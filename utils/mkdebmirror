@@ -1,25 +1,23 @@
 #! /bin/sh
 
 # $Id$
-# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001-2003
+# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001-2004
 
-# create partitial debian mirror using debmirror new in unstable/sarge
-# needs debmirror 20020427-1 or newer
+# create partitial debian mirror using command debmirror(1) and rsync
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rsync_disks() {
 
     # get the boot disks
-    rsync --delete -av $rsynchost::debian/dists/$1/main/disks-$arch $destdir/debian/dists/$1/main/
+    rsync --delete -av $2::debian/dists/$1/main/disks-$arch $destdir/debian/dists/$1/main/
 }
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 update_from() {
 
-    # update local mirror from host $1
+    # update local mirror from a host
     host=$1
     allopt="$debug --passive --getcontents --nosource --arch=$arch --ignore=disks-$arch/"
-    defopt="$allopt --host=$host --dist=$dist,$dist-proposed-updates"
+    defopt="$allopt --host=$host --dist=$dist"
 
     echo "------------------ create mirror for debian ------------------"
     debmirror $destdir/debian $defopt
@@ -29,21 +27,25 @@ update_from() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
+#
+# here you have to adjust the hostnames of the mirror and the names of the distributions
 
-arch=i386
-dist=woody
+
 debug="$@"
+arch=i386
+dist=sarge,woody,sarge-proposed-updates,woody-proposed-updates
+
 destdir=/files/scratch/debmirror
 
-# first sync to a mirror near to you
+# first sync from a mirror near to you
 update_from ftp.uni-koeln.de
 
-# since this mirror is not always up to date, sync now to an official mirror
+# since this mirror is not always up to date, sync the rest from an official mirror
 update_from ftp.de.debian.org
 
 # even one should not mirror the security site, but I will do it.
 echo "------------------ create mirror for debian-security ------------------"
-debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d $dist/updates
+debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d sarge/updates,woody/updates
 
-rsynchost=ftp2.de.debian.org
-rsync_disks $dist
+# get installation disk images via rsync
+rsync_disks woody ftp2.de.debian.org
