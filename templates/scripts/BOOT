@@ -53,7 +53,7 @@ if ifclass GRUB; then
 	initrdopt="initrd $broot/initrd.img"
     fi
 
-    fcopy /boot/grub/menu.lst && {
+    fcopy /boot/grub/menu.lst || {
     cat > $target/boot/grub/menu.lst <<-EOF
 
 	# created by FAI
@@ -79,9 +79,10 @@ EOF
 	chainloader  +1
 EOF
     fi
+    }
     rdev $target/$kernelname $ROOT_PARTITION
     echo "Grub installed for $kernelname on $broot"
-    }
+
 fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
