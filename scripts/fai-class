@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.3.2, 1-apr-2003"
+version="version 1.3.3, 22-july-2003"
 
 # import variables: $LOGDIR $verbose $debug
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -160,18 +160,19 @@ for f in $scripts ; do
 	echo "File $f is not executable, so it's not used for defining classes."
 	continue
     fi
-    verbosemsg "Executing $classdir/$f."
     classes=`cat $filename`
     export classes
     case $f in
 	*~|*.bak) echo "Skipping backup file $f" ;;
 	*.source)
+	    verbosemsg "Executing $classdir/$f."
 	    # this script can define $newclasses
 	    newclasses=
 	    . $f
 	    fc_check_status $f $?
 	    echo $newclasses | addclass ;; 
 	*)
+	    verbosemsg "Executing $classdir/$f."
 	    classes=`$f </dev/null`
 	    fc_check_status $f $?
 	    echo $classes | addclass
