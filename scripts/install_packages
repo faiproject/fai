@@ -84,8 +84,11 @@ foreach $type (@commands) {
 
   if ($type eq "install") {
     # check for packages, that don't exists
+    # do not try to check packages that end in + or -
+    # it's not easy to determine the real package name
+    # example: g++; is the package called g+ and should be installed, or just g++ ?
+    $packlist = join(' ',grep {! /[+-]$/} @{$list{$type}});
     my $plist = $packlist;
-    $plist =~ s/[+-] / /g; # remove +- suffix from package names
     my $misspelt = qx{$rootcmd apt-cache show $plist 2>&1 1>/dev/null};
     $misspelt =~ s/W: Unable to locate package //g;
     $misspelt =~ s/\n/ /g;
@@ -95,7 +98,6 @@ foreach $type (@commands) {
     grep { $misspelt{$_} or $newlist .= "$_ "} @{$list{install}};
     $packlist = $newlist;
   }
-
   execute("$rootcmd $command{$type} $packlist") if $packlist;
 }
 
