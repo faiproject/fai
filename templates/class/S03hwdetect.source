@@ -1,5 +1,8 @@
 #! /bin/sh
 
+# load ide kernel modules
+modprobe -a ide-probe-mod ide-disk ide-cd
+
 # probe for scsi devices and set classes
 
 setscsi=0
@@ -9,7 +12,7 @@ for d in `discover --module scsi`; do
 	    newclasses=SCSI
 	    modprobe -a sd_mod sr_mod
             # we want also get the filename in front of each line. So do not use cat, use grep
-	    grep . /proc/scsi/*/*
+	    grep -H . /proc/scsi/*/*
 	    setscsi=1
         fi
 
