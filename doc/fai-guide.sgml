@@ -868,7 +868,7 @@ relativ to <file>/tmp/target</file> . So, for
 eg. <file>/tmp/target/home</file> will become later <file>/home</file>
 in the new installed system.  
 
-<sect1 id=ipackages>Install software packages<p>
+<sect1 id=ipackages>Installing software packages<p>
 
 When local filesystems are created, they are all empty (except for
 preserved partitions). Now the Debian base system and all requested
@@ -881,10 +881,9 @@ this dependency by installing the required package.
 <p>
 
 Classes are also used when selecting the configuration files in
-<file>/fai/package_config/</file> for
-software installation. The format of the configuration files  is
-described in XXXX.
-
+<file>/fai/package_config/</file> for software installation. The
+format of the configuration files is described in <ref
+id="diskconfig">.
 
 <sect1 id=icscripts>Configuration scripts<p>
 
@@ -899,32 +898,7 @@ templates for these scripts, but you can write your own bourne, bash,
 perl, cfengine or expect scripts.
 
 <p>
-Using cfengine, you can easily edit any existing text file or remove
-files, create links or directories.  It has a rich set of editing
-commands (AppendIfNoSuchLine, ReplaceAll, LocateLineMatching,
-InsertLine, HashCommentLinesContaining,...) and support the use of
-classes.
- 
-<p>If you have to create a new file or append many line to an exiting
-one, it's better to use perl or a shell script. Cfengine is also
-sensitive to undefined variables. A cfengine script does not get
-executed, if any of the used variables is undefinded. Hence, it's not
-useful if you have a variable number of parameters in your
-configuration (a famous example are the DNS server for
-<file>/etc/resolv.conf</file>).
-
-<p>
-For copying files use <prgn>fcopy</prgn>. It's included in FAI and can
-handle classes Shell scripts are useful if most functions can be done
-by unix commands, or a single command (e.g. calling lilo) must be
-executed.
-<p>
-
-There's a tradeoff between writing a few large script, which
-use definitions by cases or to write a single script for each
-class. It may also be useful to write two scripts, that together
-perform one task. Try to find the right way, and let us participate in
-your scripts.
+These important scripts are described in detail in XXXXXXXXXX
 
 <sect1 id=isavelog>Save log files<p>
 When all installation tasks are finished, the log files are written to
@@ -935,20 +909,39 @@ on the new system and to the
 install server, if <var>LOGUSER</var> is defined.
 
 <sect1 id=ireboot>Reboot new installed system<p>
-At least the system is automatically reboot. Only usefull if booting
+
+At least the system is automatically rebooted if the flag <var>reboot</var>
+is set <footnote><p>Add "reboot" to <var>FAI_FLAGS</var>  (= T172).</p> </footnote>
+
+Only usefull if booting
 from network card. Else you have to remove the floppy disk and type
 return or call <prgn>faireboot</prgn> from a remote login. Currently
 it's not possible to edit the BIOS from Linux, to change the boot
 device, so next time the host will boot from another device (local
 disk).
 
-
 <chapt id=config>The configuration<p>
-The configuration is the collection information how to partition local
+
+<em>Plan your installation, and FAI installs your plans.</em>
+<p>
+This is the most important hint I can give you. It hard and take much time to plan how the clients should be installed. But it will be very easy to XXX umsetzen XX your plans info classes and scripts for FAI. Here are some questions you have to answer by yourself<p>
+
+
+<taglist>
+	  <tag></tag>
+	  <item>
+	    <p>SHould I use NIS</p>
+	  </item>
+	</taglist>
+NTP, mounting directories, .......
+
+The configuration is the collection of information how exactly to
+install a computer. This includes how to partition local
 hard disks, where to mount the filesystems, which software packages to
 install, and how to make local customization to the installation. The
-configuration space is located on the server in
-<file>/usr/local/share/fai</file> and is mounted by the install
+configuration space for all install clients is XXX centraly ???XXX
+located on the server in <file>/usr/local/share/fai</file> and all its
+subdirectories. This will be mounted by the install
 clients to <file>/fai</file>. Following subdirectories are available:
 
 <taglist>
@@ -968,7 +961,7 @@ clients to <file>/fai</file>. Following subdirectories are available:
 </taglist>
 
 The main installation script <prgn>rcS_fai</prgn> uses these
-subdirectories in the listed order.
+subdirectories in the order listed.
 
 
 
@@ -989,14 +982,16 @@ simple. An example:
 <example>
 # an example package class
 
-PRELOAD http://www.location.org/preload/rp7_linux20_libc6_i386_b2_rpm /root
+PRELOAD http://www.location.org/rp8_linux20_libc6_i386_cs1_rpm /root
 
 PACKAGES install
 adduser netstd ae
 less passwd
+task-x-window-system
+realplayer
 
 PACKAGES remove
-gpm
+gpm xdm
 
 PACKAGES dselect-upgrade
 ddd                     install
@@ -1006,34 +1001,36 @@ a2ps                    install
 Comments are starting with a hash (#) and are ending at the end of
 the line. Every command begins with the word <tt>PACKAGES</tt>
 followed by a command name. The command name is similar to those of
-<prgn>apt-get</prgn>. Here the list of supported command names:
+<prgn>apt-get</prgn>. Here's the list of supported command names:
 
 
 <taglist>
-<tag>install</tag> <item> <p>Install all packages that are specified
+<tag>install:</tag> <item> <p>Install all packages that are specified
 in the following lines. If a hyphen is appended to the package name
    (with no intervening space), the package will be removed, not
    installed.</p> </item>
 
-<tag>remove</tag> <item> <p>Remove the named packages. Has the same format as for
-  <tt>install</tt>. Append a + to the package name, for packages that
-  should be installed. </p> </item>
+<tag>remove:</tag> <item> <p>Remove all packages that are specified in
+the following lines. Append a + to the package name, if the package
+should be installed.</p> </item>
 
 <tag>dselect-upgrade</tag> <item> <p> Set package selections using the
-follwoing lines. The follwoing lines must be the output of the command
+follwoing lines. The follwoing lines must be the output of the commands
 <prgn>dpkg --get-selections</prgn>.
 </taglist>
 
 
 Multiple lines with lists of space separated names of packages follows
 the commads install and remove. All dependencies are resolved and <prgn>apt-get</prgn>
-is used to perform the installation or remove of packages. The order of the
+is used to perform the installation or removal of packages. The order of the
 packages is of no matter. 
 <p>
 A line, that contains the <tt>PRELOAD</tt> token, loads a file into a
 directory before installing the packages. For examples the package
 <prgn>realplayer</prgn> needs an archive to install the software, so
-this archive is downloaded and save to the directory <file>/root</file>.
+this archive is downloaded to the directory
+<file>/root</file>. Currently, it will not be removed after installing
+the packages.
 
 
 <sect id=cscripts>Scripts in <tt>/fai/class</tt><p>
@@ -1045,7 +1042,18 @@ If the installation process stops or even it finishes, parse all log files for e
 > egrep "no such variable|bad variable|E:|ERROR" *.log
 </example>
 
+<chapt id=sparc>FAI on SUN SPARC<p>
+Even FAI is architecture independent, there are some XX caveats ????.
+Some packages does not exist for sparc or sparc64 architecture. 
+To boot a SUN
 
+<example>boot net</example>
+
+
+Read the ultralinux FAQ
+
+elftoaout
+Make a symlink that represent the IP address as hexadecimal XXX<file>/boot/8A34E310</file> not a symlink with the hostname.
 <!--
 
 
@@ -1064,7 +1072,6 @@ give mount options.
 
 
 <chapt id=x1>Preparing your configuration<p>
-<em>Plan your installation, and FAI installs your plans.</em>
 <chapt id="details">Details<p>
 <sect id=bootpdsetup>bootp setup<p>
 <sect id=dhcpsetup>dhcp setup<p>
@@ -1103,6 +1110,41 @@ define classes for this host, or all host which match a certain name
 
 Before installing the FAI package on your server, you should plan your
 installation. 
+
+
+
+
+Using cfengine, you can easily edit any existing text file or remove
+files, create links or directories.  It has a rich set of editing
+commands (AppendIfNoSuchLine, ReplaceAll, LocateLineMatching,
+InsertLine, HashCommentLinesContaining,...) and support the use of
+classes.
+ 
+<p>If you have to create a new file or append many line to an exiting
+one, it's better to use perl or a shell script. Cfengine is also
+sensitive to undefined variables. A cfengine script does not get
+executed, if any of the used variables is undefinded. Hence, it's not
+useful if you have a variable number of parameters in your
+configuration (a famous example are the DNS server for
+<file>/etc/resolv.conf</file>).
+
+<p>
+For copying files use <prgn>fcopy</prgn>. It's included in FAI and can
+handle classes Shell scripts are useful if most functions can be done
+by unix commands, or a single command (e.g. calling lilo) must be
+executed.
+<p>
+
+There's a tradeoff between writing a few large script, which
+use definitions by cases or to write a single script for each
+class. It may also be useful to write two scripts, that together
+perform one task. Try to find the right way, and let us participate in
+your scripts.
+
+
+
+
+
 
 general hints:
 
