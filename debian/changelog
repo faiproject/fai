@@ -9,28 +9,38 @@ fai (2.4) unstable; urgency=low
     mknbi-linux (closes: #167900), replace $UID with `id -u`, do not call
     rdev, remove packages that are already installed by debootstrap, new
     option for mknbi-linux, always do setup for dhcp and bootp, write PATH
-    to /root/.profile, correct location for syslog.conf
-  * scripts/BOOT: echo each kernel module to a seperate line in
+    to /root/.profile, correct location for syslog.conf, copy sources.list
+    from /etc/fai if available
+  * scripts/BOOT: echo each kernel module to a seperate line in, add
+    supoprt for kernel using initrd, use fcopy for lilo.conf and menu.lst,
     /etc/modules, lilo.conf can also boot the old kernel
   * scripts/LAST: add call: apt-get -f install
+  * scripts/USB: fix option for echo 
+  * scripts/FAI_BOOTPART: missing $target added, remove rdev call
+  * lib/subroutines*: better regex for matching disks in /proc/partitions,
+    task_sysinfo, prepare_apt, add link last to last action performed, new
+    variable $LOGSERVER, list_disks move to a external script
+  * DEFAULT/S01: install $addpackages with one dpkg call, installation of
+    default kernel creates symlinks in /, make /root accessable only by
+    root, use fcopy -r to copy all dot files for the root account
   * ftar: conditional rm -rf
   * test if mknbi-linux is available (closes: #167900)
-  * make-fai-bootfloppy: rmdir lost+found and copy fewer files to get more
-    space on the floppy, replace $UID with `id -u`, create a generic 
-    boot floppy independant of the boot protocol, use one image with
-    multiple append parameters, new options -v, -d
-  * DEFAULT/S01: install $addpackages with one dpkg call, installation of
-    default kernel creates symlinks in /, make /root accessable only by root
+  * make-fai-bootfloppy: add grub support, code reorganized and split into
+    more subroutines, rmdir lost+found and copy fewer files to get more
+    space on the floppy, replace $UID with `id -u`, create a generic boot
+    floppy independant of the boot protocol, use one image with multiple
+    append parameters, new options -v, -d, -l, -g
   * bug fix: hooks can now skip its task again
   * NFS file systems are also mounted with noatime.
   * rcS_fai: create var/run/sshd directory, /usr/local/{bin,sbin} at the
     very beginning of PATH, add /usr/lib/fai to PATH, PATH is defined
     before doing anything else, create_ramdisk is an extern script
-  * scripts/USB: fix option for echo 
-  * scripts/FAI_BOOTPART: missing $target added, remove rdev call
-  * lib/subroutines*: better regex for matching disks in /proc/partitions,
-    task_sysinfo, prepare_apt, task_sysinfo now a separate script, add
-    link last to last action performed, new variable $LOGSERVER
+  * task_sysinfo now a separate script; add lsmod call, new test if
+    executables are available is using which
+    * adddivert, mkdivert, rmalldivert, rmdivert moved to the new script
+    fai-divert
+  * mount_local_disks, umount_local_disks, fstab_mount move to new script
+    fai-mount-disk 
   * Fai.pm and subroutines* are moved from lib/ moved to share/
   * fai-setup: ssh-keygen needs option -t (closes: #156947)
   * fai.conf: correct line containing proposed-updates
@@ -39,10 +49,16 @@ fai (2.4) unstable; urgency=low
   * fai_modules_off: add block-major-{104,105}
   * remove debian/undocumented
   * install_packages: add option -l, only print the list of packages
+  * disk_config/: make /fai-boot partition larger, CS_KOELN use more
+    flexible values for partitions sizes
   * add suffix -386 to name of kernel-image package
-  * save_log_*(): do not loops in symlinks
+  * save_log_*(): do not create loops in symlinks, moved to external
+    script fai-savelog
   * apt.conf: add option force-confdef to dpkg call
-  * 03hwdetect script loads scsi and ide modules and prints /proc/scsi info
+  * 03hwdetect script loads scsi and ide modules and prints /proc/scsi
+    info
+  * move mount2dir to lib directory
+  * fcopy bug fix: option -r does not work correctly
   
  -- Thomas Lange <lange@debian.org>  Tue, 10 Dec 2002 16:58:31 +0100
 
