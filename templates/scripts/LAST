@@ -15,7 +15,7 @@ ifclass TMP_PARTITION || {
 }
 
 [ "$FAI_DEBMIRROR" ] && 
-echo "#$FAI_DEBMIRROR $MNTPOINT nfs ro,rsize=8192,wsize=8192 0 0" >> $target/etc/fstab
+echo "#$FAI_DEBMIRROR $MNTPOINT nfs ro 0 0" >> $target/etc/fstab
 
 # set bios clock
 case "$UTC" in
@@ -33,5 +33,5 @@ $ROOTCMD hwclock $hwopt --systohc
 # the system is now configured
 rm -f $target/sbin/unconfigured.sh
 
-# copy sources.list forall
-fcopy /etc/apt/sources.list
+# copy sources.list forall and update apt-list at next boot
+fcopy /etc/apt/sources.list /etc/rc2.d/S99aptupdate
