@@ -25,9 +25,11 @@ install:
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
 	install -m644 lib/subroutines $(DESTDIR)/usr/share/fai
+# potato
 	install -m644 lib/Fai.pm $(DESTDIR)/usr/lib/perl5/Debian
+	install -m644 lib/Fai.pm $(DESTDIR)/usr/share/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(LIBDIR)/etc/
-	install -m644 conf/fai.conf $(DESTDIR)/etc
+	install -m644 conf/fai.conf $(DESTDIR)/etc/fai/
 	cp -a examples $(DESTDIR)/$(DOCDIR)
 	cp -a utils templates $(DESTDIR)/usr/share/fai
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
