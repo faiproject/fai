@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.9, 21-feb-2002";
+my $version = "Version 1.9.1, 22-feb-2002";
 
 use File::Copy;
 use File::Compare;
@@ -187,6 +187,8 @@ sub read_file_mode {
   warn "reading $modefile\n" if $verbose;
   open (MODEFILE,"<$modefile") || die "fcopy: can't open $modefile\n";
   while (<MODEFILE>) {
+    # skip empty lines
+    next if /^\s*$/;
     ($owner,$group,$mode,$fclass) = split;
     $mode = oct($mode);
     # class found
@@ -309,7 +311,7 @@ $opt_m && check_mopt();
 $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
 $source  = $opt_s || $ENV{FAI_FILES} || `pwd`;
-$target  = $opt_t || $ENV{FAI_ROOT};
+$target  = $opt_t || $ENV{FAI_ROOT} || $ENV{target};
 $opt_L and { open(LOGFILE,">> $opt_L") or die("can't open logfile: $!")};
 $opt_P and read_status();
 
