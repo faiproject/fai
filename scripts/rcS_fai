@@ -28,6 +28,7 @@
 
 #set -xv # for full debugging
 
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/bin:/sbin:/usr/bin:/usr/sbin:
 # some variables
 FAI_VERSION=FAIVERSIONSTRING
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
@@ -36,9 +37,8 @@ fstab=fstab  # Solaris uses vfstab
 
 # default classes before calling task defvar. Will be overwritten by task defvar
 # the type of operating system (linux, sunos)
-oclass=`uname -s | tr /a-z/ /A-Z/`
+oclass=$(uname -s | tr /a-z/ /A-Z/)
 classes="DEFAULT $oclass $HOSTNAME LAST"
-unset oclass
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
@@ -51,9 +51,10 @@ fai_init() {
     [ -f /etc/fai/fai.conf ] && . /etc/fai/fai.conf
     # solaris dir
     [ -f /tmp/install_config/fai/fai.conf ] && . /tmp/install_config/fai/fai.conf
-    # some variables are not needed here
+    # some variables from are not needed here
     unset KERNELPACKAGE NFSROOT NFSROOT_PACKAGES FAI_ROOTPW SSH_IDENTITY
-    unset FAI_DEBOOTSTRAP FAI_DEBOOTSTRAP_OPTS FAI_CONFIGDIR FAI_SOURCES_LIST ftpserver debdist
+    unset FAI_DEBOOTSTRAP FAI_DEBOOTSTRAP_OPTS FAI_CONFIGDIR FAI_SOURCES_LIST
+    unset installserver ftpserver debdist
 
     # read subroutine definitions
     sub=/usr/share/fai/subroutines
@@ -117,10 +118,9 @@ EOF
 # Main routine
 # callarg=$1
 
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/bin:/sbin:/usr/bin:/usr/sbin:
-
 # Solaris has already a writable /tmp directory
-[ `uname -s` = Linux ] && create_ramdisk
+[ "$oclass" = LINUX ] && create_ramdisk
+unset oclass
 
 fai_init
 {
