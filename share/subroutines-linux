@@ -4,25 +4,6 @@
 #
 # subroutine definitions for linux
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-netdevice_info() {
-
-    # devices that are running
-    netdevices_up=`ifconfig | perl -anF'\s+' -e 'print "$F[0]\n" if $F[0];' | grep -v "^lo"`
-    # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
-    # if not defined, use boot messages to determine network devices
-    [ -n "$netdevices" ] || netdevices=$netdevices_up
-
-    # some network driver do not echo eth0,..; they are not detected
-    netdevices_all=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
-
-    # another way to determine all ethernet devices
-    local dev devices
-    devices=$(seq 0 1 8)
-    for dev in $devices; do
-        ifconfig eth$dev up 2>/dev/null && netdevices_all="$netdevices_all eth$dev"
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
 
     # the variable holds a space separated list of devices and their block size
@@ -50,38 +31,6 @@ jobsrunning() {
     ps r | egrep -qv "ps r|TIME COMMAND"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_dhcp_info() {
-
-    local dhcplog=$LOGDIR/dhcp.log
-    dhclient -lf /dev/null $netdevices >$dhcplog 2> $LOGDIR/dhclient.log
-    [ -n "$verbose" -a -f $dhcplog ] && echo "Reading $dhcplog"
-    # define all dhcp information as variables
-    eval `grep -v "^#" $dhcplog`
-    killall dhclient-2.2.x
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_bootp_info() {
-
-    local device
-    local bootlog=$LOGDIR/bootp.log
-    # use all devices in $netdevices
-    for device in $netdevices; do
-	echo "Sending BOOTP request using device $device"
-	echo "* --- network device $device ---" >> $bootlog
-	bootpc --dev $device --timeoutwait $timeout --returniffail >> $bootlog 2>&1
-    done
-
-    [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
-    # define all bootpc information as variables
-    eval `grep -v "^\*" $bootlog`
-    # Think aboout this:
-    # echo next lines >> bootlog; then eval bootlog
-    FAI_LOCATION=$T170
-    FAI_ACTION=$T171
-    FAI_FLAGS=$T172
-    #FAI_BACKUP_LIST=$T174 # not yet used
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 eval_cmdline() {
 
     # parse kernel parameters and define variables
@@ -100,12 +49,13 @@ eval_cmdline() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_confdir() {
 
-    local dnshost
+    local dnshost bootlog
     eval_cmdline
 
-    netdevice_info
-    dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
-    dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
+    bootlog=$LOGDIR/boot.log
+    get-boot-info
+    [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
+    eval `grep -v "^#" $bootlog`
 
     # define flags to see if syslogd should be started
     # this routine is called again, so you can use a hook to redefine flags
