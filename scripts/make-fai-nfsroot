@@ -49,6 +49,7 @@ set -e
 packages="$packages $NFSROOT_PACKAGES"
 ROOTCMD="chroot $NFSROOT"
 
+LIBFAI=/usr/lib/fai
 conffile=$NFSROOT/etc/rcS_fai.conf
 export DEBIAN_FRONTEND=Noninteractive
 
@@ -114,7 +115,7 @@ call_debootstrap() {
 
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "calling debootstrap $1 $NFSROOT $2"
-    debootstrap $1 $NFSROOT $2 > $devnull 2>&1
+    LC_ALL=C debootstrap $1 $NFSROOT $2 > $devnull 2>&1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
@@ -261,7 +262,9 @@ umount_dirs() {
 if [ -d $NFSROOT/fai ]; then
     echo $NFSROOT already exists. Removing $NFSROOT
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
-    rm -rf $NFSROOT
+    rm -rf $NFSROOT/.??* $NFSROOT/*
+    # also remove files $NFSROOT/.? but not . and ..
+    find $NFSROOT ! -type d -xdev -maxdepth 1 | xargs -r rm -f
 fi
 
 create_nfsroot
