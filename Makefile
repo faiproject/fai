@@ -9,22 +9,16 @@ SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup
 CONFFILES= apt.conf dhclient.conf
 
 # files with variable KERNLEVERSION in it
-KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/S91global.source $(DESTDIR)/$(DOCDIR)/templates/class/S98variables.source
+KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/ALL.source $(DESTDIR)/$(DOCDIR)/templates/class/faisimple.source
 
 all:
-	$(MAKE) -C kernel kernels
 	$(MAKE) -C doc all
 
-veryclean: clean
-	$(MAKE) -C kernel veryclean
-
 clean:
-	$(MAKE) -C kernel clean
 	$(MAKE) -C doc clean
-	rm -f /tmp/make.log
 
 install: 
-	$(MAKE) -C kernel install LIBDIR=$(LIBDIR)
+#	$(MAKE) -C kernel install LIBDIR=$(LIBDIR)
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
