@@ -10,6 +10,8 @@ for module in $moduleslist; do
     echo $module >> $target/etc/modules
 done
 
+cd $target/boot && kernelversion=`ls vmlinuz-*`
+
 # if class MBR is defined, write lilo into master boot record
 ifclass MBR || BOOT_DEVICE=$ROOT_PARTITION
 
@@ -62,7 +64,7 @@ if ifclass GRUB; then
 	default 0
 	color cyan/blue white/blue
 
-	title Debian GNU/Linux, $kernelname $kernelimage
+	title Debian GNU/Linux, $kernelname $kernelversion
 	root $broot
 	kernel $kernelname
 	$initrdopt
@@ -111,9 +113,6 @@ ifclass FAI_BOOTPART && {
 
     cp -a $target/boot $target/fai-boot
 
-    cd $target/boot
-    kernelversion=`ls vmlinuz-*`
-
     ifclass LILO && {
     # write lilo.conf and install lilo to disk
 	echo "Add /fai-boot partition to lilo.conf"
@@ -146,7 +145,7 @@ EOF
 	kernel $kernelname nfsroot=rom
 EOF
 
-	echo "Grub installed for $kernelimage $broot"
+	echo "Grub for $kernelversion installed on $broot"
     }
 }
 
