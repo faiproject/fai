@@ -1026,9 +1026,9 @@ output. In the future, there will be a graphical frontend available.
 <sect id=isetup>Set up FAI<p>
 
 After the install client has booted, only the script
-<file>/sbin/rcS_fai</file><footnote><p>Since the root filesystem on
-the clients is mounted via NFS, <prgn>rcS_fai</prgn> is located in
-<file>/usr/lib/fai/nfsroot/sbin</file> on the install server.</p>
+<file>/usr/sbin/fai</file><footnote><p>Since the root filesystem on
+the clients is mounted via NFS, <prgn>fai</prgn> is located in
+<file>/usr/lib/fai/nfsroot/usr/sbin</file> on the install server.</p>
 </footnote> is executed. This is the main script which controls the
 sequence of tasks for FAI. No other scripts in
 <file>/etc/init.d/</file> are executed.
@@ -1326,7 +1326,7 @@ several files:
 	  installation process.</p> </item>
 </taglist>
 
-The main installation script <prgn>rcS_fai</prgn> uses all these
+The main installation command <manref name="fai" section="8"> uses all these
 subdirectories in the order listed except for hooks. The FAI package
 contains examples 
 for all these configuration scripts and files in
@@ -1370,7 +1370,7 @@ installation!
 
 After the kernel has booted, it mounts the root file system via NFS
 from the install server and <manref name="init" section="8"> starts the script
-<file>/sbin/rcS_fai</file>. This script controls the
+<file>/usr/sbin/fai</file>. This script controls the
 sequence of the installation. No other scripts in
 <file>/etc/init.d/</file> are used.
 <p>
@@ -1450,7 +1450,7 @@ definition of FAI's subroutines.
      </item>
 
      <tag>softupdate</tag> <item>This task, executed inside a running 
-     system via the <tt>fai</tt> command line interface, performs a softupdate.
+     system via the <manref name="fai" section="8"> command line interface, performs a softupdate.
      See chapter <ref id=softupdate> for defails. </item>
 
      <tag>partition</tag> <item><p>Calls <prgn>setup_harddisk</prgn>
@@ -2533,20 +2533,23 @@ Except these changes, things are the same as when installing a new computer:
 
 <sect1 id=runsoftupdate>How to run a softupdate
 <p>As softupdates use the same infrastructure as a FAI installation, you even
-start them by using the same script <tt>/usr/sbin/fai</tt> which is used for
+start them by using the same command <manref name="fai" section="8"> which is used for
 installation:
 	<example>
 		/usr/sbin/fai softupdate
 	</example>
 starts a softupdate on the client it is run on.</p>
+
 <sect2 id=startsoftupdate>How to do mass softupdates
 <p>Probably you don't want to run to each client and start a softupdate there
 locally, so a mechanism to start an update there has to be thought of.</p>
+
 <sect3 id=cronsoftupdate>Cron
 <p>One possible solution is to use crontab entries on the clients to start an
 update, but in big installations you have to consider including a random-delay
 mechanism, because too many updates at the same time may produce too much
 traffic on your network.</p>
+
 <sect3 id=remotesoftupdate>Starting a softupdate remotely
 <p>If you want more control on when exactly a softupdate is run on the clients
 and maybe want to monitor it while it is running, you can install remote root
@@ -2588,11 +2591,9 @@ as running them once. Some things to keep an eye on:
 				<item>contains the currently executed action:
 					<taglist>
 						<tag><tt>install</tt></tag>
-							<item>when
-							installing.</item>
+							<item>when installing.</item>
 						<tag><tt>softupdate</tt></tag>
-							<item>when
-							updating</item>
+							<item>when updating</item>
 					</taglist>
 		</taglist>
 
@@ -2600,30 +2601,31 @@ as running them once. Some things to keep an eye on:
 		configuration once when starting; if you modify it, you need to
 		make them reload it using
 		<example>
-			${ROOTCMD} invoke-rc.d $somedaemon reload
+			$ROOTCMD invoke-rc.d $somedaemon reload
 		</example>
 		or even restart them
 		<example>
-			${ROOTCMD} invoke-rc.d $somedaemon restart
+			$ROOTCMD invoke-rc.d $somedaemon restart
 		</example>
 		when the configuration for <tt>$somedaemon</tt> has been
-		changed<footnote>You can for example use <tt>fcopy</tt>'s
+		changed<footnote>You can for example use <manref
+		name="fcopy" section="8">'s
 		<tt>postinst</tt> script support for doing this; if other
 		things than <tt>fcopy</tt> modify your conffiles, you have to
 		keep track of the changes for yourself</footnote>.
 		</item>
 
-	<item>Other things like scheduling a reboot if a new kernel is 
-		installed</item>
+	<item>Other things like scheduling a reboot if a new kernel is installed</item>
 </list></p>
 </sect1>
 
 <sect1 id=localconfsoftupdate>What if there are locally changed conffiles?
 <p><strong>Short: there shouldn't be any!</strong></p>
 <p><strong>Long: </strong> <em>if</em> you are using FAI <tt>softupdate</tt> to
-update client's configuration, you shouldn't do any local changes, because they
-may be lost while updating. Backup copies are done by fcopy only on the local
-disk; if you want to save them together with the logfiles,
+update client's configuration, you shouldn't do any local changes on
+the install clients, because they may be lost while updating. Backup
+copies are done by fcopy only on the local disk; if you want to save
+them together with the logfiles, 
 	<example>
 		FAI_BACKUPDIR=$LOGDIR/backup
 	</example>
