@@ -42,9 +42,6 @@ if ifclass LILO; then
 	$liloappend
 EOF
   }
-  $target/sbin/lilo -r $target
-  # you can also use this
-  # $ROOTCMD lilo -v
 fi
 
 if ifclass GRUB; then
@@ -117,7 +114,6 @@ EOF
 
 	mkdir $target/fai-boot/etc
 	cp $target/etc/lilo.conf $target/fai-boot/etc
-	$target/sbin/lilo -r $target
     }
 
     ifclass GRUB && {
@@ -140,3 +136,10 @@ EOF
 	echo "Grub installed for $kernelimage $broot"
     }
 }
+
+# now call lilo
+# you can also use this
+# $ROOTCMD lilo -v
+if ifclass LILO; then
+    $target/sbin/lilo -r $target
+fi
