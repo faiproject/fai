@@ -5,12 +5,14 @@
 # this is the function: AppendIfNoSuchLine
 egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/modules
 
-# a list of modules, that are loaded at boot time
-echo $moduleslist >> $target/etc/modules
+# a list of modules which are loaded at boot time
+for module in $moduleslist; do
+    echo $module >> $target/etc/modules
+done
 
 ifclass LILO && {
     # write lilo.conf and install lilo to disk
-    echo " Creating lilo.conf for /vmlinuz"
+    echo "Creating lilo.conf for /vmlinuz"
     cat > $target/etc/lilo.conf <<-EOF
 	boot=$BOOT_DEVICE
 	root=$ROOT_PARTITION
@@ -18,9 +20,15 @@ ifclass LILO && {
 	map=/boot/map
 	vga=normal
 	delay=50
-	#
+
 	image=/vmlinuz
 	label=linux
+        read-only
+
+	image=/vmlinuz.old
+	label=linux.old
+	read-only
+	optional
 	$liloappend
 EOF
 
