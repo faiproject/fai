@@ -103,7 +103,7 @@ ifclass LINUX && fcopy /etc/exim/exim.conf
 ifclass USR_LOCAL_MOUNT || ftar /usr/local
 
 # change cdrecord default
-fcopy /etc/default/cdrecord
+fcopy -i /etc/default/cdrecord
 # set cdrecord to suid 
 [ -f $target/usr/bin/cdrecord ] && chmod u+s $target/usr/bin/cdrecord
 chmod a+rw $target/dev/scd0 $target/dev/scd1
@@ -124,4 +124,18 @@ fi
 
 ifclass DATALESS && ftar /etc/alternatives
 
-fcopy /etc/ssh/ssh_known_hosts
+# if TeX/LaTeX is installed build german hyphenation
+if $ROOTCMD dpkg -l tetex-bin ; then
+    echo "Creating german hyphenation for TeX/LaTeX"
+    cat > $target/tmp/mkgermantex.sh <<EOF
+cd /tmp
+echo "\input hyphen.cfg" > hyphen.tex
+initex /usr/share/texmf/tex/plain/config/tex.ini
+cp /var/lib/texmf/web2c/tex.fmt /var/lib/texmf/web2c/tex.fmt.old
+cp tex.fmt /var/lib/texmf/web2c
+initex /usr/share/texmf/tex/latex/base/latex.ltx
+cp latex.fmt /var/lib/texmf/web2c
+EOF
+    chmod u+x $target/tmp/mkgermantex.sh
+    $ROOTCMD /tmp/mkgermantex.sh
+fi
