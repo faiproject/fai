@@ -2,12 +2,25 @@
 
 # (c) Thomas Lange, 2001-2003, lange@debian.org
 
+# if $kernelimage is not a debfile, then it's the kernel version
+# create dummy link, so package kernel-image-* makes new correct link
+ln -s /boot/vmlinuz-nolink $target/vmlinuz
+
 # install additional packags that are located in /fai/files/packages/
 if [ -f /fai/files/packages/Packages.gz ]; then
     # Mm. It seems to be a simple repository. I assume it's configured in sources.list
     [ "$addpackages" ] &&  yes '' | $ROOTCMD apt-get install $addpackages
 else
     [ "$addpackages" ] && cd $FAI/files/packages && dpkg -i --root=$target $addpackages
+fi
+
+# Do not use $kernelimage when you specified it by $addpackages
+if [ -f $files/packages/$kernelimage ]; then
+   yes 'n' | dpkg --root=$target -i $files/packages/$kernelimage
+else
+   # default kernel package
+   echo "do_symlinks = Yes" > $target/etc/kernel-img.conf
+   yes 'n' | $ROOTCMD apt-get install $kernelimage
 fi
 
 echo $HOSTNAME     > $target/etc/hostname
@@ -25,6 +38,8 @@ echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$target/etc/hosts
 # make /root accessable only by root
 chmod 0700 $target/root
 chown root:root $target/root
+# copy default dotfiles for root account
+fcopy -r /root
 
 # create keyboard layput table
 dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
@@ -40,31 +55,12 @@ if ifclass NIS; then
     done
 fi
 
-# copy default dotfiles for root account
-fcopy -r /root
-
-# suppress emacs errors
-touch $target/etc/mailname
-
 ifclass USR_LOCAL_COPY && cp -a /usr/local $target/usr
 
 # make floppy read and writeable for all users
 chmod a+rw $target/dev/fd*
 # cdrom's are read only for all
 chmod a+r $target/dev/sr* 
-
-# if $kernelimage is not a debfile, then it's the kernel version
-# create dummy link, so package kernel-image-* makes new correct link
-ln -s /boot/vmlinuz-nolink $target/vmlinuz
-
-# needed for new kernels
-if [ -f $files/packages/$kernelimage ]; then
-   yes 'n' | dpkg --root=$target -i $files/packages/$kernelimage
-else
-   # default kernel package
-   echo "do_symlinks = Yes" > $target/etc/kernel-img.conf
-   yes 'n' | $ROOTCMD apt-get install $kernelimage
-fi
 
 fcopy /etc/X11/XF86Config-4
 
@@ -108,9 +104,6 @@ if ifclass WWWKIOSK; then
     rm -f $target/usr/X11R6/bin/netscape
     ln -s /usr/lib/netscape/477/communicator/communicator-smotif.real $target/usr/local/bin/netscape
 fi
-
-# create pseudo /vol
-ifclass LINUX && ifclass CS_KOELN && ln -s /usr/local/vol $target/vol
 
 # change cdrecord default
 fcopy /etc/default/cdrecord
