@@ -11,22 +11,31 @@
 # tlink installimage all ant
 # tlink nodeimage all ant
 
+# define the range for client numbers using prefix
+startnum=1
+endnum=16
 
 image=$1
 host=$2
 prefix=$3
 
-# we have sixteen nodes
-hostnums="01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16"
-
-tftpdir=/boot/fai
-
+# - - - - - - - - - - - - - - - - - - - -
 link() {
 
 	echo $1 now booting $image
     	rm -f $ $tftpdir/$1
 	ln -s $image $tftpdir/$1 
 }
+# - - - - - - - - - - - - - - - - - - - -
+tftpdir=/boot/fai
+
+# create list of hosts without prefix
+i=$startnum
+while [ $i -le $endnum ]; do
+    num=`printf "%.2d" $i`
+    hostnums="$hostnums $num"
+    i=$(($i+1))
+done
 
 if [ $host = "all" ];then
     for i in $hostnums
