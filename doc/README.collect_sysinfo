@@ -1,0 +1,41 @@
+README: How to collect system information
+-----------------------------------------
+
+People how have a big cluster wants a tool or a magic floppy, to
+collect the hardware information from all cluster nodes
+automatically. Then they want a little tool to activate a
+configuration on the server using this information.
+
+I think it's not needed. The only task, which has to be done manually
+for new hardware is to assign the MAC address to a hostname and to an
+IP-address and to define classes for this host, or all host which
+match a certain name (look at class/S01alias.sh).
+
+1. Collecting MAC addresses
+
+If a new cluster node is booting, it sends broadcast packets to the
+LAN. You can watch the MAC addresses on the server with:
+
+tcpdump -qte port bootpc >/tmp/mac_addresses.lis
+
+After all hosts has been send some broadcast packets (they will fail to
+boot because bootpd isn't running or does not recognise the MAC address)
+you abort tcpdump by typing ctrl-c. Then you get a list of all unique MAC
+addresses with:
+
+perl -ane 'print "$F[0]\n"' /tmp/mac_addresses.lis |sort|uniq
+
+After that you only have to assign ethernet addresses to hostnames and
+IP-addresses (/etc/ethers and /etc/hosts or corresponding NIS maps).
+
+
+2. Collecting other system information
+
+After bootpd is set up, boot all your cluster nodes with
+FAI_ACTION=sysinfo (:T171="sysinfo": in bootptab)
+
+The nodes will boot and save their system information on your server
+in the directory ~fai/<hostname>/sysinfo to dmesg.log and rcS.log
+
+I recommend to write the MAC addresses (last three bytes will suffice)
+and the hostname in the front of each chassis.

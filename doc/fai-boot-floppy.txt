@@ -1,0 +1,93 @@
+From: "Thomas Gebhardt" <gebhardt@hrz.uni-marburg.de>
+Sender: owner-linux-fai@rrz.uni-koeln.de
+To: linux-fai@rrz.uni-koeln.de
+Subject: [linux-fai] bootp, tftp and boot ROMs and boot floppies
+Date: Mon, 05 Jun 2000 15:15:22 +0200
+
+.
+.
+.
+
+In order to take a step into that direction, I can contribute
+a "mini howto" on the creation of a FAI Boot Floppy:
+--------------------------------------------------------------
+
+1. Make a kernel image that fits your personal needs. I suggest
+to make a .deb package with the kernel-package provided by
+the debian distribution. Select the following options (the
+sections refer to the configuration scheme of kernel 2.2.15) :
+
+ * Floppy disk support (in section "Block devices"); you may not
+   compile it as a module since you will boot from the floppy
+
+ * RAM disk support (section "Block devices")
+
+ * IP: kernel level autoconfiguration (section "Networking options")
+ *     BOOTP support (section "Networking options")
+
+ * NFS filesystem support (section "Network File Systems")
+ * root filesystem on NFS (section "Network File Systems")
+
+ * be sure to include the appropriate ethernet card driver(s)
+
+2. Insert an empty floppy. Since we will use LILO to boot from the
+   floppy, we will need to make an ext2 filesystem on the floppy:
+
+# mke2fs /dev/fd0
+
+3. Install the previously built kernel on the floppy:
+
+# mount -t ext2 /dev/fd0 /floppy
+# cd /floppy    
+# dpkg --fsys-tarfile /tmp/kernel-image-2.2.15_custom.1.0_i386.deb | tar xvf -
+
+4. Make a symbolic link from /vmlinuz to your kernel and copy
+the boot block:
+
+# ln -s boot/vmlinuz-2.2.15 ./vmlinuz
+# cp /boot/boot.b /floppy/boot/
+
+5. Make a dummy NFS boot device in /dev:
+
+# mknod /dev/boot255 c 0 255
+
+6. Prepare a lilo.conf file somewhere (e.g. in /tmp). Here is my choice:
+
+boot=/dev/fd0
+root=/dev/boot255
+install=/floppy/boot/boot.b
+map=/floppy/boot/map
+vga=extended
+append = "nfsroot=<ip address of fai server>:/usr/lib/fai/nfsroot"
+delay=10
+compact
+image=/floppy/vmlinuz
+        label=FAI-nfsroot
+        read-only
+
+This will work in my environment where the basic network configuration
+(but not the additional fai parameters) are provided by bootp/dhcp.
+This is convenient because I can use the same boot floppy for every
+PC that I want to install. If you do not have bootp/dhcp you can
+hardcode the network configuration as an additional kernel parameter:
+ip=<client-ip>:<server-ip>:<gw-ip>:<netmask>:<hostname>:<device>:<autoconf>
+(for additional information see Documentation/nfsroot.txt in your kernel
+sources).
+
+BTW: We use Lilo as a boot loader rather than writing the raw kernel
+image to the floppy because this gives us the possibility to supply
+additional kernel parameters.
+
+7. Make the floppy bootable with Lilo:
+
+# lilo -C /tmp/lilo.conf
+
+8. Unmount the floppy:
+
+# cd /; umount /floppy
+
+9. Make the floppy read-only and try to boot. Hopefully it works :-)
+   Apart from installation I use this floppy as a "rescue floppy"
+   whenever I cannot boot from disk anymore or when I do not want
+   to touch the local hard disk (i.e. fsck on /).
+

@@ -1,0 +1,42 @@
+# $Id$
+
+The installation of packages (without interaction) depends on the
+success of apt-get (using dpkg). But some packages are broken and an
+error occurs during installation. Some workarounds are made in rcS_fai
+in the subsourine prepare_apt. Most problems occur if postinst script
+has a loop, when all questions are answered with <Return> or
+n<Return>.
+
+Following table describes the problems with postinstall script.
+
+INPUT is what is typed to all questions of the postinstall script.
+The value of the cossespondening column means:
+
+L = script go into a loop (will ask forever)
+O = OK (script finishes successfully)
+
+
+			I N P U T
+
+package name |Return|  N  |  Y  |     |     | Comments
+-------------------------------------------------------
+libpaperg    |      |  L  |  L  |     |     |
+dump         |  O   |  O  |  O  |     |     |
+ingerman     |  O   |  L  |  L  |     |     |
+xserver-svga |  L   |  O  |  L  |     |     |
+nis          |  O   |     |     |     |     |
+ntp          |      |  O  |     |     |     | nedds a /etc/ntp.conf
+             |      |     |     |     |     |
+cslatex      |  O   |     |     |     |     | calls initex which needs <CR>
+             |      |     |     |     |     |
+
+
+Following packages are know to have errors:
+
+libpaperg    (divert error in version -12), loop if input is not a valid papersize 
+xf86setup
+xserver-svga (does not like n<Return>)
+ntp	     (does not like n<Return>)
+telnetd	     must installed before nis (adduser hangs ?)
+gcc	     causes dpkg to segfault sometimes depending on packagelist
+ssmtp	     hostname --fqdn breaks in chroot environment

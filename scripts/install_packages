@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+
+# $Id$
+#*********************************************************************
+#
+# install_packages -- parse package configuration and install packages via apt-get
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2000, Thomas Lange, Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING. If not, write to the
+# Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+# MA 02111-1307, USA.
+#*********************************************************************
+
+# PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
+# june 2000, Thomas Lange, lange@informatik.uni-koeln.de
+
+$| = 1;
+@typelist = qw/install remove/;
+%options = (
+		       install => '-y --fix-missing',
+		       remove  => '-y --purge',
+);
+
+$verbose=$ENV{verbose};
+$FAI_ROOT = $ENV{FAI_ROOT};
+$classpath = "/fai/package_config";
+$aptgetlog = ">> /tmp/apt-get.log 2>&1";
+$aptgetlog = '' if $verbose;
+
+@classes = grep { !/^#|^\s*$/} split(/[\s\n]/,$ENV{classes});
+
+foreach (@classes) {
+  $filename = "$classpath/$_";
+  &readconfig($filename) if -f $filename;
+}
+
+foreach $entry (@preloadlist) {
+  my ($url, $directory) = @$entry;
+  $command = "wget -nv -P$FAI_ROOT/$directory $url";
+  print "$command\n" if $verbose;
+  $error = system $command; # get return code from system
+  if ($error != 0) {
+    warn "$0 ERROR: $? $error";
+  }
+}
+
+foreach $type (@typelist) {
+  $packlist = join(' ',@{$list{$type}});
+
+  if ($packlist) {
+    $command = "chroot $FAI_ROOT apt-get $options{$type} $type $packlist $aptgetlog";
+    print "$command\n" if $verbose;
+    $error = system $command; # get return code from system
+    (($? >> 8) == 0) || warn "$0 ERROR: $? $error";
+  }
+}
+
+system "chroot $FAI_ROOT dpkg -C $aptgetlog";
+system "chroot $FAI_ROOT apt-get clean $aptgetlog";
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub readconfig {
+
+  my $filename = shift;
+  my ($package,$type);
+
+  open (FILE,"$filename") || warn "ERROR $0: Can't read config file: $filename\n";
+  print "$0: read config file $filename\n" if $verbose;
+
+  while (<FILE>) {
+    chomp;
+    next if /^#/;
+    next if /^\s*$/;
+    /^PRELOAD\s+([^\s]+)\s+([^\s]+)/ and push(@preloadlist, [$1, $2]),next;
+    /^PACKAGES\s+([^\s]+)/ and $type = $1,next;
+    warn "PACKAGES .. line missing in $filename\n" unless $type;
+    push @{$list{$type}}, split;
+  }
+}

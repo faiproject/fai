@@ -1,0 +1,102 @@
+INSTALLATION 
+
+Install the newest fai Debian package using apt-get or dpkg
+
+Even the technical report was written for fai-1.0, it's good to start
+with it to understand how fai works. The directory layout has changed
+and new features has beeen added to fai. Read all README files for how to
+build package and harddisk configurations. Since FAI uses cfengine
+during the last part of installation, reading the cfengine manual is
+also recommended (http://www.iu.hioslo.no/cfengine/).
+
+The file links.html contains links to all important web sites for FAI.
+In our examples, the root password will be set to: fai
+-----------------------------------------------------------------------
+FAI consists of these directories
+
+usr
+.
+|-- lib
+|   `-- fai
+|       |-- etc
+|       |-- kernel
+|       `-- nfsroot
+|-- local
+|   `-- share
+|    	`-- fai
+|    	    |-- class
+|    	    |-- disk_config
+|    	    |-- fai_config
+|    	    |-- files
+|    	    |-- package_config
+|    	    `-- scripts
+|-- sbin
+`-- share
+    `-- doc
+        `-- fai
+            |-- examples
+            `-- templates
+
+
+
+fai step by step
+----------------
+
+Access to a (local) Debian mirror: via NFS, ftp or http
+It's recommended to build a local mirror, in order to have access via NFS.
+variables: FAI_PACKAGEDIR FAI_BASETGZ FAI_SOURCES_LIST
+
+You have to setup a BOOTP server (bootpd) (/etc/bootptab). Fetch the
+ethernet address (also called MAC address) of your network cards and
+include them into bootptab. Read also README.collect_sysinfo how you
+can get the ethernet addresses of your all hosts easily. There's an
+example how bootptab should look like for fai.
+
+Create a link /boot/fai/installimage, if you boot via network card or
+prepare the boot floppy.
+
+Start with T171="sysinfo" to see if your computer boots successfully.
+
+The directory layout:
+
+/usr/lib/fai/nfsroot	contains the extracted base2_X.tgz data
+/usr/lib/fai/etc	apt.conf that is used by fai
+/usr/lib/fai/kernel	files for building kernel for tftp boot
+
+cp -dpR /usr/share/doc/fai/templates/* /usr/local/share/fai
+
+
+All base FAI scripts are located in subdirectory sbin/.  The global
+configuration file are in fai_config/. They are parse before the
+installation begins. Subdirectory class/ contains all scripts and
+files for defining classes for the client. The configuration for
+partitioning the harddisk and mounting local filesystems are stored in
+disk_config/. Information for software packages can be found in
+packages_config/. The scripts that are executed at the end of the
+installation are stored in subdirectory scripts/. Template for files
+that are copied onto the clients are located in files/. Subdirectories
+etc/ and kernel/ contain files for NIS and for BOOTPD and the scripts
+for the building of different kernels. 
+
+These are important FAI_ Vairables:
+
+XXXXX
+
+
+
+
+FAI_NFSSERVER_USR	Where the clients are going to mount the /usr 
+			from. Not required.
+
+read_config is used two times. This is a feature, not a bug. It can be
+used, when you will not use a BOOTP server.
+
+
+/boot/fai/$HOSTNAME must always be a link to an installimage !
+
+
+kernelimage	    if it's not pointing to a debfile, it's the
+		    version for the package kernel-image-*
+
+
+Start with a minimal list of packages to install.

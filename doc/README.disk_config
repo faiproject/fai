@@ -1,0 +1,121 @@
+Documentation for hard disk configuration
+
+The script setup_harddisks.pl partitions and formats the local disks. 
+It uses all configuration files in /fai/disk_config/, which are also
+defined as classes. Lines beginning with # are comments.
+The following example is a configuration for the first IDE disk "hda"
+and for the second SCSI disk "sdb":
+
+# <Type> <mount point> <Size in mb> [mount options]            [;extra options]
+
+disk_config hda
+
+primary   /           200          defaults,errors=remount-ro 
+logical   /home       100-300
+logical   /scratch1   10-          defaults,nosuid             ; -i 15000 -m 0
+
+
+disk_config sdb
+
+primary   /tmp        300-500      rw                          ;
+primary   /backup     preserve2    rw
+logical   swap        50-100
+logical   /scratch2   100-300      rw                          ;-m 30
+logical   -           preserve7
+logical   /var        100                                      ;
+logical   /var/tmp    preserve9                                ;format
+primary   /tmp/mytmp  -300
+
+
+Every disk configuration starts with the command "disk_config"
+followed by the Linux device name without "/dev/". After this command
+for each partition a line containing the type, mount point and size is
+added. Mount options and additional parameters for mke2fs -- separated
+from the mount options by a semicolon -- can be added.
+
+
+Type:
+There are two types of partitions: primary and logical. Primary
+partitions are bootable, but there is a maximum of four primary partitions on
+each disk. The Linux root filesystem must be of this type. 
+
+
+All other partitions are called logical. Because logical partitions
+are gathered internally in one big primary partition, only three
+primary partitions can be used, if logical partitions are defined. 
+Normally only one primary partition for the root file system is
+created and all others are logical, like hda in the example above.
+
+Mount point: 
+The mount point is the full path (beginning with a slash) for the
+filesystem. The value "swap" defines a Linux swap partition. Both types
+will be automatically added to /etc/fstab.  A dash "-" indicates, that
+the partition will not be mounted and can be used for other types of
+filesystems (VAT, UFS, MINIX, ...)
+
+Size: 
+This is the size of the partition in megabytes. This value is rounded
+up to fit to a cylinder number. There are several forms to define the
+size:
+
+	"200" means about 200MB, no more no less
+	"100-300" sets a 100MB minimum and a 300MB maximum
+	"10-" sets a minimum of 10MB and a maximum of the disk size
+	"-300" sets a minimum of 1MB and a 300MB maximum
+
+By default, a new filesystem (currently of type ext2 or swap) will be
+created, and all data on the partition is lost.  The meaning of
+"preserve<no>" will be described later.
+
+Calculating the partition size:
+If an interval is defined for several partition sizes, the script
+maximizes the values by preserving the ratio between them.
+
+
+Mount options:
+The mount options will be copied to /etc/fstab. An empty field sets the
+option to "defaults" (see mount(8)).
+
+
+Extra options:
+The last field is a space separated extra options list. Following
+options are known:
+
+     -i <bytes>   : Bytes per inode
+                    (only ext2 filesystem)
+     -m <blocks>  : Reserved blocks percentage for superuser
+                    (only ext2 filesystem)
+     -c		  : Check for bad blocks
+     format       : Always format this partition even if preserve
+
+The order of the extra options is not relevant. For more information
+see mke2fs(8).
+
+
+Preserving partitions:
+
+It is possible to preserve the size of a partition or additionally to
+preserve the existing data on this partition. To preserve only the
+partition size, the number of the partition must be unchanged and the
+size must be specified as "preserve<no>". The number <no> is the
+device number (used by /dev/hda*, or see output of "df") of the
+partition. Primary partitions are numbered from one to four, the
+numbers for logical partitions begin at five.
+
+In this example, the partitions numbers  (= device number) are also
+shown for disk sdb:
+
+primary   /tmp        300-500     #  1
+primary   /backup     preserve2   #  2
+logical   swap        50-100      # (3)   5
+logical   /scratch2   100-300     # (3)   6
+logical   -           preserve7   # (3)   7
+logical   /var        100         # (3)   8
+logical   /var/tmp    preserve9   # (3)   9
+primary   /tmp/mytmp  -300        #  4
+
+The first two partitions are of type primary, so they get the numbers
+1 and 2. The logical partitions start at 5 and the last gets number
+8. All logical partitions define the primary partition 3, but this
+number is not used. So, if you want to preserve /dev/hda7 you have to
+insert a minimum of two logical partitions before it.

@@ -1,0 +1,67 @@
+#! /usr/bin/cfengine
+##############################################################
+#
+# cf.boot - for informatik.uni-koeln.de
+#
+#################################################################
+
+control: 
+
+   OutputPrefix = ("${cf_prefix}")
+
+   actionsequence  = ( 
+		     editfiles
+		     tidy
+		     shellcommands
+		     )
+
+tidy:
+   any::
+	${target}/sbin  pat=unconfigured.sh age=0
+
+editfiles:
+   any::
+#	{ ${target}/etc/modutils/switch_off
+#	  AutoCreate
+#	  AppendIfNoSuchLine "alias char-major-4 off"
+#	}
+
+	{ ${target}/etc/modules
+	  AutoCreate
+	  AppendIfNoSuchLine "auto"
+	}
+
+   MBR::
+	{ ${target}/etc/lilo.conf
+	  AutoCreate
+	  EmptyEntireFilePlease
+	  Append	'boot=${BOOT_DEVICE}'
+	  Append	'root=${ROOT_PARTITION}'
+	  Append	'install=/boot/boot.b'
+	  Append	'map=/boot/map'
+	  Append	'vga=normal'
+	  Append	'delay=1'
+	  Append	'#'
+	  Append	'image=/vmlinuz'
+	  Append	'label=linux'
+	  Append	'${liloappend}'
+	}
+
+   !MBR::
+	{ ${target}/etc/lilo.conf
+	  AutoCreate
+	  EmptyEntireFilePlease
+	  Append	'boot=${ROOT_PARTITION}'
+	  Append	'root=${ROOT_PARTITION}'
+	  Append	'install=/boot/boot.b'
+	  Append	'map=/boot/map'
+	  Append	'vga=normal'
+	  Append	'delay=1'
+	  Append	'#'
+	  Append	'image=/vmlinuz'
+	  Append	'label=linux'
+	}
+
+
+shellcommands:
+	"${target}/sbin/lilo -r ${target}"

@@ -1,0 +1,122 @@
+This file contains visible changes to the users.
+These are the new things for FAI:
+
+The directory layout of FAI has changed since fai 1.0.1 !
+--------------------------------------------------
+fai-1.1beta2: june 20, 2000
+
+- script faireboot for easy rebooting
+- package_config can now preload a file before installing a package
+  (usefull for realplayer, fai,..)
+- install_packages called in different ways depending on FAI_FLAGS
+  (verbose,debug) for better debugging
+- a "mini howto" on the creation of a FAI Boot Floppy doc/fai-boot-floppy.txt
+- S24 echoes NONIS if no nisdomain is defined
+- allways call the new lilo ${target}/sbin/lilo
+- apt-get upgrade before installation of packages
+- define_classes is called when FAI_ACTION is sysinfo
+- two configuration examples: faiserver and faiclient01
+- Class renamed: MAINTAINER -> DEBIAN_DEVEL
+- start-stop-daemon is now faked in a better way
+- fai.pl renamed to Fai.pm, new location
+- use make-fai-nfsroot if you do not want to mount /usr from a server (default)
+- some tests which nfs server you are using; only the user space
+  nfs-server is supported until now
+- testsize (Fai.pm) tests if lower < size <= upper
+- blocksize of harddisk will now be determined in Fai.pm (not fixed to 512 bytes)
+--------------------------------------------------
+fai-1.1beta1:
+
+- examples that are not used are now put into the subdirectory example
+- metapackages are used for software selection (package names task-*)
+- now using lprng instead of lpd (lpd always started daemon during installation)
+- class REBOOT removed. reboot can now be set via FAI_FLAGS (T172) or
+  in class/S*.source
+- base2_X.tgz can now be retrieved via ftp and http using wget
+- NO second reboot is needed ! S99finish.sh is obsolete
+- using the tools from kernel-package, now it's easy to create and
+  install a kernel and his modules for a host. /fai/files/boot and
+  /fai/files/modules not used any more, because we have a Debian
+  package for the kernel
+- FAI now has serveral actions. If you only want some hardware
+  information, you can get it without installing anything. See bootp
+  tag $T171 or $FAI_ACTION (thanks to Thomas Gebhardt for this idea)
+- a lot of cfengine actions are now unnecessarily, because there's a
+  finer selection of software (eg. rstat-client, rstatd). Former these
+  services must be disabled in inetd.conf
+- resolv.conf is used during installation
+- the full location of /usr is now defined in fai.conf
+- new options for setup_harddisk (-X -m)
+- totally new rewritten install_packages.pl
+- call lilo from $target; it's version must match with files in /boot
+- if the correct amount of memory is not detected, you can define it
+  in $liloappend
+- a lot of software packages are gone, renamed, new or better one
+  available so files in package_config also had changed (eg. now lprng
+  instead of lpd)
+- timezone is now a variable, not fixed in cfengine
+- you can now load a different keytable (eg. german keyboard)
+--------------------------------------------------
+FAI 1.0.1: january 19, 2000
+
+- setup_harddispk.pl now calculates partition sizes more exactly, it
+  checks all filesystems before mounting them (setup_harddisk.pl)
+  It also mounts filesystems read-only if they should be
+  preserved. Ignore error messages (read-only filesystem) when
+  extracting base2_1.tgz. This is a feature, not a bug.
+  It can handle different output of old and new sfdisk executables.
+
+- the link name to the (tftp) image for booting from local disk is now
+  specified with $TFTPLINK; previously it was always a link to the
+  file clusterimage (rcS,class/S*.source)
+
+- if host if in class MBR, lilo will write the master boot record
+  (mbr) otherwise, mbr will be left intact and only the boot sector of
+  the root partition is written (scripts/BOOT)
+
+- class LAST is now always the last class (S99last.sh)
+
+- S99var.source now S91var.source; variable definition depending on
+  hosts should be defined after S91* (eg. S99kueppers.sh)
+
+- start-stop-daemon is disabled during installation (rcS)
+
+- rcS is now a bash script, and trap also starts a bash (formerly sh
+  script), the quit signal (ctrl-\) also calls trap
+
+- BOOTP tag T172 holds a space separated list of flags, that will be
+  set to 1 inside rcS (verbose, debug are now used)
+
+- installkernel now supports Adaptec AIC7xxx based SCSI controllers
+
+- Thomas Renard has done some work on FAI for Red Hat RPM Systems
+  http://www.netcologne.de/~nc-renardth/fai/
+
+- doc/links.html is a file, that contains all important links, so you
+  can easily click and jump to these pages
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+----------------------------------------------------------------------
+Configuration and Release Notes
+
+The file installkernel includes now the new 3c90x-1.0.0e network card
+driver from 3Com and should run with most types of hardware (even 386 XXXXX
+CPU's). FAI is currently tested with Debian 2.XXX (potato).
+
+The configuration was used and optimized for these computers
+(hostname: hardware equipment):
+
+faiserver, faiclient01:
+		dual Pentium II
+			IDE disk
+			3Com 3c905B network card
+			no CD-ROM
+
+kueppers:		K7 Athlon
+			IDE disk
+			Tekram SCSI adapter
+			SCSI CD-ROM
+			3Com 3c905C network card
+

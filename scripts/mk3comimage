@@ -1,0 +1,73 @@
+#!/bin/sh
+
+# TODO: create a bootable floppy
+# syslinux: root=ip-server:/usr/lib/fai/nfsroot
+# -h => help
+
+# $Id$
+#*********************************************************************
+#
+# mk3comimage -- create tftp boot image for 3Com network card
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (c) 2000 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+
+# This scripts builds a bootable tftp boot image for 3Com network cards
+# tested with the MBA v3.10 (or later) eproms 
+
+mnt=/tmp/mountpoint.$$
+dosdisk=/tmp/dosdisk.$$
+
+if [ ! "$UID" ]; then
+ echo "You must be root!"
+ exit 9
+fi
+
+# where to find emptydosdisk and imagegen_firstblock
+    base=/usr/lib/fai/kernel/ # default
+while getopts r: opt ; do
+        case "$opt" in
+        r) base="$OPTARG" ; shift;shift ;;
+        *) usage; exit 1 ;;
+        esac
+done
+
+bzimage=$1
+shift
+tftpimage=$1
+shift
+rootdevice=$1
+shift
+parameter=$*
+
+if [ -f $tftpimage ]; then
+    echo $tftpimage already exists.
+    exit 2
+fi
+
+trap 'cd /;umount $mnt ; rm -rf $dosdisk $bootdev $mnt' EXIT HUP INT QUIT
+
+mkdir $mnt
+gzip -dc $base/emptydosdisk.gz > $dosdisk
+mount $dosdisk $mnt -t msdos -o loop
+cp $bzimage $mnt/linux
+cat <<EOF >$mnt/syslinux.cfg
+TIMEOUT 20
+PROMPT 0
+DEFAULT linux
+EOF
+
+app="APPEND root=$rootdevice"
+[ -n "$parameter" ] && app="$app $parameter" 
+echo $app >> $mnt/syslinux.cfg
+
+#[ -n "$parameter" ] && echo "APPEND \"$parameter\"" >> $mnt/syslinux.cfg
+syslinux $dosdisk
+cp $base/imagegen_firstblock $tftpimage
+dd if=$dosdisk of=$tftpimage bs=1024 seek=1
+chmod a=r $tftpimage
+
+exit 0

@@ -1,0 +1,16 @@
+#! /bin/sh
+
+# reboot fai correctly
+
+FAI_ROOT=/tmp/target
+
+cd /
+umount $FAI_ROOT/proc
+if [ -L $FAI_ROOT/sbin/start-stop-daemon ];then
+    rm -f $FAI_ROOT/sbin/start-stop-daemon
+    mv $FAI_ROOT/sbin/start-stop-daemon.orig $FAI_ROOT/sbin/start-stop-daemon
+fi
+umount -ar
+echo sleeping 3 seconds before rebooting
+sleep 3
+exec reboot -dfi

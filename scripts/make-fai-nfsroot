@@ -1,0 +1,115 @@
+#! /bin/sh
+
+# $Id$
+#*********************************************************************
+#
+# make-fai-nfsroot -- create nfsroot directory and add additional packages
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2000 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+# Thomas Lange, Universitaet Koeln, 6/2000
+
+# configuration of some packages will need some interactive input
+# lilo, netbase,... will not be set up correctly, but that doesn't matter
+
+# apt-get must been working on your server (sources.list must be OK)
+
+dversion=2_2
+packages="file rdate cfengine bootpc wget rsh-client less dump"
+
+basetgz=base${dversion}.tgz
+fai=/usr/lib/fai
+root=$fai/nfsroot
+aptconf=$fai/etc/apt.conf.nfsroot
+DEBIAN_FRONTEND=Noninteractive
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+recreate_nfsroot() {
+
+    echo removing old nfsroot $root
+    rm -rf $root/*
+    cd $root
+    echo unpacking $basetgz
+    tar zxpf /tmp/$basetgz
+    mkdir -p $root/fai/fai_config
+    cp -p /usr/lib/fai/sbin/* /usr/lib/fai/nfsroot/sbin
+    cp -p /usr/lib/perl5/Debian/Fai.pm $root/usr/lib/perl5/Debian/
+
+    rm -rf etc/mtab etc/apt/sources.list var/run
+    mv $root/etc/init.d/rcS $root/etc/init.d/rcS.orig
+    ln -s /proc/mounts $root/etc/mtab
+    ln -s /tmp/var/run $root/var/run 
+    ln -s /tmp/etc/resolv.conf $root/etc/resolv.conf
+    ln -s /sbin/rcS_fai $root/etc/init.d/rcS
+    touch etc/fstab  # dump needs this file
+
+    cat >$root/etc/rc2.d/S01fai_abort.sh <<EOF
+    #!/bin/sh
+    echo FAI: installation aborted.
+    echo reboot with: reboot -dfi
+    echo or after a logout
+    sh
+    cd /
+    umount -ar
+    reboot -dfi
+EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+update_nfsroot() {
+
+    echo upgrading $root
+    apt-get -c $aptconf update
+    apt-get -c $aptconf check
+    chroot $root mount -n -t proc proc /proc
+    apt-get -c $aptconf -y upgrade </dev/null
+    apt-get -c $aptconf -y --fix-missing install $packages </dev/null
+    chroot $root umount /proc
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# create installation filesystem that will be
+# mounted readonly by all clients during installation process
+# get base2_2.tgz via wget from ftp.debian.org (default no)
+
+if [ ! -f /tmp/$basetgz ]; then
+    echo "Please put the Debian $basetgz file into /tmp before creating nfsroot for fai."
+    exit 1
+fi
+
+if [ -d $root/fai ]; then
+    echo $root/fai already exists
+    echo "Do you want to delete and recreate it ?:"
+    read answer
+    case "$answer" in
+	[yY])
+	    recreate_nfsroot
+	    ;;
+    esac
+else
+    recreate_nfsroot
+fi
+
+update_nfsroot
+
+exit 0
