@@ -183,11 +183,11 @@ First, get the newest version of FAI and install it using the
 <prgn>dpkg</prgn> command:
 
 <example>
-kueppers[~]# dpkg -i fai_1.4.0_i386.deb
+kueppers[~]# dpkg -i fai_1.4.1_i386.deb
 Selecting previously deselected package fai.
 (Reading database ... 39564 files and directories currently installed.)
-Unpacking fai (from fai_1.4.0_i386.deb) ...
-Setting up fai (1.4.0) ...
+Unpacking fai (from fai_1.4.1_i386.deb) ...
+Setting up fai (1.4.1) ...
 To set up FAI edit /etc/fai.conf and call fai-setup
 </example>
 <p>
@@ -227,12 +227,29 @@ name="sources.list" section="5">.  </p> </item>
 	      <var>$MNTPOINT</var>. It's not needed if you use FTP or
 	      HTTP access.</p> </item>
 
+	    <tag><var>KERNELPACKAGE</var></tag>
+	    <item>
+	      <p> You must specify a kernel package, which includes
+	      the default kernel used during installation process. The
+	      package <package>fai-kernels</package> contains the
+	      default kernels for BOOTP and DHCP support.</item>
 	  </taglist>
 
 FAI uses <prgn>apt-get</prgn> to create the nfsroot filesystem which
-needs about 90MB of free disk space. Additional software packages for
+needs about &nfsrootsize of free disk space. Additional software packages for
 nfsroot are defined by the variable <var>NFSROOT_PACKAGES</var>.
 <p>
+
+You should also install the package <package>fai-kernels</package>,
+which will automaticlly install when you use <prgn>apt-get</prgn> for
+package isntallation.
+<example>
+kueppers[~]# dpkg -i ~lange/fai-kernels_1.0_i386.deb 
+Selecting previously deselected package fai-kernels.
+(Reading database ... 40562 files and directories currently installed.)
+Unpacking fai-kernels (from .../lange/fai-kernels_1.0_i386.deb) ...
+Setting up fai-kernels (1.0) ...
+</example>
 
 Before setting up FAI, you should get the program <prgn>imggen</prgn>,
 if you like to boot from 3 network card from 3Com. This executable
@@ -240,7 +257,6 @@ converts netboot images, so they can be booted by 3Com cards. You can
 get this compiled program from the download page &faidownload;. Put
 that executable in your path (e.g. <file>/usr/local/bin</file>). After
 editing &fc call <prgn>fai-setup</prgn>.
-
 
 <example>
 kueppers[/home/lange]# fai-setup 
@@ -253,7 +269,7 @@ Creating FAI nfsroot can take a long time
 Unpacking /tmp/base2_2.tgz
 Upgrading /usr/lib/fai/nfsroot
 Adding additional packages to /usr/lib/fai/nfsroot:
-ssh perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 lvm strace expect5.31
+ssh perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 lvm strace expect5.31 hdparm
 grep: /etc/ssh/sshd_config: No such file or directory
 grep: /etc/ssh/sshd_config: No such file or directory
 Not starting OpenBSD Secure Shell server (/etc/ssh/NOSERVER)
@@ -275,7 +291,7 @@ MBA support has been succesfully added
 You have no FAI configuration. Copy FAI template files with:
 cp -pR /usr/share/doc/fai/templates/* /usr/local/share/fai
 Then change the configuration files to meet your local needs.
-FAI set up finished.
+FAI setup finished.
 </example>
 
 The installation process adds lines to <file>/etc/exports</file> to
@@ -480,7 +496,7 @@ IP-Config: Complete:
 .
 .
 ------------------------------------------------------------
-FAI 1.4.0, november 23, 2000
+FAI 1.4.1, december 04, 2000
 Fully Automatic Installation for Debian GNU/Linux
 ------------------------------------------------------------
 .
@@ -593,7 +609,7 @@ clients to <file>/fai</file>. Following subdirectories are available:
 
 <taglist>
 	  <tag><tt>fai_config/</tt></tag> <item> <p>global parameters</p> </item>
-	  <tag><tt>class/</tt></tag> <item> <p>scripts and file to
+	  <tag><tt>class/</tt></tag> <item> <p>scripts and files to
 	  load kernel modules and define classes</p> </item>
 	  <tag><tt>disk_config/</tt></tag> <item> <p>configuration
 	  files for disk partitioning and file system creation</p> </item>
@@ -649,7 +665,8 @@ A CVS repository for the development version of FAI is available (the password i
 <example>
 > CVSROOT=":pserver:anonymous@poolserver.informatik.uni-koeln.de:/home/fai/cvs"
 > cvs login
-> cvs co fai
+> cvs co -P fai
+> cvs co -P fai-kernels
 </example>
 
 <taglist>
