@@ -95,7 +95,7 @@ install_base() {
     # mount debian directory; get baseX_Y.tgz and unpack it
     if [ "$FAI_PACKAGEDIR" ]; then
 	mkdir $FAI_ROOT/mnt
-	mount -o ro $FAI_PACKAGEDIR $FAI_ROOT/mnt || die "Can't mount $FAI_PACKAGEDIR"
+	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $FAI_ROOT/mnt || die "Can't mount $FAI_PACKAGEDIR"
     fi
 
     # use wget if FAI_BASETGZ is an URL
@@ -217,7 +217,7 @@ fai_init() {
     ifup lo
     mount -n -t proc proc /proc
     mount -n -t devpts devpts /dev/pts
-    mount -n -o remount,rw /dev/root /
+    mount -n -o remount,rw,rsize=8192 /dev/root /
     cat /proc/kmsg >/dev/tty4 &
     create_ramdisk
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
@@ -247,7 +247,7 @@ fai_setup() {
     echo -n "Kernel parameters:"; cat /proc/cmdline
 
     if [ "$FAI_LOCATION" ]; then
-	mount -o ro $FAI_LOCATION /fai &&
+	mount -o ro,rsize=8192 $FAI_LOCATION /fai &&
 	    echo "/fai mounted from $FAI_LOCATION"
     fi
 
@@ -264,11 +264,6 @@ fai_setup() {
     devnull=/dev/null
     [ "$debug" ] && devnull=/dev/console;
 
-    # after mounting /usr, we have everything needed # not required any more
-    if [ "$FAI_NFSSERVER_USR" ]; then
-	mount -o ro -n ${FAI_NFSSERVER_USR} /usr &&
-	    echo "/usr mounted from ${FAI_NFSSERVER_USR}"
-    fi
 #    not yet used
 #    if [ "$FAI_EXTRA_MOUNT" ]; then
 #	mount -o ro -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
