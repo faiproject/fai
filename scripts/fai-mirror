@@ -25,15 +25,12 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.3.3, 5-apr-2005"
+version="Version 1.3.4, 5-apr-2005"
 
 # variables: NFSROOT, FAI_CONFIGDIR
 # NFSROOT_PACKAGES, packages from make-fai-nfsroot.conf
 
-# TODO:
-# - add support for package that will be removed like: lilo-
-#   currently you must remove those package from you package_config files
-
+debdist=sarge
 set -a 
 . /etc/fai/fai.conf
 . /etc/fai/make-fai-nfsroot.conf
@@ -85,6 +82,7 @@ get_addpackages() {
 
     local f p pkg pkglist
 
+    [ -z "$addpackages" ] && return
     echo -n "Adding packages from variable \$addpackages:"
     for f in $(echo $FAI_CONFIGDIR/class/*.var); do
 	pkg=$(egrep ^addpackages= $f | sed 's/addpackages=//'|sed 's/"//g'| perl -pe 's/\$[\w_-]+//g')
@@ -274,7 +272,7 @@ echo "Calling apt-move"
 cat > $aptmovefile <<EOF   # generate apt-move.conf
 APTSITES=*
 LOCALDIR=$mirrordir
-DIST=sarge
+DIST=$debdist
 FILECACHE=$archivedir
 LISTSTATE=$aptcache/var/lib/apt/lists
 DELETE=no
