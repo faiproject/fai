@@ -19,7 +19,7 @@ FVERSION_FILES = $(LIBDIR)/sbin/rcS_fai
 kernel/bzImage: kernel/config
 	mv $(KERNEL)/.config $(KERNEL)/.config.pre_fai
 	cp kernel/config $(KERNEL)/.config
-	cd $(KERNEL) && make oldconfig clean dep bzImage > /tmp/make.log
+	cd $(KERNEL) && make oldconfig clean dep bzImage 2> /tmp/make.log
 	cp $(KERNEL)/arch/$(DEB_HOST_ARCH)/boot/bzImage kernel/bzImage
 	cp $(KERNEL)/System.map kernel/System.map
 	mv $(KERNEL)/.config.pre_fai $(KERNEL)/.config
