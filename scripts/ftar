@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.5.2, 29-jan-2003"
+version="Version 1.5.3, 24-dec-2004"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -113,7 +113,15 @@ fpath=$source/$dir
 [ -d $fpath ] || die "No directory $fpath"
 
 [ $deletefiles -eq 1 ] && cd $target/$dir && rm -f  .* * 2>/dev/null
-[ $removedir -eq 1 ]   && cd $target/$dir && rm -rf .* * 2>/dev/null
+
+if [ $removedir -eq 1 ]; then
+    cd $target/$dir
+    if [ $PWD = "/" ]; then
+	echo "ftar WARNING: Will not do recursive removal of directory /"
+    else
+	rm -rf .* * 2>/dev/null
+    fi
+fi
 
 for c in $revclasses ; do
     # what if a directory exists which is equal to the hostname or a classname?
