@@ -218,7 +218,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Can be used as a rescue system</p> </item>
 	    <item> <p>Tested on SUN SPARC hardware</p> </item>
 	    <item> <p>Diskless clients support</p> </item>
-	    <item> <p>Easyly add your own functions via hooks</p> </item>
+	    <item> <p>Easily add your own functions via hooks</p> </item>
 
 </list>
 
@@ -886,8 +886,9 @@ has booted on the install clients.
 	    <item> <p>Reboot the new installed system</p> </item>
 	  </enumlist>
 
-You can also define additional tasks to perform before a certain step
-is executed. The additional task are called hooks and are explained in
+You can also define additional programs, that will be run on particular
+occasions. They are called <tt>hooks</tt>. So it's very easy to
+customize the whole installation process. Hooks are explained in
 detail in <ref id="hooks">.
 
 <p>
@@ -1554,22 +1555,113 @@ This will enable the first IDE hard disk as first boot device. It the
 boot sector of the hard disk is invalid, the computer will use the
 network interface as second boot device.
 
-<sect1 id=hooks>Hooks<p>
+<sect id=hooks>Hooks<p>
 
-The directory <file>/usr/local/share/fai/hooks/</file> can contain
-file, which are called hooks. The file name of the hooks are
+Hooks let you specify functions or programs, that are run at certain
+steps of the installation process. FAI provides many locations, where
+hooks are called. As you might expect, classes are also used when
+calling hooks. In Emacs, every hook has to be defined and created if
+it should be executed. In FAI, a hook is called if a certain class is
+defined. So you only have to create the hook with the name of the
+desired class and it will be used. Hooks are executed for every
+defined class. If <tt>debug</tt> is included in <var>$FAI_FLAG</var>
+the option <tt>-d</tt> is passed to all hooks.
+<p>
+The directory <file>/usr/local/share/fai/hooks/</file> contains the
+hooks. The file name of a hook consists of a hook prefix and a class
+name, chained by a dot. The prefix describes the time when the hook is
+called, if the class if defined for the install client. For example,
+the hook <file>partition.DISKLESS</file> is called for every client
+belonging to the class <tt>DISKLESS</tt> before the local disks would
+be partitioned. Since it should become a diskless client, this hook
+can mount remote filesystems via NFS and create a <tt>/tmp/fstab</tt>.
+After that, the installation process will not try to partition and
+format a local hard disk, because a file <file>/tmp/fstab</file>
+already exists.
+<p>
+A hook of the form <tt>hookprefix.classname</tt>  can't define
+variables for the installation script, because it's a subprocess. But
+you can use any binary executable or any script you wrote. Hook which
+has a suffix <tt>.sh</tt> (eg. <file>partition.DEFAULT.sh</file>) must
+be bourne shell scripts and will be sourced. So it's possible to
+redefine variables for the installation script.
+<p>
+This is the complete list of hooks and when they will be called.
 
-<tt>hookprefix.classname</tt>
+<taglist>
+      <tag>first</tag> <item><p>After some basic initialization, all
+      hooks with prefix <tt>first</tt> are called. Since the configuration directory
+      <file>/fai</file> is not yet mount on the install client, these
+      hooks are located in <file>$nfsroot/fai/hooks</file> on the server. </p> </item>
 
-The prefix describes the time, when the hook is called. For example
-the hook <tt>defclasses</tt> is called before the main FAI script
-defines the classes. Before the classes are defined, the routine
-<tt>call_hook</tt> is called which looks for every class
+      <tag>setup</tag> <item><p>These hooks are immediately called
+      after the configuration directory is mounted.  </p> </item>
 
- 
-During the installation process FAI calls a hook
+<tag>action</tag> <item><p>Hooks called before the variable
+<var>FAI_ACTION</var> is evaluated.</p> </item>
 
-They are executed for every defined class.
+      <tag>sysinfo</tag> <item><p>Called when no installation is
+      performed but the action is <tt>sysinfo</tt>.</p>
+      </item>
+
+	    <tag>backup</tag> <item><p>Called when action is
+	    <tt>backup</tt>. Here you can define your own backup taks.</p> </item>
+
+      <tag>devclass</tag> <item><p>Called before defining classes.</p> </item>
+
+      <tag>defvar</tag> <item><p>Called before defining variables.</p> </item>
+      <tag>partition</tag> <item><p>Called before partitioning the
+      local hard disks.</p> </item>
+
+      <tag>mountdiks</tag> <item><p>Called before the local disks are
+      mounted to <var>$FAI_ROOT</var>.</p> </item>
+
+    <tag>extrbase</tag> <item><p>Called before the base archive
+    <file>base.tgz</file> in unpacked.</p> </item>
+
+      <tag>mirror</tag> <item><p>Called before the Debian mirror would
+      be mounted.</p> </item>
+
+      <tag>updatebase</tag> <item><p>Called before the base system is upgraded.</p> </item>
+
+      <tag>instsoft</tag> <item><p>Called before the software packages
+      are installed.</p> </item>
+
+      <tag>configure</tag> <item><p>Called before the local
+      customisation of the new installed system is performed.</p> </item>
+
+      <tag>chboot</tag> <item><p>Called before the boot devices should
+      be changed.</p> </item>
+
+      <tag>savelog</tag> <item><p>Called before are log files are save
+      to local disk an to the install server.</p> </item>
+
+      <tag>faiend</tag> <item><p>Called when the installation has
+      finished, before the automatic reboot is performed.</p> </item>
+
+ </taglist>
+
+Some examples what hooks could be used for:
+
+<list>
+<item> <p>Use <prgn>ssh</prgn> in the very beginning to verify that
+you mounted the configuration from the correct server.</p></item>
+
+<item> <p>Pop up a little menu and ask the user, which kind of installation should be performed (eg. CAD
+workstation, scientific workstation, workgroup server, Gnome desktop...). Keep in
+mind that this won't lead to a fully automatic installation.
+</p></item>
+
+<item> <p>Do not mount the configuration, instead get a compressed archive
+and extract it into a ram disk, then redefine <var>$FAI_LOCATION</var>.</p></item>
+
+<item> <p>Load kernel modules before classes are defined
+in <file>/fai/class</file>. </p></item>
+
+<item> <p>Send an email to the administrator, if the installation is finished.</p></item>
+
+<item> <p></p></item>
+</list>
 
 <sect id=errors>Looking for errors<p>
 If the installation process stops or even it finishes, parse all log files for errors using:
