@@ -664,8 +664,17 @@ task_sysinfo() {
     # show some system information and save it on the server
     local disk
     lspci
+    lsdev
     echo "Ethernet cards found: $netdevices"
-    
+
+    [ -x /sbin/discover ] && discover ethernet cdrom scsi sound video
+    [ -x /sbin/discover ] && discover --module ethernet cdrom scsi sound video
+    if [ -x /usr/sbin/detect ]; then
+       cd /tmp
+       detect
+       cat /tmp/report.txt
+    fi
+
     [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
     cat /proc/partitions
     disk_info
