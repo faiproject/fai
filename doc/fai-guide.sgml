@@ -10,8 +10,8 @@
 <!entity faiver "2.5">
 <!entity faiverdate "6 aug 2003">
 
-<!entity version "2.3">
-<!entity date    "6 aug 2003">
+<!entity version "2.3.1">
+<!entity date    "7 oct 2003">
 ]>
 
 <debiandoc>
@@ -2564,6 +2564,83 @@ jumpstart.
 <p>
 The file format of the configuration files in <file>disk_config</file> and
 <file>package_config</file> are different that those for Linux.
+
+<chapt id=advanced>Advanced FAI<p>
+
+This chapter tells someabout how FAI can be used in bigger environments, this
+means both many administrators and many clients.
+<p>
+<sect id=generalscm>Using revision control for FAI configuration<p>
+If there is a team of administrators involved, a revision control/sourcecode
+management system like CVS can make coordination easier: many people can 
+work on the configuration files simultaneously, while the system helps
+avoiding conflicts (and if they occur it helps resolving them). Another
+advantage lies in <em>branching</em>: while the administrator works out a 
+new configuration and tries it out using a test system, other clients aren't
+disturbed in any way, because they use another <em>branch</em> of the
+configuration.
+<p>
+<sect1 id=cvs>Setting up FAI for CVS based configuration<p>
+First you should setup a CVS repository and within it a module to store the
+FAI configuration files. In this example a cvs pserver will be used for
+<em>read-only</em> access to the configuration files by the clients, while
+ssh is used for the developers access (rw)<footnote>CVS is quite flexible 
+when it comes to different methods of access, so I recommend you to read 
+further documentation to find the optimal solution in your
+environment</footnote>. <p>
+
+The relevant variables in &fc; for CVS are:
+<taglist>
+  <tag><var>FAI_LOCATION</var></tag>
+    <item><p>
+    This variable <strong>must not</strong> be set if you want to use CVS.
+    </p></item>
+  <tag><var>FAI_CVSROOT</var></tag>
+    <item><p>
+    contains the cvsroot where the configuration is stored.
+    <example>
+    FAI_CVSROOT=":pserver:client@cvs.local.net:/var/lib/cvs"
+    </example>
+    </p></item>
+  <tag><var>FAI_CVSMODULE</var></tag>
+    <item><p>
+      contains the module in the cvsroot where the configuration is stored.
+      <example>
+      FAI_CVSMODULE="config"
+      </example>
+    </p></item>
+  <tag><var>FAI_CVSTAG</var></tag>
+    <item><p>
+      contains the <em>tag</em> of the cvs branch to
+      be checked out by the client<footnote>This is optional: if not set,
+      <em>HEAD</em> will be used, which corresponds to the most actual
+      revision the configuration</footnote>.
+      <example>
+      FAI_CVSTAG="STABLE"
+      </example>
+    </p></item>
+<!--  <tag><var>FAI</var></tag>
+    <item><p>
+      Before checking out the configuration, the code copies the contents of
+      this directory after a sanity check (i
+      to <file>/tmp/$FAI_CVSMODULE</file>, then enters the
+      directory and does a <example>cvs update</example> instead of a
+      <example>cvs checkout</example>. This behaviour is used in connection
+      with system updates to record the changes within configuration files.
+    </p></item>
+    -->
+</taglist>
+
+<p> If you use a cvs pserver for storing configuration files, the file
+<file>/root/.cvspass</file> has to exist and be valid in the nfsroot. CVS
+uses this file to get the password for the pserver. You can create it most
+easiely if you try <example>cvs -d$FAI_CVSROOT login</example> and then copy
+the generated line from your <file>~/.cvspass</file> into
+<file>/root/.cvspass</file> in the nfsroot.</p>
+</sect1>
+</sect>
+</chapt>
+
 
 <chapt id=hints>Various hints<p>
 
