@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.3.1, 29-jan-2004";
+$version="version 1.4, 30-june-2004";
 
 use Socket;
 use Net::hostent;
@@ -48,6 +48,11 @@ sub host2hex {
   if ($host =~ /^\d+\.\d+\.\d+\.\d+$/) {
     # hostname is already an IP address
     return ip2hex($host);
+  }
+
+  if ($host =~ /^default/) {
+    # hostname is already an IP address
+    return ('no IP','default');
   }
 
   my $h = gethost($host);
@@ -80,9 +85,13 @@ sub lsdir {
     @n = $_ =~ m/[0-9A-F][0-9A-F]/g;
     $ip = join ('.', map {$_ = hex $_} @n);
 
-    # ip to hostname
-    $iaddr = inet_aton($ip);
-    $host  = gethostbyaddr($iaddr, AF_INET)->name || 'currently unknown';
+    if ($hex =~ /^default/) {
+      $host = 'unknown IP';
+    } else {
+      # ip to hostname
+      $iaddr = inet_aton($ip);
+      $host  = gethostbyaddr($iaddr, AF_INET)->name || 'currently unknown';
+    }
 
     # read pxe config file for a host
     undef $kernelname;
@@ -95,6 +104,8 @@ sub lsdir {
 
     $opt_L or undef $append;
     printf "%-8s %-12s $kernelname $append\n",$hex,$host;
+    undef $append;
+    undef $kernelname;
   }
   exit;
 }
@@ -127,9 +138,11 @@ sub mkpxecfg {
 default fai-generated
 
 label fai-generated
-kernel $kernel
-append $bootprot root=$rootfs $opt_k $flags
+$kernel
 EOM
+
+  $append="append $bootprot root=$rootfs $opt_k $flags\n";
+  print FILE $append if $rootfs;
   close FILE;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -144,7 +157,7 @@ sub disable {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-getopts('Bd:hnvlLiIp:f:Frk:S');
+getopts('Bd:hnvlLiIp:f:Frk:So');
 $opt_h and usage;
 defined @ARGV or usage;
 
@@ -179,13 +192,20 @@ if ($opt_I) {
 
 if ($opt_i) {
   # create config so host will boot the install kernel
-  $kernelname = 'vmlinuz-install';
+  $kernelname = 'kernel vmlinuz-install';
   $rootfs     = '/dev/nfs';
   $bootprot   = "ip=dhcp devfs=nomount $action";
+} elsif ($opt_o) {
+  $kernelname = 'localboot 0';
+  $rootfs   = '';
+  $bootprot = '';
+  $flags    = '';
 } else {
   $kernelname = shift;
+  $kernelname = "kernel $kernelname";
   $rootfs = shift;
 }
+
 $opt_F and $opt_f="verbose,sshd,createvt,syslogd";
 $opt_B and $opt_f="verbose,sshd,syslogd,reboot";
 $opt_f and $flags="FAI_FLAGS=$opt_f";
