@@ -123,6 +123,7 @@ fstab_mount() {
 save_log_local() {
 
     # save log files on local disk
+    local logdir=/var/log/fai
     find /tmp -maxdepth 1 -size 0 | xargs -r rm
     mkdir -p $FAI_ROOT/$logdir/$HOSTNAME/$FAI_ACTION
     cp -p /tmp/* $FAI_ROOT/$logdir/$HOSTNAME/$FAI_ACTION 2> $devnull
@@ -133,8 +134,8 @@ save_log_remote() {
 
     # save log files to $SERVER
     [ "$LOGUSER" ] || return
+    local logdir=$HOSTNAME/$FAI_ACTION
     find /tmp -maxdepth 1 -size 0 | xargs -r rm
-    logdir=$HOSTNAME/$FAI_ACTION
     $FAI_REMOTESH -l $LOGUSER $SERVER "rm -f $logdir/* ; \
 	test -d $logdir || mkdir -p $logdir" 2> $devnull
     $FAI_REMOTECP -p /tmp/* $LOGUSER@$SERVER:$logdir 2> $devnull
