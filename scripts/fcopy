@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.5.1, 09-Apr-2001";
+my $version = "Version 1.5.2, 18-Apr-2001";
 
 use File::Copy;
 use File::Compare;
@@ -66,6 +66,9 @@ sub copy_one {
   $destfile = "$target/$source";
   # do nothing if source and destination files are equal
   compare($sourcefile,$destfile) || return;
+
+  # if destination is a symlink and -l is given, complain about it
+  $opt_l && -l $destfile && ewarn("Destination $destfile is a symlink"),return;
 
   # create subdirectories, if they do not exist
   unless (-d $tpath) {
@@ -188,6 +191,7 @@ Usage: fcopy [OPTION] ... SOURCE ...
    -D                   Create debug output.
    -F file              Read list of sources from file.
    -h                   Show summary of options.
+   -l                   Do not copy if destination is a symbolic link.
    -m user,group,mode   Set user, group and mode for copied files.
    -r                   Copy recursivly.
    -s source_dir        Look for source files relative to source_dir.
@@ -219,7 +223,7 @@ sub read_files {
 
 $|=1;
 $error = 0;
-getopts('s:t:rm:vdDc:C:hF:');
+getopts('s:t:rm:vdDc:C:hF:l');
 $opt_h && usage;
 $opt_m && check_mopt();
 $verbose = $opt_v || $ENV{verbose} || 0;
