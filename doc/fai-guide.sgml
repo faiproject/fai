@@ -48,7 +48,6 @@ writing to the &fsf-addr;.
 <chapt id="intro">Introduction<p>
 The homepage of FAI is
 <httpsite>http://www.informatik.uni-koeln.de</httpsite><httppath>/fai</httppath>.
-
 There you will find any information about FAI, for e.g. the mailing
 list archive. The FAI package is available as a Debian package from
 &faidownload;. It's an official Debian package and is available from
@@ -219,6 +218,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Tested on SUN SPARC hardware</p> </item>
 	    <item> <p>Diskless client support</p> </item>
 	    <item> <p>Easily add your own functions via hooks</p> </item>
+	    <item> <p>Easily change the default behavior via hooks</p> </item>
 	    <item> <p>Lilo and grub support</p> </item>
 </list>
 
@@ -474,6 +474,14 @@ install clients. This is described in section <ref id="bootfloppy">.
 When you make changes to &fc; or want to install a new kernel to
 nfsroot, the nfsroot has to be rebuild by calling <prgn>make-fai-nfsroot</prgn>.
 
+<sect1 id=troublefaisetup> Troubleshooting set up
+The set up of FAI add the FAI account, exports file systems and calls
+<prgn>make-fai-nfsroot</prgn>. If you call make-fai-nfsroot
+X-v you will see more messages. When using a local Debian
+mirror it's important, that the install server can mounted this
+directory via NFS. Sometimes it has to mount it from itself.
+
+
 <chapt id="booting">Preparing booting <p> 
 
 Before booting for the first time, you have to choose which medium you
@@ -682,12 +690,6 @@ easier to use a daemon.
 </footnote>. Now it's time to boot all install clients again!
 
 
-
-
-
-
-
-
 FAI can perform several actions when the client is booting. This action
 is defined in the variable <var>FAI_ACTION</var>
 
@@ -697,6 +699,10 @@ client, indeed most time it should do this ;-). It's recommended to change this 
 on a per client base in the BOOTP configuration. Do not change it in
 the section <tt>.failocal</tt> in <file>/etc/bootptab</file>, which
 is a definition for all clients.
+
+<sect1 id=troublebootp>Troubleshooting BOOTP daemon<p>
+The BOOTP daemon can also be started in debug modus:
+<example># bootpd -d7</example>
 
 <sect id="bootdhcp">Configuration of the DHCP daemon <p>
 An example for <manref name="dhcp.conf" section="5"> is available in
@@ -1113,7 +1119,10 @@ to the configuration space and start an installation.
 > cp -a /usr/share/fai/templates/* /usr/local/share/fai
 </example>
 
-These files contain configuration for some example hosts.
+These files contain configuration for some example hosts. Thers a
+clsuter of workstation (<em>bigfoot, ant01, ant02,...</em>) and a beowulf
+cluster with a mster node called <em>nucleus</em> and computing nodes
+<em>atom01, atom02,...</em>.
 
 <taglist>  
    <tag>bigfoot</tag>  <item> <p>This is a server with much software. It
@@ -1123,6 +1132,14 @@ These files contain configuration for some example hosts.
    <file>/usr</file> and <file>/home</file> from bigfoot. Most of
    the disk space is spend for a scratch partition, which is exported
    to a netgroup of hosts.</p> </item>
+
+   <tag>nucleus</tag>  <item> <p>This beowulf master node is a server with much software. It
+   provides the home directory and all programs for its computing nodes. Also some
+   daemons are installed and activated by default.</p> </item>
+   <tag>atom01,...</tag>  <item> <p>These clients mount
+   <file>/usr/local</file> and <file>/home</file> from <em>nucleus</em>. Most of
+   the disk space is spend for a scratch partition, which is exported
+   to a netgroup of hosts.</p> </item>
 </taglist>
 Start looking at these examples and study them. Then change or add
 things to these examples. But don't forget to plan your own
@@ -1130,7 +1147,9 @@ installation !
 
 <sect id=s1> Set up FAI<p>
 
-This jobs is done by the tasks: <em>confdir</em> and <em>setup</em>.<p>
+After the subroutine <em>fai_init</em> has done some basic
+initialization, the setup continues. This jobs is done by the tasks:
+<em>confdir</em> and <em>setup</em>.<p>
 
 
 Since only the ramdisk is writable in the beginning, all log
@@ -1688,14 +1707,17 @@ This is the complete list of hooks and when they will be called.
 	<tag>configure</tag> <item><p>Called before the scripts in
       <file>/fai/scripts/</file> are called.</p> </item>
 
+      <tag>finish</tag> <item><p>Called after the coniguration is
+finished.</p> </item>
+
+      <tag>faiend</tag> <item><p>Called when the installation is
+      finished, but before the automatic reboot is performed.</p> </item>
+
       <tag>chboot</tag> <item><p>Called before the boot device should
       be changed.</p> </item>
 
       <tag>savelog</tag> <item><p>Called before are log files are save
       to local disk and to the install server.</p> </item>
-
-      <tag>faiend</tag> <item><p>Called when the installation is
-      finished, but before the automatic reboot is performed.</p> </item>
 
  </taglist>
 
@@ -1765,9 +1787,6 @@ several log files made by <manref name="in.tftpd" section="8"> and
 
 <example>egrep "tftpd|bootpd" /var/log/*</example>
 
-The BOOTP daemon can also be started in debug modus:
-<example># bootpd -d7</example>
-
 
 If the installation process stops or even it finishes, parse all log files for errors using:
 <example>
@@ -1784,6 +1803,93 @@ scripts on the console. Don't hesitate to send an email to the
 mailing list or to <email>fai@informatik.uni-koeln.de</email> if you
 have any questions. Sample log files from successful
 installed computers are available on the FAI homepage.
+
+<chapt id=beowulf>How to build a beowulf cluster using FAI<p>
+
+This chapter describes the particularities about building a beowuld
+cluster. For maore information about the beowulf concept, look at
+<httpsite>http://www.beowulf.org/</httpsite>. The master node (in my
+examples I call it <em>nucleus</em>) has two
+network cards. One for the connection to the external Internet, one for
+the connection to the internal cluster network. If connected from the
+external Internet, it's called <em>nucleus</em>, but the cluster nodes
+accesses the master node with name <em>atom00</em>, which is a name
+for the second network interface.
+
+<p>
+All computing nodes (called <em>atom01</em> to <em>atom99</em>) are
+connected via a switch with the second interface card of the master
+node. They can only connect to the other nodes or the master, but
+can't communicate to any host outside their cluster network. So, all
+services (time server, DNS, ...) must be available on the master
+server.
+<p>
+
+I choose the class C network address <em>192.168.49.</em> for building
+the local cluster network. You can replace the subnet 49 with any
+other number you like. I you have more that 253 computing nodes,
+choose a class A network address (10.X.X.X).
+</p>
+<sect id=master> Set up the master server<p>
+
+The master server will be installed by hand, cause it could be your
+first computer installed with Debian. It you have already a Debian
+host running, you can also install it via FAI. After the normal Debian
+system is installed to the master server you have to add some software
+packages and
+
+
+The master server is also the install server for the computing
+nodes. It has 
+
+Create a local Debian mirror on <file>/files/scratch/</file> using
+<prgn>mkdebmirror</prgn>. This will need about 2.6GB disk space for
+Debian 2.2 (aka potato).
+
+
+
+Add following lines for the second network card to <file>/etc/network/interfaces</file>:
+<example>
+# beowulf cluster connection
+iface eth1 inet static
+address 192.168.49.200
+netmask 255.255.255.0
+broadcast 192.168.49.255
+</example>
+
+<file>/etc/hosts</file>:
+<example>
+# beowulf nodes
+# atom00 is the master server
+192.168.49.200 atom00
+192.168.49.1 atom01
+192.168.49.2 atom02
+</example>
+
+Add following packages to the install server
+<example>nucleus:/# apt-get install task-dns-server ntp</example>
+
+
+It's very important to use the network name of the cluster network for
+the master node in <file>/etc/bootptab</file> and <file>/etc/fai.conf</file>.
+
+<file>/etc/bootptab:</file>
+<example>
+.failocal:\
+        :tc=.faiglobal:\
+        :sa=atom00:\
+        :ts=atom00:\
+        :T170="atom00:/usr/local/share/fai":\
+        :T171="sysinfo":\
+        :T172="verbose createvt sshd":\
+        :sm=255.255.255.0:\
+        :gw=192.168.49.200:\
+        :dn=pc.uni-koeln.de:\
+        :ds=192.168.49.200:\
+        :ys=atom00:yd=nisnucleus:\
+        :nt=atom00:
+</example>
+
 
 <chapt id=sparc>FAI on SUN SPARC<p>
 Even FAI is architecture independent, there are some packages, that
@@ -1840,10 +1946,10 @@ your scripts.
 
 general hints:
 
-all in one config file, or multiple small config files. Ypou can
+all in one config file, or multiple small config files. You can
 choose !
 
-FAI-BOOTPART 
+FAI-BOOTPART
 -->
 </book>
 </debiandoc>
