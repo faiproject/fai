@@ -49,8 +49,8 @@ defnop() {
 islinux() {
 
     # test is we are running on Linux
-#    [ X$OSTYPE = X ] && OSTYPE=`uname -s | tr '[A-Z]' '[a-z]'
-    if [ X$OSTYPE = Xlinux ]; then
+#    [ X$OS_TYPE = X ] && OS_TYPE=`uname -s | tr '[A-Z]' '[a-z]'
+    if [ X$OS_TYPE = Xlinux ]; then
        return 0
     else
        return 1
@@ -329,6 +329,12 @@ task_setup() {
 
     # when did FAI start, using localtime
     RUNDATE=$(date +'%Y%m%d_%H%M%S')
+
+    cat >> $rcsfaivar <<-EOM
+	RUNDATE=$RUNDATE
+	FAI_ACTION=$FAI_ACTION
+	LOGDIR=$LOGDIR
+EOM
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_action() {
