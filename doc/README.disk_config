@@ -3,19 +3,20 @@ Documentation for hard disk configuration
 The script setup_harddisks.pl partitions and formats the local disks.
 It uses all configuration files in /fai/disk_config/ which are also
 defined as classes. Lines beginning with # are comments.
-The following example is a configuration for the first IDE disk "hda"
-and for the second SCSI disk "sdb":
+The following example is a configuration for the first IDE disk "disk1"
+and for the second SCSI disk "disk2". The numbering of the disks comes
+from the order in /proc/partitions.
 
 # <Type> <mount point> <Size in mb> [mount options]            [;extra options]
 
-disk_config hda
+disk_config disk1
 
 primary   /           200          defaults,errors=remount-ro
 logical   /home       100-300
 logical   /scratch1   10-          defaults,nosuid             ; -i 15000 -m 0
 
 
-disk_config sdb
+disk_config disk2
 
 primary   /tmp        300-500      rw                          ;ext2
 primary   /backup     preserve2    rw
@@ -28,7 +29,11 @@ primary   /tmp/mytmp  -300
 
 
 Every disk configuration starts with the command "disk_config"
-followed by the Linux device name without "/dev/". After this command
+followed by "diskX" where X is the number of the HDD. The Linux device
+names "/dev/hda" and "/dev/sda" corresponds to disk1, disk2 is equal to
+"/dev/hdb" and "/dev/sdb" and so on.
+
+After this command
 for each partition a line containing the type, mount point and size is
 added. Mount options and additional parameters for mke2fs -- separated
 from the mount options by a semicolon -- can be added.
@@ -44,7 +49,7 @@ All other partitions are called logical. Because logical partitions
 are gathered internally in one big primary partition, only three
 primary partitions can be used if logical partitions are defined.
 Normally only one primary partition for the root file system is
-created and all others are logical, like hda in the example above.
+created and all others are logical, like disk1 in the example above.
 
 Mount point:
 The mount point is the full path (beginning with a slash) for the
@@ -125,11 +130,11 @@ partition. Primary partitions are numbered from one to four, the
 numbers for logical partitions begin at five.
 
 Problems were reported (feb 2003) when using more than two primary
-partitions and trying to preserve a logical partition. It you have
+partitions and trying to preserve a logical partition. If you have
 this problem, try to use only two primary partitions.
 
 In this example, the partitions' numbers  (= device number) are also
-shown for disk sdb:
+shown for disk disk2:
 
 primary   /tmp        300-500     #  1
 primary   /backup     preserve2   #  2
