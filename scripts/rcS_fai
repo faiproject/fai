@@ -38,7 +38,7 @@ fstab=fstab  # Solaris uses vfstab
 # the type of operating system (linux, sunos)
 oclass=`uname -s | tr /a-z/ /A-Z/`
 classes="DEFAULT $oclass $HOSTNAME LAST"
-unset oclass
+unset oclass ROOT_PATH
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
@@ -53,13 +53,12 @@ fai_init() {
     [ -f /tmp/install_config/fai/fai.conf ] && . /tmp/install_config/fai/fai.conf
     # some variables are not needed here
     unset KERNELPACKAGE NFSROOT NFSROOT_PACKAGES FAI_ROOTPW SSH_IDENTITY
-    unset ftpserver debdist
+    unset FAI_DEBOOTSTRAP FAI_DEBOOTSTRAP_OPTS FAI_CONFIGDIR FAI_SOURCES_LIST ftpserver debdist
 
     # read subroutine definitions
-    sub=$FAI_SHAREDIR/subroutines
+    sub=/usr/share/fai/subroutines
     [ -f $sub ] && . $sub
     [ -f $sub-$OS_TYPE ] && . $sub-$OS_TYPE
-    unset FAI_SHAREDIR
 
     DEBIAN_FRONTEND=noninteractive
     # local disks are mounted to $FAI_ROOT
