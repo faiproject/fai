@@ -42,18 +42,19 @@ case "$1" in
         # set mirrorhost in  /etc/fai.conf and  /etc/fai/sources.list as
         # defined in debconf db
         db_get fai/mirrorhost
-        sed -i "s/MIRRORHOST/$RET/" /etc/fai/fai.conf
+        grep MIRRORHOST /etc/fai/fai.conf > /dev/null
+        if [ $? -eq 0 ] ; then
+          sed -i "s/MIRRORHOST/$RET/" /etc/fai/fai.conf
+        else
+          sed -i "s/^mirrorhost=.*\$/mirrorhost=$RET/" /etc/fai/fai.conf
+        fi
         sed -i "s/MIRRORHOST/$RET/" /etc/fai/sources.list
 
-        db_get fai/fai-setup-done || true
-        FAISETUPDONE=$RET
-        
         db_get fai/run-faisetup-on-install || true
-        RUNFAISETUP=$RET
-       
-        if [ "$FAISETUPDONE" != true -a "$RUNFAISETUP" = true ]; then 
+        if [ "$RET" = true ]; then
             echo "The script fai-setup will be executed now, this procedure can take a while."
             fai-setup || true
+            db_unregister fai/run-faisetup-on-install
         else
             echo "Now edit fai.conf, make-fai-nfsroot.conf and sources.list in /etc/fai and call fai-setup."
         fi
