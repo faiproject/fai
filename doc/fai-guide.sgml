@@ -217,7 +217,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Keyboard layout selectable</p> </item>
 	    <item> <p>Can be used as a rescue system</p> </item>
 	    <item> <p>Tested on SUN SPARC hardware</p> </item>
-	    <item> <p>Diskless clients support</p> </item>
+	    <item> <p>Diskless client support</p> </item>
 	    <item> <p>Easily add your own functions via hooks</p> </item>
 
 </list>
@@ -295,11 +295,11 @@ Get the newest version of FAI and install it using the
 <prgn>dpkg</prgn> command:
 
 <example>
-kueppers[~]# dpkg -i fai_2.0_all.deb
+kueppers[~]# dpkg -i fai_&faiver;_all.deb
 Selecting previously deselected package fai.
 (Reading database ... 39564 files and directories currently installed.)
-Unpacking fai (from fai_2.0_all.deb) ...
-Setting up fai (2.0) ...
+Unpacking fai (from fai_&faiver;_all.deb) ...
+Setting up fai (&faiver;) ...
 To set up FAI edit /etc/fai.conf and call fai-setup
 </example>
 <p>
@@ -342,7 +342,9 @@ These are important variables in &fc;:
 	    multi line string is the definition for
 	    <file>sources.list</file> (used by <manref name="apt-get"
 	    section="8">), which defines the location and access
-	    method of the Debian mirror. For more information on the
+	    method of the Debian mirror. If this variable is undefined,
+	    the definitions of <file>/etc/apt/sources.list</file> will
+	    be used. For more information on the
 	    file format see <manref name="sources.list" section="5">.
 	    </p> </item>
 
@@ -351,7 +353,7 @@ These are important variables in &fc;:
 	      <p> If you have NFS access to your local Debian mirror,
 	      specify the remote filesystem. It will be mounted to
 	      <var>$MNTPOINT</var> (defined in
-	      <file>fai.conf</file>). It's not needed if you use FTP
+	      &fc;). It's not needed if you use FTP
 	      or HTTP access.</p> </item>
 
 	    <tag><var>KERNELPACKAGE</var></tag>
@@ -409,7 +411,7 @@ Stopping NFS kernel daemon: mountd nfsd.
 Unexporting directories for NFS kernel daemon...done.
 Starting NFS kernel daemon: nfsd mountd.
 Exporting directories for NFS kernel daemon...done.
-Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-2.2.19
+Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-&kver;
 Output file name        = /boot/fai/installimage
 Kernel command line     = "auto rw root=/dev/nfs nfsroot=kernel nfsaddrs=kernel"
 
@@ -705,7 +707,7 @@ These are the messages, when booting from floppy.
 <example>
 LILO Loading FAI-BOOTP.
 Uncompressing Linux... OK, booting the Kernel.
-Linux version 2.2.19 (root@kueppers) (gcc version 2.95.2 20000220
+Linux version &kver; (root@kueppers) (gcc version 2.95.2 20000220
 .
 .
 .
@@ -718,7 +720,7 @@ TFTP....
 Linux Net Boot Image Loader Version 0.8.1 (netboot)
 .
 Uncompressing Linux... OK, booting the Kernel.
-Linux version 2.2.19 (root@kueppers) (gcc version 2.95.2 20000220
+Linux version &kver; (root@kueppers) (gcc version 2.95.2 20000220
 .
 .
 .
@@ -731,7 +733,7 @@ IP-Config: Complete:
 .
 .
    ------------------------------------------------------
-     FAI 2.0, 15 may, 2001
+     FAI &faiver;, &faiverdate;
      Fully Automatic Installation for Debian GNU/Linux
 
      Copyright (c) 1999-2001, Thomas Lange
@@ -777,8 +779,8 @@ supports your network card. This driver must no be a kernel module. To
 compile the new kernel, start using the default kernel configuration
 of FAI.
 <example>
-kueppers# cd /usr/src/linux
-kueppers# cp /usr/lib/fai/nfsroot/boot/config-2.2.19 .config
+kueppers# cd /usr/src/kernel-source-&kver;
+kueppers# cp /usr/lib/fai/nfsroot/boot/config-&kver; .config
 kueppers# make menuconfig
 </example>
 Call <prgn>make menuconfig</prgn> and add the driver in menu <tt>Network
@@ -790,7 +792,7 @@ kueppers# make-kpkg --revision BOOTP2 kernel-image
 </example>
 
 This command creates the file 
-<file>/usr/src/kernel-image-2.2.19_BOOTP2_i386.deb</file>. Adjust 
+<file>/usr/src/kernel-image-&kver;_BOOTP2_i386.deb</file>. Adjust 
 the variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot.
 <example>
 kueppers# make-fai-nfsroot
@@ -1154,7 +1156,7 @@ HOSTNAME='bigfoot'
 T170='kueppers:/usr/local/share/fai'
 T171='sysinfo'
 T171='install'
-T172='sshd'
+T172='createvt sshd'
 </example>
 
 It's not a bug, if a variable (T171 in the example above) is defined
@@ -1354,10 +1356,10 @@ the file <tt>$</tt><file>HOSTNAME.var</file>.
    <file>/fai/files/packages/</file><tt>$kernelimage</tt> exists use
    this as kernel package. Otherwise try installing the package
    <tt>$kernelimage</tt>. If <var>$kernelimage</var> is
-   <tt>2.2.19</tt> the default kernel (package kernel-image-2.2.19)
+   <tt>&kver;</tt> the default kernel (package kernel-image-&kver;)
    will be installed. To install the a special kernel for host
    bigfoot, set
-   <tt>kernelimage=kernel-image-2.2.19_bigfoot1_i386.deb</tt>.</p></item>
+   <tt>kernelimage=kernel-image-&kver;_bigfoot1_i386.deb</tt>.</p></item>
 
    <tag>liloappend</tag> <item> <p>Append parameters for the kernel of
    the new system (written to <file>/etc/lilo.conf</file>).</p> </item>
@@ -1472,7 +1474,12 @@ configuration file <file>SERVER</file> contains following line:
 
 If the video card isn't detected, the software installation tries to
 install the package <tt>xserver-unknown</tt>. It will not start
-because this package doesn't exist.
+because this package doesn't exist. You can test all software package
+configuration files with the utility <prgn>chkdebnames</prgn>, which
+is available in <file>/usr/share/doc/fai/utils/</file>.
+<example>
+> chkdebnames stable /usr/local/share/fai/package_config/*
+</example>
 
 <sect id=cscripts>Scripts in <tt>/fai/scripts</tt><p>
 
@@ -1532,7 +1539,7 @@ will write a valid boot sector to the local disk. Since it's the first
 boot device, the computer will boot the new installed system. If you
 like to perform an installation again, you have to disable this boot
 sector using the command <prgn>bootsector</prgn><footnote><p>The
-command <tt>bootsector</tt> is part og the package
+command <tt>bootsector</tt> is part of the package
 <package>fai</package> and will be installed to
 <file>/usr/local/sbin</file> on the install clients.</p></footnote>
 . For more information use: <example># bootsector -h
@@ -1557,30 +1564,31 @@ Boot Failure Prompt    Wait for timeout
 Boot Failure           Next boot device
 </example>
 
-This will enable the first IDE hard disk as first boot device. It the
-boot sector of the hard disk is invalid, the computer will use the
-network interface as second boot device.
+This will enable the first IDE hard disk as first boot device. If the
+boot sector of the hard disk is disabled, the computer will use the
+network interface as second boot device and boots from it. Maybe the
+disk p[artitioning tool can't work on such a disk. So you have to
+enable the boot sector before you want to partition the disk.
 
 <sect id=hooks>Hooks<p>
 
 Hooks let you specify functions or programs, that are run at certain
 steps of the installation process. FAI provides many locations, where
 hooks are called. As you might expect, classes are also used when
-calling hooks. In Emacs, every hook has to be defined and created if
-it should be executed. In FAI, a hook is called if a certain class is
-defined. So you only have to create the hook with the name of the
-desired class and it will be used. Hooks are executed for every
-defined class. If <tt>debug</tt> is included in <var>$FAI_FLAG</var>
-the option <tt>-d</tt> is passed to all hooks.
+calling hooks. Hooks are executed for every defined class. You only
+have to create the hook with the name of the desired class and it will
+be used.  If <tt>debug</tt> is included in <var>$FAI_FLAG</var> the
+option <tt>-d</tt> is passed to all hooks, so you can debug your own hooks.
 <p>
-The directory <file>/usr/local/share/fai/hooks/</file> contains the
-hooks. The file name of a hook consists of a hook prefix and a class
-name, chained by a dot. The prefix describes the time when the hook is
-called, if the class if defined for the install client. For example,
-the hook <file>partition.DISKLESS</file> is called for every client
-belonging to the class <tt>DISKLESS</tt> before the local disks would
-be partitioned. Since it should become a diskless client, this hook
-can mount remote filesystems via NFS and create a <tt>/tmp/fstab</tt>.
+The directory <file>/usr/local/share/fai/hooks/</file> contains all
+hooks, except the hooks with prefix <tt>first</tt>. The file name of a
+hook consists of a hook name as a prefix and a class name, chained by
+a dot. The prefix describes the time when the hook is called, if the
+class if defined for the install client. For example, the hook
+<file>partition.DISKLESS</file> is called for every client belonging
+to the class <tt>DISKLESS</tt> before the local disks would be
+partitioned. Since it should become a diskless client, this hook can
+mount remote filesystems via NFS and create a <tt>/tmp/fstab</tt>.
 After that, the installation process will not try to partition and
 format a local hard disk, because a file <file>/tmp/fstab</file>
 already exists.
@@ -1589,7 +1597,7 @@ A hook of the form <tt>hookprefix.classname</tt>  can't define
 variables for the installation script, because it's a subprocess. But
 you can use any binary executable or any script you wrote. Hook which
 has a suffix <tt>.sh</tt> (eg. <file>partition.DEFAULT.sh</file>) must
-be bourne shell scripts and will be sourced. So it's possible to
+be bourne shell scripts and are sourced. So it's possible to
 redefine variables for the installation script.
 <p>
 This is the complete list of hooks and when they will be called.
@@ -1598,7 +1606,7 @@ This is the complete list of hooks and when they will be called.
       <tag>first</tag> <item><p>After some basic initialization, all
       hooks with prefix <tt>first</tt> are called. Since the configuration directory
       <file>/fai</file> is not yet mount on the install client, these
-      hooks are located in <file>$nfsroot/fai/hooks</file> on the server. </p> </item>
+      are the only hooks located in <tt>$</tt><file>nfsroot/fai/hooks</file> on the server. </p> </item>
 
       <tag>setup</tag> <item><p>These hooks are immediately called
       after the configuration directory is mounted.  </p> </item>
@@ -1613,13 +1621,13 @@ This is the complete list of hooks and when they will be called.
 	    <tag>backup</tag> <item><p>Called when action is
 	    <tt>backup</tt>. Here you can define your own backup taks.</p> </item>
 
-      <tag>devclass</tag> <item><p>Called before defining classes.</p> </item>
+      <tag>defclass</tag> <item><p>Called before defining classes.</p> </item>
 
       <tag>defvar</tag> <item><p>Called before defining variables.</p> </item>
       <tag>partition</tag> <item><p>Called before partitioning the
       local hard disks.</p> </item>
 
-      <tag>mountdiks</tag> <item><p>Called before the local disks are
+      <tag>mountdisks</tag> <item><p>Called before the local disks are
       mounted to <var>$FAI_ROOT</var>.</p> </item>
 
     <tag>extrbase</tag> <item><p>Called before the base archive
@@ -1647,19 +1655,40 @@ This is the complete list of hooks and when they will be called.
 
  </taglist>
 
-Some examples what hooks could be used for:
+All hooks that are called before classes are defined can only use the
+following classes: <tt>DEFAULT $HOSTNAME LAST</tt>. If a hook for
+class <tt>DEFAULT</tt> should only be called if no hook for class
+<tt>$HOSTNAME</tt> is available, insert these lines to the default
+hook:
+
+<example>
+hookexample.DEFAULT:
+
+#! /bin/sh
+
+# skip DEFAULT hook, if a hook for $HOSTNAME exists
+[-f /fai/hooks/$HOSTNAME ] && exit
+# here follows the actions for class DEFAULT
+.
+.
+</example>
+
+
+<p> Some examples what hooks could be used for:
 
 <list>
 <item> <p>Use <prgn>ssh</prgn> in the very beginning to verify that
-you mounted the configuration from the correct server.</p></item>
+you mounted the configuration from the correct server and not a
+possible spoofing host.</p></item>
 
 <item> <p>Pop up a little menu and ask the user, which kind of installation should be performed (eg. CAD
 workstation, scientific workstation, workgroup server, Gnome desktop...). Keep in
-mind that this won't lead to a fully automatic installation.
+mind that this won't lead to a fully automatic installation ;-)
 </p></item>
 
-<item> <p>Do not mount the configuration, instead get a compressed archive
-and extract it into a ram disk, then redefine <var>$FAI_LOCATION</var>.</p></item>
+<item> <p>Do not mount the configuration directory, instead get a
+compressed archive via HTTP or from floppy disk and extract it into a
+new ram disk, then redefine <var>$FAI_LOCATION</var>.</p></item>
 
 <item> <p>Load kernel modules before classes are defined
 in <file>/fai/class</file>. </p></item>
