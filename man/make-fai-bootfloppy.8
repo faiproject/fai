@@ -1,7 +1,7 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .if \n(zZ=1 .ig zZ
 .if \n(zY=1 .ig zY
-.TH make-fai-bootfloppy 8 "17 june 2003" "FAI 2.4"
+.TH make-fai-bootfloppy 8 "05 August 2003" "FAI 2.5"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -54,34 +54,38 @@ successfully and >0 if an error occurs.
 
 
 .TP
-.B \-d label
+.B \-d LABEL
 
-use label when selection the default boot kernel (and parameters).
-  d for dhcp
-  b for bootp
-  f for the fixed IP address for the server
+Use LABEL when selection the default boot kernel (and parameters).
+Possible values of LABEL:
+  a for any: the linux kernel will try all compiled in protocols in turn, until one succeeds;
+  b for BOOTP;
+  d for DHCP;
+  f for using a fixed IP address on the FAI client (see option '-s');
+  r for RARP.
 
-Without this option both (dhcp and booth) are used.
+Without this option, the kernel setting 'ip=both' is used, which on Linux 
+means to try BOOTP and RARP.
 .TP
-.B \-f file
-Make a 1440k floppy image.
+.B \-f FILE
+Make a 1440k floppy image in FILE.
 .TP
 .B \-g
-Use grub as boot loader (default).
+Use GRUB as boot loader (default).
 .TP
 .B \-l 
-Use lilo as boot loader.
+Use LILO as boot loader.
 .TP
-.B \-m dir
-Use dir as mountpoint for either floppy device or file.  Defaults to /floppy.
+.B \-m DIR
+Use DIR as mountpoint for either floppy device or file.  Defaults to /floppy.
 .TP
-.B \-s host
-Prepare a host specific bootfloppy by disabling DHCP and BOOTP, instead insert
-network configuration into kernel command line's "ip=" statement, getting
-necessary data by DNS A lookup.
+.B \-s HOST
+Prepare a host specific bootfloppy which will boot the kernel with the fixed
+IP of HOST (i.e., insert network configuration into kernel command line's
+"ip=" statement).  All necessary data are gethered by DNS A lookup.
 .TP
 .B "-v"
-print verbose output
+Print verbose output
 
 .SH EXAMPLES
 
@@ -91,10 +95,10 @@ Create a generic boot floppy for James ;-)
 
 To make the boot floppy use the DHCP protocol
 
-# make-fai-bootfloppy "ip=dhcp"
+# make-fai-bootfloppy -d d
 
 Make a boot floppy with fixed IP adress, enable verbose messages and
-additional termials.
+additional terminals.
 
 # make-fai-bootfloppy -l -d f "10.0.2.5:10.0.2.1:10.0.0.1: 255.255.0.0:client5:eth0:off FAI_FLAGS=verbose,createvt"
 .fi
