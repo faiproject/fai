@@ -30,12 +30,13 @@
 # main part
 $| = 1;
 # order of commands to execute
-@commands = qw/taskinst install remove dselect-upgrade/;
+@commands = qw/hold taskinst install remove dselect-upgrade/;
 %command = (
 	    install => 'apt-get -y --fix-missing install',
 	    remove  => 'apt-get -y --purge remove',
   "dselect-upgrade" => 'apt-get -y dselect-upgrade',
          "taskinst" => 'tasksel -n install',
+             "hold" => 'dpkg --set-selections',
 );
 
 # currently no test, always execute
@@ -66,7 +67,14 @@ foreach $type (@commands) {
     next;
   }
 
-   $packlist = join(' ',@{$list{$type}});
+  if ($type eq "hold") {
+    $hold = join " hold\n", @{$list{hold}};
+    $hold .= " hold\n";
+    execute("echo \"$hold\" | $rootcmd $command{hold}");
+    next;
+  }
+
+  $packlist = join(' ',@{$list{$type}});
 
   if ($type eq "install") {
     # check for packages, that don't exists
