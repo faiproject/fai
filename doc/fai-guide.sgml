@@ -12,7 +12,13 @@
 
 <!entity version "2.4.3">
 <!entity date    "XXX 2004">
+
+<!entity packageinstall     system "entities/packageinstall.sgml">
+<!entity faisetup           system "entities/faisetup.sgml">
+<!entity bootexample        system "entities/bootexample.sgml">
+
 ]>
+
 
 <debiandoc>
 <book>
@@ -313,24 +319,7 @@ Before installing FAI, you have to install the package <package>fai-kernels</pac
 which contains the install kernels for FAI. You can install both
 packages using
 
-<example>
-kueppers[~]# apt-get install fai fai-kernels
-Reading Package Lists... Done
-Building Dependency Tree... Done
-The following NEW packages will be installed:
-  fai fai-kernels 
-0 packages upgraded, 2 newly installed, 0 to remove and 1 not upgraded.
-Need to get 0B/12.7MB of archives. After unpacking 13.9MB will be used.
-Selecting previously deselected package fai.
-(Reading database ... 48317 files and directories currently installed.)
-Unpacking fai (from .../main/f/fai/fai_2.5_all.deb) ...
-Selecting previously deselected package fai-kernels.
-Unpacking fai-kernels (from .../fai-kernels_1.5.3_i386.deb) ...
-Setting up fai (2.5) ...
-To set up FAI, edit /etc/fai/fai.conf and call fai-setup.
-
-Setting up fai-kernels (1.5.3) ...
-</example>
+& packageinstall
 
 If you like to install all recommended packages that are useful for
 fai, use following command
@@ -429,70 +418,7 @@ cards from 3Com. Put that executable in your path
 (e.g. <file>/usr/local/bin</file>). After editing &fc; call
 <prgn>fai-setup</prgn>.
 
-<example>
-kueppers[~]# fai-setup
-Account $LOGUSER=fai already exists.
-Make sure that all install clients can
-log into this account without a password.
-Using interface eth0 to determine local hostname.
-Adding kueppers to known_hosts.
-/home/fai/.ssh/known_hosts created.
-/home/fai/.ssh/authorized_keys created.
-User account fai set up.
-Creating FAI nfsroot can take a long time and will
-need more than &nfsrootsize disk space in /usr/lib/fai/nfsroot.
-Creating nfsroot for woody using debootstrap
-dpkg: base-passwd: dependency problems, but configuring anyway as you request:
- base-passwd depends on libc6 (>= 2.2.4-4); however:
-  Package libc6 is not installed.
-dpkg: base-files: dependency problems, but configuring anyway as you request:
-.
-.
-.
-Automatically converting /etc/network/interfaces succeeded.
-Old interfaces file saved as interfaces.dpkg-old.
-Creating base.tgz
-`/etc/fai/sources.list' -> `etc/apt/sources.list'
-Upgrading /usr/lib/fai/nfsroot
-Adding additional packages to /usr/lib/fai/nfsroot:
-portmap file rdate cfengine bootpc wget rsh-client less dump
-ext2resize strace hdparm parted dnsutils grub ntpdate 
-dosfstools sysutils dialog discover mdetect read-edid kudzu hwtools
-Detecting hardware: 3c59x ide-scsi usb-uhci usb-uhci
-modprobe: Can't open dependencies file /lib/modules/2.4.20/modules.dep (No such file or directory)
-Skipping 3c59x; assuming it is compiled into the kernel.
-modprobe: Can't open dependencies file /lib/modules/2.4.20/modules.dep (No such file or directory)
-Skipping usb-uhci; assuming it is compiled into the kernel.
-Creating SSH2 RSA key
-Creating SSH2 DSA key
-Restarting OpenBSD Secure Shell server: sshd.
-`/etc/fai/fai.conf' -> `etc/fai/fai.conf'
-`/etc/fai/sources.list' -> `etc/fai/sources.list'
-DHCP environment prepared. Now enable dhcpd and the special tftp daemon
-
-Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001
-Design and Coding by Nick Kroupetski &lt;NickKroupetski@hotmail.com&gt;
-Usage: imggen [OPTION] inputfile outputfile
-  -a,   Add 3Com MBA/BootWare support
-  -r,   Remove 3Com MBA/BootWare support from image file
-  -i,   Show information on an image
-  -h,   Help screen
-
-In filename: /boot/fai/installimage
-Out filename: /boot/fai/installimage_3com
-Adding MBA support...
-MBA support has been succesfully added 
-BOOTP environment prepared.
-make-fai-nfsroot finished.                 <= *
-Stopping NFS kernel daemon: mountd nfsd.
-Unexporting directories for NFS kernel daemon...done.
-Exporting directories for NFS kernel daemon...done.
-Starting NFS kernel daemon: nfsd mountd.
-You have no FAI configuration. Copy FAI template files with:
-cp -a /usr/share/doc/fai/examples/simple/* /usr/local/share/fai
-Then change the configuration files to meet your local needs.
-FAI setup finished.                        <= *
-</example>
+&faisetup
 
 <p>
 It's important that you will see both lines that are marked with an
@@ -864,98 +790,8 @@ Linux version &kver; (root@kueppers) (gcc version 2.95.4 20011002
 </example>
 After this, the rest of the boot message will be equal to those when booting from
 network card. When booting from network card with PXE you will see:
-<example>
-Managed PC Boot Agent (MBA) v4.00
-.
-.
-Pre-boot eXecution Environment (PXE) v2.00
-.
-.
-DHCP MAC ADDR: 00 04 75 74 A2 43
-DHCP.../
-CLIENT IP: 134.95.9.150 MASK: 255.255.255.0  DHCP IP: 134.95.9.149
-GATEWAY IP: 134.95.9.254
 
-PXELINUX 1.66 2002-01-01  Copyright (C) 1994-2002 H. Peter Anvin
-Found PXEENV+ structure
-PXE API version is 0201
-UNDI data segment at:   0009D740
-UNDI data segment size: 3284
-UNDI code segment at:   00090000
-UNDI code segment size: 24C0
-PXE entry point found (we hope) at 9D74:00F6
-My Ip address seems to be 865F0996 134.95.9.150
-ip=134.95.9.150:134.95.9.149:134.95.9.254:255.255.255.0
-TFTP prefix:
-Trying to load pxelinnux.cfg/865F0996
-Loading vmlinuz-install.....................
- ready.
-
-Faile to free base memory, sorry...
-Uncompressing Linux... OK, booting the Kernel.
-Linux version &kver; (root@kueppers) (gcc version 2.95.4 20011002
-.
-.
-.
-Sending DHCP requests ., OK
-IP-Config: Got DHCP answer from 134.95.9.149, my address is 134.95.9.150
-IP-Config: Complete:
-   device=eth0, addr=134.95.9.150, mask=255.255.255.0, gw=134.95.9.254,
-   host=demohost, domain=informatik.uni-koeln.de, nis-domain=informatik4711.YP,
-   bootserver=134.95.9.149, rootserver=134.95.9.149, rootpath=/usr/lib/fai/nfsroot
-Looking up port of RPC 1000003/2 on 134.95.9.149
-Looking up port of RPC 1000005/1 on 134.95.9.149
-.
-.
-   ------------------------------------------------------
-     FAI &faiver;, &faiverdate;
-     Fully Automatic Installation for Debian GNU/Linux
-
-     Copyright (c) 1999-2004, Thomas Lange
-             lange@informatik.uni-koeln.de
-   ------------------------------------------------------
-
-Calling task_confdir
-Kernel parameters: ip=dhcp devfs=nomount FAI_ACTION=install root=/dev/nfs FAI_FLAGS=verbose,sshd,createvt,syslogd BOOT_IMAGE=vmlinuz-install 
-Defining variable: ip=dhcp
-Defining variable: devfs=nomount
-Defining variable: FAI_ACTION=install
-Defining variable: root=/dev/nfs
-Defining variable: FAI_FLAGS=verbose,sshd,createvt,syslogd
-Defining variable: BOOT_IMAGE=vmlinuz-install
-Reading /tmp/fai/boot.log
-FAI_FLAGS: verbose=1
-FAI_FLAGS: sshd=1
-FAI_FLAGS: createvt=1
-FAI_FLAGS: syslogd=1
-Configuration space /fai mounted from kueppers:/usr/local/share/fai
-Calling task_setup
-.
-.
-Calling task_defclass
-/usr/bin/fai-class: Defining classes.
-.
-.
-Calling task_action
-FAI_ACTION: install
-Performing FAI installation. All data may be overwritten!
-.
-.
-FAI finished.
-Calling task_chboot
-append parameters:   
-kernel is dom-localboot
-rootfs is /dev/hda6
-dom has 134.95.9.150 in hex 865F0996
-Writing file /boot/fai/pxelinux.cfg/865F0996 for dom
-Calling hook: savelog.LAST
-ERRORS found in log files. See /tmp/fai/error.log.
-savelog.LAST         OK.
-Calling task_savelog
-Save log files via rsh to fai@kueppers:dom/install-20030801_155242
-Calling task_faiend
-Press &lt;RETURN&gt; to reboot or ctrl-c to execute a shell
-</example>
+&bootexample
 
 When the copyright message of fai is shown, the install client has mounted
 the nfsroot<footnote> <p><file>/usr/lib/fai/nfsroot</file> from the
