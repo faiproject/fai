@@ -9,16 +9,17 @@ seek=510
 usage() {
 
 cat <<EOF
-    bootsector [-edlv] diskdevice
+    bootsector [-edlvh] device
 
-Read the magic number (the last two bytes) of a boot sector or write
-it. Writing 0000 to it disables bootig of the boot sector, writing
-0xAA55 to it enablaes booting this boot sector.
+Read or write the magic number (the last two bytes) of a boot
+sector. Writing 0x0000 to it disables booting from this boot sector.
+The value 0xAA55 enables booting from this boot sector.
 
     -e    enable the boot sector
     -d    disable the boot sector
     -l    list the magic number hexadecimal
-    -v    list the magic number is a verbose way
+    -v    list the magic number in a verbose way
+    -h    print this help
 
 Examples:
 
@@ -30,33 +31,41 @@ Examples:
 0000000 0000
 # bootsector -v /dev/hda
 Boot sector /dev/hda disabled.
+
+bootsector is written by Thomas Lange, lange@informatik.uni-koeln.de, 2001.
+
 EOF
+exit 0
 }
 
-[ "$1" = "-h" ] && usage
+readbb() { # read last two bytes from boot block
+
+    dd bs=1c skip=$seek count=2 if=$1 2>/dev/null|od -x|grep -v 0000002
+}
+
+writebb() { # write last two bytes of boot block
+
+    dd bs=1c seek=$seek of=$1 2>/dev/null || echo "Can't write to boot block $1"
+}
 
 arch=`dpkg --print-installation-architecture`
 [ "$arch" = "i386" ] || {
-    Currently only i386 architecure is supported.
+    Currently, only i386 architecure is supported.
     exit 1
 }
 
-[ "$2" ] || {
-    echo "Specify a disk device."
-    exit 0
-}
-
-case $1 in
-
-    -e) echo -ne "\x55\xaa" | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
-    -d) echo -ne "\x0\x0"   | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
-    -l) dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002 ;;
-    -v) bs=`dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002`
-	case $bs in
-	    "0000000 0000") echo "Boot sector $2 disabled." ;;
-	    "0000000 aa55") echo "Boot sector $2 enabled." ;;
-	esac
-	;;
+getopts e:d:l:v:h opt
+case $opt in
+    h) usage ;;
+    e) echo -ne "\x55\xaa" | writebb $OPTARG ;;
+    d) echo -ne "\x0\x0"   | writebb $OPTARG ;;
+    l) readbb $OPTARG ;;
+    v) bs=`readbb $OPTARG`
+       case $bs in
+	    "0000000 0000") echo "Boot sector $OPTARG is disabled." ;;
+	    "0000000 aa55") echo "Boot sector $OPTARG is enabled." ;;
+	    *) echo "Unknown boot sector $bs" ;;
+       esac
+       ;;
+    *) usage; exit 1 ;;
 esac
-
-exit
