@@ -36,10 +36,8 @@ romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 fstab=fstab  # Solaris uses vfstab
 lpipe=/tmp/logfifo
 
-# default classes before calling task defvar. Will be overwritten by task defvar
 # the type of operating system (linux, sunos)
 oclass=$(uname -s | tr /a-z/ /A-Z/)
-classes="DEFAULT $oclass $HOSTNAME LAST"
 faimond=0
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -67,6 +65,7 @@ fai_init() {
     [ -f /tmp/install_config/fai/fai.conf ] && . /tmp/install_config/fai/fai.conf
 
     if [ -f /boot/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
+	umount /initrd
 	romountopt=
 	FAI_DEBMIRROR="--bind /media/mirror"
 	MNTPOINT=/media/mirror
@@ -105,13 +104,21 @@ fai_init() {
     umask 022
     trap 'echo "Now rebooting";faireboot' INT QUIT
 
+    # set hostname if not yet set and kernel parameter HOST= was given
+    if [ $HOSTNAME = '(none)' -a -n "$HOST" ]; then
+	eval_cmdline
+	HOSTNAME=$HOST
+	hostname $HOST
+	echo "Hostname set to $HOST" | tee -a $rcslog
+	sleep 3
+    fi
+
     if [ X$OS_TYPE = Xlinux ]; then
 	grep -q '[[:space:]]sysfs' /proc/filesystems && mount -t sysfs sysfs /sys
 	osname='Debian GNU/Linux'
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -t devpts devpts /dev/pts
-	[ -d /initrd/lib ] && umount /initrd
 	# add other options for nfs mount of /dev/root to root-path in dhcpd.conf
 	mount -o remount,noatime,ro /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
@@ -126,8 +133,7 @@ fai_init() {
 	*) test -e /.nocolorlogo || echo -ne "\ec\e[1;31m" ;;
     esac
 
-    prcopyleft
-    prcopyleft > $rcslog
+    prcopyleft | tee -a $rcslog
 
     # set scroll region, but not on sparc
     case $HOSTTYPE in
