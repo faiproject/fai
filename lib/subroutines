@@ -30,12 +30,16 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
+    # echo comment and exit installation
     echo "$@"
     exec bash
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 defnop() {
-    # define noop functions; will fake unknown commands
+
+    # define given list of subroutine names as dummy function;
+    # this will fake unknown commands
+
     local name
     for name in "$@";do
         eval "$name () { :;}"
@@ -44,6 +48,7 @@ defnop() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 islinux() {
 
+    # test is we are running on Linux
 #    [ X$OSTYPE = X ] && OSTYPE=`uname -s | tr '[A-Z]' '[a-z]'
     if [ X$OSTYPE = Xlinux ]; then
        return 0
@@ -54,7 +59,7 @@ islinux() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ifclass() {
 
-# test, if a certain class is defined
+    # test, if a class is defined
     local cl
     for cl in $classes; do
 	[ x$cl = x$1 ] && return 0
@@ -64,7 +69,7 @@ ifclass() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_resolv_conf() {
 
-    # create a resolv.conf
+    # create a resolv.conf using the DHCP or BOOTP information
     if [ "$DNSSRVS" ]; then
 	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
 	for dnshost in $DNSSRVS ; do
@@ -75,7 +80,7 @@ create_resolv_conf() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 list_disks() {
 
-    # print only every second entry
+    # print only every second entry; used by disk_info
     local i ent list
     list="$@"
     i=0
@@ -92,7 +97,7 @@ list_disks() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mount_local_disks() {
 
-    # try to mount all partitions
+    # try to mount all local disk partitions
     local mountoption=ro
     local disk partition partitions
     fstabcount=0
@@ -139,6 +144,7 @@ rwmount() {
 fstab_mount() {
 
     if [ $fstabcount -eq 1 ]; then
+        # mount the root partition; then mount the rest according to fstab found
 	umount_local_disks
 	mount -o ro /dev/$fstabpart $FAI_ROOT
 	mount2dir $FAI_ROOT $FAI_ROOT/etc/$fstab
@@ -162,7 +168,7 @@ save_log_local() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote() {
 
-    # save log files to $SERVER
+    # save log files to user $LOGUSER on $SERVER
     [ "$LOGUSER" ] || return
 
     echo "Saving log files remote to $LOGUSER@$SERVER $HOSTNAME/$FAI_ACTION-$RUNDATE"
@@ -193,6 +199,7 @@ task() {
 
     local taskname=$1
     if [ -f $LOGDIR/skip.$taskname ]; then
+        # skip whole task and hook
 	rm $LOGDIR/skip.$taskname
 	[ "$verbose" ] && echo "Skiping task_$taskname"
     else
@@ -229,6 +236,7 @@ call_hook() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 skiptask() {
 
+    # mark all given tasks, so they will be skipped
     local tasklist="$@"
     local task
 
@@ -239,6 +247,7 @@ skiptask() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_fai_dir() {
 
+    # get /fai directory; mount it or get it from a cvs repository
     if [ -z "$FAI_LOCATION" ]; then
        [ "$debug" ] && echo "Warning $0: \$FAI_LOCATION not defined."
        get_fai_cvs
@@ -277,9 +286,10 @@ get_fai_cvs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_fai_flags() {
 
-    # FAI_FLAGS are now comma separated
+    # FAI_FLAGS are now comma separated, define all flags
     FAI_FLAGS=`echo $FAI_FLAGS | sed -e 's/,/ /g'` 
     for flag in $FAI_FLAGS; do
+	# define this flag as 1
 	eval "$flag=1"
 	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
     done
@@ -288,30 +298,31 @@ define_fai_flags() {
 task_setup() {
 
     local flag
+    # set the system time and date using rdate or/and ntpdate
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
 
-    DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
-
     define_fai_flags
 
+    DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
     devnull=/dev/null
     [ "$debug" ] && devnull=/dev/console
 
-#    not yet used
+#    not yet used, maybe use a hook for that
 #    if [ "$FAI_EXTRA_MOUNT" ]; then
 #	mount $romountopt -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
 #    fi
 
     [ "$createvt" ] && {
-	# create two virtual terminals
+	# create two virtual terminals; acces via alt-F2 and alt-F3
 	echo "Press ctrl-c to interrupt FAI and to get a shell"
 	openvt -c2 /bin/bash ; openvt -c3 /bin/bash
 	trap 'echo "You can reboot with faireboot";bash' INT QUIT
     }
 
+    # start secure shell daemon for remote access
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
-    disk_info
+    disk_info # get and define all information of local disks
 
     # when did FAI start, using localtime
     RUNDATE=$(date +'%Y%m%d_%H%M%S')
@@ -376,11 +387,11 @@ task_defclass() {
     [ "$debug" ] && echo "additonal classes: $addclasses"
     classes="$classes $addclasses $HOSTNAME LAST"
 
+    # also define all classes in reverse order ($revclases)
     for class in $classes ; do
 	echo $class >> $LOGDIR/FAI_CLASSES
 	revclasses="$class $revclasses"
     done
-    # revclass is the list of classes in reversed order
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
@@ -415,7 +426,8 @@ task_mountdisks() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_configure() {
 
-    # execute scripts; cfengine, shell, perl and expect scripts are known types
+    # execute all scripts that match the name of a class,
+    # if class is a directory, execute all $class/S[0-9]* scripts in it
     local class f
 
     cd $FAI/scripts
@@ -431,11 +443,13 @@ task_configure() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 do_script() {
 
+    # execute scripts and save their outpu in log files
+    # cfengine, shell, perl and expect scripts are known types
     local shelldebug file filetype
 
     file=$1
-    cd $FAI/scripts
 
+    cd $FAI/scripts
     filetype=`file $file`
     shelldebug=
     case $filetype in
@@ -485,7 +499,7 @@ task_faiend() {
 
     wait_for_jobs
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
-    # $reboot is a FAI_FLAG
+    # reboot without prompting if FAI_FLAG reboot is set
     [ -z $reboot ] && read
     echo "Rebooting $HOSTNAME now"
     cd /
@@ -495,6 +509,8 @@ task_faiend() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_backup() {
+
+# NOT YET USED. IT'S ONLY AN IDEA
 
 # FAI_BACKUP_LIST contains backup options
 # proposed format: "hda1 hda3 hda12 sda2 '0 0 1 1'"
