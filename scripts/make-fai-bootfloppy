@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.5.3, 22-july-2004"
+version="Version 2.5.4, 23-july-2004"
 set -e
 timeout=15
 mkimage=0
@@ -163,9 +163,16 @@ lilo_floppy() {
     rmdir $mountpoint/lost+found
 
     [ "$verbose" ] && echo "Copying the kernel $NFSROOT/boot/$kernel to the floppy."
-    cd $NFSROOT && cp -dp boot/boot-menu.b boot/vmlinuz-$KERNELVERSION $mountpoint/boot
+    cd $NFSROOT && cp -dp boot/vmlinuz-$KERNELVERSION $mountpoint/boot
+
+    # this is only needed for lilo versions < 22; newer lilos 
+    # have this functionality built-in with no .b bootblocks req'd
+    if [ -r "boot/boot-menu.b" ]; then
+	cp -dp boot/boot-menu.b $mountpoint/boot
+	ln -fs $mountpoint/boot/boot-menu.b $mountpoint/boot/boot.b
+    fi
+
     ln -s boot/vmlinuz-$KERNELVERSION $mountpoint/vmlinuz
-    ln -fs $mountpoint/boot/boot-menu.b $mountpoint/boot/boot.b
 
     [ $mkimage -eq 1 ] && cat > $mountpoint/etc/lilo.conf <<-EOF
     disk=$(mount | grep $mountpoint | sed -e 's/.*loop=\([^)]*\))/\1/')
