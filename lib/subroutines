@@ -269,17 +269,19 @@ get_fai_cvs() {
     # access via ftp, http, or from a database
 
     if [ "$FAI_CVSROOT" ] ; then
-        local TAG
+        local TAG=""
 	echo "Checking out CVS"
 	[ -n "$FAI_CVSTAG" ] && TAG="-r $FAI_CVSTAG"
-        if [ -w $(dirname "$FAI") ] ; then
-	   cd $(dirname "$FAI") 
-	else
-	   cd /tmp
-	   export FAI_CONFIG_AREA=$FAI
-	   export FAI=/tmp/$(basename $FAI_CONFIG_AREA)
-	   echo "\$FAI now points to $FAI"
+        export FAI_CONFIG_AREA=$FAI
+        export FAI=/tmp/$(basename $FAI_CONFIG_AREA)
+        
+	[ "$debug" ] && echo "\$FAI now points to $FAI"
+        
+	if [ -d "$FAI_CONFIG_AREA" ] ; then
+	   echo "Config found at $FAI_CONFIG_AREA: Copying"
+	   cp -a $FAI_CONFIG_AREA $FAI 
 	fi
+	cd /tmp
 	cvs -q -d"$FAI_CVSROOT" co -P -d $(basename "$FAI") \
 	  $TAG $FAI_CVSMODULE > ${THISLOG}/cvs.log
     else
