@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.7.2, 14 Apr 2002"
+version="version 1.7.3, 15 Apr 2002"
 set -e
 MKIMAGE=0
 floppydev=/dev/fd0
@@ -149,9 +149,9 @@ fi
 mke2fs $mkfsopt -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
 mount $mountopts $floppydev $MOUNTPOINT || die "Can't mount floppy $floppydev"
 mkdir $MOUNTPOINT/boot $MOUNTPOINT/etc
-cd $NFSROOT/boot
+
 # do not copy System.map*
-cp -dp map chain* boot* vmlinuz-$KERNELVERSION $MOUNTPOINT/boot 2>/dev/null || true
+cp -dp $NFSROOT/boot/map $NFSROOT/boot/chain* $NFSROOT/boot/boot* $NFSROOT/boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/boot 2>/dev/null || true
 ln -s boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/vmlinuz
 # since lilo 21.5, boot.b is a link
 [ -e $MOUNTPOINT/boot/boot.b ] || ln -fs $MOUNTPOINT/boot/boot-compat.b $MOUNTPOINT/boot/boot.b
