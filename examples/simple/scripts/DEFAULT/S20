@@ -13,8 +13,6 @@ files:
         ${target}/dev include=sr* mode=444   action=fixall r=1
 
 directories:
-   any::
-	${target}/tmp mode=1777 owner=0 group=0
 
    BSDAMD::
         ${target}/scratch/. mode=755 owner=0 group=0
@@ -27,32 +25,9 @@ directories:
 
 editfiles:
    any::
-   # suppress emacs errors
-	{ ${target}/etc/mailname
-	  AutoCreate
-          AppendIfNoSuchLine "${HOSTNAME}"
-	}
-
-	{ ${target}/etc/default/rcS
-	  ReplaceAll "^UTC=.*" With "UTC=${UTC}"
-	}
 
 	{ ${target}/etc/init.d/sysklogd
 	  ReplaceAll "^SYSLOGD=.*" With "SYSLOGD=${dblquote}-m 360${dblquote}"
-	}
-
-	{ ${target}/etc/fstab
-	  AppendIfNoSuchLine "none  /proc/bus/usb  usbdevfs  defaults"
-	  AppendIfNoSuchLine "/dev/fd0  /floppy  auto  users,noauto 0 0"
-	}
-
-	{ ${target}/etc/locale.gen
-	  AutoCreate
-	  AppendIfNoSuchLine "en_US ISO-8859-1"
-	}
-
-	{ ${target}/etc/hosts
-	  AppendIfNoSuchLine "127.0.0.1       localhost"
 	}
 
 # add second root account using tcsh
@@ -72,21 +47,9 @@ editfiles:
 	  AppendIfNoSuchLine "local6.debug${tab}${tab}${tab}/var/log/daemon.log"
 	}
 
-	{ ${target}/etc/inittab
-	  ReplaceAll "/sbin/getty"
-		With "/sbin/getty -f /etc/issue.linuxlogo"
-	}
-
    DEMO::
 	{ ${target}/etc/passwd
 	  ReplaceAll 		"^demo:!:" With "demo:${rootpw}:"
-	}
-
-   GERMAN::
-	{ ${target}/etc/locale.gen
-	  AutoCreate
-	  AppendIfNoSuchLine "de_DE ISO-8859-1"
-	  AppendIfNoSuchLine "de_DE@euro ISO-8859-15"
 	}
 
    HOME_CLIENT::
