@@ -161,7 +161,7 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_setup() {
 
-    echo <<-EOF
+    cat <<-EOF
 
     ------------------------------------------------------
     $FAI_VERSION
@@ -196,24 +196,6 @@ EOF
 #	mount -o ro -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
 #    fi
 
-    # support for other keyboards
-    if [ "$FAI_KEYMAP" ]; then
-	for mapname in $FAI_KEYMAP; do
-	    keymapfile=`find /usr/share/keymaps/ /fai/files \ 
-	      ! -type d -name $mapname.kmap.gz -o \
-	      -name $mapname.inc.gz -o -name $mapname`
-	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
-	done
-
-	if [ "$keymaps" ]; then
-	    loadkeys $keymaps
-	else
-	    echo "FAI_KEYMAP $FAI_KEYMAP not found"
-	fi
-    fi
-
-    [ "$FAI_CONSOLEFONT" ] &&
-	consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
     # create two virtual terminals
     openvt bash; openvt bash
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
@@ -239,6 +221,7 @@ fai_sysinfo() {
     ) > >( tee -a $rcslog )  2>&1
     define_classes
     define_variables
+    load_keymap_consolechars
     save_dmesg
     save_log_remote
     fai_boot
@@ -330,6 +313,7 @@ fai_install() {
 
     define_classes > >( tee -a $rcslog )  2>&1
     define_variables > >( tee -a $rcslog )  2>&1
+    load_keymap_consolechars
     save_dmesg
     ( # execute in a subshell to get all output
 
@@ -423,6 +407,7 @@ case $FAI_ACTION in
     showclasses)
 	define_classes
 	define_variables
+	load_keymap_consolechars
 	echo The defined classes are:
 	echo $classes
 	echo The classes are also saved in /tmp/FAI_CLASSES
