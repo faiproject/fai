@@ -28,13 +28,29 @@
 # source this file, then you have these function available in the shell
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    echo $*
+    exec bash
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ifclass() {
+
+# test, if a certain class is defined
+    local cl
+    for cl in $classes; do
+	[ x$cl = x$1 ] && return 0
+    done
+    return 1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
 
     # the variable holds a space separated list of devices and their block size
     device_size=`egrep ' cciss/c.d.$| ida/c.d.$| rd/c.d.$| hd.$| sd.$|/disc$' /proc/partitions | diskandsize`
 
     # a list of all local disks, without size
-    disklist=`list_disks`
+    disklist=`list_disks $device_size`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ether_info() {
@@ -57,10 +73,11 @@ diskandsize() {
 list_disks() {
 
     # print only every second entry
-    local i ent
+    local i ent list
+    list=$1
     i=0
 
-    for ent in $device_size; do
+    for ent in $list; do
 	if [ $i -eq 0 ]; then
 	    echo $ent
 	    i=1
@@ -71,10 +88,11 @@ list_disks() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mount_local_disks() {
-    # try to mount all partitions
 
-    fstabcount=0
+    # try to mount all partitions
     local mountoption=ro
+    local disk partition partitions
+    fstabcount=0
     [ "$1" = "rw" ] && mountoption=$1
 
     for disk in $disklist; do
@@ -86,8 +104,8 @@ mount_local_disks() {
 	    mount -o $mountoption /dev/$partition $FAI_ROOT/$partition
 	    # \ && echo $partition mounted successfully
 	    if [ -f $FAI_ROOT/$partition/etc/fstab ]; then
-		echo /etc/fstab found in $partition
-		fstabpart=$partition
+		echo "/etc/fstab found in $partition"
+		fstabpart=$partition   # used in fstab_mount
 		fstablist="$fstablist $partition"
 		fstabcount=$((fstabcount+1))
 	    fi
@@ -128,11 +146,11 @@ fstab_mount() {
 save_log_local() {
 
     # save log files on local disk
-    local logdir=/var/log/fai
+    local logdir=$FAI_ROOT/var/log/fai
     find /tmp -maxdepth 1 -size 0 | xargs -r rm
-    mkdir -p $FAI_ROOT/$logdir/$HOSTNAME/$FAI_ACTION
-    cp -p /tmp/* $FAI_ROOT/$logdir/$HOSTNAME/$FAI_ACTION 2> $devnull
-    ln -s $HOSTNAME $FAI_ROOT/$logdir/localhost
+    mkdir -p $logdir/$HOSTNAME/$FAI_ACTION
+    cp -p /tmp/* $logdir/$HOSTNAME/$FAI_ACTION 2> $devnull
+    ln -s $HOSTNAME $logdir/localhost
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote() {
@@ -151,55 +169,14 @@ save_dmesg() {
     dmesg > /tmp/dmesg.log
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-die() {
-
-    echo $*
-    exec bash
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-ifclass() {
-
-# test, if a certain class is defined
-    local cl
-    for cl in $classes; do
-	[ x$cl = x$1 ] && return 0
-    done
-    return 1
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-call_hook() {
-
-    local hook=$1
-    local cl
-    [ "$debug" ] && local dflag="-d"
-
-    for cl in $classes; do
-	local hfile=/fai/hooks/${hook}.$cl
-	if [ -x $hfile ]; then
-	   	echo "Call hook: $hook.$cl"
-		# execute the hook
-		$hfile $dflag
-		# is that really good ? Makes sense, if hostname would
-		# be the first hook
-		# execute only one hook if return value is 42
-		# [ $? -eq 42 ] && return
-	fi
-	if [ -x $hfile.sh ]; then
-	   	echo "Source hook: $hook.$cl.sh"
-		# source this hook
-		. $hfile.sh $dflag
-	fi
-     done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
     # wait for running jobs to finish (eg. update-auctex-elisp)
     local i=0
     while (ps r | egrep -qv "ps r|TIME COMMAND"); do
-	[ $(($i % 10)) -eq 0 ] && echo "Waiting for background jobs to finish."
+	[ $(($i % 6)) -eq 0 ] && echo "Waiting for background jobs to finish."
 	i=$(($i+1))
-	sleep 3
+	sleep 5
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -219,7 +196,7 @@ mkdivert() {
     $ROOTCMD dpkg-divert --quiet --package fai --add --rename $1
     cat > $FAI_ROOT/$1 <<-EOF
 	#! /bin/sh
-	# created by FAI
+	# diversion of $1 created by FAI
 	exit 0
 EOF
     chmod a+rx $FAI_ROOT/$1
@@ -304,6 +281,31 @@ task() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+call_hook() {
+
+    local hook=$1
+    local cl
+    [ "$debug" ] && local dflag="-d"
+
+    for cl in $classes; do
+	local hfile=/fai/hooks/${hook}.$cl
+	if [ -x $hfile ]; then
+	   	echo "Call hook: $hook.$cl"
+		# execute the hook
+		$hfile $dflag
+		# is that really good ? Makes sense, if hostname would
+		# be the first hook
+		# execute only one hook if return value is 42
+		# [ $? -eq 42 ] && return
+	fi
+	if [ -x $hfile.sh ]; then
+	   	echo "Source hook: $hook.$cl.sh"
+		# source this hook
+		. $hfile.sh $dflag
+	fi
+     done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defvar() {
 
     local class
@@ -346,6 +348,7 @@ task_defclass() {
 	echo $class >> /tmp/FAI_CLASSES
 	revclasses="$class $revclasses"
     done
+    # revclass is the list of classes in reversed order
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
@@ -382,7 +385,7 @@ task_extrbase() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mirror() {
 
-    # mount debian directory
+    # mount debian mirror directory
     if [ "$FAI_DEBMIRROR" ]; then
 	mkdir -p $FAI_ROOT/$MNTPOINT
 	mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT ||
@@ -505,9 +508,10 @@ task_backup() {
 # this subroutine is not yet tested, not yet used
 # It's only an idea how a backup could be made
     die "make_backup routine not yet used. But you can use the hook backup."
+    local partition
     mount_local_disks
     for partition in $SAVE_DEVICES ; do
-	# tar cf - $FAI_ROOT/$partition | $FAI_REMOTESH -l $LOGUSER $SERVER dd if= of=$partition.tar
+	# tar cf - $FAI_ROOT/$partition | $FAI_REMOTESH -l $LOGUSER $SERVER dd if= of=$HOSTNAME.$partition.tar
 	dump 0f $LOGUSER@$SERVER:backup/$HOSTNAME/$partition.dmp $FAI_ROOT/$partition
     done
 }
@@ -566,6 +570,7 @@ done
 task_faiend() {
 
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
+    # $reboot is a FAI_FLAG
     [ -z $reboot ] && read
     echo "Rebooting $HOSTNAME now"
     cd /
