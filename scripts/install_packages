@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.11.1, 5-apr-2005";
+my $version = "Version 2.11.2, 5-apr-2005";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -37,7 +37,7 @@ use AptPkg::System '$_system';
 use AptPkg::Cache;
 
 # global variables
-our ($opt_d,$opt_f,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our @commands;
 our %command;
@@ -80,7 +80,7 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 );
 
 $test = 0;
-getopts('df:thvlLm:');
+getopts('dthvlLm:');
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
@@ -96,8 +96,6 @@ $classpath = "$ENV{FAI}/package_config";
 $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
 @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 foreach (@classes) { $classisdef{$_}=1;}
-
-read_config_file();
 
 $_config->init;                 # initialize AptPkg
 $_config->set("Dir",$FAI_ROOT); # simulate "chroot"
@@ -197,20 +195,6 @@ execute("$rootcmd $command{pending}");
 execute("$rootcmd $command{dpkgc}");
 # clean apt cache
 execute("$rootcmd $command{clean}");
-# - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub read_config_file {
-
-  my $conffilename; # must be in perl syntax
-  if ($opt_f) {
-    $conffilename="$opt_f/install_packages.conf";
-  } else {
-    $conffilename="/etc/fai/install_packages.conf";
-  }
-  if (-f $conffilename) {
-    warn "Reading config file $conffilename\n" if $verbose;
-    do "$conffilename";
-  }
-}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
 
