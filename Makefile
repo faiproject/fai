@@ -9,7 +9,7 @@ SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar
 CONFFILES= apt.conf dhclient.conf fai_modules_off
 
 # files with variable KERNLEVERSION in it
-KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/DEFAULT.var
+KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/DEFAULT.var $(DESTDIR)/etc/fai.conf
 
 all:
 	$(MAKE) -C doc all
@@ -31,7 +31,7 @@ install:
 	cd conf ; install -m644 $(CONFFILES) $(LIBDIR)/etc/
 	install -m644 conf/fai.conf $(DESTDIR)/etc
 	cp -dRp examples templates $(DESTDIR)/$(DOCDIR)
-	perl -pi -e 's/KERNELVERSION/$(KERNELVERSION)/' $(KVERSION_FILES)
+	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(LIBDIR)/sbin/rcS_fai
 	ln -fs installimage_3com $(DESTDIR)/boot/fai/bigfoot
 	ln -fs installimage_3com $(DESTDIR)/boot/fai/ant01
