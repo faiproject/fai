@@ -66,6 +66,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_dhcp_info() {
 
+    boot=1
     dhclient -lf /dev/null $netdevices >>$bootlog 2> $LOGDIR/dhclient.log
     killall dhclient
 }
@@ -73,6 +74,7 @@ get_dhcp_info() {
 get_bootp_info() {
 
     local device
+    boot=1
     # use all devices in $netdevices
     for device in $netdevices; do
 	echo "Sending BOOTP request using device $device"
@@ -93,5 +95,9 @@ EOM
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 netdevice_info
+boot=0
 dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
 dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
+if [ $boot -eq 0 ]; then
+    echo "Neither a BOOTP nor a DHCP request was sent. Can't get boot information"
+fi
