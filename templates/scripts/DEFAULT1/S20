@@ -2,17 +2,22 @@
 
 control:
    OutputPrefix = ("${cf_prefix}")
-   actionsequence = ( files editfiles )
+   actionsequence = ( directories editfiles )
    EditFileSize = ( 30000 )
-files:
+
+directories:
+
    any::
-	${target}/tmp mode=1777 owner=root group=root act=fixdirs
-   
-   BSDAMD|SCRATCH::
-        ${target}/scratch mode=1777 owner=root group=root act=create
+	${target}/tmp mode=1777 owner=0 group=0
+
+   BSDAMD::
+        ${target}/scratch/. mode=755 owner=0 group=0
 
    FILES_SCRATCH::
-        ${target}/files/scratch mode=1777 owner=root group=root act=fixdirs
+        ${target}/files/scratch/. mode=1777 owner=0 group=0
+
+   SCRATCH::
+        ${target}/scratch mode=1777 owner=0 group=0
 
 editfiles:
    any::
@@ -30,6 +35,7 @@ editfiles:
 	}
 
 	{ ${target}/etc/locale.gen
+	  AutoCreate
 	  AppendIfNoSuchLine "en_US ISO-8859-1"
 	}
 
