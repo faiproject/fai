@@ -21,10 +21,10 @@ arch=i386
 debug="$@"
 
 allopt="$debug --passive --getcontents --arch=$arch --nosource"
-defopt="$allopt --host=$host --dist=potato,sid,woody --ignore=Release"
+defopt="$allopt --host=$host --dist=sid,woody --ignore=Release"
 
 echo "------------------ create mirror for debian ------------------"
-debmirror $destdir/debian $defopt --ignore="disks-$arch/" --adddir="dists/potato-proposed-updates"
+debmirror $destdir/debian $defopt --ignore="disks-$arch/" --adddir="dists/woody-proposed-updates"
 rsync -vrR $rsynchost::debian/dists/\*/Release/ $destdir/debian
 
 echo "------------------ create mirror for debian-non-US ------------------"
@@ -33,7 +33,6 @@ rsync -vrR $rsynchost::debian-non-US/dists/\*/Release/ $destdir/debian-non-US
 
 echo "------------------ create mirror for debian-security ------------------"
 # even one should not mirror the security site, but I will do it.
-debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d potato/updates
+debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d woody/updates
 
-rsync_disks potato
 rsync_disks woody
