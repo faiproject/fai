@@ -10,8 +10,8 @@
 <!entity faiver "2.6">
 <!entity faiverdate "26 july 2004">
 
-<!entity version "2.4.7">
-<!entity date    "19 jan 2005">
+<!entity version "2.4.8">
+<!entity date    "10 mar 2005">
 
 <!entity packageinstall     system "entities/packageinstall.sgml">
 <!entity faisetup           system "entities/faisetup.sgml">
@@ -35,7 +35,7 @@ creating of the configuration and how to deal with errors.
  
 <copyright>
 <copyrightsummary>
-Copyright &copy; 2000-2004 Thomas Lange
+Copyright &copy; 2000-2005 Thomas Lange
 </copyrightsummary>
 	<p>
 This manual is free software; you may redistribute it and/or modify it
@@ -332,8 +332,7 @@ install the packages using the
 <prgn>dpkg</prgn> command.
 <p>The configuration for the FAI package (not the configuration data
 for the install clients) are defined in &fc;. Definition that are only
-used for creating the nfsroot are located in &mfnc;. Since FAI doesn't use
-<prgn>debconf</prgn> yet, edit these files before calling
+used for creating the nfsroot are located in &mfnc;. Edit these files before calling
 <prgn>fai-setup</prgn>. These are important variables in &mfnc;:
 
 <taglist>
@@ -1271,7 +1270,8 @@ several files:
 	  files for disk partitioning and file system creation.</p> </item>
 
 	  <tag><tt>debconf/</tt></tag> <item> <p>This directory holds
-	  all <manref name="debconf" section="8"> data. Not yet used.</p> </item>
+	  all <manref name="debconf" section="8"> data. The format is
+	  the same a for <manref name="debconf-set-selections" section="8">.</p> </item>
 
 	  <tag><tt>package_config/</tt></tag> <item> <p>File with
 	   lists of software
@@ -1461,6 +1461,9 @@ definition of FAI's subroutines.
       <tag>mirror</tag> <item><p>If a local Debian mirror is accessed via NFS
       (when <var>$FAI_DEBMIRROR</var> is defined), this directory will
       be mounted to <var>$MNTPOINT</var>.</p> </item>
+
+      <tag>debconf</tag> <item><p>Calls <manref name="fai-debconf"
+      section="8"> to set the values for the debconf database.</p> </item>
 
       <tag>updatebase</tag> <item><p>Prepares the extracted Debian
       base system for further installation and updates the list of
@@ -1839,6 +1842,11 @@ should be installed.</p> </item>
 <tag>taskinst:</tag> <item> <p>Install all packages belonging to the
 task that are specified in the following lines using <manref
 name="tasksel" section="1">.</p> </item>
+
+<tag>aptitude:</tag> <item> <p>Install all packages with
+the command <prgn>aptitude</prgn>. Will be the default in a future
+releaes and may replace taskinst. Aptitude can also install task
+packages.</p> </item>
 
 <tag>dselect-upgrade</tag> <item> <p> Set package selections using the
 following lines and install or remove the packages specified. These
