@@ -1,0 +1,69 @@
+#! /bin/bash
+
+# parse all log files for error messages
+# print errors and warnings found to error.log
+
+errfile=/tmp/fai/error.log
+
+# Things to look for...
+# Followed by things to ignore
+grep -i \
+  -e "error" \
+  -e "fail" \
+  -e "warn" \
+  -e "bad" \
+  -e "no space" \
+  -e "syntax" \
+  -e "not found" \
+  -e "couldn't" \
+  -e "can't" \
+  -e "E: Sorry, broken packages" \
+  -e "operator expected" \
+  -e "ambiguous redirect" \
+  -e "No previous regular expression" \
+  -e "No such" \
+  -e "unknown option" \
+  -e "[a-z]\+\.log:E: " \
+  -e "cannot create" \
+  /tmp/fai/* \
+  | grep -vi \
+  -e "[a-z]\+\.log:#" \
+  -e "warned about = ( )" \
+  -e "daemon.warn" \
+  -e "kern.warn" \
+  -e "rw,errors=" \
+  -e "Expect some cache" \
+  -e "no error" \
+  -e "failmsg" \
+  -e "RPC call returned error 101" \
+  -e "deverror.out" \
+  -e "(floppy), sector 0" \
+  -e "mount version older than kernel" \
+  -e "Can't locate module " \
+  -e "Warning only 896MB will be used." \
+  -e "hostname: Host name lookup failure" \
+  -e "I can't tell the difference." \
+  -e "warning, not much extra random data, consider using the -rand option" \
+  -e "confC._FILE" \
+  -e "Warning: 3 database(s) sources" \
+  -e "were not found, (but were created)" \
+  -e "removing exim" \
+  -e "The home dir you specified already exists." \
+  -e "No Rule for /usr/lib/ispell/default.hash." \
+  -e "/usr/sbin/update-fonts-.\+: warning: absolute path" \
+  -e "hostname: Unknown server error" \
+  -e "EXT2-fs warning: checktime reached" \
+  -e "RPC: sendmsg returned error 101" \
+  -e "can't print them to stdout. Define these classes" \
+  -e "warning: downgrading" \
+  -e "suppress emacs errors" \
+  -e "echo Error: " \
+  -e "if you have both a SCSI and an IDE CD-ROM" \
+  -e "not updating .\+ font directory data." \
+  | sed -e "s,/tmp/fai/,," \
+  > $errfile
+
+
+if [ -s $errfile ]; then
+   echo ERRORS found
+fi
