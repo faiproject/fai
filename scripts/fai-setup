@@ -92,13 +92,17 @@ setup_fai_account() {
 	#Adding servers keys to known_hosts list of LOGUSER. 
 	#So that installed clients can ssh $LOGUSER@$HOSTNAME without password
 	if [ ! -f $sshdir/known_hosts ]; then     
-		SERVERIP=`host $HOSTNAME | tr -d '[a-z]' | sed -e "s/^. * //"`
-		[ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=` cat /etc/ssh/ssh_host_dsa_key.pub | sed -e "s/= .*$/=/"`
-		[ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=` cat /etc/ssh/ssh_host_rsa_key.pub | sed -e "s/= .*$/=/"`
-		
-		[ -z "$DSASERVER" ] || echo "$HOSTNAME,$SERVERIP $DSASERVER" >> $sshdir/known_hosts
-		[ -z "$RSASERVER" ] || echo "$HOSTNAME,$SERVERIP $RSASERVER" >> $sshdir/known_hosts
+	    SERVERIP=`host $HOSTNAME | tr -d '[a-z]' | sed -e "s/^. * //"`
+	    [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=` cat /etc/ssh/ssh_host_dsa_key.pub | sed -e "s/= .*$/=/"`
+	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=` cat /etc/ssh/ssh_host_rsa_key.pub | sed -e "s/= .*$/=/"`
+	
+	    [ -z "$DSASERVER" ] || echo "$HOSTNAME,$SERVERIP $DSASERVER" >> $sshdir/known_hosts
+	    [ -z "$RSASERVER" ] || echo "$HOSTNAME,$SERVERIP $RSASERVER" >> $sshdir/known_hosts
+	    echo "$sshdir/known_hosts created."
+	else
+	    echo "$sshdir/known_hosts remained unchanged."
 	fi
+
 	chmod 0700 $sshdir/authorized_keys
 	echo "$sshdir/authorized_keys created."
     fi
