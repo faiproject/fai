@@ -148,7 +148,7 @@ call_debootstrap() {
     
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "calling debootstrap $1 $NFSROOT $2"
-    yes '' | debootstrap $1 $NFSROOT $2 || true
+    yes '' | debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2 || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
@@ -257,7 +257,7 @@ upgrade_nfsroot() {
     $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
-    $ROOTCMD apt-get --purge -y remove debconf+ pcmcia-cs ppp pppconfig </dev/null
+    $ROOTCMD apt-get --purge -y install debconf </dev/null
 
     # fake start-stop-dameon
     $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
