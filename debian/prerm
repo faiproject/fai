@@ -18,6 +18,11 @@ set -e
 #          <conflicting-package> <version>
 # for details, see /usr/doc/packaging-manual/
 
+# nothing to do during upgrade
+case "$1" in
+    upgrade) exit 0 ;;
+esac
+
 . /etc/fai/fai.conf
 
 # potato only 
@@ -27,19 +32,19 @@ test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 test -f /etc/init.d/nfs-user-server && nfsserver=nfs-user-server
 
 case "$1" in
-    upgrade) ;;
+    upgrade) exit 0 ;;
 
     remove|deconfigure)
 
-rmdir $NFSROOT || true
+	rm -rf $NFSROOT || true
 
-perl -ni.bak -e "print unless m#^$FAI_CONFIGDIR\s#" /etc/exports
-perl -ni.bak -e "print unless m#^$NFSROOT\s#" /etc/exports
-/etc/init.d/$nfsserver reload
+	perl -ni.bak -e "print unless m#^$FAI_CONFIGDIR\s#" /etc/exports
+	perl -ni.bak -e "print unless m#^$NFSROOT\s#" /etc/exports
+	/etc/init.d/$nfsserver reload
 
-rmdir $FAI_CONFIGDIR || true
+	rmdir $FAI_CONFIGDIR || true
 
-[ -f /home/$LOGUSER/.account_created_by_fai_package ] && userdel -r $LOGUSER
+	[ -f /home/$LOGUSER/.account_created_by_fai_package ] && userdel -r $LOGUSER
 
         ;;
     failed-upgrade)
