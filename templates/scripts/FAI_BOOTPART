@@ -1,0 +1,25 @@
+#! /bin/sh
+
+# create a partition for booting FAI from local disk and
+# add this kernel to lilo
+
+# Thomas Lange, Uni Koeln, 12/2000
+
+echo "Add /fai-boot partition to lilo.conf"
+
+cp -dpR /boot $target/fai-boot
+
+cd $target/boot
+kernelversion=`ls vmlinuz-*`
+mknod $target/dev/boot255 c 0 255
+
+cat >> $target/etc/lilo.conf <<EOF
+image=/fai-boot/boot/$kernelversion
+root=/dev/boot255
+label=FAI
+EOF
+
+mkdir $target/fai-boot/etc
+cp $target/etc/lilo.conf $target/fai-boot/etc
+
+$target/sbin/lilo -r $target

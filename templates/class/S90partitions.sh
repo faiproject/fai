@@ -13,6 +13,9 @@ do
 	grep -v "^#" /fai/disk_config/$c | \
 	grep -q '[[:space:]]/tmp[[:space:]]'  && echo "TMP_PARTITION"
 
+	grep -v "^#" /fai/disk_config/$c | \
+	grep -q '[[:space:]]/fai-boot[[:space:]]'  && echo "FAI_BOOTPART"
+
 	exit
     fi
 done
