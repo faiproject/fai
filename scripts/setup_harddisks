@@ -37,6 +37,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes: 23.01.2003 by Thomas Lange print info data to stdout
 # Last changes: 03.12.2002 by Thomas Lange remove ida, cciss stuff. Just match everything
 # Last changes: 27.11.2002 by Thomas Lange allow more that 3 primary partitions
 # Last changes: 14.05.2002 by Thomas Lange use strict
@@ -143,7 +144,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-my $Version = "0.21fai";
+my $Version = "0.22fai";
 
 my $megabyte = 1024 * 1024;    # guess
 # $gigabyte = 1024 * $megabyte;
@@ -252,7 +253,7 @@ sub PartName {
 #****************************************************
 sub GetAllDisks{
     my $line=""; my $disk=""; my $device=""; my $rest; my $result; my $divi;
-    print "disks found:";
+    print "Disks found:";
     $result = `sh -c "LC_ALL=C sfdisk -g -q"`;
     foreach my $line(split(/\n/,$result)){
 	if($line =~ m'^/dev/(.+?):\s+(\d+)\s+cylinders,\s+(\d+)\s+heads,\s+(\d+)\s+sectors'i){
@@ -710,7 +711,7 @@ sub PartitionPersfdisk{
             ($part eq $BootPartition) && ($line .= ", bootable");
             $sfdiskTables{$disk} .= "$line\n";
 	}
-	print $sfdiskTables{$disk};
+#	print $sfdiskTables{$disk};
 	$filename = "$ENV{LOGDIR}/" . (($disk=~ m#/#) ? join('_', split('/', $disk)) : $disk) . ".sfdisk";
 	if(($test != 1) && ($filename)){
 	    open(FILE, ">$filename") || die "unable to write temporary file $filename\n";
@@ -719,7 +720,7 @@ sub PartitionPersfdisk{
         }
 	$command = "LC_ALL=C sfdisk $sfdisk_options /dev/$disk < $filename";
 	if($test != 1){
-            print "  $command\n";
+            print "$command\n";
 	    $result = `sh -c "$command"`;
 	    (($? >> 8) == 0) || (die "\nSFDISK ERROR:\n $result\n");
 	}
@@ -773,7 +774,7 @@ sub FormatDisks{
 	    }
 	    # swap
 	    if ($mountpoint =~ /^swap/i) {
-	        print "Make Swap Partition:\n";
+#	        print "Make Swap Partition:\n";
 	        $command = "mkswap $mkswap_options";
 		($MPOptions{$mountpoint} =~ /(\-c)\b/i) && ($command .= " $1");
 		push @swaplist, "/dev/$device";
@@ -787,7 +788,7 @@ sub FormatDisks{
 	    }
 	    # Linux Reiser file system
 	    if ($MPOptions{$mountpoint} =~ /\breiser\b/i) {
-	        print "Make Reiser Filesystem:\n";
+#	        print "Make Reiser Filesystem:\n";
 	        $command = "echo y | mkreiserfs $mkreiserfs_options";
 		($MPOptions{$mountpoint} =~ /(\-h\s*\w+)\b/) && ($command .= " $1");
 		($MPOptions{$mountpoint} =~ /(\-v\s*\d+)\b/) && ($command .= " $1");
@@ -801,7 +802,7 @@ sub FormatDisks{
 	    }
 	    # Linux Extended 2 file system
 	    if ($MPOptions{$mountpoint} =~ /\b(ext[23]|auto)\b/i) {
-	        print "Make Extended 2/3 Filesystem:\n";
+#	        print "Make Extended 2/3 Filesystem:\n";
 	        $command = "mke2fs $mke2fs_options";
 		($MPOptions{$mountpoint} =~ /(\-c)\b/i) && ($command .= " $1");
 		($MPOptions{$mountpoint} =~ /(\-i\s*\d+)\b/) && ($command .= " $1");
@@ -835,7 +836,6 @@ sub FormatDisks{
 #****************************************************
 sub WriteFSTab{
     my ($FileSystemTab, $device, $type, $filename);
-    print "\nWrite fstab:\n";
     $FileSystemTab  = << "EOM";
 # /etc/fstab: static file system information.
 #
@@ -868,7 +868,8 @@ EOM
     }
     # write it
     $filename = "$ENV{LOGDIR}/fstab";
-    print $FileSystemTab;
+#    print $FileSystemTab;
+    print "\nWrite fstab to $filename\n";
     if($test != 1){
 	open(FILE, ">$filename") || die "unable to write fstab $filename\n";
 	print FILE $FileSystemTab;
