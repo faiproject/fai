@@ -174,7 +174,7 @@ EOF
     echo -n "Kernel parameters:"; cat /proc/cmdline
     # TODO: eval kernel parameters
 
-    [ "$FAI_LOCATION" ] || die "$FAI_LOCATION not defined."
+    [ "$FAI_LOCATION" ] || die "\$FAI_LOCATION not defined."
     mount -o ro,rsize=8192 $FAI_LOCATION /fai &&
 	    echo "/fai mounted from $FAI_LOCATION"
 
@@ -199,8 +199,9 @@ EOF
     # support for other keyboards
     if [ "$FAI_KEYMAP" ]; then
 	for mapname in $FAI_KEYMAP; do
-	    keymapfile=`find /usr/share/keymaps/ \ 
-	      ! -type d -name $mapname.kmap.gz -o -name $mapname.inc.gz`
+	    keymapfile=`find /usr/share/keymaps/ /fai/files \ 
+	      ! -type d -name $mapname.kmap.gz -o \
+	      -name $mapname.inc.gz -o -name $mapname`
 	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
 	done
 
@@ -230,6 +231,7 @@ fai_sysinfo() {
 	    lspci
 	    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
 	    hdparm -iv /dev/hd[a-h]
+	    echo -n "xserver for graphic card:"; xviddetect -q
 	    #si -p -o shm
 	fi
 	mount_local_disks
