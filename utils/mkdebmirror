@@ -16,7 +16,7 @@ update_from() {
 
     # update local mirror from a host
     host=$1
-    allopt="$debug --passive --getcontents --nosource --arch=$arch --ignore=disks-$arch/"
+    allopt="$debug --ignore-missing-release --ignore-release-gpg --passive --getcontents --nosource --arch=$arch --ignore=disks-$arch/"
     defopt="$allopt --host=$host --dist=$dist"
 
     echo "------------------ create mirror for debian ------------------"
@@ -33,7 +33,7 @@ update_from() {
 
 debug="$@"
 arch=i386
-dist=sarge,woody,sarge-proposed-updates,woody-proposed-updates
+dist=sarge,sarge-proposed-updates
 
 destdir=/files/scratch/debmirror
 
@@ -45,7 +45,7 @@ update_from ftp.de.debian.org
 
 # even one should not mirror the security site, but I will do it.
 echo "------------------ create mirror for debian-security ------------------"
-debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d sarge/updates,woody/updates
+debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d sarge/updates
 
 # get installation disk images via rsync
-rsync_disks woody ftp2.de.debian.org
+#rsync_disks sarge ftp2.de.debian.org
