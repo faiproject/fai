@@ -17,6 +17,10 @@ all:
 clean:
 	$(MAKE) -C doc clean
 
+veryclean: clean
+	rm -f build-stamp
+	dh_clean
+
 install: 
 #	$(MAKE) -C kernel install LIBDIR=$(LIBDIR)
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
