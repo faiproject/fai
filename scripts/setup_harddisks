@@ -108,9 +108,10 @@
 #
 #   After the semicolon there could be extra options like:
 #     -i <bytes>   : Bytes per inodes
-#                    (only ext2 filesystem)
+#                    (only ext2/3 filesystem)
 #     -m <blocks>% : reserved blocks percentage for superuser
-#                    (only ext2 filesystem)
+#                    (only ext2/3 filesystem)
+#     -j	   : format in ext3
 #     -c           : check for bad blocks
 #     format       : Always format this partition even if preserve
 #     lazyformat   : Do not format if partition has not moved
@@ -132,7 +133,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-$Version = "0.13fai";
+$Version = "0.14fai";
 
 $megabyte = 1024 * 1024;    # guess
 # $gigabyte = 1024 * $megabyte;
@@ -448,7 +449,7 @@ sub ParseConfigFile{
 		      && die "ERROR: unable to preserve partitions of size 0.\n$line\n ";
 		  } else {
 		    # If not preserve we must know the filesystemtype
-	            ($options !~ /\b(ext2|swap|dosfat16|winfat32|reiser)\b/i ) && ($options .= " ext2");
+	            ($options !~ /\b(ext2|ext3|auto|swap|dosfat16|winfat32|reiser)\b/i ) && ($options .= " auto");
 		  }
 		if($size =~ /^(\d*)(\-?)(\d*)$/){
 		    $Min = $1;
@@ -475,7 +476,7 @@ sub ParseConfigFile{
 		# fstaboptions
 		$MPfstaboptions{$mountpoint} = $fstaboptions;
 		# extra options
-		($options =~ /\bext2\b/i) && ($MPID{$mountpoint} = 83); # Linux native
+		($options =~ /\b(ext[23]|auto)\b/i) && ($MPID{$mountpoint} = 83); # Linux native
 		($options =~ /\bswap\b/i) && ($MPID{$mountpoint} = 82); # Linux swap
 		($options =~ /\bdosfat16\b/i) && ($MPID{$mountpoint} = 6); # DOS FAT 16bit (>=32MB, will be changed later)
 		($options =~ /\bwinfat32\b/i) && ($MPID{$mountpoint} = "b"); # Win 95 FAT 32
@@ -780,12 +781,13 @@ sub FormatDisks{
 		next;
 	    }
 	    # Linux Extended 2 file system
-	    if ($MPOptions{$mountpoint} =~ /\bext2\b/i) {
-	        print "Make Extended 2 Filesystem:\n";
+	    if ($MPOptions{$mountpoint} =~ /\b(ext[23]|auto)\b/i) {
+	        print "Make Extended 2/3 Filesystem:\n";
 	        $command = "mke2fs $mke2fs_options";
 		($MPOptions{$mountpoint} =~ /(\-c)\b/i) && ($command .= " $1");
 		($MPOptions{$mountpoint} =~ /(\-i\s*\d+)\b/) && ($command .= " $1");
 		($MPOptions{$mountpoint} =~ /(\-m\s*\d+)\b/) && ($command .= " $1");
+		($MPOptions{$mountpoint} =~ /(\-j)\b/) && ($command .= " $1");
 		$command .= " /dev/$device";
 		print "  $command\n";
 		if ($test != 1){
@@ -821,8 +823,10 @@ sub WriteFSTab{
 #<file sys>          <mount point>     <type>   <options>   <dump>   <pass>
 EOM
     # 1. /
-    $type = "ext2";
+    $type = "auto";
     ($MPOptions{'/'} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
+    ($MPOptions{'/'} =~ /\b(ext3)\b/i) && ($type = "ext3");
+    ($MPOptions{'/'} =~ /\b(ext2)\b/i) && ($type = "ext2");
     $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/",$type,$MPfstaboptions{'/'},0,1);
     # 2. swap partitions
     foreach $mountpoint (%PartMountpoint){
@@ -836,9 +840,11 @@ EOM
     foreach $mountpoint (sort %PartMountpoint){
 	next if ( ($mountpoint !~ m#^/#) || ($mountpoint eq "/"));
 	$device = $MountpointPart{$mountpoint};
-	$type = "ext2";
+	$type = "auto";
 	($MPOptions{$mountpoint} =~ /\b(dosfat16|winfat32)\b/i) && ($type = "vfat");
 	($MPOptions{$mountpoint} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
+	($MPOptions{$mountpoint} =~ /\b(ext3)\b/i) && ($type = "ext3");
+	($MPOptions{$mountpoint} =~ /\b(ext2)\b/i) && ($type = "ext2");
 	$FileSystemTab .= BuildfstabLine("/dev/$device",$mountpoint,$type,$MPfstaboptions{$mountpoint},0,2);
     }
     # write it
