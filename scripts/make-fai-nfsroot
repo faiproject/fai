@@ -29,7 +29,16 @@
 
 # Thomas Lange, Universitaet Koeln, 2000
 
+# Packages that are install to nfsroot by default
+# Additional packages are defined with $NFSROOT_PACKAGES in fai.conf
+packages="perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils grub"
+
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+
+if [ "$UID" -ne 0 ]; then
+ echo "Run this program as root."
+ exit 9
+fi
 
 while getopts v opt ; do
         case "$opt" in
@@ -37,19 +46,11 @@ while getopts v opt ; do
         esac
 done
 
-if [ "$UID" -ne 0 ]; then
- echo "Run this program as root."
- exit 9
-fi
-
 set -e
 . /etc/fai.conf
+packages="$packages $NFSROOT_PACKAGES"
 
 conffile=$NFSROOT/etc/rcS_fai.conf
-
-# Additional packages that are install to nfsroot
-packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils"
-
 export DEBIAN_FRONTEND=Noninteractive
 
 if [ "$verbose" ]; then
@@ -67,10 +68,11 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
 
-    # if no ssh in nfsroot available, do nothing
-    [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return
+    # nothing to do if no ssh is available in nfsroot
+    [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return 0
     mkdir -p -m 700 $NFSROOT/root/.ssh
     hkey=`cat /etc/ssh/ssh_host_key.pub`
+    # get ipaddress of server; try using ifconfig eth0
     hname=`$NFSROOT/usr/bin/host $HOST |  perl -pe 's/\s+A\s+/,/'`
     echo "$hname  $hkey " > $NFSROOT/root/.ssh/known_hosts
     loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
@@ -86,17 +88,19 @@ setup_ssh() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 copy_fai_files() {
 
+    # copy to nfsroot
     perl -pi -e "s/^root::/root:${FAI_ROOTPW}:/" etc/passwd
     mkdir -p $NFSROOT/fai/fai_config $NFSROOT/usr/share/fai
-    cp -p $LIBFAI/sbin/dhclient-script $LIBFAI/etc/dhclient.conf $NFSROOT/etc
-    cp -p $LIBFAI/sbin/* $NFSROOT/sbin
-    cp -p /usr/share/fai/* $NFSROOT/usr/share/fai
-    cp -p $LIBFAI/etc/apt.conf $NFSROOT/etc/apt
-    cp -p $LIBFAI/etc/fai_modules_off $NFSROOT/etc/modutils
-    cp -p /usr/lib/perl5/Debian/Fai.pm $NFSROOT/usr/lib/perl5/Debian/
-    cp -p /etc/fai.conf $NFSROOT/etc
-    cp -p /tmp/base?_?.tgz $NFSROOT/var/tmp
-    echo $NFSROOT_ETC_HOSTS >> $NFSROOT/etc/hosts
+    cd $NFSROOT
+    cp -p $LIBFAI/sbin/dhclient-script $LIBFAI/etc/dhclient.conf /etc/fai.conf etc
+    cp -p $LIBFAI/sbin/* sbin
+    cp -p $LIBFAI/etc/fai_modules_off etc/modutils
+
+    cp -p /usr/share/fai/* usr/share/fai
+    cp -p $LIBFAI/etc/apt.conf etc/apt
+    cp -p /usr/lib/perl5/Debian/Fai.pm usr/lib/perl5/Debian/
+    cp -p /tmp/base?_?.tgz var/tmp
+    echo $NFSROOT_ETC_HOSTS >> etc/hosts
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
@@ -106,8 +110,6 @@ create_nfsroot() {
     get_basetgz
     echo -n "Unpacking " ; ls /tmp/base?_?.tgz
     tar -C $NFSROOT -zxpf /tmp/base?_?.tgz
-    # needed by make-fai-bootfloppy
-    mknod $NFSROOT/dev/boot255 c 0 255
 
     if [ "$FAI_DEBMIRROR" ]; then
 	mkdir -p $NFSROOT/$MNTPOINT
@@ -118,38 +120,39 @@ create_nfsroot() {
     touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
     mkdir -p lib/modules/$KERNELVERSION           # dirty trick to hoax lvm
     touch lib/modules/$KERNELVERSION/modules.dep  # dirty trick to hoax lvm
-    mkdir -p $NFSROOT/etc/ssh
-    touch $NFSROOT/etc/ssh/NOSERVER
+    mkdir -p etc/ssh
+    touch etc/ssh/NOSERVER
 
-    echo "$FAI_SOURCES_LIST" > $NFSROOT/etc/apt/sources.list
+    echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     upgrade_nfsroot  
     copy_fai_files
 
-    # set timezone
-    rm -f $NFSROOT/etc/localtime
-    cp -d /etc/localtime /etc/timezone $NFSROOT/etc
 
-    # make little changes to nfsroot, because file systems are
+
+    # set timezone
+    rm -f etc/localtime
+    cp -d /etc/localtime /etc/timezone etc
+
+    # make little changes to nfsroot, because nfsroot is
     # read only for the install clients 
     rm -rf etc/mtab var/run
-    mv $NFSROOT/etc/init.d/rcS $NFSROOT/etc/init.d/rcS.orig
-    ln -s /proc/mounts $NFSROOT/etc/mtab
-    ln -s /tmp/var/run $NFSROOT/var/run 
-    ln -sf /tmp/etc/resolv.conf $NFSROOT/etc/resolv.conf
-    ln -s /sbin/rcS_fai $NFSROOT/etc/init.d/rcS
+    mv etc/init.d/rcS etc/init.d/rcS.orig
+    ln -s /proc/mounts etc/mtab
+    ln -s /tmp/var/run var/run 
+    ln -sf /tmp/etc/resolv.conf etc/resolv.conf
+    ln -s /sbin/rcS_fai etc/init.d/rcS
 
     # turn off logging of loading kernel modules
-    rmdir $NFSROOT/var/log/ksymoops/
-    ln -s /dev/null $NFSROOT/var/log/ksymoops
+    rmdir var/log/ksymoops/
+    ln -s /dev/null var/log/ksymoops
 
     # definition for loopback device
-    echo "iface lo inet loopback" >$NFSROOT/etc/network/interfaces
+    echo "iface lo inet loopback" > etc/network/interfaces
 
-    echo "*.* /tmp/syslog.log" >$NFSROOT/etc/syslog.conf
-    echo ". /usr/share/fai/subroutines" >> $NFSROOT/root/.profile
+    echo "*.* /tmp/syslog.log" > etc/syslog.conf
+    echo ". /usr/share/fai/subroutines" >> root/.profile
 
     setup_ssh
-    umount $NFSROOT/dev/pts 2>/dev/null || true
 
     cat >$NFSROOT/etc/rc2.d/S01fai_abort <<-EOF
 	#!/bin/sh
@@ -171,8 +174,8 @@ upgrade_nfsroot() {
     cp /etc/resolv.conf $NFSROOT/etc
     chroot $NFSROOT apt-get update
     chroot $NFSROOT apt-get check
-    chroot $NFSROOT mount -n -t proc proc /proc
     rm -rf $NFSROOT/etc/pcmcia $NFSROOT/etc/apm
+    mount -t proc /proc $NFSROOT/proc
     chroot $NFSROOT apt-get -y remove pcmcia-cs </dev/null
 
     # fake start-stop-dameon
@@ -185,17 +188,17 @@ upgrade_nfsroot() {
     {
     chroot $NFSROOT apt-get -y --fix-missing install $packages </dev/null
     chroot $NFSROOT apt-get clean
-    chroot $NFSROOT umount -n /proc
+    umount $NFSROOT/proc
     } > $devnull
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_basetgz() {
 
     [ -f /tmp/base?_?.tgz ] && return
-    [ "$FAI_BASETGZ" ] || die "no /tmp/base?_?.tgz found and FAI_BASETGZ not defined."
+    [ "$FAI_BASETGZ" ] || die "No /tmp/base?_?.tgz found and FAI_BASETGZ not defined."
     case $FAI_BASETGZ in
 	ftp:*|http:*)
-	    echo "Getting $FAI_BASETGZ via wget. This may take some time."
+	    echo "Fetching $FAI_BASETGZ via wget. This may take some time."
 	    TMPBDIR=`mktemp /tmp/FAI-wget-XXXXXX` || exit 1
 	    rm $TMPBDIR; mkdir $TMPBDIR || exit
 	    wget -P$TMPBDIR $FAI_BASETGZ
@@ -223,7 +226,9 @@ fi
 
 create_nfsroot
 
+umount $NFSROOT/dev/pts 2>/dev/null || true
 # TODO: only umount if created (debian mirror via NFS)
 test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
 
+echo make-fai-nfsroot finished.
 exit 0
