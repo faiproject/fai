@@ -153,7 +153,7 @@ fai_init() {
     set -a # now export all variables
 
     . /usr/share/fai/subroutines
-
+    # ulimit -c 90000
     FAI_ARCH=`dpkg --print-installation-architecture`
     # global variables
     diskvar=/tmp/disk_var.sh
@@ -305,17 +305,13 @@ prepare_apt() {
     chroot $FAI_ROOT apt-get -f -y remove pcmcia-cs
     chroot $FAI_ROOT apt-get -f -y upgrade </dev/null
 
-    # fake start-stop-daemon
-    mv $ststd ${ststd}.orig
+    # fake some programs
+    mkdivert /usr/sbin/xserver-configure
+# or mkdivert  ypbind; rm ypbind
+#    mkdivert /usr/sbin/ypbind
+    mkdivert /usr/bin/ypwhich
+    mkdivert /sbin/start-stop-daemon
     cp -p /sbin/start-stop-daemon $ststd
-
-    chroot $FAI_ROOT apt-get -f -y --fix-missing install debconf
-    # WORKAROUND for several packages that loop when getting n<Return>
-    chroot $FAI_ROOT apt-get -f -y --fix-missing install libpaperg </dev/null
-
-    # attention: telnetd must be configured before nis
-    # ntp does not like n<Return> as input without ntp.conf
-    touch $FAI_ROOT/etc/ntp.conf
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_install() {
@@ -349,16 +345,20 @@ fai_install() {
     if [ "$debug" ]; then
 	install_packages
     elif [ "$verbose" ]; then
-	nice yes 'n' | install_packages | tee -a /tmp/software.log
+	nice yes '' | install_packages | tee -a /tmp/software.log
     else
-	nice yes 'n' | install_packages >> /tmp/software.log 2>&1
+	nice yes '' | install_packages >> /tmp/software.log 2>&1
     fi
 
     fai_configure
 
     umount -n $FAI_ROOT/proc
-    # undo fake of start-stop-daemon
-    rm -f $ststd ; mv ${ststd}.orig $ststd
+    # undo fake of programs
+    rmdivert /sbin/start-stop-daemon
+    rmdivert /usr/sbin/xserver-configure
+#    rmdivert /usr/sbin/ypbind
+    rmdivert /usr/bin/ypwhich
+
     chroot $FAI_ROOT hwclock --utc --systohc
     date
     echo -e "FAI finished.\a"

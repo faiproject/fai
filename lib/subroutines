@@ -160,3 +160,22 @@ create_ramdisk() {
     cd    /tmp/var && mkdir tmp log lock run spool
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkdivert() {
+
+    # make a diversion of a file
+    chroot $FAI_ROOT dpkg-divert --quiet --package fai --add --rename $1
+    cat > $FAI_ROOT/$1 <<-EOF
+	#! /bin/sh
+	# created by FAI
+	exit 0
+EOF
+    chmod a+rx $FAI_ROOT/$1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+rmdivert() {
+
+    # remove diversion
+    rm -f $FAI_ROOT/$1
+    chroot $FAI_ROOT dpkg-divert --quiet --package fai --remove --rename $1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
