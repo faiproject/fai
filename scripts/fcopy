@@ -91,10 +91,9 @@ sub copy_one {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub postinst {
-	my ($sourcefile,$destfile,$class) = @_;
-	if (-x "$sourcefile/postinst") {
-		system "$sourcefile/postinst $class $destfile";
-	};
+
+  my ($sourcefile,$destfile,$class) = @_;
+  system "$sourcefile/postinst $class $destfile" if -x "$sourcefile/postinst"; 
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub name2num {
@@ -235,7 +234,7 @@ sub rfilter {
   # Filter for recursive copying
   my $nlink;
   -d && ! ($_ =~ /^CVS$/) && ($nlink=(lstat($_))[3]) && 
-    ( (-d 'CVS') && ($nlink==3) || (nlink==2) ) && 
+    ( (-d 'CVS') && ($nlink==3) || ($nlink==2) ) && 
       push @rlist,$ffname;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
