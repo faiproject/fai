@@ -10,7 +10,7 @@ SCRIPTS = rcS_fai setup_harddisks faireboot start-stop-daemon dhclient-perl dhcl
 SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar bootsector install_packages fai-chboot
 BIN_SCRIPTS = fai-class fai-do-scripts
 CONFDIR= $(SHAREDIR)/etc
-CONFFILES= apt.conf dhclient.conf fai_modules_off pxelinux.cfg
+CONFFILES= apt.conf dhclient.conf fai_modules_off
 TEMPLATEDIR=$(SHAREDIR)/templates
 UTILSDIR=$(SHAREDIR)/utils
 
