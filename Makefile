@@ -17,7 +17,7 @@ SIEXAMPLE=$(DOCDIR)/examples/simple
 libfiles=$(wildcard lib/[a-z]*)  # do not include CVS dir
 
 # files with variable KERNLEVERSION in it; this string will be substituted
-KVERSION_FILES =  $(DESTDIR)/etc/fai/fai.conf $(SIEXAMPLE)/class/DEFAULT.var $(SIEXAMPLE)/class/ATOMCLIENT.var
+KVERSION_FILES =  $(DESTDIR)/etc/fai/make-fai-nfsroot.conf $(SIEXAMPLE)/class/DEFAULT.var $(SIEXAMPLE)/class/ATOMCLIENT.var
 
 all:
 	$(MAKE) -C doc all
@@ -38,7 +38,7 @@ install:
 	install -m755 share/subroutines* $(SHAREDIR)
 	install -m644 share/Fai.pm $(DESTDIR)/usr/share/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(CONFDIR)
-	install -m644 conf/fai.conf conf/sources.list $(DESTDIR)/etc/fai/
+	install -m644 conf/fai.conf conf/make-fai-nfsroot.conf conf/sources.list $(DESTDIR)/etc/fai/
 	cp -a examples $(DOCDIR)
 	cp -a utils $(DOCDIR)/examples
 	cp -a templates/* $(DOCDIR)/examples/advanced
