@@ -6,7 +6,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2002 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2003 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -114,6 +114,8 @@ task() {
 	echo "Calling task_$taskname"
 	task_$taskname
     fi
+    # since the subroutine is not needed any more, we can undefine it
+    unset task_$taskname
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_hook() {
@@ -158,7 +160,7 @@ get_fai_dir() {
        get_fai_cvs
     else
         mount $romountopt $FAI_LOCATION $FAI &&
-	    echo "$FAI mounted from $FAI_LOCATION"
+	    echo "Configuration space $FAI mounted from $FAI_LOCATION"
     fi
     # source user specific subroutines
     [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
@@ -193,6 +195,7 @@ get_fai_cvs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_fai_flags() {
 
+    local flag
     # FAI_FLAGS are comma separated, define all flags
     FAI_FLAGS=`echo $FAI_FLAGS | sed -e 's/,/ /g'` 
     for flag in $FAI_FLAGS; do
@@ -204,16 +207,12 @@ define_fai_flags() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_setup() {
 
-    local flag
     # set the system time and date using rdate or/and ntpdate
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
 
     define_fai_flags
-
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
-    devnull=/dev/null
-    [ "$debug" ] && devnull=/dev/console
 
 #    not yet used, maybe use a hook for that
 #    if [ "$FAI_EXTRA_MOUNT" ]; then
@@ -232,10 +231,10 @@ task_setup() {
     disk_info # get and define all information of local disks
 
     # when did FAI start, using localtime
-    RUNDATE=$(date +'%Y%m%d_%H%M%S')
+    FAI_RUNDATE=$(date +'%Y%m%d_%H%M%S')
 
     cat >> $rcsfaivar <<-EOM
-	RUNDATE=$RUNDATE
+	FAI_RUNDATE=$FAI_RUNDATE
 	FAI_ACTION=$FAI_ACTION
 	LOGDIR=$LOGDIR
 EOM
@@ -280,9 +279,9 @@ task_defclass() {
     classes=`cat $LOGDIR/FAI_CLASSES`
 
     # also define all classes in reverse order ($revclasses)
-    for class in $classes ; do
-	revclasses="$class $revclasses"
-    done
+#    for class in $classes ; do
+#	revclasses="$class $revclasses"
+#    done
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
@@ -293,7 +292,6 @@ task_defclass() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defvar() {
 
-    local class
     cd $FAI/class
     for class in $classes ; do
 	if [ -f $class.var ]; then
@@ -309,8 +307,9 @@ task_defvar() {
     [ "$debug" ] && set -vx
     [ -f $LOGDIR/additional.var ] && . $LOGDIR/additional.var
     [ "$debug" ] && set +vx
-    # now all variables are defined. Dump them to variables.var
-    set | perl -ne 'print if /^\w\w+=/' > $LOGDIR/variables.var
+    unset class
+    # now all variables are defined. Dump them to variables.sh
+    set | perl -ne 'print if /^\w\w+=/' > $LOGDIR/variables.sh
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mountdisks() {
