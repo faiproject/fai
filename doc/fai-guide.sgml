@@ -10,8 +10,8 @@
 <!entity faiver "2.6">
 <!entity faiverdate "26 july 2004">
 
-<!entity version "2.4.6">
-<!entity date    "28 dec 2004">
+<!entity version "2.4.7">
+<!entity date    "15 jan 2005">
 
 <!entity packageinstall     system "entities/packageinstall.sgml">
 <!entity faisetup           system "entities/faisetup.sgml">
@@ -1281,15 +1281,29 @@ several files:
 	   customization.</p> </item>
 
 	  <tag><tt>files/</tt></tag> <item> <p>Files used by
-	  customization scripts, e.g. user created kernel
-	   packages. Most files are located in a subtree structure
+	  customization scripts. 
+	   Most files are located in a subtree structure
 	   which reflects the ordinary directory tree. For example, the
 	   templates for <file>nsswitch.conf</file> are located in
-	   <file>/fai/files/etc/nsswitch.conf</file>. The directory
-	  <file>files/pacakges/</file> can contain you local Debian
-	  packages, which can be installed when adding them to the
-	  variables <var>addpackages</var>. See <ref
-	  id="classvariables"> for more information.</p> </item>
+	   <file>/fai/files/etc/nsswitch.conf</file>. Note that the
+	  contents of the files directory are not automatically copied
+	  to the target machine, rather they must be explicitely
+	  copied by customization scripts using the <manref
+	  name="fcopy" section="8"> command.</p> </item>
+
+	  <tag><tt>files/packages/</tt></tag> <item> <p>
+   The simple example configuration also includes the directory
+   <file>/files/packages/</file> which can contain local Debian
+   packages. This directory is referenced by default in
+   <file>/etc/fai/make-fai-nfsroot.conf</file> as
+   <var>FAI_LOCAL_REPOSITORY</var> and will be added to the nfsroot's
+   apt sources by <manref name="make-fai-nfsroot" section="8">. Note
+   that these packages will not be automatically installed, but will
+   be available for installation in your customization scripts using
+   <prgn>install_packages</prgn> or apt-get. For example,
+   <file>.../DEFAULT/S01</file> uses the variable
+   <var>$addpackages</var> and apt-get for installing any packages
+   specified in the this variable.</p> </item>
 
 	  <tag><tt>hooks/</tt></tag> <item> <p>Hooks are user defined
 	  programs or scripts, which are called during the
