@@ -1,0 +1,79 @@
+#! /usr/bin/cfengine
+
+control:
+   OutputPrefix = ("cfengine")
+   actionsequence = ( files links editfiles )
+   EditFileSize = ( 30000 )
+
+# enable access to /dev/sg3 for everybody if a scsi scanner exists
+# this makes sure, that xsane is able to find the connected scsi scanners
+# only for kueppers
+# /dev/sg3 is accessed if scanner is added by scsi-add at runtime
+# ifclass kueppers && chmod a+rw $target/dev/sg3
+files:
+   kueppers::
+        ${target}/dev/sg3 mode=666
+
+links:
+   LINUX.CS_KOELN::
+	${target}/vol -> /usr/local/vol nofile=force
+	${target}/Vol -> /vol nofile=force
+
+editfiles:
+# Install users for netscape kiosk-mode
+   WWWKIOSK::
+	{ ${target}/etc/passwd
+	  AppendIfNoSuchLine "halt:${haltpw}:0:0:,,,:/root/:/root/.shutdown.sh"
+	  AppendIfNoSuchLine "opac:${opacpw}:20000:20000:OPAC WI/INF,,,:/home/opac:/bin/bash"
+	}
+	
+	{ ${target}/etc/group
+	  AppendIfNoSuchLine "opac:*:20000:"
+	}
+
+	#leave only one tty for login. First tty has the entry
+        #..:2345:... in inittab
+	{ ${target}/etc/inittab
+	  HashCommentLinesContaining ":23:respawn:/sbin/getty"
+        }
+
+# mount shm filesystem
+   kueppers|dom::
+        { ${target}/etc/fstab
+	  AppendIfNoSuchLine "none  /dev/shm  shm  defaults  0 0"
+        }
+
+# add NIS printcap
+   NISLPRCLIENT::
+        { ${target}/etc/lprng/lpd.conf
+	  AppendIfNoSuchLine "printcap_path=|/usr/local/share/LPRng/pcfilter"
+	}
+
+# add an account so everybody can shutdown the notebook
+# this account has no password!
+   NOTEBOOK::
+	{ ${target}/etc/passwd
+	  AppendIfNoSuchLine "poweroff::0:0:poweroff account:/tmp:/sbin/poweroff"
+	}
+
+   CS_KOELN::
+
+	# enable remote connect to the Xserver
+	{ ${target}/etc/X11/xinit/xserverrc
+	  ReplaceAll "-nolisten tcp" With " "
+	}
+
+	# a2ps write to stdout
+	{ ${target}/etc/a2ps-site.cfg
+	  AppendIfNoSuchLine "Options: --borders=no --output=-"
+	}
+	# insert some important hosts
+	{ ${target}/etc/hosts
+	  AppendIfNoSuchLine "134.95.9.10     rubens"
+	}
+
+	{ ${target}/etc/ssh/sshd_config
+	  ReplaceAll "X11Forwarding no"
+	        With "X11Forwarding yes"
+	}
+
