@@ -1,11 +1,13 @@
 <!DOCTYPE debiandoc PUBLIC "-//DebianDoc//DTD DebianDoc//EN" [
   <!-- include version information so we don't have to hard code it
        within the document -->
-  <!entity % versiondata SYSTEM "version.ent"> %versiondata;
   <!-- common, language independant entities -->
   <!entity % commondata  SYSTEM "common.ent" > %commondata;
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
+
+<!entity version "0.4">
+<!entity date    "april XXX, 2001">
 
 ]>
 
@@ -26,7 +28,7 @@ creating of the configuration and how to deal with errors.
 
 <copyright>
 <copyrightsummary>
-Copyright &copy; 2000 Thomas Lange
+Copyright &copy; 2000-2001 Thomas Lange
 </copyrightsummary>
 	<p>
 This manual is free software; you may redistribute it and/or modify it
@@ -47,7 +49,23 @@ writing to the &fsf-addr;.
 <toc detail="sect2">
 
 <chapt id="motivation">Motivation<p>
-There was lot of motivation for creating FAI ! TODO ...
+Have you ever performed identical installations of an operating system
+several times?  Would you like to be able to install a Linux cluster
+with dozens of nodes single handedly?
+
+<p>
+Repeating the same task time and again is boring -- and will surely
+lead to mistakes. Also a whole lot of time could be saved, if the
+installation were done automatically.  An installation process with
+manual interaction does not scale.  But clusters have the habit of
+growing over the years.  Think long-term rather than plan only just a
+few months into the future.  
+
+<p>
+In 1999 I had to install a Linux cluster with one server and 16
+clients.  Since I had much experience doing automatic installation of
+Solaris operating system on SUN SPARC hardware, the idea to build
+an automatic installation for Debian was born.
 
 <chapt id="overview">Overview and concepts of FAI<p>
 <p>
@@ -185,24 +203,23 @@ until it will be an official Debian package soon.
 
 <sect id="debian-mirror">How to create a local Debian mirror<p> 
 There are two scripts available for creating a local partitial
-mirror. XXXX
+mirror in <file>/usr/share/doc/fai/examples/utils/</file>,
+<prgn>mkdebmirror</prgn> uses debmirror
+<httpsite>http://cvs.kitenet.net/</httpsite><httppath>joey-cvs/bin/debmirror</httppath>.
+Use these script for building a mirror only for i386 architecture.
 
 <sect id=aptsetup> Setting up FAI
 <p>
 
 First, get the newest version of FAI and install it using the
-
-XXXXX<example># apt-get install fai
-</example>
-
 <prgn>dpkg</prgn> command:
 
 <example>
-kueppers[~]# dpkg -i fai_1.4.1_i386.deb
+kueppers[~]# dpkg -i fai_1.5.0_all.deb
 Selecting previously deselected package fai.
 (Reading database ... 39564 files and directories currently installed.)
-Unpacking fai (from fai_1.4.1_i386.deb) ...
-Setting up fai (1.4.1) ...
+Unpacking fai (from fai_1.5.0_all.deb) ...
+Setting up fai (1.5.0) ...
 To set up FAI edit /etc/fai.conf and call fai-setup
 </example>
 <p>
@@ -236,7 +253,7 @@ section="8">), which defines the location and access method of the Debian
 mirror. For more information on the file format see <manref
 name="sources.list" section="5">.  </p> </item>
 
-	    <tag><var>FAI_PACKAGE_DIR</var></tag>
+	    <tag><var>FAI_DEBMIRROR</var></tag>
 	    <item>
 	      <p> If you have NFS access to your local Debian mirror,
 	      specify the remote filesystem. It will be mounted to
@@ -264,11 +281,11 @@ space. You should also install the package <package>fai-kernels</package>,
 which will be automaticlly installed when you use <prgn>apt-get</prgn> for
 installing FAI.
 <example>
-kueppers[~]# dpkg -i ~lange/fai-kernels_1.0_i386.deb 
+kueppers[~]# dpkg -i ~lange/fai-kernels_1.1_i386.deb 
 Selecting previously deselected package fai-kernels.
 (Reading database ... 40562 files and directories currently installed.)
-Unpacking fai-kernels (from .../lange/fai-kernels_1.0_i386.deb) ...
-Setting up fai-kernels (1.0) ...
+Unpacking fai-kernels (from .../lange/fai-kernels_1.1_i386.deb) ...
+Setting up fai-kernels (1.1) ...
 </example>
 
 Before setting up FAI, you should get the program <prgn>imggen</prgn>,
@@ -279,29 +296,37 @@ that executable in your path (e.g. <file>/usr/local/bin</file>). After
 editing &fc; call <prgn>fai-setup</prgn>.
 
 <example>
-kueppers[/home/lange]# fai-setup 
+kueppers[~]# fai-setup 
 Adding system user fai...
 Stopping Name Service Cache Daemon: nscd.
 Adding new user fai (100) with group nogroup.
 Starting Name Service Cache Daemon: nscd.
 Creating home directory /home/fai.
-Creating FAI nfsroot can take a long time
+/home/fai/.rhosts created.
+User account fai created.
+Creating FAI nfsroot can take a long time and will
+need more than 100MB disk space in /usr/lib/fai/nfsroot.
 Unpacking /tmp/base2_2.tgz
 Upgrading /usr/lib/fai/nfsroot
 Adding additional packages to /usr/lib/fai/nfsroot:
-ssh perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 lvm strace expect5.31 hdparm
+perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils grub ssh
 grep: /etc/ssh/sshd_config: No such file or directory
 grep: /etc/ssh/sshd_config: No such file or directory
 Not starting OpenBSD Secure Shell server (/etc/ssh/NOSERVER)
-Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-2.2.17
+make-fai-nfsroot finished.
+Stopping NFS kernel daemon: mountd nfsd.
+Unexporting directories for NFS kernel daemon...done.
+Starting NFS kernel daemon: nfsd mountd.
+Exporting directories for NFS kernel daemon...done.
+Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-2.2.19
 Output file name        = /boot/fai/installimage
 Kernel command line     = "auto rw root=/dev/nfs nfsroot=kernel nfsaddrs=kernel"
 
-
 Image Creator for MBA ROMs v1.00
 Usage: imggen [OPTION] inputfile outputfile
-  -a,   Add 3Com MBA or Lanworks BootWare support
-  -r,   Remove BootWare header from boot image file
+  -a,   Add 3Com MBA/BootWare support
+  -r,   Remove 3Com MBA/BootWare support from image file
+  -i,   Show information on an image
   -h,   Help screen
 
 In filename: /boot/fai/installimage
@@ -309,7 +334,7 @@ Out filename: /boot/fai/installimage_3com
 Adding MBA support...
 MBA support has been succesfully added 
 You have no FAI configuration. Copy FAI template files with:
-cp -pR /usr/share/doc/fai/templates/* /usr/local/share/fai
+cp -a /usr/share/doc/fai/templates/* /usr/local/share/fai
 Then change the configuration files to meet your local needs.
 FAI setup finished.
 </example>
@@ -393,18 +418,19 @@ Set the boot method to <tt>TCP/IP</tt> and the protocol to either
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM
 <p>
 My notebook has an builtin Intel EtherExpress PRO 100 network
-interface card,
-with a fixed configuration for booting using the PXE method. This
-requires a PXE Linux XXXxx. See MAILLINGLIST XXXXXXXX for more information, how to
-boot in such an environment.
-
-See also <file>/usr/share/doc/syslinux/pxelinux.doc.gz</file>.
+interface card, with a fixed configuration for booting using the PXE
+protocol. This requires a PXE Linux boot loader. See
+<file>/usr/share/doc/syslinux/pxelinux.doc.gz</file> for more
+information, how to boot in such an environment. There are also some
+mail in the mailling list archive concerning this topic.
 
 <sect id="bootnetwork">Booting via network card
 <p>
-You will find two install kernels in <file>/boot/fai</file>. Make a
+
+Make a
 symbolic link from the hostname of your client to the appropriate
-kernel image. The file <file>installimage_3com</file> is created by
+kernel image in <file>/boot/fai</file>.
+The file <file>installimage_3com</file> is created by
 <prgn>imggen</prgn> and suitable for booting 3Com network cards.
 
 <example> 
@@ -425,10 +451,10 @@ floppy, it desired. See <example>make-fai-bootfloppy -h XX</example>
 for more information.
 
 <p>
-If you have no BOOTP or DHCP server you can supply the network
+If you have no BOOTP or DHCP server, supply the network
  configuration as kernel parameters:
 <footnote>
-<p>For additional information see Documentation/nfsroot.txt in the kernel
+	    <p>For additional information see <file>/usr/src/linux/Documentation/nfsroot.txt</file> in the kernel
 sources.
 </p> </footnote>
 <example>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
@@ -452,8 +478,6 @@ command is running simultaneously on the server:
 
 <example># tcpdump -qte broadcast and port bootpc >/tmp/mac.lis</example>
 
-<p>
-XXXXXXXXXX Was ist bei DHCP ?
 <p>
 After the hosts has been sent some broadcast packets (they will fail
 to boot because <prgn>bootpd</prgn> isn't running or does not recognise the MAC
@@ -532,8 +556,13 @@ adjust the other network tags (<tt>sm, gw, dn, ds</tt>) to your local
 needs. The tags for NIS and time servers (<tt>yp, yd, nt</tt>) are
 optional. Tags with prefix <tt>T</tt> (starting from T170) are generic
 tags which are used to transfer some FAI specific data to the
-clients. <strong> It is important, that T171 (equivalent to variable
-<var>FAI_ACTION</var> is set to <tt>sysinfo</tt>
+clients. <strong> It is important, that T171  (equivalent to variable
+<var>FAI_ACTION</var><footnote>
+	  <p>Theses names are used in the main installation
+script <file>rcS_fai</file>. The configuration files for DHCP and BOOTP daemons use other
+names. Example: <var>FAI_ACTION</var> is equal to <tt>T171</tt> in
+bootptab or <tt>option-171</tt> in dhcp.conf. </p>
+	</footnote>. is set to <tt>sysinfo</tt>
 !</strong> Later you can set it to <tt>install</tt>, in order to start
 the automatic installation. For more information see <manref
 name="bootptab" section="5"> and section (TODO: explain all tags).
@@ -562,9 +591,8 @@ easier to use a daemon.
 These are the messages, when booting from floppy.
 <example>
 LILO Loading FAI-BOOTP.
-Loading Linux....................
 Uncompressing Linux... OK, booting the Kernel.
-Linux version 2.2.17 (root@kueppers) (gcc version 2.95.2 20000220
+Linux version 2.2.19 (root@kueppers) (gcc version 2.95.2 20000220
 .
 .
 .
@@ -572,12 +600,12 @@ Linux version 2.2.17 (root@kueppers) (gcc version 2.95.2 20000220
 The rest of the boot message will be equal to those when booting from
 network card. When booting from network card you will see:
 <example>
-BOOTP........
-TFTP..........
-SYSLINUX 1.48 1999-09-26  Copyright (C) 1994-1999 H. Peter Anvin
-Loading Linux....................
+BOOTP.
+TFTP....
+Linux Net Boot Image Loader Version 0.8.1 (netboot)
+.
 Uncompressing Linux... OK, booting the Kernel.
-Linux version 2.2.17 (root@kueppers) (gcc version 2.95.2 20000220
+Linux version 2.2.19 (root@kueppers) (gcc version 2.95.2 20000220
 .
 .
 .
@@ -590,10 +618,14 @@ IP-Config: Complete:
 .
 .
 .
-------------------------------------------------------------
-FAI 1.4.1, december 04, 2000
-Fully Automatic Installation for Debian GNU/Linux
-------------------------------------------------------------
+    ------------------------------------------------------
+    FAI 1.5.0, XXXX XX, 2001
+    Fully Automatic Installation for Debian GNU/Linux
+
+    Copyright (c) 1999-2001, Thomas Lange
+            lange@informatik.uni-koeln.de
+    ------------------------------------------------------
+    Press ctrl-c to interrupt FAI and to get a shell
 .
 .
 .
@@ -621,14 +653,14 @@ which supports your network card. Then create a Debian package using:
 
 <example>
 kueppers# cd /usr/src/linux
-kueppers# cp /usr/lib/fai/nfsroot/boot/config-2.2.17 .config
+kueppers# cp /usr/lib/fai/nfsroot/boot/config-2.2.19 .config
 kueppers# make menuconfig
 kueppers# make-kpkg clean
 kueppers# make-kpkg --revision BOOTP2 kernel-image
 </example>
 
 The created file is
-<file>/usr/src/kernel-image-2.2.17_BOOTP2_i386.deb</file>. Adjust 
+<file>/usr/src/kernel-image-2.2.19_BOOTP2_i386.deb</file>. Adjust 
 the variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot
 by calling.
 
@@ -664,7 +696,7 @@ information about the boot process.
 
 All log files from <file>/tmp </file> are also written to the server
 in the directory <tt>~fai/ant01/sysinfo/</tt><footnote>More
-general: <tt>~$LOGUSER/$HOSTNAME/FAI_ACTION/</tt>.
+general: <tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION/</tt>.
 </footnote>
 
 <p>
@@ -699,12 +731,7 @@ You can reboot the computer using the command <prgn>faireboot</prgn>.
 <chapt id=instprocess>The installation process<p>
 
 FAI can perform several actions when the client is booting. This action
-is defined in the variable <var>FAI_ACTION</var><footnote>
-	  <p>Theses names are used in the main installation
-script <file>rcS_fai</file>. The configuration files for DHCP and BOOTP daemons use other
-names. Example: <var>FAI_ACTION</var> is equal to <tt>T171</tt> in
-bootptab or <tt>option-171</tt> in dhcp.conf. </p>
-	</footnote>.
+is defined in the variable <var>FAI_ACTION</var>
 
 Be very carefully if you set <var>FAI_ACTION </var> to
 <em>install</em>. This can destroy all your data on the install
