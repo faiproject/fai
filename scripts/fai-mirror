@@ -1,0 +1,230 @@
+#! /bin/bash
+
+# $Id$
+#*********************************************************************
+#
+# fai-mirror -- create and manage a partitial mirror for FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2004-2005, Thomas Lange, lange@informatik.uni-koeln.de
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING. If not, write to the
+# Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+# MA 02111-1307, USA.
+#*********************************************************************
+
+version="Version 1.1, 11-jan-2005"
+
+# additional files: install_packages.conf
+# variables: NFSROOT, FAI_CONFIGDIR
+
+# TODO:
+# - cleanup code
+# - add support for package that will be removed like: lilo-
+#   currently you must remove those package from you package_config files
+
+set -a 
+. /etc/fai/fai.conf
+FAI_ROOT=/ # do not execute in chroot
+[ -z "$MAXPACKAGES" ] && MAXPACKAGES=9999
+set +a
+
+trap "umount_dirs" EXIT ERR
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    echo "fai-mirror -- create and manage a partitial mirror for FAI"
+    echo "$0 $version"
+    exit
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+excludeclass() {
+
+    # removes/excludes all classes in $* from $classes
+    local insert eclasses newclass c e
+
+    eclasses=$(echo $* | sed "s/,/ /g")
+   
+    for c in $classes; do
+        insert=1
+        for e in $eclasses; do
+          [ $c = $e ] && insert=0
+        done
+        [ $insert = 1 ] && newclass="$newclass $c"
+    done
+    classes="$newclass"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_addpackages() {
+
+    # add packages (mostly kernels) which are defined in the variable $addpackages
+    # TODO: maybe better to craeate a tmp file with all these package
+    # names, then to call install_packages for the tmp file
+
+    local f p pkg pkglist
+
+    echo -n "Adding packages from variable \$addpackages:"
+    for f in $(echo $FAI_CONFIGDIR/class/*.var); do
+	pkg=$(egrep ^addpackages= $f | sed 's/addpackages=//'|sed 's/"//g'| perl -pe 's/\$[\w_-]+//g')
+	pkglist="$pkglist $pkg"
+    done
+
+    # loop over the list, because maybe some packages doesn't exist in the
+    # partitial mirror, but only in the local repository. These can't be
+    # downloaded via the normal method
+    for p in $pkglist; do
+	echo -n " $p"
+	# test if .deb file is available
+	if [ ! -f $FAI_CONFIG/files/packages/${p}_*.deb ]; then
+	    apt-get -qq -d $aptoptions -y --force-yes --fix-missing install $p
+	fi
+    done
+    echo ""
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+umount_dirs() {
+
+    [ "$FAI_DEBMIRROR" ] && umount $FAI_ROOT/$MNTPOINT 2>/dev/null 1>&2
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+cleandirs() {
+
+echo "nothing to clean up"
+#    rm $statefile
+#    rm -rf $mirrordir/.apt-move  $statefile
+#    [ $debug -eq 1 ] || rm -rf $aptcache $archivedir
+#    rm -rf $aptcache $archivedir
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+initialize() {
+
+    # TODO: root is only needed when FAI_DEBMIRROR is defined. Then we
+    # must mount a directory
+
+    if [ ! -f /etc/fai/install_packages.conf ]; then
+	echo "/etc/fai/install_packages.conf not found. Aborting."
+	exit 3
+    fi
+
+    # store all packages temporary in the mirror partition so we need only a move,
+    # not a copy later during apt-move
+    aptcache=$mirrordir/aptcache   # holds the package cache data
+    archivedir=$aptcache/var/cache/apt/archives
+    aptmovefile=$aptcache/etc/apt-move.conf # stores apt-move.conf
+    statefile=$aptcache/statefile   # also used in install_packages.conf
+
+    # also used in install_pacakges.conf
+    export aptoptions=" \
+      -o Dir::State::status=$statefile \
+      -o Dir::Cache=$aptcache/var/cache/apt \
+      -o Dir::State=$aptcache/var/cache/apt \
+      -o Dir::Cache::Archives=$archivedir \
+      -o Dir::Etc::sourcelist=$aptcache/etc/apt/sources.list \
+      -o Dir::State::Lists=$aptcache/var/lib/apt/lists/"
+
+    # not needed
+    # -o APT::Get::ReInstall
+    # ."-o APT::Get::Download-Only=true -o Aptitude::Cmd-Line::Download-Only=true "
+
+    # we only need some empty dirs
+    mkdir -p $archivedir/partial $aptcache/etc/apt
+    mkdir -p $aptcache/var/lib/apt/lists/partial 
+    > $statefile
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+delete_base_packages() {
+
+    # now delete all packages that are already included in base.tgz
+    local p
+
+    echo "Removing packages that are already included in base.tgz"
+    for p in $(cat $NFSROOT/var/tmp/base-pkgs.lis); do
+	if [ -f $archivedir/${p}_*.deb ]; then
+	    [ $verbose -eq 1 ] && echo "deleting package $p"
+	    rm $archivedir/${p}_*.deb
+        # else commands only for debugging
+        #    else
+        #	echo "package $p not found"
+        #	ls $archivedir/${p}_*.deb
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+preserve=0
+verbose=0
+while getopts "hx:p" opt ; do
+    case "$opt" in
+	h) usage ;;
+	x) exclasses="$OPTARG";;
+	p) preserve=1;;
+	v) verbose=1; vflag=-v;;
+	?) echo "Unknown option"; exit 1;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+debug=0
+[ $debug -eq 0 ] && quiet=-q
+
+mirrordir=$1
+[ -z "$mirrordir" ] && mirrordir=/files/scratch/mirror
+if [ -d $mirrordir/pool -o -d $mirrordir/dists ]; then
+    echo "Please first remove $mirrordir/pool and $mirrordir/dists"
+    exit 3
+fi
+
+initialize
+
+# if we are using nfs mounts for Debian mirror, this may fail here, since inside a chroot environment different dir are used
+
+# if sources.list includes file AND FAI_DEBMIRROR is defined we have to mount
+# otherwise mounting is not needed. call task_mirror
+
+[ "$FAI_DEBMIRROR" ] && mount -r $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT
+# TODO: use -p to preserve sources.list
+perl -p -e 's/file:/copy:/' /etc/fai/sources.list > $aptcache/etc/apt/sources.list
+
+echo "Getting package information"
+apt-get $quiet $aptoptions update >/dev/null
+
+# all available file names are classes
+classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep "^[A-Z0-9_]+$")
+addclasses=$(grep -h PACKAGES $FAI_CONFIGDIR/package_config/* | awk '{print $3}')
+export classes=$(echo -e "$classes\n$addclasses\n" | sort | uniq)
+[ -n "$exclasses" ] && excludeclass $exclasses
+
+echo "Downloading packages for classes:" $classes
+FAI=$FAI_CONFIGDIR install_packages -i $vflag -f /etc/fai
+get_addpackages
+umount_dirs
+trap "" EXIT
+delete_base_packages
+
+# create mirror directory structure
+echo "Calling apt-move"
+cat > $aptmovefile <<EOF   # generate apt-move.conf
+APTSITES=*
+LOCALDIR=$mirrordir
+DIST=sarge
+FILECACHE=$archivedir
+LISTSTATE=$aptcache/var/lib/apt/lists
+DELETE=no
+CONTENTS=no
+EOF
+apt-move $quiet -c $aptmovefile update
+echo "$0 finished."
+echo -n "Mirror size and location: ";du -sh $mirrordir
+cleandirs
