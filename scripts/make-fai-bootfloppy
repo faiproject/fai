@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.4, 27-jan-2004"
+version="Version 2.4.1, 9-feb-2004"
 set -e
 timeout=15
 mkimage=0
@@ -133,6 +133,7 @@ determine_network_parameters() {
     fi
 
     SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
+    [ -z "$SERVERIP" ] && echo "WARNING: Can't determine IP-address for $SERVERINTERFACE"
 
     if [ -n "${TARGETHOST}" ] ; then
 	TARGETIP=`perl -e 'use Socket; use Net::hostent; printf "%s\n", inet_ntoa((gethost($ARGV[0]))->addr);' "${TARGETHOST}"`
@@ -205,6 +206,7 @@ grub_floppy() {
     # make a boot floppy using grub
     kernel=vmlinuz-$KERNELVERSION
     mkdir -p $mountpoint/boot/grub
+    echo "(fd0)   /dev/fd0" > $mountpoint/boot/grub/device.map
     [ "$verbose" ] && echo "Copying the kernel $NFSROOT/boot/$kernel to the floppy."
     cp -p $NFSROOT/usr/lib/grub/i386-pc/stage? $mountpoint/boot/grub
     cp $NFSROOT/boot/$kernel $mountpoint
@@ -235,13 +237,13 @@ kernel (fd0)/$kernel root=/dev/nfs ip=::::::rarp $params
 savedefault
 "
     echo "$grubconf" > $mountpoint/boot/grub/menu.lst
-    umount $mountpoint
-    chroot $NFSROOT /sbin/grub --batch --device-map=/dev/null >/dev/null <<EOF
+    $NFSROOT/sbin/grub --batch --device-map=$mountpoint/boot/grub/device.map >/dev/null <<EOF
 device (fd0) $floppydev
 root (fd0)
 setup (fd0)
 quit
 EOF
+    umount $mountpoint
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
