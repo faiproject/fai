@@ -140,11 +140,13 @@ fai_init() {
     PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
     DEBIAN_FRONTEND=Noninteractive
     ifup lo
+    [ -x /sbin/portmap ] && /sbin/portmap
     mount -n -t proc proc /proc
     mount -n -t devpts devpts /dev/pts
     mount -n -o remount,rw,rsize=8192 /dev/root /
     cat /proc/kmsg >/dev/tty4 &
     create_ramdisk
+    # after FAI 1.4.2 init process uses much memory
     # init should eat up less CPU time
     renice 19 1
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
@@ -172,13 +174,13 @@ fai_setup() {
 
     cat <<-EOF
 
-    ------------------------------------------------------
-    $FAI_VERSION
-    Fully Automatic Installation for Debian GNU/Linux
+    -----------------------------------------------------
+      $FAI_VERSION
+      Fully Automatic Installation for Debian GNU/Linux
 
-    Copyright (c) 1999-2001, Thomas Lange
-            lange@informatik.uni-koeln.de
-    ------------------------------------------------------
+      Copyright (c) 1999-2001, Thomas Lange
+              lange@informatik.uni-koeln.de
+    -----------------------------------------------------
     Press ctrl-c to interrupt FAI and to get a shell
 
 EOF
