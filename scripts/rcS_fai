@@ -93,7 +93,8 @@ fai_init() {
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -t devpts devpts /dev/pts
-	mount  $romountopt -o remount,rsize=8192 /dev/root /
+	# add other options for nfs mount of /dev/root to root-path in dhcpd.conf
+	mount -o remount,ro /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
     fi
     if [ X$OS_TYPE = Xsunos ]; then
@@ -105,15 +106,14 @@ fai_init() {
     cat <<-EOF
              -----------------------------------------------------
                Fully Automatic Installation for $osname
-               $FAI_VERSION
+               $FAI_VERSION     Copyright (c) 1999-2004
 
-               Copyright (c) 1999-2004 Thomas Lange
-               <lange@informatik.uni-koeln.de>
+               Thomas Lange      <lange@informatik.uni-koeln.de>
              -----------------------------------------------------
 EOF
     save_dmesg
     } > >( tee -a $rcslog )  2>&1
-    echo -ne "\e[8;25r"
+    echo -ne "\e[7;25r"
     echo -ne "\e[9B\e[1;m"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
