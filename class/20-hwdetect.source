@@ -29,7 +29,7 @@ esac
 
 for mod in $kernelmodules; do
     [ "$verbose" ] && echo loading kernel module $mod
-    modprobe -a $mod
+    modprobe -a $mod 1>/dev/null 2>&1
 done
 
 # let discover do most of the job
@@ -39,26 +39,19 @@ done
 mount -t usbfs  usbfs /proc/bus/usb
 
 modprobe -a sd_mod sr_mod
-# are any SCSI devices attached?
-if grep -q "^Attached devices:[[:space:]]*$" /proc/scsi/scsi; then # 2.6 output
-    :
-elif grep -q "^Attached devices: none" /proc/scsi/scsi; then # 2.4 output
-    :
-    newclasses="SCSI $newclasses"
-    # we want also get the filename in front of each line. So do not use cat, use grep
-    [ "$verbose" ] && cat /proc/scsi/scsi
-    [ "$debug" ] && grep -H . /proc/scsi/*/*
-fi
+
 echo 6 > /proc/sys/kernel/printk
 
 # try to detect graphics card
 # the variable videodrv may be used to generate the XF86config file
-videodrv=$(discover --data-path=xfree86/server/device/driver display)
+if discover --version | grep "discover \(version \)*1\." ; then
+    videodrv=$(discover --xdriver video 2> /dev/null)
+else
+    videodrv=$(discover --data-path=xfree86/server/device/driver display)
+fi
 [ -n "$videodrv" ] && echo "videodrv=$videodrv" >> $LOGDIR/additional.var
-case "$videodrv" in
-    mga) newclasses="$newclasses MATROX"
-esac
 echo "Video card detected: $videodrv"
 
 set_disk_info  # calculate number of available disks
 save_dmesg     # save new boot messages (from loading modules)
+
