@@ -1,0 +1,49 @@
+#! /bin/bash
+
+# display some information about the system
+
+sysinfo_linux() {
+
+    load_keymap_consolechar
+    # show some system information and save it on the server
+    lspci
+    lsdev
+    echo "Ethernet cards found: $netdevices_all"
+    echo "Ethernet cards running: $netdevices_up"
+    ifconfig -a
+
+    [ -x /sbin/discover ] && {
+      discover --xdriver video
+      discover ethernet cdrom scsi sound video
+      discover --module ethernet cdrom scsi sound video
+    }
+    [ -x /usr/sbin/kudzu ] && kudzu -q
+    if [ -x /usr/sbin/detect ]; then
+       cd $LOGDIR
+       detect && cat report.txt
+    fi
+
+    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
+    cat /proc/partitions
+    disk_info
+    local disk
+    for disk in $disklist; do
+	hdparm -iv /dev/$disk
+	fdisk -s /dev/$disk
+	LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
+    done
+    fdisk -lu
+    mount_local_disks
+    fstab_mount
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+echo The defined classes are:
+echo $classes
+echo The classes are also saved in $LOGDIR/FAI_CLASSES
+
+islinux && sysinfo_linux
+
+save_dmesg
+save_log_remote
+task_faiend
