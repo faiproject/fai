@@ -4,8 +4,8 @@ DESTDIR=$(shell pwd)/debian/tmp
 DEB_HOST_ARCH=$(MACHTYPE)
 DOCDIR=/usr/share/doc/fai
 LIBDIR = $(DESTDIR)/usr/lib/fai
-SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon dhclient-perl dhclient-script fcopy mount2target
-SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy
+SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon dhclient-perl dhclient-script fcopy ftar mount2target
+SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar
 CONFFILES= apt.conf dhclient.conf
 
 # files with variable KERNLEVERSION in it
