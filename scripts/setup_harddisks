@@ -37,6 +37,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes: 9.11.2001 by Thomas Lange
 # reiserfs patch 8.11.2001 by Diane Trout <diane@caltech.edu>
 # Last changes: 25.10.2001 by Thomas Lange
 # Last changes: 09.07.2001 by Thomas Lange
@@ -129,7 +130,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-$Version = "0.9fai";
+$Version = "0.10fai";
 
 $megabyte = 1024 * 1024;    # guess
 $gigabyte = 1024 * $megabyte;
@@ -227,16 +228,7 @@ sub GetAllDisks{
     print "disks found:";
     $result = `sh -c "LC_ALL=C sfdisk -g -q"`;
     foreach $line(split(/\n/,$result)){
-        # old sfdisk format
-	if($line =~ /^Disk\s+\/dev\/(.+?):\s+(\d+)\s+heads,\s+(\d+)\s+sectors,\s+(\d+)\s+cylinders/i){
-	    $disk = $1;
-	    $DiskUnits{$disk} = $2 * $3;# heads * sectors = cylinder size in sectors
-	    $DiskSize{$disk} = $4;      # cylinders
-	    ($DOS_Alignment eq "yes") ? ($SectorsAlignment{$disk} = $3) : ($SectorsAlignment{$disk} = 1);
-	    print " $disk";
-	}
-        # new sfdisk format
-	if($line =~ /^Disk\s+\/dev\/(.+?):\s+(\d+)\s+cylinders,\s+(\d+)\s+heads,\s+(\d+)\s+sectors/i){
+	if($line =~ /^\/dev\/(.+?):\s+(\d+)\s+cylinders,\s+(\d+)\s+heads,\s+(\d+)\s+sectors/i){
 	    $disk = $1;
 	    $DiskUnits{$disk} = $3 * $4;# heads * sectors = cylinder size in sectors
 	    $DiskSize{$disk} = $2;      # cylinders
