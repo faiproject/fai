@@ -48,8 +48,6 @@ EOF
 fi
 
 if ifclass GRUB; then
-    fcopy /boot/grub/menu.lst || {
-
     kernelname=/vmlinuz
     echo "Installing grub and boot entry for $kernelname"
     grub-install --root-directory=$target $BOOT_DEVICE
@@ -58,6 +56,7 @@ if ifclass GRUB; then
 	initrdopt="initrd $broot/initrd.img"
     fi
 
+    fcopy /boot/grub/menu.lst && {
     cat > $target/boot/grub/menu.lst <<-EOF
 
 	# created by FAI
@@ -84,7 +83,7 @@ EOF
 EOF
     fi
     rdev $target/$kernelname $ROOT_PARTITION
-    echo "Grub installed for $kernelimage $broot"
+    echo "Grub installed for $kernelname on $broot"
     }
 fi
 
@@ -98,36 +97,38 @@ fi
 
 # Thomas Lange, Uni Koeln, 2000,2002
 
-cp -a $target/boot $target/fai-boot
+ifclass FAI_BOOTPART && {
 
-cd $target/boot
-kernelversion=`ls vmlinuz-*`
+    cp -a $target/boot $target/fai-boot
 
-ifclass LILO && {
+    cd $target/boot
+    kernelversion=`ls vmlinuz-*`
+
+    ifclass LILO && {
     # write lilo.conf and install lilo to disk
-    echo "Add /fai-boot partition to lilo.conf"
+	echo "Add /fai-boot partition to lilo.conf"
 
-    cat >> $target/etc/lilo.conf <<-EOF
+	cat >> $target/etc/lilo.conf <<-EOF
 	image=/fai-boot/boot/$kernelversion
 	$initrdopt
 	append="devfs=nomount"
 	label=FAI
 EOF
 
-    mkdir $target/fai-boot/etc
-    cp $target/etc/lilo.conf $target/fai-boot/etc
-    $target/sbin/lilo -r $target
-}
+	mkdir $target/fai-boot/etc
+	cp $target/etc/lilo.conf $target/fai-boot/etc
+	$target/sbin/lilo -r $target
+    }
 
-ifclass GRUB && {
+    ifclass GRUB && {
 
-    echo "Add /fai-boot partition to menu.lst for grub"
-    kernelname=/boot/$kernelversion
+	echo "Add /fai-boot partition to menu.lst for grub"
+	kernelname=/boot/$kernelversion
     # get device for this boot partition
-    dev=`df $target/fai-boot | grep '^/dev/' | cut -d ' ' -f1`
-    broot=`device2grub $dev`
+	dev=`df $target/fai-boot | grep '^/dev/' | cut -d ' ' -f1`
+	broot=`device2grub $dev`
 
-    cat >> $target/boot/grub/menu.lst <<-EOF
+	cat >> $target/boot/grub/menu.lst <<-EOF
 
 	# created by FAI
 	
@@ -136,5 +137,6 @@ ifclass GRUB && {
 	kernel $kernelname nfsroot=rom
 EOF
 
-    echo "Grub installed for $kernelimage $broot"
+	echo "Grub installed for $kernelimage $broot"
+    }
 }
