@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.5.1, 2-jan-2005";
+$version="version 1.5.2, 12-jan-2005";
 
 use Socket;
 use Net::hostent;
@@ -92,7 +92,11 @@ sub lsdir {
     } else {
       # ip to hostname
       $iaddr = inet_aton($ip);
-      $host  = gethostbyaddr($iaddr, AF_INET)->name || 'currently unknown';
+      if ($h = gethostbyaddr($iaddr, AF_INET)) {
+	$host = $h->name;
+      } else {
+	$host = "unknown host: $ip";
+      }
     }
 
     # read pxe config file for a host
