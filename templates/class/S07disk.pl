@@ -19,9 +19,9 @@ read_disk_info();
     disksize(sdb,2000,5400) and
     class("SD_2_5GB");
 
-# one disk 1-4 GB, IDE or SCSI
+# one disk 3.5-4.4 GB, IDE or SCSI
 ($numdisks == 1) and
-    testsize($sum_disk_size,1000,4400) and
+    testsize($sum_disk_size,3500,4400) and
     class("4GB");
 
 #-------------------------------------------------------
