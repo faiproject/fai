@@ -45,6 +45,8 @@ $(kerneldir)/$(DHCPKERNEL): .config-dhcp
 
 kernels: $(KERNEL) $(BOOTPKERNEL) $(DHCPKERNEL)
 
+extract: $(KERNEL)
+
 all: $(BOOTPKERNEL) $(DHCPKERNEL)
 
 install:
@@ -57,4 +59,4 @@ clean:
 veryclean: clean
 	rm -rf $(KERNEL) .config-bootp .config-dhcp
 
-.PHONY: clean veryclean kernels
+.PHONY: clean veryclean kernels extract
