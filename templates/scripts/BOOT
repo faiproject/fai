@@ -68,6 +68,17 @@ if ifclass GRUB; then
 	kernel $kernelname
 	$initrdopt
 EOF
+if ifclass BOOTWINDOWS; then
+    cat >> $target/boot/grub/menu.lst <<-EOF
+
+	# created by FAI
+
+	# For booting Windows NT or Windows95
+	title Windows
+	rootnoverify (hd0,0)
+	makeactive
+	chainloader  +1
+EOF
     rdev $target/$kernelname $ROOT_PARTITION
     echo "Grub installed for $kernelimage $broot"
     }
