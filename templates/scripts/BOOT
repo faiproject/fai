@@ -1,63 +1,26 @@
-#! /usr/bin/cfengine
-##############################################################
+#! /bin/sh
+
+# copyright Thomas Lange 2001, lange@debian.org
+
+# this is the function: AppendIfNoSuchLine
+egrep "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/modules
+
+# if class MBR is defined, write lilo into master boot record
+ifclass MBR && BOOT_DEVICE=$ROOT_PARTITION
+
+# write lilo.conf
+cat > ${target}/etc/lilo.conf <<EOF
+
+boot=$BOOT_DEVICE
+root=$ROOT_PARTITION
+install=/boot/boot.b
+map=/boot/map
+vga=normal
+delay=50
 #
-# cf.boot - for informatik.uni-koeln.de
-#
-#################################################################
+image=/vmlinuz
+label=linux
+$liloappend
+EOF
 
-control: 
-
-   OutputPrefix = ("${cf_prefix}")
-
-   actionsequence  = ( 
-		     editfiles
-		     tidy
-		     shellcommands
-		     )
-
-tidy:
-   any::
-	${target}/sbin  pat=unconfigured.sh age=0
-
-editfiles:
-   any::
-
-	{ ${target}/etc/modules
-	  AutoCreate
-	  AppendIfNoSuchLine "auto"
-	}
-
-   MBR::
-	{ ${target}/etc/lilo.conf
-	  AutoCreate
-	  EmptyEntireFilePlease
-	  Append	'boot=${BOOT_DEVICE}'
-	  Append	'root=${ROOT_PARTITION}'
-	  Append	'install=/boot/boot.b'
-	  Append	'map=/boot/map'
-	  Append	'vga=normal'
-	  Append	'delay=50'
-	  Append	'#'
-	  Append	'image=/vmlinuz'
-	  Append	'label=linux'
-	  Append	'${liloappend}'
-	}
-
-   !MBR::
-	{ ${target}/etc/lilo.conf
-	  AutoCreate
-	  EmptyEntireFilePlease
-	  Append	'boot=${ROOT_PARTITION}'
-	  Append	'root=${ROOT_PARTITION}'
-	  Append	'install=/boot/boot.b'
-	  Append	'map=/boot/map'
-	  Append	'vga=normal'
-	  Append	'delay=1'
-	  Append	'#'
-	  Append	'image=/vmlinuz'
-	  Append	'label=linux'
-	}
-
-
-shellcommands:
-	"${target}/sbin/lilo -r ${target}"
+${target}/sbin/lilo -r ${target}

@@ -1,25 +1,13 @@
-#! /usr/bin/cfengine
-##############################################################
-#
-# cf.last - for informatik.uni-koeln.de
-#
-#################################################################
+#! /bin/sh
 
-#TODO: do not remove lilo.conf.cfedited 
+# copyright Thomas Lange 2001, lange@debian.org
+# remove backup files from cfeninge (*.cfedited)
 
-control:
+dirs="root etc var"
 
-   OutputPrefix = ("${cf_prefix}")
+for path in $dirs; do
+    find $FAI_ROOT/$path -maxdepth 25 -name \*.cfedited -o -name \*.cfsaved | xargs ls
+done
 
-   actionsequence  = ( 
-		     tidy
-                     )
-tidy:
-   any::
-	${target}/root/ pat=*.cfedited R=25 age=0
-	${target}/etc/  pat=*.cfedited R=25 age=0
-	${target}/var/  pat=*.cfedited R=25 age=0	
-
-	${target}/root/ pat=*.cfsaved R=25 age=0
-	${target}/etc/  pat=*.cfsaved R=25 age=0
-	${target}/var/  pat=*.cfsaved R=25 age=0
+# the system is now configured
+rm -f $FAI_ROOT/sbin/unconfigured.sh
