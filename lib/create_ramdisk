@@ -1,0 +1,16 @@
+#! /bin/sh
+
+# $Id$
+
+# create a writeable area on the install client
+
+mount -n -t proc proc /proc
+# if we have shm use it as ramdisk
+mount -t shm shm /tmp || {
+    ramdevice=/dev/ram0
+    mke2fs -q -m 0 $ramdevice && echo "ramdisk $ramdevice created"
+    mount -n $ramdevice /tmp
+}
+# now create the required subdirectories
+mkdir -p /tmp/etc /tmp/target /tmp/var/run/sshd
+cd    /tmp/var && mkdir tmp log lock spool
