@@ -14,10 +14,11 @@ CONFDIR= $(SHAREDIR)/etc
 CONFFILES= apt.conf dhclient.conf fai_modules_off
 ADEXAMPLE=$(DOCDIR)/examples/advanced
 SIEXAMPLE=$(DOCDIR)/examples/simple
+BEOEXAMPLE=$(DOCDIR)/examples/beowulf
 libfiles=$(wildcard lib/[a-z]*)  # do not include CVS dir
 
 # files with variable KERNLEVERSION in it; this string will be substituted
-KVERSION_FILES =  $(DESTDIR)/etc/fai/make-fai-nfsroot.conf $(SIEXAMPLE)/class/DEFAULT.var $(SIEXAMPLE)/class/ATOMCLIENT.var
+KVERSION_FILES =  $(DESTDIR)/etc/fai/make-fai-nfsroot.conf $(SIEXAMPLE)/class/DEFAULT.var $(BEOEXAMPLE)/class/ATOMCLIENT.var
 
 all:
 	$(MAKE) -C doc all
