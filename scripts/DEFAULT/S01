@@ -2,63 +2,11 @@
 
 # (c) Thomas Lange, 2001-2005, lange@debian.org
 
-# disable fsck on ext3 filesystems
-partitions=`mount|grep $target |grep "type ext3"|perl -ane 'print "$F[0] "'`
-for part in $partitions; do
-    echo "Disable periodic fsck on $part"
-    tune2fs -c 0 -i 0 $part
-done
-
-# assuming that make-fai-nfsroot.conf sets
-# FAI_LOCAL_REPOSITORY="deb file:/fai/files packages/"
-# install additional packags that are located in /fai/files/packages/
-if [ -d /fai/files/packages ] && [ ! -f /fai/files/packages/Packages.gz ]; then
-    # Mm. It seems not to be a simple repository. I assume it's configured in sources.list
-    echo "WARNING! Index file Packages.gz is missing in /fai/files/packages."
-fi
-# create dummy link, so package kernel-image-* makes new correct link
-ln -s /boot/vmlinuz-nolink $target/vmlinuz
-fcopy /etc/kernel-img.conf
-[ "$addpackages" ] && $ROOTCMD apt-get install $addpackages < /dev/null
-
-fcopy /etc/hostname || echo $HOSTNAME     > $target/etc/hostname
-echo $time_zone    > $target/etc/timezone
-ln -fs /usr/share/zoneinfo/${time_zone} $target/etc/localtime
-
-fcopy -iM /etc/hosts /etc/motd
-
-# make /root accessable only by root
-chmod 0700 $target/root
-chown root:root $target/root
-# copy default dotfiles for root account
-fcopy -r /root
-
-# create keyboard layput table
-dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
-
 fcopy -M /etc/X11/XF86Config   && rm -f $target/etc/X11/XF86Config-4
 fcopy -M /etc/X11/XF86Config-4 && rm -f $target/etc/X11/XF86Config
 [ -n "$videodrv" ] || videodrv=vesa
 grep -q %%VIDEODRV%% $target/etc/X11/XF86Config-4 &&
    perl -pi.orig -pe "s/%%VIDEODRV%%/$videodrv/" $target/etc/X11/XF86Config-4
-
-# put CD-ROM into fstab and exports
-# if cdromdevice is defined in *.var, use that value
-# if you have both a SCSI and an IDE CD-ROM -> Uuuuups, this will fail
-# if you have an IDE CDROM (mostly hdc) but you are using the ide-scsi driver,
-# this IDE CDROM will be scd0, nopt hdc. So the auto detect in the following lines will fail
-[ "$cdromdevice" ] || cdromdevice=`grep -q CD-ROM /proc/scsi/scsi && echo "scd0"`
-[ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -n 1 | awk -F/ '{print $4}'`
-if [ "$cdromdevice" ]; then
-    echo "/dev/$cdromdevice  /cdrom   auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
-    echo "/cdrom        *(ro,async)" >> $target/etc/exports
-fi
-# if a second cd-rom exists we assume that this is the cd-writer
-if [ `grep "Type:.*CD-ROM" /proc/scsi/scsi | wc -l` -gt 1 ]; then
-    echo "/dev/scd1  /cdrec  auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
-    echo "/cdrec        *(ro,async)" >> $target/etc/exports
-    mkdir $target/cdrec
-fi
 
 # add a demo user account
 ifclass DEMO && $ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
