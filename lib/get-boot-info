@@ -28,7 +28,6 @@
 #*********************************************************************
 
 # TODO
-# options: -p protocol d,b
 # -t timeout
 # a list of devices
 #
@@ -93,11 +92,42 @@ get_bootp_info() {
 EOM
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+setnet() {
+
+    IPADDR=$1
+    shift
+    SERVER=$1
+    shift
+    GATEWAYS=$1
+    shift
+    NETMASK=$1
+    BROADCAST=${IPADDR%\.*}.255
+
+    cat >> $bootlog <<EOF
+IPADDR=$IPADDR
+SERVER=$SERVER
+NETMASK=$NETMASK
+GATEWAYS=$GATEWAYS
+BROADCAST=$BROADCAST
+EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_fixed_info() {
+
+    boot=1
+    # ip contains the network parameters
+    echo $ip | grep -q : || echo "Kernel parameter ip= does not contain network parameters."
+    ips=${ip//:/ }
+    setnet $ips
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 netdevice_info
 boot=0
 dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
 dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
+dmesg | grep -q "IP-Config: " && get_fixed_info
+
 if [ $boot -eq 0 ]; then
-    echo "Neither a BOOTP nor a DHCP request was sent. Can't get boot information"
+    echo "Network information can't be determined. Can't get boot information"
 fi
