@@ -288,7 +288,15 @@ create_nfsroot
 if [ -f $KERNELPACKAGE ]; then
     # create tftp boot images
     install_kernel_nfsroot
-    mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+
+    grep -q ic_bootp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=BOOTP
+    # only BOOTP need a netboot image, DHCP can do with raw kernels
+    if [ "$TYPE" = BOOTP ]; then
+	mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+    else
+	cp -p $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+    fi
+    # TODO: does dhcp need imggen ?
     # imggen is free software from 3com
     # it converts netboot image to images, that are bootable by 3com network cards
     imggen=`which imggen || true`
