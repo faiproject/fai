@@ -1,30 +1,50 @@
-fai (2.3.5) unstable; urgency=low
+fai (2.4) unstable; urgency=low
 
+  * use fai-class to define classes
   * bootsector: do not use dpkg to get hardware architecture
   * a lot of spelling mistakes corrected. Thanks Era! (closes: # 155735)
   * control: correct name for Debian distribution (closes: #150887)
   * make-fai-nfsroot: add -l to tar when creating base.tgz (closes: #151173),
     add noatime to mount, new mknbi-linux options, check for existence of
-    mknbi-linux (closes: #167900), replace $UID with `id -u`
+    mknbi-linux (closes: #167900), replace $UID with `id -u`, do not call
+    rdev, remove packages that are already installed by debootstrap, new
+    option for mknbi-linux, always do setup for dhcp and bootp, write PATH
+    to /root/.profile, correct location for syslog.conf
   * scripts/BOOT: echo each kernel module to a seperate line in
     /etc/modules, lilo.conf can also boot the old kernel
   * scripts/LAST: add call: apt-get -f install
   * ftar: conditional rm -rf
   * test if mknbi-linux is available (closes: #167900)
-  * make-fai-bootfloppy: rmdir lost+found to get more space on floppy,
-    replace $UID with `id -u`
-  * DEFAULT/S01: install $addpackages with one dpkg call
+  * make-fai-bootfloppy: rmdir lost+found and copy fewer files to get more
+    space on the floppy, replace $UID with `id -u`, create a generic 
+    boot floppy independant of the boot protocol, use one image with
+    multiple append parameters, new options -v, -d
+  * DEFAULT/S01: install $addpackages with one dpkg call, installation of
+    default kernel creates symlinks in /, make /root accessable only by root
   * bug fix: hooks can now skip its task again
   * NFS file systems are also mounted with noatime.
   * rcS_fai: create var/run/sshd directory, /usr/local/{bin,sbin} at the
-    very beginning of PATH, add /usr/lib/fai to PATH
+    very beginning of PATH, add /usr/lib/fai to PATH, PATH is defined
+    before doing anything else, create_ramdisk is an extern script
   * scripts/USB: fix option for echo 
-  * scripts/FAI_BOOTPART: missing $target added
-  * scripts/DEFAULT/S01: make /root accessable only by root
-  * lib/subroutines: better regex for matching disks in /proc/partitions
+  * scripts/FAI_BOOTPART: missing $target added, remove rdev call
+  * lib/subroutines*: better regex for matching disks in /proc/partitions,
+    task_sysinfo, prepare_apt, task_sysinfo now a separate script, add
+    link last to last action performed, new variable $LOGSERVER
   * Fai.pm and subroutines* are moved from lib/ moved to share/
+  * fai-setup: ssh-keygen needs option -t (closes: #156947)
+  * fai.conf: correct line containing proposed-updates
+  * setup_harddisks: allow more that 3 primary partitions, new regex for
+    matching disks and partitions
+  * fai_modules_off: add block-major-{104,105}
+  * remove debian/undocumented
+  * install_packages: add option -l, only print the list of packages
+  * add suffix -386 to name of kernel-image package
+  * save_log_*(): do not loops in symlinks
+  * apt.conf: add option force-confdef to dpkg call
+  * 03hwdetect script loads scsi and ide modules and prints /proc/scsi info
   
- -- Thomas Lange <lange@debian.org>  Fri, 22 Nov 2002 15:53:09 +0100
+ -- Thomas Lange <lange@debian.org>  Tue, 10 Dec 2002 16:58:31 +0100
 
 fai (2.3.4) unstable; urgency=low
 
