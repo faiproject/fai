@@ -1,6 +1,20 @@
 #! /bin/sh
 
 # copyright Thomas Lange 2001-2003, lange@debian.org
+# LILO support may be dropped in a future release
+
+gmenu=$target/boot/grub/menu.lst
+grubvars() {
+    # define variables for grub
+    fp=$1
+    #fullpath=$(ls $target/boot/vmlinuz-*)
+
+    dfline=$(df $fp | grep '^/dev/')
+    dev=$(echo $dfline | cut -d ' ' -f1)
+    mntp=$(echo $dfline | awk '{print $6}')
+    broot=`device2grub $dev`
+    gpath=${fp#$mntp}
+}
 
 # this is the function: AppendIfNoSuchLine
 egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/modules
@@ -9,6 +23,8 @@ egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/m
 for module in $moduleslist; do
     echo $module >> $target/etc/modules
 done
+
+FFLAGS=${FAI_FLAGS// /,}
 
 cd $target/boot && kernelversion=`ls vmlinuz-*`
 
@@ -47,16 +63,19 @@ EOF
 fi
 
 if ifclass GRUB; then
-    kernelname=/vmlinuz
-    echo "Installing grub and boot entry for $kernelname"
+#    echo "Installing grub and boot entry for $kernelversion"
     grub-install --root-directory=$target $BOOT_DEVICE
-    broot=`device2grub $ROOT_PARTITION`
-    if [ -L $target/initrd.img ]; then
-	initrdopt="initrd $broot/initrd.img"
-    fi
 
     fcopy /boot/grub/menu.lst || {
-    cat > $target/boot/grub/menu.lst <<-EOF
+    fullpath=$(ls $target/boot/vmlinuz-*)
+    grubvars $fullpath
+    if [ -L $target/initrd.img ]; then
+	iname=$(cd $target/boot; ls initrd.img*)
+	t="$target/boot"
+	ipath=${t#$mntp}
+	initrdopt="initrd $ipath/$iname"
+    fi
+    cat > $gmenu <<-EOF
 
 	# created by FAI
 	
@@ -64,13 +83,13 @@ if ifclass GRUB; then
 	default 0
 	color cyan/blue white/blue
 
-	title Debian GNU/Linux, $kernelname $kernelversion
+	title Debian GNU/Linux, $kernelversion
 	root $broot
-	kernel $kernelname
+	kernel $gpath root=$ROOT_PARTITION
 	$initrdopt
 EOF
     if ifclass BOOTWINDOWS; then
-    cat >> $target/boot/grub/menu.lst <<-EOF
+    cat >> $gmenu <<-EOF
 
 	# created by FAI
 
@@ -84,31 +103,19 @@ EOF
 
     # add entry for memtest
     if dpkg -l memtest86 > /dev/null 2>&1 ; then
-    cat >> $target/boot/grub/menu.lst <<-EOF
+    t="$target/boot"
+    gpath=${t#$mntp}
+    cat >> $gmenu <<-EOF
 
-        title  memtest
-        root   $broot
-        kernel /boot/memtest86.bin
-
+	title  memtest
+	root   $broot
+	kernel $gpath/memtest86.bin
 EOF
     fi
-
     }
-    rdev $target/$kernelname $ROOT_PARTITION
-    echo "Grub installed for $kernelname on $broot"
-
+    echo "Grub installed for $kernelversion on $broot"
 fi
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# this was the script FAI_BOOTPART
-# this must be executes after the part above, because we append
-# some lines to the boot loader configuration files
-
-# create a partition for booting FAI from local disk and
-# add this kernel to lilo or grub
-
-# Thomas Lange, Uni Koeln, 2000,2002
-
 ifclass FAI_BOOTPART && {
 
     mkdir -p $target/fai-boot/boot
@@ -124,7 +131,6 @@ ifclass FAI_BOOTPART && {
 	append="devfs=nomount"
 	label=FAI
 EOF
-
 	mkdir $target/fai-boot/etc
 	cp $target/etc/lilo.conf $target/fai-boot/etc
     }
@@ -133,19 +139,17 @@ EOF
 
 	echo "Add /fai-boot partition to menu.lst for grub"
 	cd $target/fai-boot/ && kernelname=/`ls boot/vmlinuz-*`
-    # get device for this boot partition
-	dev=`df $target/fai-boot | grep '^/dev/' | cut -d ' ' -f1`
-	broot=`device2grub $dev`
-
-	cat >> $target/boot/grub/menu.lst <<-EOF
+	fullpath=$(ls $target/fai-boot/boot/vmlinuz-*)
+	grubvars $fullpath
+	cat >> $gmenu <<-EOF
 
 	title start FAI with FAI_ACTION=sysinfo
 	root $broot
-	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FAI_FLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=sysinfo
+	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FFLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=sysinfo
 
 	title FAI re-Installation
 	root $broot
-	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FAI_FLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=install
+	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FFLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=install
 EOF
 	echo "Grub for $kernelversion installed on $broot"
     }
