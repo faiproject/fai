@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/sh -xv
 
 # $Id$
 #*********************************************************************
@@ -34,8 +34,12 @@
 # apt-get must been working on your server (sources.list must be OK)
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
 rootpw="56hNVqht51tzc"
+url=ftp://ftp.debian.org/debian   # format for http or ftp
+url=/mnt   # format for a mounted directory
 dversion=2_2
+dname=potato
 verbose=1
 # Additional packages that are install to nfsroot
 packages="debconf file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm"
@@ -70,6 +74,7 @@ recreate_nfsroot() {
 
     perl -pi -e "s/^root::/root:${rootpw}:/" etc/passwd
     mkdir -p $root/fai/fai_config
+    touch $root/fai/BOOTP   # enable BOOTP support
     cp -p /usr/lib/fai/sbin/* $root/sbin
     cp -p /usr/lib/fai/etc/apt.conf $root/etc/apt
     cp -p /usr/lib/perl5/Debian/Fai.pm $root/usr/lib/perl5/Debian/
@@ -110,6 +115,18 @@ upgrade_nfsroot() {
 # create installation filesystem that will be
 # mounted readonly by all clients during installation process
 # get base2_2.tgz via wget from ftp.debian.org (default no)
+
+
+# TODO: parse sources.list and guess location for baseX_X.tgz
+if [ ! -f /tmp/$basetgz ]; then
+    case $url in
+	ftp:*|http:*)
+	   wget -Nv -P/tmp $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz
+	   ;;
+        *) cp -p $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz /tmp
+	   ;;
+    esac
+fi
 
 if [ ! -f /tmp/$basetgz ]; then
     echo "Please put the Debian $basetgz file into /tmp before creating nfsroot for fai."
