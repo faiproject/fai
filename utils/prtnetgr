@@ -1,0 +1,40 @@
+#! /usr/bin/perl
+
+#*********************************************************************
+#
+# prtnetgr -- print a host netgroup, convert the netgroup tree to a flat listing
+#
+# (c) 11/2001 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# TODO: match the form (,,); currently these lines are skipped
+# global variable
+# %netgroup
+
+# - - - - - - - - - - - - - - - - - - - - -
+sub mklist {
+
+  my $grp = shift;
+  $netgroup{$grp} || return $grp;
+  map { mklist($_) } @{$netgroup{$grp}};
+}
+# - - - - - - - - - - - - - - - - - - - - -
+
+open NET, "<netgroup " or die "Can't read NIS netgroup info\n";
+#open NET, "ypcat -k netgroup |" or die "Can't read NIS netgroup info\n";
+while (<NET>) {
+  next if /^\s*$/;
+  next if /\(/;
+  next if /^#/;
+  ($grp, @members) = split;
+  $netgroup{$grp} = [ @members ];
+}
+
+# only one argument: the name of a host netgroup
+$arg = shift;
+# exit if argument is not a netgroup
+exit 1 unless $netgroup{$arg};
+$plist = join ' ', mklist($arg);
+print "$plist\n";
+exit 0;
