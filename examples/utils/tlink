@@ -1,0 +1,39 @@
+#! /bin/sh
+
+# (c) 2001, Thomas Lange
+#
+# set link for tftpboot in /boot/fai to an image for a host
+# or for all hosts with prefix and a number
+
+# examples:
+# tlink installimage bigfoot
+# tlink installimage ant06
+# tlink installimage all ant
+# tlink nodeimage all ant
+
+
+image=$1
+host=$2
+prefix=$3
+
+# we have sixteen nodes
+hostnums="01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16"
+
+tftpdir=/boot/fai
+
+link() {
+
+	echo $1 now booting $image
+    	rm -f $ $tftpdir/$1
+	ln -s $image $tftpdir/$1 
+}
+
+if [ $host = "all" ];then
+    for i in $hostnums
+    do
+	link $prefix$i
+    done
+    exit
+else
+    link $host
+fi
