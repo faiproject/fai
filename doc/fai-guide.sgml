@@ -1111,20 +1111,23 @@ and its subdirectories. This will be mounted by the install clients to
 
 The main installation script <prgn>rcS_fai</prgn> uses these
 subdirectories in the order listed. Copy the configuration templates
-to the configuration space and start an installation.
+to the configuration space and start an installation. These files
+need not belong to the root account. You can change their ownership and
+then edit the configuration with a normal user account.
 
 <example>
-> cp -a /usr/share/fai/templates/* /usr/local/share/fai
+# cp -a /usr/share/fai/templates/* /usr/local/share/fai
+# chown -R fai /usr/local/share/fai
 </example>
 
-These files contain configuration for some example hosts. Thers a
-clsuter of workstation (<em>bigfoot, ant01, ant02,...</em>) and a Beowulf
-cluster with a mster node called <em>nucleus</em> and computing nodes
-<em>atom01, atom02,...</em>.
+All these files contain configuration for some example hosts. 
+A cluster of workstations (<em>bigfoot, ant01, ant02,...</em>) and a Beowulf
+cluster with a master node called <em>nucleus</em> and computing nodes
+<em>atom01, atom02,...</em> are included.
 
 <taglist>  
    <tag>bigfoot</tag>  <item> <p>This is a server with much software. It
-   provides the home directory and all programs for its NFS clients. Also some
+   provides the home directory <file>/usr</file> for its NFS clients. Also some
    daemons are installed and activated by default.</p> </item>
    <tag>ant01,...</tag>  <item> <p>These dataless clients mount
    <file>/usr</file> and <file>/home</file> from <em>bigfoot</em>. Most of
@@ -1132,7 +1135,7 @@ cluster with a mster node called <em>nucleus</em> and computing nodes
    to a netgroup of hosts.</p> </item>
 
    <tag>nucleus</tag>  <item> <p>This Beowulf master node is a server with much software. It
-   provides the home directory and all programs for its computing nodes. Also some
+   provides the home directory <file>/usr/local</file> for its computing nodes. Also some
    daemons are installed and activated by default.</p> </item>
    <tag>atom01,...</tag>  <item> <p>These clients mount
    <file>/usr/local</file> and <file>/home</file> from <em>nucleus</em>. Most of
@@ -1145,7 +1148,7 @@ installation !
 
 <sect id=tasks>The default tasks<p>
 
-After the kernel has booted it mounts the root file system via NFS
+After the kernel has booted, it mounts the root file system via NFS
 from the install server and init starts the script
 <file>/sbin/rcS_fai</file>. This is the script which controls the
 whole sequence of the installation. No other scripts in
@@ -1155,40 +1158,39 @@ whole sequence of the installation. No other scripts in
 The installation script <file>rcS_fai</file> uses many subroutines,
 which are defined in <file>/usr/share/fai/subroutines</file>. All
 important tasks of the installation are called via the call <tt>task
-<em>name</em></tt>. This subroutine calls hooks with prefix
-<em>name</em> if available and then calls the default task (defined as <tt>task_<em>name</em></tt>) if it shouldn't be skiped.
-<p>
-
-This is the description of all default tasks.
+<em>name</em></tt>. The subroutine <tt>task</tt> calls hooks with
+prefix <em>name</em> if available and then calls the default task
+(defined as <tt>task_<em>name</em></tt> in
+<file>subroutines</file>). The default task can be skiped on
+demand. This is the description of all default tasks.
 <taglist>
 
       <tag>confdir</tag> <item><p>The kernel append parameters define
-variables the syslog and kernel log daemon are started. The list of
+variables, the syslog and kernel log daemon are started. The list of
 network devices is stored in <var>$netdevices</var>. Then additional
 parameters are fetched from a DHCP or BOOTP server and also define
 variables.  The resolver configuration file is created and the
 configuration space is mounted from the install server to
-<file>/fai</file>. The last step is to mount the configuration
-directory to <file>/fai</file> and to source the file
-<file>/fai/hooks/subroutines</file> if it exists. Using this file, you
-can define your own subroutines or override the definition of FAI's
-subroutines.
+<file>/fai</file>. The file <file>/fai/hooks/subroutines</file> is
+sourced, if it exists. Using this file, you can define your own
+subroutines or override the definition of FAI's subroutines.
 
-      <tag>setup</tag> <item><p>The system time is set, all FAI_FLAGS
-      are defined and two additional virtual terminals are opened. A
-      secure shell daemon is started on demand for remote login. A
-      list of all local hard disks is stored to <var>$disklist</var>
-      and <var>$device_size</var> contains a list of devices and their size.
+    <tag>setup</tag> <item><p>This task sets the system time, all
+      <tt>FAI_FLAGS</tt> are defined and two additional virtual
+      terminals are opened on demand. A secure shell daemon is started
+      on demand for remote logins. A list of all local hard disks is
+      stored to <var>$disklist</var> and <var>$device_size</var>
+      contains a list of devices and their size.
 
-      <tag>action</tag> <item><p>This subroutine decides depending on
-      the value of <var>$FAI_ACTION</var> which action FAI should
-      perform. The default actions are: <tt>sysinfo, install,
+      <tag>action</tag> <item><p>Depending on the value of
+      <var>$FAI_ACTION</var> this subroutine decides which action FAI
+      should perform. The default actions are: <tt>sysinfo, install,
       backup</tt>. A user defined action is called, if a file
-      <file>/fai/hooks/$FAI_ACTION</file> exists.
+      <file>/fai/hooks/</file><tt>$FAI_ACTION</tt> exists.
 
       <tag>sysinfo</tag> <item><p>Called when no installation is
-      performed but the action is <tt>sysinfo</tt>. Show information
-      about the detected hardware. Mounts the local hard disks read
+      performed but the action is <tt>sysinfo</tt>. It shows information
+      about the detected hardware and mounts the local hard disks read
       only to <file>/tmp/target/partitionname</file> or with regard to a
       <file>fstab</file> file. Log files are stored to the install server.</p> </item>
 
@@ -1197,73 +1199,75 @@ subroutines.
      </item>
 
      <tag>install</tag> <item><p>This task controls the installation
-     sequence. The major work is to call other tasks.</p> </item>
+     sequence. The major work is to call other tasks and to save the
+     output to <file>/tmp/rcS.log</file>. If you have any problems
+     during installation, look for errors there. You can find examples
+     of the log files for some hosts in the download directory of the
+     FAI homepage.</p> </item>
 
-      <tag>defclass</tag> <item><p>Defines classes using scripts and
+     <tag>defclass</tag> <item><p>Defines classes using scripts and
       files in <file>/fai/class</file>.</p> </item>
 
-      <tag>defvar</tag> <item><p>Sources all files in
-      <file>/fai/class/*.var</file> for every defined class.</p>
+     <tag>defvar</tag> <item><p>Sources all files
+      <file>/fai/class/*.var</file> for every defined class. If a hook
+      has written some variable definitions to the file
+      <file>/tmp/additional.var</file>, this file is also
+      sourced.</p></item>
 
-      </item> <tag>partition</tag> <item><p>Calls
-      <prgn>setup_harddisk</prgn> to partition the hard disks. Defines
-      variables for the root and boot device
-      (<var>$ROOT_PARTITION, $BOOT_PARTITION</var>)</p> </item>
+     <tag>partition</tag> <item><p>Calls <prgn>setup_harddisk</prgn>
+      to partition the hard disks. Defines variables for the root and
+      boot device (<var>$ROOT_PARTITION, $BOOT_PARTITION</var>) using
+      <file>/tmp/disk_var.sh</file>.</p></item>
 
       <tag>mountdisks</tag> <item><p>Mounts the created partitions
-      according to the created <file>fstab</file> file.
-      XXX relativ to <var>$FAI_ROOT</var>.</p> </item>
+      according to the created <file>/tmp/fstab</file> file relativ to
+      <var>$FAI_ROOT</var>.</p> </item>
 
-    <tag>extrbase</tag> <item><p>Extracts the base tar file <file>base.tgz</file>.</p> </item>
+      <tag>extrbase</tag> <item><p>Extracts the base tar file
+      <file>base.tgz</file>.</p> </item>
 
-      <tag>mirror</tag> <item><p>If a local mirror is accessed via
-      NFS, this directory will be mounted.</p> </item>
+      <tag>mirror</tag> <item><p>If a local mirror is accessed via NFS
+      (if <var>$FAI_DEBMIRROR</var> is defined), this directory will
+      be mounted.</p> </item>
 
       <tag>updatebase</tag> <item><p>Prepares the extracted base
-      system for futher installation XXXX and updates the list of available
-      packages. Updates the packages to the newest version.</p> </item>
+      system for futher installation and updates the list of available
+      packages. Updates the packages to the newest version. Creates
+      fake scripts for some commands inside the new installed system
+      using <manref name="dpkg-divert" section="8">.</p> </item>
 
-      <tag>instsoft</tag> <item><p>Install the desired software
-      packages using class files in <file>/fai/packages_config</file>.</p> </item>
+      <tag>instsoft</tag> <item><p>Installs the desired software
+      packages using class files in
+      <file>/fai/packages_config</file>.</p> </item>
 
-	<tag>configure</tag> <item><p>Call scripts in
-      <file>/fai/scripts/</file>.</p> </item>
+	<tag>configure</tag> <item><p>Calls scripts in
+      <file>/fai/scripts/</file> for every defined class.</p> </item>
 
       <tag>finish</tag> <item><p>Umounts the proc filesystem in the
-new installed system and removes diversions of files.</p> </item>
+      new installed system and removes diversions of files (<prgn>rmdivert</prgn>).</p>
+      </item>
 
-      <tag>faiend</tag> <item><p>Automaticly reboot the install
-      clients or waits for manuals input before reboot.</p> </item>
+      <tag>faiend</tag> <item><p>Automaticly reboots the install
+      clients or waits for manual input before reboot.</p> </item>
 
-      <tag>chboot</tag> <item><p>Change sysbolic link on install
+      <tag>chboot</tag> <item><p>Changes symbolic link on the install
       server, which indicates which kernel image to load on next boot
       from network card.</p> </item>
 
-      <tag>savelog</tag> <item><p>Save log file to local disk and to
+      <tag>savelog</tag> <item><p>Saves log files to local disk and to
       the install server.</p> </item>
 
  </taglist>
 
 
-<sect id=s1> Set up FAI<p>
+<sect id=s1>The setup routines of the install clients<p>
 
-After the subroutine <em>fai_init</em> has done some basic
-initialization, the setup continues. This jobs is done by the tasks:
-<em>confdir</em> and <em>setup</em>.<p>
-
-
-Since only the ramdisk is writable in the beginning, all log
-files are written to <file>/tmp</file>. The main script
-<prgn>rcS_fai</prgn> logs its messages to
-<file>/tmp/rcS.log</file>. If you have any problems during
-installation, look for errors there. You can find examples of the log files for
-some hosts in the download directory of the FAI homepage.<p>
-
-When the kernel has booted and the network interface is set up, the
-BOOTP (or DHCP) server is inquired a second time to get the additional
-information for FAI. The command <manref name="bootpc" section="8"> is
-called and its output is used to define the corresponding global
-variables which are save in <file>/tmp/bootp.log</file>.
+After the subroutine <prgn>fai_init</prgn> has done some basic
+initialization, the setup continues by callinf the task
+<tt>confdir</tt> and <tt>setup</tt>. The command <manref name="bootpc"
+section="8"> is called and its output is used to define the
+corresponding global variables which are save in
+<file>/tmp/bootp.log</file>.
 
 <example>
 /tmp/bootp.log:
@@ -1389,16 +1393,16 @@ then added to the host.
 
 <sect id=s2> Defining classes<p>
 
-This part is done by the task: <em>defclass</em><p>
-
-The main FAI script <file>rcS_fai</file> defines the classes
-<tt>DEFAULT, LAST, $HOSTNAME</tt> and all classes in the file
+The default task <em>defclass</em> defines the classes <tt>DEFAULT,
+LAST, $HOSTNAME</tt> and all classes in the file
 <file>/fai/class/</file><tt>$HOSTNAME</tt> for every hosts.
 Additionally, all files that are executable and match the shell
 regular expression <tt>S[0-9]*.{sh,pl}</tt> are called in alphabetical
 order. Every output from these scripts is used to define
-classes. Multiple classes in one line must be space separated. The
-list of all defined classes is stored in the variable
+classes. Multiple classes in one line must be space separated. If a
+hook has written classes to the file
+<file>/tmp/additional-classes</file>, these classes are also defined.
+The list of all defined classes is stored in the variable
 <var>$classes</var> and in <file>/tmp/FAI_CLASSES</file>. The list of
 all classes is transfered to <prgn>cfengine</prgn>, so it can use them
 too. Script <file>S01alias.sh</file> (see below) is used to define
@@ -1413,18 +1417,22 @@ S01alias.sh:
 
 # all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
-    ant??)
-        cat anthill ;;
+    ant??) cat anthill ;;
+esac
+
+# the Beowulf cluster; all nodes except the master node atom00
+# use classes from file class/atoms
+case $HOSTNAME in
+    atom00) ;;
+    atom??) cat atoms ;;
 esac
 
 # if host belongs to class C subnet 134.95.9.0 use class NET_9
 case $IPADDR in
-    134.95.9.*)
-        echo NET_9 ;;
+    134.95.9.*) echo NET_9 ;;
 esac
 
-
-# echo architecture
+# echo architecture in upper case
 dpkg --print-installation-architecture | tr /a-z/ /A-Z/
 </example>
 
@@ -1468,11 +1476,15 @@ the on the fourth console terminal (pressing <tt>Alt-F4</tt>).<p>
 
 <sect id=classvariables> Variables in <tt>class/*.var</tt><p>
 
-This part is done by the task: <em>defvar</em><p>
+The task <em>defvar</em> defines the variables for the install
+clients. All global variables can be set in
+<file>DEFAULT.var</file>. For certain groups of hosts use a class file
+or for a single host use the file
+<tt>$HOSTNAME</tt><file>.var</file>. Also here, it's useful to study
+all the examples.
 
-All variables can be set global in <file>DEFAULT.var</file>. For
-certain groups of hosts use a class file or for a single host use
-the file <tt>$</tt><file>HOSTNAME.var</file>.
+Following variables are used in the examples and may be also useful
+for your installation:
 
 <taglist>
    <tag>hdparm</tag> <item> <p>Multi line commands to tune the
@@ -1945,56 +1957,61 @@ to a.out format. Therefore use the program <prgn>elftoaout</prgn>
 (mentioned in the FAQ). The symlink to the kernel image to be booted
 is not the host name. Look at the FAQ for more information.
 
-
-<!--
 <chapt id=hints>Various Hints<p>
 
-check for bad blocks:
+This chapter has various hints which may not be explained in very
+detail.
+<p>
 
-$ROOTCMD dpkg -l
+Use <prgn>mkdivert</prgn> if a postinst script calls a configuration programm
+(eg. the postinst script for package apache calls apacheconfig) needs manual
+input. You can fake the configuration programm so the installation
+can be fully automatic. But don't forget to use<prgn>rmdivert</prgn>
+to remove the faking.
 
-One of the most important feature of FAI are the classes. Using
-classes you can share configuration data among multiple
-clients. Details are described in <ref id="classes">.
-All defined classes are listed in <file>/tmp/FAI_CLASSES</file>.
+<p>
+During the installation of when it's finished, you can execute commans
+inside the newly installed system by using <example>chroot
+/tmp/target</example> or just <example>$ROOTCMD</example> followed by
+the command you want to call.
+<p>
 
 The only task, which has to be done manually for new hardware, is to
-assign the MAC address to a hostname and to an IP address and to
-define classes for this host, or all host which match a certain name
-(look at <file>class/S01alias.sh</file>).
+assign the MAC address to a hostname and to an IP address and define
+classes for this host.
+<p>
+There's a tradeoff between writing a few large configuration scripts,
+or many short scripts. Large scripts can distinguish classes by using
+case statements or the ifclass test.
+<p>
+If your computer can't boot from network card you need not always boot
+from floppy. Define a partition <file>/fai-boot</file> in your
+<file>disk_config</file> configuration file. Then the class
+<tt>FAI_BOOTPART</tt> will automaticly defined and will create a lilo entry for
+booting the FAI bootfloppy from this partition. So you can start the
+reinstallation without a boot floppy. This will also make the test
+phase shorter, since booting from harddisk is faster.
 
-
-Using cfengine, you can easily edit any existing text file or remove
-files, create links or directories.  It has a rich set of editing
-commands (AppendIfNoSuchLine, ReplaceAll, LocateLineMatching,
-InsertLine, HashCommentLinesContaining,...) and support the use of
-classes.
- 
-<p>If you have to create a new file or append many line to an exiting
-one, it's better to use perl or a shell script. Cfengine is also
-sensitive to undefined variables. A cfengine script does not get
-executed, if any of the used variables is undefinded. Hence, it's not
-useful if you have a variable number of parameters in your
-configuration (a famous example are the DNS server for
-<file>/etc/resolv.conf</file>).
-
-
-There's a tradeoff between writing a few large script, which
-use definitions by cases or to write a single script for each
-class. It may also be useful to write two scripts, that together
-perform one task. Try to find the right way, and let us participate in
-your scripts.
-
-general hints:
-
-all in one config file, or multiple small config files. You can
-choose !
-
-FAI-BOOTPART
--->
 </book>
 </debiandoc>
 
+<!-- 
+buy a switch box for monitor and keyboard
+rdev vmlinuz-2.2.19 /dev/hda1 if your server does not have /dev/hda1
+as root device. The call imggen
+
+chown -R fai /boot/fai
+
+
+# install pine
+cd /tmp
+dpkg-source -x /usr/src/pine4/pine4_4.21-1.dsc 
+cd /tmp/pine4-4.21
+dpkg-buildpackage 
+cd /tmp
+dpkg -i *.deb
+
+-->
 
 <!-- Keep this comment at the end of the file
 Local variables:
