@@ -6,12 +6,12 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.5">
-<!entity faiver "2.4.1">
-<!entity faiverdate "2 apr 2003">
+<!entity faikernelver "1.5.3">
+<!entity faiver "2.5">
+<!entity faiverdate "XXXX 2003">
 
-<!entity version "2.2">
-<!entity date    "4 june 2003">
+<!entity version "2.3">
+<!entity date    "14 july 2003">
 ]>
 
 <debiandoc>
@@ -50,16 +50,14 @@ writing to the &fsf-addr;.
 
 <chapt id="intro">Introduction<p>
 <sect id="availability">Availability<p>
-The homepage of FAI is
-<httpsite>http://www.informatik.uni-koeln.de</httpsite><httppath>/fai</httppath>.
+The homepage of FAI is <url id="&faiwww">.
 There you will find any information about FAI, for example the mailing
 list archive. The FAI package is also available as a Debian package from
-&faidownload;. It's an official Debian package and is available from
+<url id="&faidownload">;. It's an official Debian package and is available from
 all Debian mirrors. Send any bug or comment to
 <email>fai@informatik.uni-koeln.de</email>. You can also use the
 Debian bug tracking system (BTS)
-<httpsite>http://www.debian.org</httpsite><httppath>/Bugs</httppath>
-for reporting errors.
+<url id="&url-bts"> for reporting errors.
 <p>
 You can access the CVS repository containing the newest developer
 version of FAI from a Bourne shell using the
@@ -158,8 +156,8 @@ First, some terms used in this manual are described.
 	  of the clients should be performed. This includes information about:
 <list>
 		<item> <p>Hard disk layout</p> </item>
-		<item> <p>Local filesystems, their mount points and
-		mount options</p> </item>
+		<item> <p>Local filesystems, their types, mount points
+		and mount options</p> </item>
 		<item> <p>Software packages</p>	</item>
 		<item> <p>Keyboard layout, time zone, NIS,
 		XFree86 configuration, remote filesystems, user accounts,
@@ -285,7 +283,9 @@ The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
  section="1">. A partial Debian mirror only for i386 architecture for
  Debian 3.0 (aka woody) without the source packages needs about
  &mirrorsize of disk space. Accessing the mirror via NFS will be the
- normal and fastest way in most cases.
+ normal and fastest way in most cases. To see more output from the
+ script call <tt>mkdebmirror --debug</tt>. You need not to create and maintain
+ the Debian mirror with the root account.
 
 To use HTTP access to the local Debian mirror, install the webserver
 software and create a symlink to the local directory where you mirror
@@ -295,7 +295,7 @@ is located:
 # ln -s /files/scratch/debmirror /var/www/debmirror
 </example>
 
-Don't forget to adjust the variable <var>FAI_SOURCES_LIST</var> in &fc
+Don't forget to adjust the variable <var>FAI_SOURCES_LIST</var> in &fc;
 to access the Debian mirror.
 
 <sect id=faisetup> Setting up FAI<p>
@@ -314,15 +314,21 @@ The following NEW packages will be installed:
 Need to get 0B/12.7MB of archives. After unpacking 13.9MB will be used.
 Selecting previously deselected package fai.
 (Reading database ... 48317 files and directories currently installed.)
-Unpacking fai (from .../main/f/fai/fai_2.4.1_all.deb) ...
+Unpacking fai (from .../main/f/fai/fai_2.5_all.deb) ...
 Selecting previously deselected package fai-kernels.
-Unpacking fai-kernels (from .../fai-kernels_1.5_i386.deb) ...
-Setting up fai (2.4.1) ...
+Unpacking fai-kernels (from .../fai-kernels_1.5.3_i386.deb) ...
+Setting up fai (2.5) ...
 To set up FAI, edit /etc/fai/fai.conf and call fai-setup.
 
-Setting up fai-kernels (1.5) ...
+Setting up fai-kernels (1.5.3) ...
 </example>
 
+If you like to install all recommended packages that are useful for
+fai, use following commandL
+
+<example>
+# apt-get install netboot dhcp3 tftpd-hpa rsh-server wget grub syslinux
+</example>
 
 You can also get the newest version of <package>fai</package> and
 <package>fai-kernels</package> from the download page of fai and
@@ -381,8 +387,8 @@ for the install clients) are defined in &fc;. Since FAI doesn't use
 	    <tag><var>FAI_BOOT</var></tag>
 	    <item><p>
 	    which of DHCP and/or BOOTP should the server create setups for
-	    (when make-fai-nfsroot is run). Default are to create setups for 
-	    both.
+	    (when make-fai-nfsroot is run). The default is to create
+	    the setup for both protocols.
 	    </p></item>
 	  </taglist>
 <p>
@@ -466,12 +472,14 @@ Unexporting directories for NFS kernel daemon...done.
 Exporting directories for NFS kernel daemon...done.
 Starting NFS kernel daemon: nfsd mountd.
 You have no FAI configuration. Copy FAI template files with:
-cp -a /usr/share/fai/templates/* /usr/local/share/fai
+cp -a /usr/share/doc/fai/examples/simple/* /usr/local/share/fai
 Then change the configuration files to meet your local needs.
 FAI setup finished.
 </example>
 
 <p>
+It's important that you will see the last line. Otherwise something
+went wrong.
 The warning messages from dpkg about dependencies problems can be ignored.
 If you have problems running fai-setup, they stem usually from 
 make-fai-nfsroot. You may restart it by calling 'make-fai-nfsroot -r' 
@@ -508,7 +516,10 @@ kueppers# /etc/init.d/nfs-user-server reload
 
 <p>
 The setup also creates the account <tt>fai</tt> (defined by $LOGUSER)
-if not already available. The log
+if not already available. So you can add a user before calling <manref
+name="fai-setup" section="8"> using the command
+<manref name="adduser" section="8"> and use this as your local account
+for saving log files. The log
 files of all install clients are saved to the home directory of this
 account. If you boot from network card, you should change the primary
 group of this account, so this account has write permissions to
@@ -579,8 +590,9 @@ it has changed, but using the PXE environment is more comfortable.
 
 When using BOOTP, you have to make a
 symbolic link from the hostname of your client to the appropriate
-kernel image in <file>/boot/fai</file>. In the following example the
-host is called <tt>bigfoot</tt>. The file
+kernel image in <file>/boot/fai</file>. You can also use the utility
+<prgn>tlink</prgn> (<file>/usr/share/fai/utils/tlink</file>) to create
+this link. The file
 <file>installimage_3com</file> is created by <prgn>imggen</prgn> and
 suitable for booting 3Com network cards<footnote> <p>If you have
 problems booting with a 3Com network card and get the error "BOOTP
@@ -590,16 +602,9 @@ installimage_3com image. I had this problem using netboot 0.8.1-4 and
 Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001 but only on an
 Athlon computer.
 </p></footnote>
-You can also use the utility
-<prgn>tlink</prgn> (<file>/usr/share/fai/utils/tlink</file>) to create
-this link.
-
-<example> 
-kueppers# cd /boot/fai
-kueppers# ln -s installimage_3com bigfoot
-</example>
 
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM<p>
+Most modern bootable network cards support the PXE boot environment.
 Some network cards (e.g. Intel EtherExpress PRO 100) have a fixed
 boot configuration, so they can only use the PXE boot protocol. This requires a PXE
 Linux boot loader and a special version of the <tt>TFTP</tt> daemon,
@@ -666,7 +671,7 @@ nfsroot, the configuration space and a subset of the Debian mirror,
 which contains all packages that you need for an unattended
 installation. Look at the mailing list archive of FAI for more
 information. A first version is available at
-<httpsite>http://members.iinet.net.au</httpsite><httppath>/~niall/fai/</httppath>.
+<httpsite>http://holbytla.org/fai/</httpsite><httppath>/fai/</httppath>.
 
 <sect id="mac">Collecting Ethernet addresses<p>
 
@@ -749,15 +754,16 @@ ds</tt>) to your local needs.
  of DNS servers and the domain name.
  <tag>T172:</tag> <item>  <p>List of <var>FAI_FLAGS</var>;
  e.g. verbose, debug, reboot, createvt, sshd, syslogd</p> </item>
- <tag>T173:</tag> <item>  <p>Reserved for future use</p> </item>
  </taglist>
 
 The tags for NIS and time servers (<tt>yp, yd, nt</tt>) are
 optional. Tags with prefix <tt>T</tt> (starting from T170) are generic
 tags which are used to transfer some FAI specific data to the
-clients<footnote>T170=FAI_LOCATION, T171=FAI_ACTION. You should define
-theses variables in a class/*.var script. But for backward compatibility,
-you can define theses variables also from a BOOTP or DHCP server.</footnote>
+clients<footnote>T170=FAI_LOCATION (now defined in
+<file>fai.conf</file> and T171=FAI_ACTION. You can define theses
+variables in a class/*.var script. But for backward compatibility, you
+can define theses variables also from a BOOTP or DHCP
+server.</footnote>
 
 The list of <var>FAI_FLAGS</var> can be space or comma
 separated. <var>FAI_FLAGS</var> in <file>bootptab</file> must be
@@ -802,14 +808,14 @@ enabled in <file>inetd.conf</file>:
 <sect id="bootdhcp">Configuration of the DHCP daemon <p>
 An example for <manref name="dhcp.conf" section="5"> is available in
 <file>/usr/share/doc/fai/examples/etc</file>, which is tested with
-version 2.x of the DHCP daemon. Version 3 needs a slightly
-different configuration file. Start using this example
+version 3.x of the DHCP daemon. Start using this example
 and look at all options used therein. If you make any changes
 to this configuration, you must restart the daemon.
 <example># /etc/init.d/dhcp3-server restart</example>
 Therefore it's recommended to only supply data into this configuration
-file, which doesn't change frequently. You should define the variables
-<var>FAI_ACTION</var> in a script in the configuration space.
+file, which doesn't change frequently. The command <manref
+name="fai-chboot" section="8"> is used for creating a per host
+configuration for the pxelinux environment.
 
 <sect id="bootmesg">Boot messages <p>
 
@@ -897,7 +903,7 @@ Before the installation is started (FAI_ACTION=install) the computer
 beeps three times. So, be watchful when you hear three beeps
 but you do not want to perform an installation!
 
-<sect id=booterror>Troubleshooting boot messages<p>
+<sect1 id=booterror>Troubleshooting the boot messages<p>
 
 This is the error message you will see, when your network card is
 working, but the install server does not export the configuration
@@ -1124,12 +1130,8 @@ of all classes can be found in
 <file>/usr/share/doc/fai/classes_description.txt</file>. It is
 advisable to document the job a new class performs. Then, this
 documentation is the base for composing the whole configuration from classes.
-
-<p>
-The scripts <prgn>11modules.source</prgn> loads kernel modules
-on demand. So you can use classes when loading modules and also define
-more classes after the kernel has loaded modules and recognized new hardware.
-But normally you only have to deal with the file <file>DEFAULT.mod</file>.
+The scripts <prgn>11modules.source</prgn> loads kernel modules on
+demand.
 The complete description of all these scripts can be found in <ref id="cscripts">.
 
 <p>
@@ -1207,6 +1209,35 @@ install server if <var>$LOGUSER</var> is defined in &fc;. It is also
 possible to specify another host as destination of the log saving by
 in a file in <file>/fai/class/</file>. Additionally, two symlinks will
 be created to indicated the last directory written.
+This method uses rsh/rcp or ssh/scp and is default.
+
+<p>
+You can use other methods to save logs to the remote server. The currently
+selected method is defined by the <var>$FAI_LOGPROTO</var> variable in 
+file &fc;:
+<taglist>
+        <tag>ftp</tag><item><p>
+                This option saves logs to the remote FTP server defined
+                by the <var>$LOGSERVER</var> variable (<var>$SERVER</var> value
+                is used if not set). Connection to the FTP server is done as user 
+                <var>$LOGUSER</var> using password <var>$LOGPASSWD</var>.
+                FTP server log directory is defined in 
+                <var>$LOGREMOTEDIR</var>. These variables are also defined 
+                in file &fc;. You need write access for the <var>$LOGREMOTEDIR</var> on 
+                the FTP server.</p><p>
+                Summary: all files in the <tt>/tmp/fai</tt> directory are 
+                copied to the FTP server following this example:
+                <tt>ftp://<var>$LOGUSER</var>:<var>$LOGPASSWD</var>@<var>$LOGSERVER</var>/<var>$LOGREMOTEDIR</var>/</tt>.
+                </p>
+        </item>
+        <!--
+        TODO:
+        <tag>smtp</tag> <item><p>Send logs via e-mail.</p></item>
+        <tag>none</tag> <item><p>Don't save logs to remote server.</p></item>
+        -->
+
+</taglist>
+</p>
 
 <sect id=ireboot>Reboot the new installed system<p>
 
@@ -1755,17 +1786,11 @@ this directory via NFS and to install the NFS server packages.
 <p>
 The script <prgn>11modules.source</prgn> does not define any class, but
 is responsible for loading kernel modules. Kernel modules are
-important for detecting hardware. This script calls the script
-<var>$HOSTNAME</var><tt>.mod</tt> and all scripts that have the format
-<tt>&lt;classname&gt;.mod</tt> and those class names are already
-defined. Classes which are used for loading modules must be defined
-before this script is called. For example, if class <tt>DEFAULT</tt> is
-defined (this class is always defined) and a file
-<file>DEFAULT.mod</file> exists, this script is executed. These
+important for detecting hardware. This
 scripts should contain all commands for loading kernel modules:
 
 <example>
-DEFAULT.mod:
+11modules.source:
 
 kernelmodules="rtc floppy parport_pc usbkbd usb-uhci keybdev"
 
@@ -1775,7 +1800,7 @@ for mod in $kernelmodules; do
 done
 </example>
 
-You can find messages from modprobe in <file>/tmp/fai/dmesg.log</file> and
+You can find messages from modprobe in <file>/tmp/fai/kernel.log</file> and
 the on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
 
 <sect id=classvariables> Defining Variables<p>
@@ -2474,6 +2499,10 @@ A success report is available at
 <httpsite>http://www.opossum.ch/</httpsite><httppath>fai/</httppath>
 and a HOWTO can be found at
 <httpsite>http://toolbox.rutgers.edu/</httpsite><httppath>~amurphy/fai</httppath>.
+
+<chapt id=solaris>FAI for Solaris<p>
+FAI is also ported to use with SUN Solaris OS installations. It is
+used in cooperation with Solaris jumpstart.
 
 <chapt id=hints>Various hints<p>
 
