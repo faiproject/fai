@@ -36,8 +36,8 @@ print: dvi
 	dvips -f $(docname) | lpr
 
 install:
-	cp -dRp $(FILES) $(docname)* $(DESTDIR)/$(DOCDIR)
-	cp -p $(MISC_DOC) $(DESTDIR)/$(DOCDIR)
+	cp -dRp $(FILES) $(docname)* $(DOCDIR)
+	cp -p $(MISC_DOC) $(DOCDIR)
 
 all: test pdf text html postscript
 
