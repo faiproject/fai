@@ -1426,7 +1426,8 @@ definition of FAI's subroutines.
       <tag>action</tag> <item><p>Depending on the value of
       <var>$FAI_ACTION</var> this subroutine decides which action FAI
       should perform. The default available actions are:
-      <tt>sysinfo</tt> and <tt>install</tt>. If <var>$FAI_ACTION</var>
+      <tt>sysinfo</tt>, <tt>install</tt> and <tt>softupdate</tt>.
+      If <var>$FAI_ACTION</var>
       has another value, a user defined action is called if a file
       <file>/fai/hooks/$FAI_ACTION</file> exists. So you
       can easily define your own actions.<p>
@@ -1447,6 +1448,10 @@ definition of FAI's subroutines.
      <file>/tmp/fai/</file>. You can find examples of the log files
      for some hosts in the download directory of the FAI homepage.</p>
      </item>
+
+     <tag>softupdate</tag> <item>This task, executed inside a running 
+     system via the <tt>fai</tt> command line interface, performs a softupdate.
+     See chapter <ref id=softupdate> for defails. </item>
 
      <tag>partition</tag> <item><p>Calls <prgn>setup_harddisk</prgn>
       to partition the hard disks. The task writes variable
@@ -2426,7 +2431,7 @@ jumpstart.
 The file format of the configuration files in <file>disk_config</file> and
 <file>package_config</file> are different than those for Linux.
 
-<chapt id=advanced>Using CVS within FAI<p>
+<chapt id=advanced>Advanced FAI
 
 <sect id=generalscm>Using revision control for FAI configuration<p>
 If there is a team of administrators involved, a revision control/sourcecode
@@ -2436,8 +2441,7 @@ avoiding conflicts (and if they occur it helps resolving them). Another
 advantage lies in <em>branching</em>: while the administrator works out a 
 new configuration and tries it out using a test system, other clients aren't
 disturbed in any way, because they use another <em>branch</em> of the
-configuration.
-<p>
+configuration. </p>
 <sect1 id=cvs>Setting up FAI for CVS based configuration<p>
 First you should setup a CVS repository and within it a module to store the
 FAI configuration files. In this example a cvs pserver will be used for
@@ -2445,38 +2449,38 @@ FAI configuration files. In this example a cvs pserver will be used for
 ssh is used for the developers access (rw)<footnote>CVS is quite flexible 
 when it comes to different methods of access, so I recommend you to read 
 further documentation to find the optimal solution in your
-environment</footnote>. <p>
+environment</footnote>. </p>
 
-The relevant variables in &fc and &mfnc; for CVS are:
+<p>The relevant variables in &fc and &mfnc; for CVS are:
 <taglist>
   <tag><var>FAI_LOCATION</var></tag>
-    <item><p>
+    <item>
     This variable <strong>must not</strong> be set if you want to use CVS.
-    </p></item>
+    </item>
   <tag><var>FAI_CVSROOT</var></tag>
-    <item><p>
+    <item>
     contains the cvsroot where the configuration is stored.
-    <example>
-    FAI_CVSROOT=":pserver:client@cvs.local.net:/var/lib/cvs"
-    </example>
-    </p></item>
+	<example>
+	FAI_CVSROOT=":pserver:client@cvs.local.net:/var/lib/cvs"
+	</example>
+    </item>
   <tag><var>FAI_CVSMODULE</var></tag>
-    <item><p>
+    <item>
       contains the module in the cvsroot where the configuration is stored.
-      <example>
-      FAI_CVSMODULE="config"
-      </example>
-    </p></item>
+	<example>
+	FAI_CVSMODULE="config"
+	</example>
+    </item>
   <tag><var>FAI_CVSTAG</var></tag>
-    <item><p>
+    <item>
       contains the <em>tag</em> of the cvs branch to
       be checked out by the client<footnote>This is optional: if not set,
       <em>HEAD</em> will be used, which corresponds to the most actual
       revision the configuration</footnote>.
-      <example>
-      FAI_CVSTAG="STABLE"
-      </example>
-    </p></item>
+	<example>
+	FAI_CVSTAG="STABLE"
+	</example>
+    </item>
 <!--  <tag><var>FAI</var></tag>
     <item><p>
       Before checking out the configuration, the code copies the contents of
@@ -2487,7 +2491,7 @@ The relevant variables in &fc and &mfnc; for CVS are:
       with system updates to record the changes within configuration files.
     </p></item>
     -->
-</taglist>
+</taglist></p>
 
 <p> If you use a cvs pserver for storing configuration files, the file
 <file>/root/.cvspass</file> has to exist and be valid in the nfsroot. CVS
@@ -2495,6 +2499,146 @@ uses this file to get the password for the pserver. You can create it most
 easiely if you try <example>cvs -d$FAI_CVSROOT login</example> and then copy
 the generated line from your <file>~/.cvspass</file> into
 <file>/root/.cvspass</file> in the nfsroot.</p>
+</sect1>
+</sect>
+
+<sect id=softupdate>Using FAI for on-line updates
+<p>FAI is even usable for system updates, using the same configuration as 
+when initially installing. An updated client will almost look like a
+newly installed machine, though all local data is preserved (except of course
+newer configuration files introduced in the FAI config).</p>
+
+<sect1 id=aboutsoftupdate>How does a softupdate work?
+<p>Softupdates take the same configuration files as a new FAI installation. They
+even use the same FAI internals as an installation, so they behave
+<em>nearly</em> in the same way as an installation, tough some things are
+different:
+<list>
+	<item>No partitioning and filesystem creation is performed</item>
+	<item>The basesytem isn't bootstrapped</item>
+	<item>FAI doesn't do tasks only useful when booting, such as setting up
+		a keymap or starting daemons</item>
+	<item>FAI doesn't prevent daemon (re-)starts</item>
+	<item>FAI doesn't reboot at the end of a softupdate</item>
+</list>
+Except these changes, things are the same as when installing a new computer: 
+<enumlist>
+	<item>define classes and variables</item>
+	<item>update the installed packages</item>
+	<item>install new software</item>
+	<item>call configuration scripts</item>
+	<item>check and save the logfiles</item>
+</enumlist>
+</sect1>
+
+<sect1 id=runsoftupdate>How to run a softupdate
+<p>As softupdates use the same infrastructure as a FAI installation, you even
+start them by using the same script <tt>/usr/sbin/fai</tt> which is used for
+installation:
+	<example>
+		/usr/sbin/fai softupdate
+	</example>
+starts a softupdate on the client it is run on.</p>
+<sect2 id=startsoftupdate>How to do mass softupdates
+<p>Probably you don't want to run to each client and start a softupdate there
+locally, so a mechanism to start an update there has to be thought of.</p>
+<sect3 id=cronsoftupdate>Cron
+<p>One possible solution is to use crontab entries on the clients to start an
+update, but in big installations you have to consider including a random-delay
+mechanism, because too many updates at the same time may produce too much
+traffic on your network.</p>
+<sect3 id=remotesoftupdate>Starting a softupdate remotely
+<p>If you want more control on when exactly a softupdate is run on the clients
+and maybe want to monitor it while it is running, you can install remote root
+login mechanism on your clients, preferably using ssh in connection with a
+authorized key for root logins.</p>
+<p>Tools like <tt>clusterssh</tt> allow you to login onto a group of clients at
+once and run <tt>/usr/sbin/fai softupdate</tt> there, while the results can be
+seen immediately in the terminals started for each host.</p>
+</sect2>
+</sect1>
+
+<sect1 id=confsoftupdate>How to write a configuration suitable for softupdates
+<p>When you want to do softupdates, you have to be even more careful when
+writing your configuration: it has to be <strong>idempotent</strong>, i.e. 
+running all the scripts twice should result into the same system configuration
+as running them once. Some things to keep an eye on:
+<list>
+	<item><em>Never</em> blindly append to files:
+		<example>
+			echo $SOMETHING >> /etc/fstab
+		</example>
+		is almost certainly wrong. Either check manually if the
+		line already exists <strong>before</strong> appending or use 
+		cfengine's <tt>AppendIfNoSuchLine</tt> statement 
+		instead.</item>
+
+	<item>Make use of FAI's environment variables to determine what to do in
+		your configuration scripts! Some of the most important ones:
+		<taglist>
+			<tag><var>FAI_ROOT</var></tag>
+				<item>points to the client's rootdir.
+					In case of softupdates: <tt>/</tt></item>
+			<tag><var>ROOTCMD</var></tag>
+				<item>contains a command for <tt>chrooting</tt>
+					into the client. This is empty when doing
+					softupdates (as <tt>/</tt> is already our
+					root...).</item>
+			<tag><var>FAI_ACTION</var></tag>
+				<item>contains the currently executed action:
+					<taglist>
+						<tag><tt>install</tt></tag>
+							<item>when
+							installing.</item>
+						<tag><tt>softupdate</tt></tag>
+							<item>when
+							updating</item>
+					</taglist>
+		</taglist>
+
+	<item>Restart daemons if needed: most daemons only read their
+		configuration once when starting; if you modify it, you need to
+		make them reload it using
+		<example>
+			${ROOTCMD} invoke-rc.d $somedaemon reload
+		</example>
+		or even restart them
+		<example>
+			${ROOTCMD} invoke-rc.d $somedaemon restart
+		</example>
+		when the configuration for <tt>$somedaemon</tt> has been
+		changed<footnote>You can for example use <tt>fcopy</tt>'s
+		<tt>postinst</tt> script support for doing this; if other
+		things than <tt>fcopy</tt> modify your conffiles, you have to
+		keep track of the changes for yourself</footnote>.
+		</item>
+
+	<item>Other things like scheduling a reboot if a new kernel is 
+		installed</item>
+</list></p>
+</sect1>
+
+<sect1 id=localconfsoftupdate>What if there are locally changed conffiles?
+<p><strong>Short: there shouldn't be any!</strong></p>
+<p><strong>Long: </strong> <em>if</em> you are using FAI <tt>softupdate</tt> to
+update client's configuration, you shouldn't do any local changes, because they
+may be lost while updating. Backup copies are done by fcopy only on the local
+disk; if you want to save them together with the logfiles,
+	<example>
+		FAI_BACKUPDIR=$LOGDIR/backup
+	</example>
+in <tt>class/DEFAULT.var</tt> will do the job.</p>
+
+<sect2 id=detectlocalchanges>How to detect locally changed files?
+<p>If you are playing with local configuration changes <em>despite all the warnings
+contained in this section</em>, there must be a way to check what has been
+changed locally. A simple approach would be to use <tt>debsums -e</tt>,
+but this method fails miserably if you modify conffiles in your FAI scripts,
+because it only checks against the version contained in the debian package. A
+better proposal is to setup/abuse <tt>tripwire</tt> or <tt>integrit</tt> to scan
+for local changes and notify you about them.</p>
+</sect2>
+
 </sect1>
 </sect>
 </chapt>
