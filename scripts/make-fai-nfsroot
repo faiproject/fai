@@ -64,7 +64,7 @@ setup_ssh() {
     perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
     if [ -f "$SSH_IDENTITY" ]; then
 	mkdir -p -m 700 $NFSROOT/root/.ssh
-	cp -p $SSH_IDENTITY $NFSROOT/root/.shh/authorized_keys
+	cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
 	echo You can log in install clients without password using $SSH_IDENTITY
     fi
 }
@@ -119,6 +119,7 @@ create_nfsroot() {
     ln -s /dev/null $NFSROOT/var/log/ksymoops
 
     setup_ssh
+    umount $NFSROOT/dev/pts 2>/dev/null
 
     cat >$NFSROOT/etc/rcS.d/S01fai_abort <<EOF
     #!/bin/sh
