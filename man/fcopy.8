@@ -1,0 +1,131 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH fcopy 8 "Jan 8,2001"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+fcopy \- copy files using classes
+.SH SYNOPSIS
+.B fcopy
+.RI [ options ] " SOURCE" ...
+.SH DESCRIPTION
+Copy a file from SOURCE to its target using classes.
+It also sets permissions modes and owner and group.
+Each SOURCE argument is a directory, which contains one or more
+template files for the source file to copy. Depending on the list of
+defined classes one file of the source directory is selected and
+copied to the target. The target filename is the name of the source
+directory.
+
+The exit code returned by fcopy is 0 if all files are copied
+successfully and >0 if an error occurs. For every successfully copied
+file, a log message is printed to standard output.
+.SH OPTIONS
+.TP
+.BI "\-c " class[,class]
+Define classes. Multiple classes must be comma separated. If not
+specified, use the shell environment variable $classes (space separated).
+.TP
+.BI "\-C " file
+Read classes from \fIfile\fR. Lines can contain multiple classes which are space separated. Lines starting with # are comments.
+.TP
+.B \-d
+Create debug output.
+.TP
+.BI "\-F " file
+Read list of sources from \fIfile\fR. One SOURCE per line.
+.TP
+.B \-h
+Show summary of options.
+.TP
+.BI "\-m " user,group,mode
+Set user, group and mode for copied files (mode as octal number, user and
+group numeric or name). If not specified, use data of source file.
+.TP
+.B \-r
+Copy recursivly (traverse down the tree). Copy all files below
+SOURCE. These are all directories leaves in your SOURCE tree.
+.TP
+.BI "\-s " source_dir
+Look for source files relative to \fIsource_dir\fR (default $FAI_FILES).
+.TP
+.BI "\-t " target_dir
+Copy files relativ to  \fItarget_dir\fR (default $FAI_ROOT).
+.TP
+.B \-v
+Create verbose output.
+
+.SH EXAMPLES
+.br
+Suppose the source directory /files/etc/X11/XF86Config consists of following files:
+
+DEFAULT LAB CAD MACH64 server1 faifoo file-modes
+
+Each file is an instance of a XF86Config file for a different
+xserver configuration except file-modes,
+which holds the file creation data. The command
+
+    # fcopy -s /files -t /tmp/target /etc/X11/XF86Config
+
+copies one of these files from /files/etc/X11/XF86Config to
+/tmp/target/etc/XF86Config. For all defined classes, fcopy looks if a
+corresponding file exists. The last matching classname will be used
+for copying.
+
+Here are examples of defined classes and the file which will be copied
+by fcopy.
+.sp
+.nf
+.ta 30n
+Classes	Used File
+
+DEFAULT,LAB,server3	LAB
+DEFAULT,CAD,server1	server1
+DEFAULT,MACH64,faiclient01	MACH64
+DEFAULT,TFT,faiclient13	DEFAULT
+.sp
+.fi
+.PP
+
+In FAI (look at SEE ALSO) the list of defined classes starts with DEFAULT and the
+last class is the hostname. So DEFAULT is only used, when no file for
+another class exists. If a file is equal to the hostname, this
+will be used, since hostname should always be the last class. 
+
+User, group and permissions for the files can be defined in several
+ways. Option -m has the highest priority and will be used for all
+files, if specified. The file file-modes in the source directory can
+contain one line for each class. The space separated parameter are:
+
+owner group mode class
+
+If class is missing, the data is used for all classes. If neither -m
+or file-modes data is available, the user, group and mode of the
+source file will be used for the target file. Missing subdirectories
+are created with mode 0777. If the destination file already exists and
+is different from the source file, the suffix .fcopy is appended. If
+the files are equal, no copy is performed.
+
+.SH NOTES
+Do not create a file DEFAULT, if no evident default configuration file can be
+used. It's better to exit with an error, than to copy a wrong
+configuration file.
+
+This command can also be used to maintain your configuration files on
+a hughe number of hosts.
+.SH SEE ALSO
+.br
+The programs is part of FAI (fully automatic installation). See the FAI manual
+for more information how to use fcopy. The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+
+.SH AUTHOR
+This manual page was written by Thomas Lange <lange@informatik.uni-koeln.de>.
