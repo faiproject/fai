@@ -1,6 +1,6 @@
 docname = fai-guide
 fdocname = $(docname).sgml
-MISC_DOC = FAQ QUESTIONNAIRE classes_description.txt links.html changelog.old README* common.ent
+MISC_DOC = FAQ QUESTIONNAIRE classes_description.txt links.html changelog.old README*
 
 %.html: %.sgml
 	debiandoc2html $<
