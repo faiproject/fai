@@ -1,17 +1,36 @@
 #! /bin/sh
 
-# load ide and pnp kernel modules
-modprobe -a ide-detect ide-disk ide-cd isa-pnp
+# als subroutine definieren!!!!! XXXX
+#echo "0" > /proc/sys/kernel/printk
 
-# probe for scsi devices and set classes
-for d in `discover --module scsi`; do
-        modprobe $d
-        case "$d" in
-	    aic7xxx)
-              # define a class for adaptec special work to do
-	      newclasses="$newclasses ADAPTEC" ;;
-        esac
+# let discover do the work
+/etc/init.d/discover start
+
+# load all IDE drivers
+
+# for a 2.6 kernel replace .o with .ko
+# DMA does not work if we load all modules in drivers/ide, so only try pci modules
+mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci ! -type d ! -name ide\* -exec basename {} .o \;)
+for i in $mod; do
+    modprobe $i
 done
+unset i
+
+# load additional kernel modules (from old 11modules.source)
+# this order should also enable DMA for all IDE drives
+kernelmodules="rtc floppy usbkbd keybdev mousedev hid ide-detect ide-disk ide-cd isa-pnp"
+for mod in $kernelmodules; do
+    [ "$verbose" ] && echo loading kernel module $mod
+    modprobe -a $mod
+done
+unset mod kernelmodules
+
+# enable DMA mode on als IDE drives
+#for disk in $(ls /proc/ide/hd[a-z]/settings 2>/dev/null); do
+#    echo $disk
+#    echo "using_dma:1" > $disk
+#done
+# unset disk
 
 modprobe -a sd_mod sr_mod
 # are any SCSI devices attached?
@@ -27,8 +46,8 @@ fi
 set_disk_info  # calculate number of available disks
 save_dmesg # save new boot messages (from loading modules)
 
-# tro to detect graphics card
-video=`discover --xdriver video`
+# try to detect graphics card
+video=`discover --data-path=xfree86/server/device/driver display`
 case "$video" in
     mga) newclasses="$newclasses MATROX"
 esac
