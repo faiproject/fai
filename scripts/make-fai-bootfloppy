@@ -6,7 +6,7 @@
 # make-fai-bootfloppy -- create a boot floppy for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2004 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2005 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,12 +27,13 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.5.4, 23-july-2004"
+version="Version 2.5.5, 3-jan-2005"
 set -e
 timeout=15
 mkimage=0
 floppydev=/dev/fd0
-mountpoint=/floppy
+[ -d /floppy ] && mountpoint=/floppy
+[ -d /media  ] && mountpoint=/media/floppy
 mountopts="-t ext2"
 sd="savedefault"
 BTYPE=d # default boot protocol is DHCP
@@ -41,6 +42,7 @@ umount_dirs() {
 
     cd /
     umount "$mountpoint" 2>/dev/null || true
+    [ -n "mpcreated" ] && rmdir $mountpoint
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -51,13 +53,10 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 determine_kernel_version() {
 
-    local num all
-    all=$(ls $NFSROOT/boot/vmlinuz-*)
-    if [ `echo $all | wc -l` = 1 ]; then
-	KERNELVERSION=$(echo "kernel version $all" | sed -e 's#.*/vmlinuz-##')
-    else
-	die "Can't determine kernel version for $all"
-    fi
+    local all
+    # choose last installed kernel of nfsroot
+    all=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1)
+    KERNELVERSION=$(echo "kernel version $all" | sed -e 's#.*/vmlinuz-##')
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -65,7 +64,7 @@ usage() {
     cat <<EOF
 make-fai-bootfloppy, create a boot floppy for FAI. $version
 
-   Copyright (C) 2000-2004 by Thomas Lange
+   Copyright (C) 2000-2005 by Thomas Lange
 
    Usage: make-fai-bootfloppy [parameter]
 
@@ -348,6 +347,11 @@ fi
 echo "Creating an ext2 filesystem on floppy device $floppydev."
 mke2fs $mkfsopt -q -i 40000 -m 0 $floppydev || \
   die "Can't create ext2 file system on $floppydev"
+
+if [ ! -d $mountpoint ]; then
+    mkdir -p $mountpoint
+    mpcreated=1  # we created the mountpoint
+fi
 mount $mountopts $floppydev $mountpoint || die "Can't mount floppy $floppydev"
 
 [ $lilo ] && lilo_floppy
