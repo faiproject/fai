@@ -1,7 +1,5 @@
 include ../VERSION
 
-# don't forget 3c90x patch, Thomas !
-
 # where I can build the kernel. I have a very huge ramdisk (160MB)
 kerneldir=/tmp/ram
 
