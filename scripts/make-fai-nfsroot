@@ -35,56 +35,70 @@
 # apt-get must been working on your server (sources.list must be OK)
 
 dversion=2_2
-packages="file rdate cfengine bootpc wget rsh-client less dump"
+verbose=1
+# Additional packages that are install to nfsroot
+packages="debconf file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 lvm"
+
 
 basetgz=base${dversion}.tgz
 fai=/usr/lib/fai
 root=$fai/nfsroot
 aptconf=$fai/etc/apt.conf.nfsroot
-DEBIAN_FRONTEND=Noninteractive
+export DEBIAN_FRONTEND=Noninteractive
 
+if [ "$verbose" ]; then
+	devnull=/dev/tty
+else
+	devnull=/dev/null
+fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 recreate_nfsroot() {
 
-    echo removing old nfsroot $root
+    echo Removing old nfsroot $root
     rm -rf $root/*
     cd $root
-    echo unpacking $basetgz
+    echo Unpacking $basetgz
     tar zxpf /tmp/$basetgz
+    touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
+    mkdir -p lib/modules/`uname -r`             # dirty trick to hoax lvm
+    touch lib/modules/`uname -r`/modules.dep    # dirty trick to hoax lvm
+    update_nfsroot
+
     mkdir -p $root/fai/fai_config
     cp -p /usr/lib/fai/sbin/* /usr/lib/fai/nfsroot/sbin
     cp -p /usr/lib/perl5/Debian/Fai.pm $root/usr/lib/perl5/Debian/
-
     rm -rf etc/mtab etc/apt/sources.list var/run
     mv $root/etc/init.d/rcS $root/etc/init.d/rcS.orig
     ln -s /proc/mounts $root/etc/mtab
     ln -s /tmp/var/run $root/var/run 
     ln -s /tmp/etc/resolv.conf $root/etc/resolv.conf
     ln -s /sbin/rcS_fai $root/etc/init.d/rcS
-    touch etc/fstab  # dump needs this file
 
-    cat >$root/etc/rc2.d/S01fai_abort.sh <<EOF
+    cat >$root/etc/rc1.d/S01fai_abort <<EOF
     #!/bin/sh
     echo FAI: installation aborted.
-    echo reboot with: reboot -dfi
+    echo reboot with: faireboot
     echo or after a logout
     sh
     cd /
     umount -ar
     reboot -dfi
 EOF
+    chmod a+rx $root/etc/rc1.d/S01fai_abort
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 update_nfsroot() {
 
-    echo upgrading $root
-    apt-get -c $aptconf update
-    apt-get -c $aptconf check
+    echo Upgrading $root
+    apt-get -c $aptconf update  > $devnull 
+    apt-get -c $aptconf check    > $devnull 
     chroot $root mount -n -t proc proc /proc
-    apt-get -c $aptconf -y upgrade </dev/null
-    apt-get -c $aptconf -y --fix-missing install $packages </dev/null
-    chroot $root umount /proc
+    apt-get -c $aptconf -y remove pcmcia-cs </dev/null  > $devnull 
+    apt-get -c $aptconf -y upgrade </dev/null  > $devnull 
+    echo Adding additional packages to $root
+    apt-get -c $aptconf -y --fix-missing install $packages </dev/null  > $devnull 
+    chroot $root umount -n /proc >/dev/null
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -109,7 +123,5 @@ if [ -d $root/fai ]; then
 else
     recreate_nfsroot
 fi
-
-update_nfsroot
 
 exit 0
