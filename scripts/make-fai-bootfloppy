@@ -27,16 +27,16 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.7.1, apr 2002"
+version="version 1.7.2, 14 Apr 2002"
 set -e
 MKIMAGE=0
 floppydev=/dev/fd0
+MOUNTPOINT=/floppy
 mountopts=""
-trap "umount_dirs" EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
     cd /
-    umount /floppy || true
+    umount "$MOUNTPOINT" || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -61,13 +61,14 @@ usage() {
     cat <<EOF
 make-fai-bootfloppy, create a boot floppy for FAI. $version
 
-   Copyright (C) 2000, 2001 by Thomas Lange
+   Copyright (C) 2000-2002 by Thomas Lange
 
    Usage: make-fai-bootfloppy [parameter]
 
    -h       print this message.
    -s host  use a static ip for host (try to get from DNS)
    -f file  make a 1440k floppy image
+   -m dir   use dir as mountpoint [/floppy]
 
 DESCRIPTION
    Creates a boot floppy for booting a FAI install client.
@@ -85,10 +86,11 @@ EOF
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
-while getopts "f:s:h" opt ; do
+while getopts "f:s:m:h" opt ; do
         case "$opt" in
         h) usage ;;
-	f) MKIMAGE=1; floppydev="$OPTARG";;
+	f) MKIMAGE=1; floppydev="$OPTARG" ;;
+	m) MOUNTPOINT="$OPTARG" ;;
 	s) TARGETHOST="$OPTARG" ;;
         ?) echo "Error parsing arguments"; exit 1;;
 esac
@@ -100,6 +102,7 @@ if [ "$UID" -ne 0 ]; then
  exit 9
 fi
 
+trap "umount_dirs" EXIT
 # additional kernel parameter
 params="$@"
 
@@ -144,37 +147,37 @@ if [ $MKIMAGE -eq 1 ]; then
 fi
 
 mke2fs $mkfsopt -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
-mount $mountopts $floppydev /floppy || die "Can't mount floppy $floppydev"
-mkdir /floppy/boot /floppy/etc
+mount $mountopts $floppydev $MOUNTPOINT || die "Can't mount floppy $floppydev"
+mkdir $MOUNTPOINT/boot $MOUNTPOINT/etc
 cd $NFSROOT/boot
 # do not copy System.map*
-cp -dp map chain* boot* vmlinuz-$KERNELVERSION /floppy/boot 2>/dev/null || true
-ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
+cp -dp map chain* boot* vmlinuz-$KERNELVERSION $MOUNTPOINT/boot 2>/dev/null || true
+ln -s boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/vmlinuz
 # since lilo 21.5, boot.b is a link
-[ -e /floppy/boot/boot.b ] || ln -fs /floppy/boot/boot-compat.b /floppy/boot/boot.b
+[ -e $MOUNTPOINT/boot/boot.b ] || ln -fs $MOUNTPOINT/boot/boot-compat.b $MOUNTPOINT/boot/boot.b
 
-[ $MKIMAGE -eq 1 ] && cat > /floppy/etc/lilo.conf << EOF
-disk=/dev/loop0
-bios=0x00
-cylinders=80
-heads=2
-sectors=18
+[ $MKIMAGE -eq 1 ] && cat > $MOUNTPOINT/etc/lilo.conf <<-EOF
+   disk=$(mount | grep $MOUNTPOINT | sed -e 's/.*loop=\([^)]*\))/\1/')
+   bios=0x00
+   cylinders=80
+   heads=2
+   sectors=18
 EOF
 
-cat >> /floppy/etc/lilo.conf <<-EOF
+cat >> $MOUNTPOINT/etc/lilo.conf <<-EOF
     boot=$floppydev
     root=$NFSROOT/dev/boot255
-    install=/floppy/boot/boot.b
-    map=/floppy/boot/map
+    install=$MOUNTPOINT/boot/boot.b
+    map=$MOUNTPOINT/boot/map
     append="nfsroot=$SERVERIP:$NFSROOT $params"
     delay=10
     compact
-    image=/floppy/vmlinuz
+    image=$MOUNTPOINT/vmlinuz
     label=FAI-$TYPE
     read-only
 EOF
 
-$NFSROOT/sbin/lilo -C /floppy/etc/lilo.conf
+$NFSROOT/sbin/lilo -C $MOUNTPOINT/etc/lilo.conf
 
 cat <<EOF
 Writing boot data to floppy.
