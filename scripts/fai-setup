@@ -94,14 +94,19 @@ setup_fai_account() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-add_fai_account
-setup_fai_account
+if [ -n "$LOGUSER" ]; then
+    add_fai_account
+    setup_fai_account
+fi
 
 echo Creating FAI nfsroot can take a long time and will
 echo need more than 100MB disk space in $NFSROOT.
 make-fai-nfsroot
-# chown only if cd was successful
-cd $loguserhome && chown -R $LOGUSER:$logusergid .
+
+if [ -n "$LOGUSER" ]; then
+    # chown only if cd was successful
+    cd $loguserhome && chown -R $LOGUSER:$logusergid .
+fi
 
 if [ -z "$FAI_CONFIGDIR" ]; then
     echo "FAI_CONFIGDIR not set in /etc/fai.conf."
