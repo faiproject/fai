@@ -9,7 +9,6 @@ cp -a $target/boot $target/fai-boot
 
 cd $target/boot
 kernelversion=`ls vmlinuz-*`
-mknod $target/dev/boot255 c 0 255
 
 ifclass LILO && {
     # write lilo.conf and install lilo to disk
@@ -17,7 +16,7 @@ ifclass LILO && {
 
     cat >> $target/etc/lilo.conf <<-EOF
 	image=/fai-boot/boot/$kernelversion
-	root=/dev/boot255
+	root=/dev/nfs
 	label=FAI
 EOF
 
@@ -39,10 +38,9 @@ ifclass GRUB && {
 	# created by FAI
 	
 	title FAI (Fully Automatic Installation) BOOT GNU/Linux
-	root $broot
-	kernel $kernelname
+	root (nd)
+	kernel $kernelname nfsroot=rom
 EOF
 
-    rdev $target/fai-boot/$kernelname $target/dev/boot255
     echo "Grub installed for $kernelimage $broot"
 }
