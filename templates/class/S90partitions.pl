@@ -11,9 +11,8 @@ sub match {
     m#\s/fai-boot\s#         && print "FAI_BOOTPART ";
 }
 
-
 # main routine is read only for you
-foreach $class (split /\s+/, $ENV{classes}) {
+foreach $class ( $ENV{HOSTNAME}, split /\s+/, $ENV{classes}) {
   $file = "/fai/disk_config/$class";
   next unless -f $file;
   open (PART,"<$file") || die "Can't open $file\n";
