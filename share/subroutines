@@ -137,18 +137,16 @@ call_hook() {
     for cl in $classes; do
 	hfile=$FAI/hooks/${hook}.$cl
 	if [ -x $hfile ]; then
-	    echo "Call hook: $hook.$cl"
+	    echo -n "Call hook: $hook.$cl"
 	    # execute the hook
 	    $hfile $dflag
-	    # is that really good? Makes sense if hostname would
-	    # be the first hook.
-	    # execute only one hook if return value is 42
-	    # [ $? -eq 42 ] && return
+	    check_status $hfile $?
 	fi
 	if [ -x $hfile.source ]; then
-	    echo "Source hook: $hook.$cl.source"
+	    echo -n "Source hook: $hook.$cl.source"
 	    # source this hook
 	    . $hfile.source $dflag
+	    check_status $hfile.source $?
 	fi
      done
 }
@@ -383,24 +381,28 @@ do_script() {
 	    echo "Executing   $shelldebug shell: $file"
 	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
 	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
+	    check_status $file $?
 	;;
 
 	*"cfengine script"*)
 	    echo "Executing cfengine: $file"
 	    echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
 	    ./$file --no-lock -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
+	    check_status $file $?
 	;;
 
 	*"perl script"*)
 	    echo "Executing    perl: $file"
 	    echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
 	    ./$file >> $LOGDIR/perl.log 2>&1
+	    check_status $file $?
 	;;
 
 	*"expect script"*)
 	    echo "Executing  expect: $file"
 	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
 	    ./$file >> $LOGDIR/expect.log 2>&1
+	    check_status $file $?
 	;;
 
 	*) echo "File $file has unsupported type $filetype." ;;
