@@ -1,0 +1,91 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH fai-chboot 8 "27 may 2003" "FAI 2.4.2"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+fai-chboot \- manage network boot configuration files
+.SH SYNOPSIS
+.B fai-chboot [\fIOPTION\fR]... \fIKERNELNAME\fR \fIROOTFS\fR \fIHOST\fR...
+.SH DESCRIPTION
+This command creates the configuration files for network booting.
+
+KERNELNAME is the file name of the kernel that will be booted. This
+kernel will mount the root filesystem from device ROOTFS. You can add
+additional kernel parameters and define some FAI specific flags. For
+each host one configuration file is created. The file name of the
+configuration file is its IP address in upper case hexadecimal. HOST
+can be a host name or an IP address.
+
+.SH OPTIONS
+.TP
+.BI "\-d " DIR
+Set the default directory for the network boot configuration to
+DIR. The default value is /boot/fai/pxelinux.cfg/.
+.TP
+.BI "\-f " fai_flags
+Set FAI_FLAGS. The flags must be comma separated.
+.TP
+.BI \-F
+Set default values for FAI_FLAGS. This is the same as -f
+verbose,sshd,createvt,syslogd
+.TP
+.B \-h
+Show simle help and version.
+.TP
+.B \-i
+Set parameters for booting the FAI install kernel. Same as fai-chboot -p ip=dhcp vmlinuz-install /dev/nfs
+.TP
+.B \-l
+List the configuration for all hosts.
+.TP
+.B \-n
+Do not create configuration but show what will be done. This also
+enables the verbose flag.
+.TP
+.BI "\-p " parameters
+Set kernel append parameters.
+.TP
+.B \-r
+Disable network booting for HOST. This renames the config file and add
+the suffix .disable to it.
+.TP
+.B \-v
+Create verbose output.
+
+.SH EXAMPLES
+.TP
+fai-chboot -l
+List the configuration for all hosts.
+
+.TP
+fai-chboot -iFv atom02 atom03 dom kueppers
+Hosts atom02, atom03, dom and kueppers will boot the FAI install kernel.
+
+.TP
+fai-chboot -v localboot-atom /dev/hda1 atom03 
+Next time atom03 will boot the kernel localboot-atom which mounts the root filesystem from /deb/hda1.
+.TP
+fai-chboot memtest86.bin blabla atom02
+Host atom02 will boot the memory test.
+
+.SH NOTES
+Currently only PXE boot is supported. BOOTP configuration can be
+managed using the tlink utility.
+
+.SH SEE ALSO
+.br
+This program is part of FAI (Fully Automatic Installation).  See the FAI manual
+for more information on how to use fcopy.  The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+
+.SH AUTHOR
+Thomas Lange <lange@informatik.uni-koeln.de>
