@@ -168,7 +168,10 @@ save_log_local() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote() {
 
-    # save log files to user $LOGUSER on $SERVER
+    # save log files to $LOGUSER/$HOSTNAME/.. on $SERVER
+    # also create a link last-$FAI_ACTION the the directory of the
+    # last action. The name of the log directory contains date and
+    # time of the action performed
     [ "$LOGUSER" ] || return
 
     echo "Saving log files remote to $LOGUSER@$SERVER $HOSTNAME/$FAI_ACTION-$RUNDATE"
@@ -383,11 +386,16 @@ task_defclass() {
 	fi
     done
 
+    # scripts can also write additional classes to a file, if they
+    # can't print them to stdout. Now read this file and define the classes
     [ -f $LOGDIR/additional-classes ] && addclasses=`grep -v '^#' $LOGDIR/additional-classes`
     [ "$debug" ] && echo "additonal classes: $addclasses"
+
+    # now add the hostname (the only class in lowercase) and LAST to
+    # the list of classes
     classes="$classes $addclasses $HOSTNAME LAST"
 
-    # also define all classes in reverse order ($revclases)
+    # also define all classes in reverse order ($revclasses)
     for class in $classes ; do
 	echo $class >> $LOGDIR/FAI_CLASSES
 	revclasses="$class $revclasses"
@@ -413,6 +421,8 @@ task_defvar() {
 	fi
     done
 
+    # /fai/class/S* scripts or hooks can write variable definitions
+    # to additonal.var. now source these definitions
     [ "$debug" ] && set -vx
     [ -f $LOGDIR/additional.var ] && . $LOGDIR/additional.var
     [ "$debug" ] && set +vx
@@ -517,7 +527,7 @@ task_backup() {
 #                  list of devices  list of backup levels
 # this subroutine is not yet tested, not yet used
 # It's only an idea how a backup could be made
-    die "make_backup routine not yet used. But you can use the hook backup."
+    die "Task backup not yet used. But you can use the hook backup."
     local partition
     mount_local_disks
     for partition in $SAVE_DEVICES ; do
