@@ -8,6 +8,7 @@
 # This is the debhelper compatability version to use.
 export DH_COMPAT=1
 
+include VERSION
 
 build: build-stamp
 build-stamp:
@@ -61,6 +62,8 @@ binary-arch: build install
 	chmod a+rx `pwd`/debian/tmp/usr/share/doc/fai/templates/class/S[0-9]*.{source,sh,pl}
 	chmod a+rx `pwd`/debian/tmp/usr/share/doc/fai/templates/scripts/*
 	chmod a+rx `pwd`/debian/tmp/usr/lib/fai/sbin/rcS_fai
+	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' `pwd`/debian/tmp/usr/share/doc/fai/README
+	echo $(VERSIONSTRING)
 	# You may want to make some executables suid here.
 	dh_installdeb
 	dh_gencontrol
