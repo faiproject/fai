@@ -13,3 +13,7 @@ case $IPADDR in
     134.95.9.*)
 	echo NET_9 ;;
 esac
+
+
+# echo architecture
+dpkg --print-installation-architecture | tr /a-z/ /A-Z/
