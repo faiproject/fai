@@ -140,7 +140,7 @@ save_log_local() {
 
     # save log files on local disk
     local logdir=$FAI_ROOT/var/log/fai
-    find $FTMP -maxdepth 1 -size 0 | xargs -r rm
+    find $FTMP -size 0 | xargs -r rm
     mkdir -p $logdir/$HOSTNAME/$FAI_ACTION
     cp -p $FTMP/* $logdir/$HOSTNAME/$FAI_ACTION 2> $devnull
     ln -s $HOSTNAME $logdir/localhost
@@ -151,7 +151,7 @@ save_log_remote() {
     # save log files to $SERVER
     [ "$LOGUSER" ] || return
     local logdir=$HOSTNAME/$FAI_ACTION
-    find $FTMP -maxdepth 1 -size 0 | xargs -r rm
+    find $FTMP -size 0 | xargs -r rm
     $FAI_REMOTESH -l $LOGUSER $SERVER "rm -f $logdir/* ; \
 	test -d $logdir || mkdir -p $logdir" 2> $devnull
     $FAI_REMOTECP -p $FTMP/* $LOGUSER@$SERVER:$logdir
