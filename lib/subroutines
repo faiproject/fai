@@ -195,7 +195,7 @@ create_ramdisk() {
 mkdivert() {
 
     # make a diversion of a file
-    $ROOTCMD dpkg-divert --quiet --package fai --add --rename $1
+    $ROOTCMD dpkg-divert --quiet --package fai --rename --add $1
     cat > $FAI_ROOT/$1 <<-EOF
 	#! /bin/sh
 	# diversion of $1 created by FAI
@@ -208,7 +208,9 @@ rmdivert() {
 
     # remove diversion
     rm -f $FAI_ROOT/$1
-    $ROOTCMD dpkg-divert --quiet --package fai --remove --rename $1
+    $ROOTCMD dpkg-divert --package fai --rename --remove $1
+    # when a diversion was made before the file exists
+    [ -f $FAI_ROOT/$1.distrib.dpkg-new ] && mv $FAI_ROOT/$1.distrib.dpkg-new $FAI_ROOT/$1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_dhcp_info() {
@@ -440,7 +442,7 @@ prepare_apt() {
 
     # fake some programs
     mkdivert /usr/sbin/xserver-configure
-    mkdivert /usr/bin/ypwhich
+    mkdivert /etc/init.d/nis
     mkdivert /sbin/start-stop-daemon
     cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
 }
@@ -632,6 +634,16 @@ task_setup() {
 
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
     disk_info
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_finish() {
+
+    umount -n $FAI_ROOT/proc
+    # undo fake of programs
+    rmdivert /sbin/start-stop-daemon
+    rmdivert /usr/sbin/xserver-configure
+    rmdivert /etc/init.d/nis
+    rmdivert /sbin/init
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
