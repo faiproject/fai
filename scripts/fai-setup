@@ -58,15 +58,15 @@ add_fai_account() {
     adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
     # there's a bug when the encrypted password is !, so change it to *
     perl -pi.bak -e "s#^$LOGUSER:.:(.+):/bin/false#$LOGUSER:*:\1:/bin/bash#" /etc/passwd
+    # get the home dir of a user in a variable; do not exit when set -e is used
+    # loguserhome is unset if $LOGUSER does not exists
+    # this is not a evil hack, it's a very clever piece of code
+    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
     touch $loguserhome/.account_created_by_fai_package
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_fai_account() {
 
-    # get the home dir of a user in a variable; do not exit when set -e is used
-    # loguserhome is unset if $LOGUSER does not exists
-    # this is not a evil hack, it's a very clever piece of code
-    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
     sshdir=$loguserhome/.ssh
     if [ -z "$loguserhome" ]; then
 	echo "Can't determine home directory for user $LOGUSER."
