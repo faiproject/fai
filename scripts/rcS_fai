@@ -81,7 +81,7 @@ define_variables() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_classes() {
 
-    cd /fai/class
+    cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the server."
     echo "Now defining classes"
 
     # alphabetical sort is important
@@ -213,7 +213,7 @@ fai_sysinfo() {
 	    lspci
 	    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
 	    hdparm -iv /dev/hd[a-h]
-	    echo -n "xserver for graphic card:"; xviddetect -q
+	    echo -n "xserver for graphic card: "; xviddetect -q
 	    #si -p -o shm
 	fi
 	mount_local_disks
@@ -394,6 +394,7 @@ fai_setup  > >( tee -a $rcslog ) 2>&1
 # if you want to recall rcS_fai
 # [ -n $callarg ] && FAI_ACTION=$callarg
 
+echo "FAI_ACTION: $FAI_ACTION"
 case $FAI_ACTION in
 
     install)
