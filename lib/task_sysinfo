@@ -4,6 +4,10 @@
 
 sysinfo_linux() {
 
+    [ -x "`which dmidecode`" ] && {
+	dmidecode
+    }
+
     lspci
     lsdev
     echo "Ethernet cards found: $netdevices_all"
@@ -32,12 +36,16 @@ sysinfo_linux() {
 	sysinfo -class device -level all
     }
 
+    [ -x "`which sfdisk`" ] && {
+	sfdisk -d
+    }
+
     [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
     cat /proc/partitions
     local disk
     for disk in $disklist; do
 	hdparm -iv /dev/$disk
-	fdisk -s /dev/$disk
+	fdisk -lu /dev/$disk
 	LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
     done
     fdisk -lu
