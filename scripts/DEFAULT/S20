@@ -7,8 +7,6 @@ control:
 
 files:
    any::
-   # suppress emacs errors
-        ${target}/etc/mailname mode=644 owner=0 group=0 action=touch
 
 # floppy and cdroms are accessible for all
         ${target}/dev include=fd* mode=666   action=fixall r=1
@@ -29,6 +27,12 @@ directories:
 
 editfiles:
    any::
+   # suppress emacs errors
+	{ ${target}/etc/mailname
+	  AutoCreate
+          AppendIfNoSuchLine "${HOSTNAME}"
+	}
+
 	{ ${target}/etc/default/rcS
 	  ReplaceAll "^UTC=.*" With "UTC=${UTC}"
 	}
