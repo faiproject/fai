@@ -8,22 +8,25 @@ egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/m
 # a list of modules, that are loaded at boot time
 echo $moduleslist >> $target/etc/modules
 
-# if class MBR is defined, write lilo into master boot record
-ifclass MBR || BOOT_DEVICE=$ROOT_PARTITION
 
-# write lilo.conf
-cat > $target/etc/lilo.conf <<EOF
-
-boot=$BOOT_DEVICE
-root=$ROOT_PARTITION
-install=/boot/boot.b
-map=/boot/map
-vga=normal
-delay=50
-#
-image=/vmlinuz
-label=linux
-$liloappend
+ifclass LILO && {
+    # write lilo.conf and install lilo to disk
+    cat > $target/etc/lilo.conf <<-EOF
+	boot=$BOOT_DEVICE
+	root=$ROOT_PARTITION
+	install=/boot/boot.b
+	map=/boot/map
+	vga=normal
+	delay=50
+	#
+	image=/vmlinuz
+	label=linux
+	$liloappend
 EOF
 
-$target/sbin/lilo -r $target
+    $target/sbin/lilo -r $target
+}
+
+ifclass GRUB && {
+    echo "GRUB not yet supported"
+}
