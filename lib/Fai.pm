@@ -6,7 +6,7 @@
 # Fai.pm -- subroutines used by /fai/class/S*.pl scripts
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (c) 1999-2000 by Thomas Lange, Universitaet zu Koeln
+# Copyright (c) 1999-2001 by Thomas Lange, Universitaet zu Koeln
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
