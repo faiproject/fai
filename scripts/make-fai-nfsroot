@@ -49,6 +49,7 @@ done
 set -e
 . /etc/fai.conf
 packages="$packages $NFSROOT_PACKAGES"
+ROOTCMD="chroot $NFSROOT"
 
 conffile=$NFSROOT/etc/rcS_fai.conf
 export DEBIAN_FRONTEND=Noninteractive
@@ -172,22 +173,22 @@ upgrade_nfsroot() {
     echo "Upgrading $NFSROOT"
     {
     cp /etc/resolv.conf $NFSROOT/etc
-    chroot $NFSROOT apt-get update
-    chroot $NFSROOT apt-get check
+    $ROOTCMD apt-get update
+    $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/pcmcia $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
-    chroot $NFSROOT apt-get -y remove pcmcia-cs </dev/null
+    $ROOTCMD apt-get -y remove pcmcia-cs </dev/null
 
     # fake start-stop-dameon
-    chroot $NFSROOT dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
+    $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
     cp $LIBFAI/sbin/start-stop-daemon $NFSROOT/sbin
-    chroot $NFSROOT apt-get -y upgrade
+    $ROOTCMD apt-get -y upgrade
     } > $devnull
     echo "Adding additional packages to $NFSROOT:"
     echo "$packages"
     {
-    chroot $NFSROOT apt-get -y --fix-missing install $packages </dev/null
-    chroot $NFSROOT apt-get clean
+    $ROOTCMD apt-get -y --fix-missing install $packages </dev/null
+    $ROOTCMD apt-get clean
     umount $NFSROOT/proc
     } > $devnull
 }

@@ -134,6 +134,7 @@ fai_init() {
     cf_prefix="cfengine:"
     files=$FAI_FILES
     target=$FAI_ROOT
+    ROOTCMD="chroot $FAI_ROOT"
 
     umask 022
     PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
@@ -305,18 +306,18 @@ prepare_apt() {
     cp /tmp/etc/resolv.conf $FAI_ROOT/etc
     cp /etc/apt/* $FAI_ROOT/etc/apt/
     # some packages must access /proc even in chroot environment
-    mount -t proc /proc $FAI_ROOT/proc
+    mount -t proc proc $FAI_ROOT/proc
 
-    chroot $FAI_ROOT apt-get update
-    chroot $FAI_ROOT apt-get check
-    [ $? -ne 0 ] && chroot $FAI_ROOT apt-get -f -y install </dev/null 
-    chroot $FAI_ROOT dpkg -C
-    [ $? -ne 0 ] && yes ''|  chroot $FAI_ROOT dpkg --configure -a 
-    chroot $FAI_ROOT apt-get -f -y remove pcmcia-cs
-    chroot $FAI_ROOT apt-get -f -y upgrade </dev/null
+    $ROOTCMD apt-get update
+    $ROOTCMD apt-get check
+    [ $? -ne 0 ] && $ROOTCMD apt-get -f -y install </dev/null 
+    $ROOTCMD dpkg -C
+    [ $? -ne 0 ] && yes ''|  $ROOTCMD dpkg --configure -a 
+    $ROOTCMD apt-get -f -y remove pcmcia-cs
+    $ROOTCMD apt-get -f -y upgrade </dev/null
     # update dpkg info which packages are available
-    chroot $FAI_ROOT apt-cache dumpavail > $target/tmp/dumpavail
-    chroot $FAI_ROOT dpkg --update-avail /tmp/dumpavail
+    $ROOTCMD apt-cache dumpavail > $target/tmp/dumpavail
+    $ROOTCMD dpkg --update-avail /tmp/dumpavail
     rm -f $target/tmp/dumpavail
 
     # fake some programs
@@ -391,7 +392,7 @@ fai_install() {
        no|"") hwopt="--localtime" ;;
        yes)   hwopt="--utc"       ;;
     esac
-    chroot $FAI_ROOT hwclock $hwopt --systohc
+    $ROOTCMD hwclock $hwopt --systohc
     date
     echo -e "FAI finished.\a"
 
