@@ -3,13 +3,7 @@
 # (c) Thomas Lange, 2001-2002, lange@debian.org
 
 # install addition packags that are located in /fai/files/packages/
-for pack in "$addpackages"; do
-    if [ -f $FAI/files/packages/$pack ]; then
-	dpkg -i --root=$target $FAI/files/packages/$pack
-    else
-	echo "Package $pack not found in $FAI/files/packages/"
-    fi
-done
+[ "$addpackages" ] && cd $FAI/files/packages && dpkg -i --root=$target $addpackages
 
 echo $HOSTNAME     > $target/etc/hostname
 echo $time_zone    > $target/etc/timezone
@@ -71,9 +65,9 @@ ifclass USR_LOCAL_COPY && cp -a /usr/local $target/usr
 # make floppy read and writeable for all users
 chmod a+rw $target/dev/fd*
 # cdrom's are read only for all
-chmod a+r /dev/sr* 
+chmod a+r $target/dev/sr* 
 
-# if $kernelimage if not a debfile, then it's the kernel version
+# if $kernelimage is not a debfile, then it's the kernel version
 # create dummy link, so package kernel-image-* makes new correct link
 ln -s /boot/vmlinuz-nolink $target/vmlinuz
 
@@ -87,7 +81,7 @@ fi
 ifclass X11 && fcopy /etc/X11/XF86Config /etc/X11/Xserver
 
 # put CD-ROM into fstab
-# if cdromdevice if defined in *.var, use that value
+# if cdromdevice is defined in *.var, use that value
 # if you have both a SCSI and an IDE CD-ROM -> Uuuuups, this will fail
 [ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -1 | awk -F/ '{print $4}'`
 [ "$cdromdevice" ] || cdromdevice=`grep -q CD-ROM /proc/scsi/scsi && echo "sr0"`
