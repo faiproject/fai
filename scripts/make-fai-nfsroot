@@ -44,7 +44,6 @@ done
 . /etc/fai.conf
 
 conffile=$NFSROOT/etc/rcS_fai.conf
-aptconf=$LIBFAI/etc/apt.conf.nfsroot
 
 # Additional packages that are install to nfsroot
 packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm strace expect5.31"
@@ -57,6 +56,12 @@ else
 	devnull=/dev/null
 fi
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    echo $*
+    exit 99
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
 
@@ -85,6 +90,7 @@ copy_fai_files() {
 	KERNELVERSION=$KERNELVERSION
 	FAI_PACKAGEDIR=$FAI_PACKAGEDIR
 	FAI_BASETGZ=$FAI_BASETGZ
+	MNTPOINT=$MNTPOINT
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -95,7 +101,12 @@ create_nfsroot() {
     get_basetgz
     echo -n "Unpacking " ; ls /tmp/base?_?.tgz
     tar zxpf /tmp/base?_?.tgz
-    mknod dev/boot255 c 0 255
+    mknod $NFSROOT/dev/boot255 c 0 255
+    mkdir -p $NFSROOT/$MNTPOINT
+
+    if [ "$FAI_PACKAGEDIR" ]; then
+	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $NFSROOT/$MNTPOINT || die "Can't mount $FAI_PACKAGEDIR"
+    fi
 
     # hoaks some packages
     touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
@@ -104,14 +115,12 @@ create_nfsroot() {
     mkdir -p $NFSROOT/etc/ssh ; touch $NFSROOT/etc/ssh/NOSERVER
 
     echo "$FAI_SOURCES_LIST" > $NFSROOT/etc/apt/sources.list
-
     upgrade_nfsroot
     copy_fai_files
 
     # set timezone
     rm -f $NFSROOT/etc/localtime
-    cp -dp /etc/localtime $NFSROOT/etc
-    cp -dp /etc/timezone $NFSROOT/etc
+    cp -dp /etc/localtime /etc/timezone $NFSROOT/etc
 
     # make little changes to nfsroot, because most file systems are read only
     rm -rf etc/mtab var/run
@@ -152,22 +161,22 @@ upgrade_nfsroot() {
 
     echo "Upgrading $NFSROOT"
     {
-    apt-get -c $aptconf update
-    apt-get -c $aptconf check
+    chroot $NFSROOT apt-get update
+    chroot $NFSROOT apt-get check
     chroot $NFSROOT mount -n -t proc proc /proc
     rm -rf $NFSROOT/etc/pcmcia $NFSROOT/etc/apm
-    apt-get -c $aptconf -y remove pcmcia-cs </dev/null
+    chroot $NFSROOT apt-get -y remove pcmcia-cs </dev/null
 
     # because start-stop-dameon must be faked do it here
-    apt-get -c $aptconf -y install dpkg </dev/null
+    chroot $NFSROOT apt-get -y install dpkg </dev/null
     cp -p $LIBFAI/sbin/start-stop-daemon $NFSROOT/sbin
 
-    apt-get -c $aptconf -y upgrade </dev/null
+    chroot $NFSROOT apt-get -y upgrade </dev/null
     } > $devnull
     echo "Adding additional packages to $NFSROOT:"
     echo "$packages"
     {
-    apt-get -c $aptconf -y --fix-missing install $packages </dev/null
+    chroot $NFSROOT apt-get -y --fix-missing install $packages </dev/null
     chroot $NFSROOT umount -n /proc
     } > $devnull
 }
@@ -175,12 +184,21 @@ upgrade_nfsroot() {
 get_basetgz() {
 
     [ -f /tmp/base?_?.tgz ] && return
+    [ "$BASETGZ" ] || die "no /tmp/base?_?.tgz found and BASETGZ not defined."
     case $BASETGZ in
 	ftp:*|http:*)
 	    echo "Getting $BASETGZ via wget. This may take some time."
-	    wget -q -P/tmp $BASETGZ
+
+	    TMPBDIR=`mktemp /tmp/FAI-wget-XXXXXX` || exit 1
+	    rm $TMPBDIR; mkdir $TMPBDIR || exit
+	    wget -q -P$TMPBDIR $BASETGZ
+	    mv $TMPBDIR/base?_?.tgz /tmp
+	    rm -rf $TMPBDIR
 	    ;;
-	*) cd /tmp ; ln -s $BASETGZ
+	*)
+	    cd /tmp
+	    rm -f base?_?.tgz
+	    ln -s $BASETGZ
 	    ;;
     esac
 }
@@ -196,16 +214,17 @@ install_kernel_nfsroot() {
 
 if [ -d $NFSROOT/fai ]; then
     echo $NFSROOT already exists. Removing $NFSROOT
-    umount $NFSROOT/dev/pts 2>/dev/null
+    umount $NFSROOT/dev/pts 1>/dev/null 2>&1
     rm -rf $NFSROOT
 fi
-    create_nfsroot
-    install_kernel_nfsroot
+
+create_nfsroot
+test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT
 
 # create tftp boot images
+install_kernel_nfsroot
 mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
-
-# imggen is a tool from 3com
+# imggen is a free software from 3com
 imggen=`which imggen || true`
 if [ -x $imggen ]; then
     imggen -a /boot/fai/installimage /boot/fai/installimage_3com
