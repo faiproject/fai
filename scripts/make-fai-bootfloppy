@@ -27,9 +27,11 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.4.3, october 2001"
+version="version 1.5, december 2001"
 set -e
+MKIMAGE=0
 floppydev=/dev/fd0
+mountopts=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
@@ -46,7 +48,8 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
 
    Usage: make-fai-bootfloppy [parameter]
 
-   -h     print this message.
+   -h       print this message.
+   -f file  make a 1440k floppy image
 
 DESCRIPTION
    Creates a boot floppy for booting a FAI install client.
@@ -64,11 +67,14 @@ EOF
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
-while getopts h opt ; do
+while getopts "f:h" opt ; do
         case "$opt" in
         h) usage ;;
-        esac
+	f) MKIMAGE=1; floppydev="$OPTARG";;
+        ?) echo "Error parsing arguments"; exit 1;;
+esac
 done
+shift `expr $OPTIND - 1`
 
 if [ "$UID" -ne 0 ]; then
  echo "You must be root!"
@@ -104,8 +110,14 @@ SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ 
 echo "Using interface $SERVERINTERFACE with IP address: $SERVERIP"
 unset SERVERINTERFACE ndevices devices dev
 
-mke2fs -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
-mount $floppydev /floppy || die "Can't mount floppy $floppydev"
+if [ $MKIMAGE -eq 1 ]; then 
+    dd if=/dev/zero of=$floppydev bs=1024 count=1440
+    mountopts="$mountopts -o loop"
+    mkfsopt=-F
+fi
+
+mke2fs $mkfsopt -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
+mount $mountopts $floppydev /floppy || die "Can't mount floppy $floppydev"
 cp -ad $NFSROOT/boot /floppy
 mkdir -p /floppy/etc
 ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
@@ -115,7 +127,15 @@ ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
     ln -s /floppy/boot/boot-compat.b /floppy/boot/boot.b
 }
 
-cat > /floppy/etc/lilo.conf <<-EOF
+[ $MKIMAGE -eq 1 ] && cat > /floppy/etc/lilo.conf << EOF
+disk=/dev/loop0
+bios=0x00
+cylinders=80
+heads=2
+sectors=18
+EOF
+
+cat >> /floppy/etc/lilo.conf <<-EOF
     boot=$floppydev
     root=$NFSROOT/dev/boot255
     install=/floppy/boot/boot.b
