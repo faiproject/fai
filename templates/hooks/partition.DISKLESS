@@ -1,0 +1,20 @@
+#! /bin/sh
+
+# install a diskless workstation
+# (c) Thomas Lange, 2001, lange@debian.org
+
+# server and all filesystems for diskless client
+server=kueppers
+root=/files/scratch/diskless/$HOSTNAME/root
+usr=
+var=
+swap=
+
+# mount2dir can't mount nfs directories yet, so do it now
+mount $server:$root $target/
+
+# create fstab
+cat > /tmp/fstab <<EOF
+$server:$root / nfs rw,errors=remount-ro 0 0
+EOF
+echo "#!" > $diskvar
