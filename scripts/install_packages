@@ -6,7 +6,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2004, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2005, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.6.1, 31-december-2004";
+my $version = "Version 2.7, 9-jan-2005";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -37,7 +37,7 @@ use AptPkg::System '$_system';
 use AptPkg::Cache;
 
 # global variables
-our ($opt_f,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
+our ($opt_i,$opt_f,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our @commands;
 our %command;
@@ -77,7 +77,7 @@ $| = 1;
 );
 
 $test = 0;
-getopts('f:thvlLm:');
+getopts('if:thvlLm:');
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
@@ -228,7 +228,7 @@ sub readconfig {
       ($type,$cllist) = ($1,$');
       # by default no classes are listed after this command so doit
       $doit = 1;
-      if ($cllist) {
+      if ($cllist && ! $opt_i) {
 	# no classes specified after PACKAGES command
       # so add all packages listed
 	# use packages on for a list of classes
