@@ -7,7 +7,7 @@
 #
 # This script is part of FAI (Fully Automatic Installation)
 # Copyright (c) 1999, 2000 by ScALE Workgroup, Universitaet zu Koeln
-# Copyright (c) 2000-2004 by Thomas Lange, Uni Koeln
+# Copyright (c) 2000-2005 by Thomas Lange, Uni Koeln
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -37,6 +37,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes:  31.3.2005 by Thomas Lange add sub mapdisk{}
 # Last changes:  8.11.2004 by Thomas Lange add $devdisklist when calling sfdisk
 # Last changes:   3.2.2004 by Thomas Lange typos
 # Last changes: 14.07.2003 by Thomas Lange add xfs filesystem support
@@ -63,12 +64,14 @@
 # config-file format:
 #   lines beginning with # are comments
 #
-# "disk_config <device>|end"
+# "disk_config <device>|first|end"
 #   The disk_config command starts the parsing.
 #   It has to be the first command.
 #    <device> is the harddisk to format in short form like "hda" or "sdc".
+#    if first is used, the first of $ENV{disklist} is used
 #    "end"    = end parsing here
 #   Example: "disk_config hdb"
+#   Example: "disk_config first"
 #
 # Defining one partition:
 # "primary|logical mountpoint|swap|- <size in mb>|preserve<No> [fstab-options][;extraordinary options]"
@@ -148,7 +151,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-my $Version = "0.32fai";
+my $Version = "0.33fai";
 
 my $megabyte = 1024 * 1024;    # guess
 # $gigabyte = 1024 * $megabyte;
@@ -326,6 +329,21 @@ sub ParseAllConfigFiles{
 }
 
 #****************************************************
+# map "disk_config first" to real disk device
+#****************************************************
+sub mapdisk {
+
+  my ($disk) = @_;
+  my @dlist = split /\s+/,$ENV{disklist};
+
+  if ($disk eq "disk1") {
+    print "Mapping disk name first to $dlist[0]\n";
+    $disk = $dlist[0];
+  }
+  return $disk;
+}
+
+#****************************************************
 # parse config-file
 #****************************************************
 sub ParseConfigFile{
@@ -353,7 +371,7 @@ sub ParseConfigFile{
 #		if($paras =~ m# (/dev/)?(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|[a-z]+)#i){
 # now match all devives
 		if($paras =~ m# (/dev/)?(\S+)#i){
-		    $disk = "$2";
+		    $disk = mapdisk($2);
 		    ($DiskMountpoints{$disk})
 		      && die "ERROR: there are more than one configuration of disk $disk.\n";
 		    ($DiskSize{$disk}) || die "ERROR: could not read device /dev/$disk\n";
