@@ -6,7 +6,7 @@
 # Fai.pm -- subroutines used by /fai/class/S*.pl scripts
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (c) 1999-2003 by Thomas Lange, Universitaet zu Koeln
+# Copyright (c) 1999-2004 by Thomas Lange, Universitaet zu Koeln
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -29,9 +29,9 @@ $hostname = $ENV{'HOSTNAME'};
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub read_all_info () {
-  read_disk_info;
-  read_memory_info;
-  read_kernel_messages;
+  read_disk_info();
+  read_memory_info();
+  read_kernel_messages();
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub classes {
