@@ -45,7 +45,7 @@ $verbose=$ENV{verbose};
 $FAI_ROOT = $ENV{FAI_ROOT};
 $classpath = "/fai/package_config";
 $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
-@classes = grep { !/^#|^\s*$/} split(/[\s\n]+/,$ENV{classes});
+@classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 
 # read all package config files
 foreach (@classes) {
@@ -67,9 +67,21 @@ foreach $type (@commands) {
   }
 
   my $packlist = join(' ',@{$list{$type}});
-  if ($packlist) {
-    execute("$rootcmd $command{$type} $packlist");
+  my $plist = $packlist;
+  $plist =~ s/[+-] / /g; # remove +- suffix from package names
+
+  if ($type eq "install") {
+    # check for packages, that don't exists
+    $misspelt = qx{$rootcmd apt-cache show $plist 2>&1 1>/dev/null};
+    $misspelt =~ s/W: Unable to locate package //g;
+    $misspelt =~ s/\n/ /g;
+    warn "These unknown packages are removed from the installation list: $misspelt\n" if $misspelt;
+    # remove misspelt package names from packlist
+    my %misspelt = map { $_ => 1 } split /\s+/,$misspelt;
+    grep { $misspelt{$_} or $packlist .= "$_ "} @{$list{install}};
   }
+
+  execute("$rootcmd $command{$type} $packlist") if $packlist;
 }
 
 # remove prelaoded files
@@ -83,7 +95,7 @@ foreach $entry (@preloadrmlist) {
 
 # check if all went right
 execute("$rootcmd dpkg -C");
-# clean apt-get cache
+# clean apt cache
 execute("$rootcmd apt-get clean");
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
