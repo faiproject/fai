@@ -195,7 +195,8 @@ create_ramdisk() {
 mkdivert() {
 
     # make a diversion of a file
-    $ROOTCMD dpkg-divert --quiet --package fai --rename --add $1
+    [ "$verbose" ] || local divertquiet=--quiet
+    $ROOTCMD dpkg-divert $divertquiet --package fai --rename --add $1
     cat > $FAI_ROOT/$1 <<-EOF
 	#! /bin/sh
 	# diversion of $1 created by FAI
@@ -207,8 +208,9 @@ EOF
 rmdivert() {
 
     # remove diversion
+    [ "$verbose" ] || local divertquiet=--quiet
     rm -f $FAI_ROOT/$1
-    $ROOTCMD dpkg-divert --package fai --rename --remove $1
+    $ROOTCMD dpkg-divert $divertquiet --package fai --rename --remove $1
     # when a diversion was made before the file exists
     [ -f $FAI_ROOT/$1.distrib.dpkg-new ] && mv $FAI_ROOT/$1.distrib.dpkg-new $FAI_ROOT/$1
 }
