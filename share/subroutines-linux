@@ -121,31 +121,6 @@ get_bootp_info() {
     #FAI_BACKUP_LIST=$T174 # not yet used
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-load_keymap_consolechars() {
-
-    local mapname keymapfile keymaps
-
-    [ "$FAI_CONSOLEFONT" ] &&
-	consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
-
-    # nothing to do if FAI_KEYMAP is undefined
-    [ "$FAI_KEYMAP" ] || return
-
-    # support for other keyboards
-    for mapname in $FAI_KEYMAP; do
-        keymapfile=`find /usr/share/keymaps/ $FAI/files \
-	  ! -type d -name $mapname.kmap.gz -o \
-	   -name $mapname.inc.gz -o -name $mapname`
-	[ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
-    done
-
-    if [ "$keymaps" ]; then
-        loadkeys $keymaps
-    else
-        echo "FAI_KEYMAP $FAI_KEYMAP not found"
-    fi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 eval_cmdline() {
 
     # parse kernel parameters and define variables
