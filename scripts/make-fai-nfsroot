@@ -27,11 +27,12 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-nfssize="160MB"  # size of the nfsroot
+nfssize="230MB"  # size of the nfsroot
 
 # Packages that are install to nfsroot by default Additional packages are
 # defined with $NFSROOT_PACKAGES in fai.conf
-packages="dhcp3-client ssh portmap file rdate cfengine cvs bootpc rsync wget
+packages="module-init-tools dhcp3-client ssh portmap file rdate cfengine cvs
+bootpc rsync wget
 rsh-client less dump reiserfsprogs dpkg-dev ext2resize hdparm parted
 dnsutils ntpdate dosfstools sysutils dialog discover mdetect libnet-perl
 netcat"
@@ -81,8 +82,8 @@ fi
 
 kfile="vmlinuz"
 case `uname -m` in
-    i386|i486|i586|i686) 
-	arch_packages="grub read-edid kudzu hwtools" ;;
+    i386|i486|i586|i686|amd64) 
+	arch_packages="grub lilo read-edid kudzu hwtools dmidecode" ;;
 
     ia64) 
 	arch_packages="elilo gnu-efi efibootmgr" ;;
@@ -104,6 +105,7 @@ echo need more than $nfssize disk space in $NFSROOT.
 ROOTCMD="chroot $NFSROOT"
 
 RUNDIR=/var/run/fai/make-fai-nfsroot
+[ ! -d $RUNDIR ] && mkdir -p $RUNDIR
 LIBFAI=/usr/lib/fai
 SHAREFAI=/usr/share/fai
 export DEBIAN_FRONTEND=noninteractive
@@ -195,7 +197,7 @@ copy_fai_files() {
     cp -Rpv $cfdir/* etc/fai
     [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
-    cp -p /usr/sbin/{ftar,fcopy,install_packages,bootsector} usr/sbin/
+    cp -p /usr/sbin/{ftar,fcopy,install_packages} usr/sbin/
     cp -p /usr/bin/{fai-do-scripts,fai-class} usr/bin/
     cp -p $LIBFAI/* usr/lib/fai 2>/dev/null || true  # cp will complain about directories
     cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
@@ -271,9 +273,10 @@ create_nfsroot() {
     LC_ALL=C call_verbose call_with_stamp add_packages_nfsroot
     call_with_stamp copy_fai_files
 
-    # set timezone
-    rm -f etc/localtime
-    cp -d /etc/localtime /etc/timezone etc
+    # set timezone in nfsroot
+    timezone=$(readlink /etc/localtime | sed 's%^/usr/share/zoneinfo/%%')
+    echo $timezone > etc/timezone 
+    rm -f etc/localtime && ln -sf /usr/share/zoneinfo/$timezone etc/localtime
 
     # make little changes to nfsroot, because nfsroot is
     # read only for the install clients 
@@ -281,6 +284,7 @@ create_nfsroot() {
     mv etc/init.d/rcS etc/init.d/rcS.orig
     ln -s /proc/mounts etc/mtab
     ln -s /tmp/var/run var/run
+    rmdir var/state/discover && ln -sf /tmp/var/state/discover var/state/discover
     ln -s /tmp/etc/syslogsocket dev/log
     ln -sf /tmp/etc/resolv.conf etc/resolv.conf
     ln -sf /tmp etc/sysconfig
@@ -373,11 +377,11 @@ get_kernel_version() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_bootp(){
 
-    if [ -x "`which mknbi-linux`" ]; then
-	mknbi-linux --ip=any --output=/boot/fai/installimage \
+    if [ -x "`which mkelf-linux`" ]; then
+	mkelf-linux --ip=any --output=/boot/fai/installimage \
 	  $NFSROOT/boot/$kfile-$KERNELVERSION 
     else
-        echo "Command mknbi-linux not found. Can not set up BOOTP booting. Please install the package mknbi and rerun fai-setup."
+        echo "Command mkelf-linux not found. Can not set up BOOTP booting. Please install the package mknbi and rerun fai-setup."
 	return
     fi
 
