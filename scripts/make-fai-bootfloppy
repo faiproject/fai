@@ -6,7 +6,7 @@
 # make-fai-bootfloppy -- create a boot floppy for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2001 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2002 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.5, december 2001"
+version="version 1.6, january 2001"
 set -e
 MKIMAGE=0
 floppydev=/dev/fd0
@@ -37,6 +37,17 @@ die() {
 
     echo -e $*
     exit 99
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+determine_kernel_version() {
+
+    local num all
+    all=$(ls $NFSROOT/boot/System.map-*)
+    if [ `echo $all | wc -l ` = 1 ]; then
+	KERNELVERSION=$(echo "kernel version $all" | sed -e 's#.*/System.map-##')
+    else
+	die "Can't determine kernel version for $all"
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -86,6 +97,7 @@ params=$*
 
 . /etc/fai/fai.conf
 
+determine_kernel_version
 grep -q ic_bootp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=BOOTP
 grep -q ic_dhcp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
 
@@ -121,11 +133,8 @@ mount $mountopts $floppydev /floppy || die "Can't mount floppy $floppydev"
 cp -ad $NFSROOT/boot /floppy
 mkdir -p /floppy/etc
 ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
-[ -L /floppy/boot/boot.b ] && {
-    # since lilo 21.5, boot.b is a link
-    rm /floppy/boot/boot.b
-    ln -s /floppy/boot/boot-compat.b /floppy/boot/boot.b
-}
+# since lilo 21.5, boot.b is a link
+[ -e /floppy/boot/boot.b ] || ln -fs /floppy/boot/boot-compat.b /floppy/boot/boot.b
 
 [ $MKIMAGE -eq 1 ] && cat > /floppy/etc/lilo.conf << EOF
 disk=/dev/loop0
