@@ -4,9 +4,11 @@ fai (2.3pre) unstable; urgency=low
   * package upgrade does not remove nfsroot (closes: #123463)
   * many files: use $FAI instead of fixes /fai, config file moved to
     from /etc/fai.conf to /etc/fai/fai.conf
+  * store log files to $LOGDIR (default to /tmp/fai), can be set in fai.conf
+  * read also subroutines-$OSTYPE file
   * fai.conf: moved to /etc/fai/fai.conf
     variables removed: FAI_ARCH, UTC (now in class/*.var), KERNELVERSION
-    variables added: FAI
+    variables added: FAI, FAI_DEBOOTSTRAP_OPTS
   * make-fai-nfsroot sets up pxelinux environment
     automaticly determine kernel version; added get_kernel_version(),
     copies /etc/fai/.cvspass to nfsroot, can now write the floppy image to
@@ -26,16 +28,18 @@ fai (2.3pre) unstable; urgency=low
     Install $NFSROOT_PACKAGES in a second pass, to sidestep conflicts
     (e.g. so that ssh may replace rsh-client)
     Don't set up $LOGUSER's home directory if that variable is undefined
+    add variable FAI_DEBOOTSTRAP_OPTS
   * conf/fai_modules_off: more modules turned off
   * call openvt with full shell path (closes: #134641)
   * hooks are also skipped if task is skipped
   * hooks that end in .source are sourced
   * class/*.mod file can now define variables
+  * add ADAPTEC.mod file
   * apt/conf: set Assume-Yes "true" so apt-get (and tasksel) is noninteractive
   * lib/subroutines: /dev/ida/ and /dev/rd/ support in
     subroutine:umount_local_disks, added $netdevices_up, use $tfsab
-    instead of fstab (for solaris support), /fai is now $FAI, use shm
-    instead of normal ramdisk when $USETMPFS is set, strip comment lines
+    instead of fstab (for solaris support), /fai is now $FAI, mount shm
+    file system if available, otherwise use normal ramdisk, strip comment lines
     when defining classes via scripts, added subroutine do_script,
     do_scriptss calls every script class/<classname>/S[0-9]* when class is
     not a file, execute all S[0-9]* scripts in a directory
@@ -43,25 +47,34 @@ fai (2.3pre) unstable; urgency=low
     task_partition() call setup_harddisk only if no disk_var.sh exists
     defclass also sources all scripts class/S*.source
     add subroutines adddivert(), rmalldivert(); task_finish calls
-    rmalldivert
+    rmalldivert, task_sysinfo calls kudzu; save_log*() -maxdepth not
+    needed for find, save_log*() now uses date and time for directory name;
+    /tmp/fai now $LOGDIR, can be set in fai.conf; new cvs co code
+  * templates/scripts: change NET and NETWORK examples; now called S10,
+    S40 and located in directory /fai/scripts/NETWORK/
+    BASE and DEFAULT moved to DEFAULT/S20 and DEFAULT/S01
   * setup_harddisk: raid support for /devc/rd, /dev/ida and cciss driver
     for Compaqs Smart Array Controllers, called with -d
   * doc/Makefile: detect if anything is really to do
   * use gzip -dc instead of zcat
-  * make-fai-bootfloppy: do not copy /boot/System.map to floppy
+  * make-fai-bootfloppy: do not copy /boot/System.map to floppy, new
+    option -s
   * added prtnetgr; change netgroup example and script all_hosts to use it
   * fcopy: added debug message if executing postinst, ignore CVS
     directories, use File::Find, now sets envionment variables $target and
     $FAI_ROOT, bug fix in -d option, new options -L and -P,
   * KERNELVERSION not needed in fai.conf, now automaticly determined in
     make-fai-* scripts
+  * FAI_FILES removed
   * Files added: THANKS, preinst, prtnetgr, pxelinux.cfg
   * Manual pages added fai-setup, install_packages, make-fai-bootfloppy,
     make-fai-nfroot
+  * add use stict pragma for perl scripts
   * add auto.master and auto.scratch config for kernel automounter
   * mkdebmirror: use passive ftp mode
   * added autofs to package_CONFIG/BEOWULF
   * debian/prerm: do nothing when upgrading package
+  * scripts/fai-setup: determine loguserhome earlier (closes: #136851)
   * new standards version 3.5.6
   
  -- Thomas Lange <lange@debian.org>  Sun, 27 Jan 2002 15:08:19 +0100
