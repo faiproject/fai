@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.2, 15-jan-2005"
+version="Version 1.2, 16-jan-2005"
 
 # additional files: install_packages.conf
 # variables: NFSROOT, FAI_CONFIGDIR
@@ -48,6 +48,15 @@ usage() {
     echo "$version"
     echo "Please the the manual page fai-mirror(1)."
     exit
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    local e=$1   # first parameter is the exit code
+    shift
+
+    echo "$@"    # print error message
+    exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 excludeclass() {
@@ -149,6 +158,11 @@ delete_base_packages() {
     # now delete all packages that are already included in base.tgz
     local p
 
+    if [ ! -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
+	echo "$NFSROOT/var/tmp/base-pkgs.lis not available."
+	echo "Can't remove wasteful packages that are already in base.tgz."
+	return
+    fi
     echo "Removing packages that are already included in base.tgz"
     for p in $(cat $NFSROOT/var/tmp/base-pkgs.lis); do
 	if [ -f $archivedir/${p}_*.deb ]; then
@@ -162,13 +176,29 @@ delete_base_packages() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+set-classes() {
+
+    # if -c is given, ignore -x
+    if [ -n "cclasses" ]; then
+	export classes=${cclasses//,/ }
+	return
+    fi
+
+    # all available file names are classes
+    classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep "^[A-Z0-9_]+$")
+    addclasses=$(grep -h PACKAGES $FAI_CONFIGDIR/package_config/* | awk '{printf $3"\n"$4"\n"$5"\n"$6"\n"}')
+    export classes=$(echo -e "$classes\n$addclasses\n" | sort | uniq)
+    [ -n "$exclasses" ] && excludeclass $exclasses
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 preserve=0
 verbose=0
-while getopts "vhx:p" opt ; do
+while getopts "vhx:pc:" opt ; do
     case "$opt" in
 	h) usage ;;
 	x) exclasses="$OPTARG";;
+	c) cclasses="$OPTARG";;
 	p) preserve=1;;
 	v) verbose=1; vflag=-v;;
 	?) echo "Unknown option"; exit 1;;
@@ -176,6 +206,7 @@ while getopts "vhx:p" opt ; do
 done
 shift $(($OPTIND - 1))
 
+[ -n "$exclasses" -a -n "$cclasses" ] && die 3 "Options -x and -c not allowed at the same time."
 debug=0
 [ $debug -eq 0 ] && quiet=-q
 
@@ -203,14 +234,10 @@ perl -p -e 's/file:/copy:/' /etc/fai/sources.list > $aptcache/etc/apt/sources.li
 echo "Getting package information"
 apt-get $quiet $aptoptions update >/dev/null
 
-# all available file names are classes
-classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep "^[A-Z0-9_]+$")
-addclasses=$(grep -h PACKAGES $FAI_CONFIGDIR/package_config/* | awk '{print $3}')
-export classes=$(echo -e "$classes\n$addclasses\n" | sort | uniq)
-[ -n "$exclasses" ] && excludeclass $exclasses
-
+set-classes
 echo "Downloading packages for classes:" $classes
-FAI=$FAI_CONFIGDIR install_packages -i $vflag -f /etc/fai
+# flag -i for install_packages seems to be silly. Remove it ASAP
+FAI=$FAI_CONFIGDIR install_packages $vflag -f /etc/fai
 get_addpackages
 umount_dirs
 trap "" EXIT ERR
