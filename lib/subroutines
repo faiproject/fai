@@ -356,14 +356,18 @@ task_defclass() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_partition() {
 
-    if [ ! -s /tmp/fstab ];then
-	echo "Partitioning local harddisks"
-	setup_harddisks -X > /tmp/format.log 2>&1
+    echo "Partitioning local harddisks"
+    setup_harddisks -X > /tmp/format.log 2>&1
+    if [ ! -s $diskvar ]; then
+	cat /tmp/format.log
+	die "Error: $diskvar not found."
     fi
+    . $diskvar
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mountdisks() {
 
+    [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
     mount2dir $FAI_ROOT /tmp/fstab
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -371,6 +375,9 @@ task_extrbase() {
 
     echo "Unpacking Debian base archive"
     zcat /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
+    # now we can copy fstab
+    [ -f $FAI_ROOT/etc/fstab ] && mv $FAI_ROOT/etc/fstab $FAI_ROOT/etc/fstab.old
+    cp -p /tmp/fstab $FAI_ROOT/etc/fstab
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mirror() {
@@ -385,6 +392,7 @@ task_mirror() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_instsoft() {
 
+    echo "Installing software may take a while"
     if [ "$debug" ]; then
 	install_packages | tee -a /tmp/software.log
     elif [ "$verbose" ]; then
@@ -403,6 +411,10 @@ prepare_apt() {
     cp /etc/apt/* $FAI_ROOT/etc/apt/
     # some packages must access /proc even in chroot environment
     mount -t proc proc $FAI_ROOT/proc
+
+    # if libc is upgraded init u is called in chroot environment and
+    #  init will eat up much cpu time
+    mkdivert /sbin/init
 
     $ROOTCMD apt-get update
     $ROOTCMD apt-get check
@@ -569,7 +581,7 @@ task_action() {
 
 	install)
 	    echo Performing FAI installation. All data may be overwritten !
-	    fai_install
+	    task install
 	    ;;
 	sysinfo)
 	    echo Showing system information.

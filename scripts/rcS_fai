@@ -146,7 +146,7 @@ task_setup() {
     disk_info
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-fai_install() {
+task_install() {
 
     > $stamp
 
@@ -160,20 +160,8 @@ fai_install() {
     load_keymap_consolechars
 
     task partition
-
-    if [ ! -s $diskvar ]; then
-	cat /tmp/format.log
-	die "Error: $diskvar not found."
-    fi
-    . $diskvar
-    [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
-
     task mountdisks
     task extrbase
-
-    # now we can copy fstab
-    [ -f $FAI_ROOT/etc/fstab ] && mv $FAI_ROOT/etc/fstab $FAI_ROOT/etc/fstab.old
-    cp -p /tmp/fstab $FAI_ROOT/etc/fstab
     task mirror
     task updatebase
     task instsoft
@@ -184,6 +172,7 @@ fai_install() {
     rmdivert /sbin/start-stop-daemon
     rmdivert /usr/sbin/xserver-configure
     rmdivert /usr/bin/ypwhich
+    rmdivert /sbin/init
 
     date
     echo -e "FAI finished.\a"
