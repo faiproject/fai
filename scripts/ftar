@@ -37,11 +37,11 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract() {
 
-    file=$1
-    option=$2
+    local file=$1
+    local catname=$2
 
     echo "ftar: extracting $file to $target/$dir"
-    tar -C $target/$dir $vflag $option -xf $file
+    $catname $file | tar -C $target/$dir $vflag -xf -
     tardone=1
     # if option -1 is set, only one class will be used
     $single && exit 0
@@ -112,10 +112,10 @@ fpath=$source/$dir
 
 for c in $classes ; do
     # what if a directory exists, which is equal to the hostname or a classname ?
-    # [ -f $fpath/$c ]          && extract $fpath/$c
-    [ -f $fpath/$c.tar ]      && extract $fpath/$c.tar
-    [ -f $fpath/$c.tar.gz ]   && extract $fpath/$c.tar.gz -z
-    [ -f $fpath/$c.tar.bz2 ]  && extract $fpath/$c.tar.bz2 -I
+    # [ -f $fpath/$c ]          && extract $fpath/$c cat
+    [ -f $fpath/$c.tar ]      && extract $fpath/$c.tar cat
+    [ -f $fpath/$c.tar.gz ]   && extract $fpath/$c.tar.gz zcat
+    [ -f $fpath/$c.tar.bz2 ]  && extract $fpath/$c.tar.bz2 bzcat
 done
 
 [ $tardone -eq 0 ] && echo "No matching class found in $fpath"

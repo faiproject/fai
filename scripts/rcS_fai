@@ -28,7 +28,8 @@
 
 #set -xv # for full debugging
 
-# local variables
+# some global variables
+DEBIAN_FRONTEND=Noninteractive
 FAI_VERSION=FAIVERSIONSTRING
 rcslog=/tmp/rcS.log
 bootlog=/tmp/bootpc.log
@@ -37,6 +38,7 @@ stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 globalconf=/fai/fai_config/global.conf
 logdir=/var/log/fai
 romountopt="-o ro,rsize=8192"
+classes="DEFAULT $HOSTNAME LAST"  # default before defining classes
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 read_config() {
@@ -74,6 +76,7 @@ define_variables() {
 define_classes() {
 
     local newclasses class f
+    classes=
 
     cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the install server."
     echo "Now defining classes"
@@ -129,7 +132,6 @@ fai_init() {
 
     umask 022
     PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
-    DEBIAN_FRONTEND=Noninteractive
     ifup lo
     [ -x /sbin/portmap ] && /sbin/portmap
     mount -n -t proc proc /proc
@@ -177,7 +179,7 @@ Press ctrl-c to interrupt FAI and to get a shell
 EOF
 
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
-    [ "$NTPSRVS_1" ] && ntpdate -b -v $NTPSRVS_1
+    [ "$NTPSRVS_1" ] && ntpdate -b -v $NTPSRVS
 
     echo -n "Kernel parameters:"; cat /proc/cmdline
     eval_cmdline
@@ -201,14 +203,13 @@ EOF
 
 #    not yet used
 #    if [ "$FAI_EXTRA_MOUNT" ]; then
-#	mount -o ro -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
+#	mount $romountopt -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
 #    fi
 
     # create two virtual terminals
     openvt -c2
     openvt -c3
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
-    echo "FAI_ACTION: $FAI_ACTION"
     disk_info
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -225,7 +226,7 @@ fai_sysinfo() {
 	    fdisk -lu
 	    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
 	    cat /proc/partitions
-	    file -s /dev/hd* /dev/sd* | egrep -v " can't read | empty$"
+	    LC_ALL=C file -s /dev/hd* /dev/sd* | egrep -v " can't read | empty$"
 	    echo -n "xserver for graphic card: "; xviddetect -q
 	    #si -p -o shm
 	fi
@@ -299,7 +300,6 @@ if [ -x $class -a -f $class ]; then
 	    ./$class >> /tmp/expect.log 2>&1
 	;;
 
-
 	*) echo "File $class has unsupported type $filetype." ;;
     esac
 fi
@@ -339,18 +339,18 @@ fai_install() {
 
     > $stamp
 
+    call_hook CLASS
     define_classes > >( tee -a $rcslog )  2>&1
+    call_hook VAR
     define_variables > >( tee -a $rcslog )  2>&1
     save_dmesg
     ( # execute in a subshell to get all output
 
     load_keymap_consolechars
 
-    echo "Partitioning local harddisks"
-    # use local setup harddisk script if available
-    if [ -x /usr/local/bin/my-fdisk ];then
-	/usr/local/bin/my-fdisk
-    else
+    call_hook PART
+    if [ ! -s $diskvar ];then
+	echo "Partitioning local harddisks"
 	setup_harddisks -X > /tmp/format.log 2>&1
     fi
     if [ ! -s $diskvar ]; then
@@ -359,17 +359,19 @@ fai_install() {
     fi
     . $diskvar
     [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
+    call_hook MOUNT
     mount2dir $FAI_ROOT /tmp/fstab
 
+    call_hook BASE
     echo "Unpacking Debian base archive"
-    cd $FAI_ROOT
-    tar zxpf /var/tmp/base?_?.tgz
+    zcat /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
+    call_hook MIRROR
     # now we can copy fstab
     [ -f $FAI_ROOT/etc/fstab ] && mv $FAI_ROOT/etc/fstab $FAI_ROOT/etc/fstab.old
     cp -p /tmp/fstab $FAI_ROOT/etc/fstab
-
     mount_debian_mirror
 
+    call_hook BASEUPDATE
     echo "Installing software may take a while"
     if [ "$debug" ]; then
 	prepare_apt | tee -a /tmp/prepare-apt.log 2>&1
@@ -377,6 +379,7 @@ fai_install() {
 	prepare_apt  > /tmp/prepare-apt.log 2>&1
     fi
 
+    call_hook SOFT
     if [ "$debug" ]; then
 	install_packages | tee -a /tmp/software.log
     elif [ "$verbose" ]; then
@@ -385,6 +388,7 @@ fai_install() {
 	yes '' | install_packages >> /tmp/software.log 2>&1
     fi
 
+    call_hook CONF
     fai_configure
 
     umount -n $FAI_ROOT/proc
@@ -421,11 +425,14 @@ fai_install() {
 
 # callarg=$1
 fai_init
+call_hook SETUP
 fai_setup  > >( tee -a $rcslog ) 2>&1
 
 # if you want to recall rcS_fai
 # [ -n $callarg ] && FAI_ACTION=$callarg
 
+call_hook ACTION
+echo "FAI_ACTION: $FAI_ACTION"
 case $FAI_ACTION in
 
     install)
