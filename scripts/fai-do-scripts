@@ -26,14 +26,14 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.3, 10-mar-2005"
+version="version 1.3.1, 5-apr-2005"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
 # And many other variables like:
 
 # execute all scripts that match the name of a class.
-# If class is a directory, execute all $class/S[0-9]* scripts in
+# If class is a directory, execute all $class/[0-9][0-9]* scripts in
 # it, but do not execute files ending in ~
     
 # TODO: -n only shows which scripts should be executed, but do not execute them
@@ -60,7 +60,7 @@ call_conf() {
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
-	   for f in $(echo $class/S[0-9]* | grep -v ~$) ; do
+	   for f in $(echo $class/{S,}[0-9][0-9]* | grep -v ~$) ; do
 	       [ -x $f -a -f $f ] && do_script $f
 	   done
 	fi
@@ -74,6 +74,11 @@ do_script() {
     local shelldebug file filetype
 
     file=$1
+
+    # may be remove some day
+    case $file in
+	S*) echo "Script, matching S* will not be executed in the future. Please use names matching [0-9][0-9]*" ;;
+    esac
 
     filetype=$(file $file)
 
@@ -136,8 +141,8 @@ usage() {
     local ex
     ex=$1
     cat <<-EOF
-        fai-do-scripts $version. Copyright (C) 2003 Thomas Lange
-        Report bugs to <fai@informatik.uni-koeln.de>.
+        fai-do-scripts $version. Copyright (C) 2003-2005 Thomas Lange
+        Read the manual page fai-do-scripts(1) for more information.
 
         Usage: fai-do-scripts [OPTION] DIRECTORY
 
