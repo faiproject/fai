@@ -11,11 +11,11 @@ if [ -c /dev/.devfsd ]; then
 fi
 
 # if we have shm use it as ramdisk
-mount -t shm shm /tmp || {
+mount -t tmpfs tmpfs /tmp || {
     ramdevice=/dev/ram0
     mke2fs -q -m 0 $ramdevice && echo "ramdisk $ramdevice created"
     mount -n $ramdevice /tmp
 }
 # now create the required subdirectories
-mkdir -p /tmp/etc /tmp/target /tmp/var/run/sshd
+mkdir -p /tmp/etc /tmp/target /tmp/var/run/sshd /tmp/var/state/discover
 cd    /tmp/var && mkdir tmp log lock spool
