@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.1 30-Mar-2001"
+version="Version 1.2 03-Apr-2001"
 
 die() {
     echo "ftar died: $1"
@@ -52,7 +52,7 @@ ftar, extract tar files using classes. $version
 
    Copyright (C) 2001 by Thomas Lange
 
-Usage: ftar [OPTION] ... SOURCE ...
+Usage: ftar [OPTION] ... SOURCE
 
    -1                   Use only first tar file matching class name.
    -c class[class]      Define classes (space separated).
@@ -72,6 +72,9 @@ EOF
 
 source=$FAI_FILES
 target=$FAI_ROOT
+
+deletefiles=0
+removedir=0
 
 while getopts 1hDdrvs:t:c: opt ; do
         case "$opt" in
@@ -96,11 +99,13 @@ shift $(($OPTIND - 1))
 [ -z "$source" ] && die "Source directory undefined."
 [ -z "$target" ] && die "Target directory undefined."
 
+# currently only one directory is used
 dir=$1
 fpath=$source/$dir
+[ -d $fpath ] || die "no directory $fpath"
 
-[ "$deletefiles" ] && cd $target/$dir ; rm -f  .* * 2>/dev/null
-[ "$removedir" ]   && cd $target/$dir ; rm -rf .* * 2>/dev/null
+[ $deletefiles -eq 1 ] && cd $target/$dir ; rm -f  .* * 2>/dev/null
+[ $removedir -eq 1 ]   && cd $target/$dir ; rm -rf .* * 2>/dev/null
 
 for c in $classes ; do
     # what if a directory exists, which is equal to the hostname or a classname ?
