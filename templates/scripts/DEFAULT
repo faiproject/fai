@@ -42,9 +42,13 @@ EOF
     ln -s ../init.d/hdparm $target/etc/rcS.d/S61hdparm
 fi
 
-# make scratch directory writeable for all
+# make scratch directory writeable for all;
 ifclass SCRATCH && chmod 1777 $target/scratch
-ifclass FILES_SCRATCH && chmod 1777 $target/files/scratch
+ifclass FILES_SCRATCH; then
+  chmod 1777 $target/files/scratch
+  # enable kernel automounter
+  fcopy /etc/auto.master /etc/auto.scratch /etc/apt/sources/list
+fi
 
 # copy default dotfiles for root account
 fcopy /root/.bash_profile /root/.bashrc /root/.cshrc /root/.login /root/.alias /root/.emacs
