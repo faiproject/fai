@@ -287,7 +287,7 @@ prepare_apt() {
     cp /tmp/etc/resolv.conf $FAI_ROOT/etc || true
 
     echo "$FAI_SOURCES_LIST" > $FAI_ROOT/etc/apt/sources.list
-    cp /usr/lib/fai/etc/apt.conf $FAI_ROOT/etc/apt/
+    cp -p /etc/apt/apt.conf $FAI_ROOT/etc/apt/
 
     # some packages must access /proc even in chroot environment
     chroot $FAI_ROOT mount /proc /proc -t proc
@@ -303,8 +303,8 @@ prepare_apt() {
     # fake start-stop-daemon
     mv $FAI_ROOT/sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon.orig
     ln -s /bin/true $FAI_ROOT/sbin/start-stop-daemon
-
     chroot $FAI_ROOT apt-get -f -y --fix-missing install debconf
+
 
     # WORKAROUND for several packages that loop when getting n<Return>
     chroot $FAI_ROOT apt-get -f -y --fix-missing install libpaperg </dev/null
@@ -313,9 +313,6 @@ prepare_apt() {
     
     # ntp does not like n<Return> as input without ntp.conf
     touch $FAI_ROOT/etc/ntp.conf
-
-
-
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_install() {
