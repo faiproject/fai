@@ -254,7 +254,7 @@ sub GetAllDisks{
     }
     $result = `sh -c "LC_ALL=C sfdisk -d -q"`;
     foreach $line(split(/\n/,$result)){
-	if($line =~ m'# partition table of /dev/(ida/c\dd\d|rd/c\dd\d|[a-z]+)'i){
+	if($line =~ m'# partition table of /dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|[a-z]+)'i){
 	   $disk = $1;
         }
 	if($line =~ m#/^/dev/(.+?)\s*:\s+start=\s*(\d+),\s+size=\s*(\d+),\s+Id=\s*([a-z0-9]+)\b(.*)$#i){
@@ -322,7 +322,7 @@ sub ParseConfigFile{
 	    if ($paras =~ / end/i){
 		$disk = "";
 	    } else {
-		if($paras =~ m# (/dev/)?(ida/c\dd\d|rd/c\dd\d|[a-z]+)#i){
+		if($paras =~ m# (/dev/)?(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|[a-z]+)#i){
 		    $disk = "$2";
 		    ($DiskMountpoints{$disk})
 		      && die "ERROR: there are more than one configuration of disk $disk.\n";
@@ -681,7 +681,7 @@ sub PartitionPersfdisk{
 	$PrimaryNo = 1;
         foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
 	    $part = $MountpointPart{$mountpoint};
-	    $part =~ /(\d+)/;
+	    $part =~ /(\d+)$/;
 	    ($1 < 5) && ($PrimaryNo++);
 	    if ( ($1 == 5) && ($PrimaryNo < 5) ){
 	        for $number($PrimaryNo..4) {
