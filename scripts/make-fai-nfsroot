@@ -92,9 +92,11 @@ copy_fai_files() {
     cp -p $LIBFAI/sbin/* $NFSROOT/sbin
     cp -p /usr/share/fai/* $NFSROOT/usr/share/fai
     cp -p $LIBFAI/etc/apt.conf $NFSROOT/etc/apt
+    cp -p $LIBFAI/etc/fai_modules_off $NFSROOT/etc/modutils
     cp -p /usr/lib/perl5/Debian/Fai.pm $NFSROOT/usr/lib/perl5/Debian/
     cp -p /etc/fai.conf $NFSROOT/etc
     cp -p /tmp/base?_?.tgz $NFSROOT/var/tmp
+    echo $NFSROOT_ETC_HOSTS >> $NFSROOT/etc/hosts
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
@@ -107,9 +109,9 @@ create_nfsroot() {
     # needed by make-fai-bootfloppy
     mknod $NFSROOT/dev/boot255 c 0 255
 
-    if [ "$FAI_PACKAGEDIR" ]; then
+    if [ "$FAI_DEBMIRROR" ]; then
 	mkdir -p $NFSROOT/$MNTPOINT
-	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $NFSROOT/$MNTPOINT || die "Can't mount $FAI_PACKAGEDIR"
+	mount -o ro,rsize=8192 $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || die "Can't mount $FAI_DEBMIRROR"
     fi
 
     # hoaks some packages
