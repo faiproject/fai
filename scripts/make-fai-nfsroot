@@ -182,7 +182,7 @@ copy_fai_files() {
     cd $NFSROOT
     cp -p $SHAREFAI/etc/dhclient.conf etc/dhcp3
     ln -fs ../../sbin/dhclient-script etc/dhcp3/dhclient-script
-    cp -Rp $v $cfdir/* etc/fai
+    cp -Rpv $cfdir/* etc/fai
     [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
     cp -p /usr/sbin/{ftar,fcopy,install_packages,bootsector} usr/sbin/
@@ -245,15 +245,15 @@ create_nfsroot() {
         echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     else
 	[ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
-        cp $v $cfdir/sources.list etc/apt/sources.list || \
-        cp $v /etc/apt/sources.list etc/apt/sources.list || \
+        cp -v $cfdir/sources.list etc/apt/sources.list || \
+        cp -v /etc/apt/sources.list etc/apt/sources.list || \
 	{ echo "FAI_SOURCES_LIST undefined and no sources.list file found."
 	  echo "I think something is wrong. But I'll try to continue."
 	}
     fi
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
-    [ -f /etc/apt/preferences ] && cp $v /etc/apt/preferences etc/apt
-    [ -f $cfdir/preferences ] && cp $v $cfdir/preferences etc/apt
+    [ -f /etc/apt/preferences ] && cp -v /etc/apt/preferences etc/apt
+    [ -f $cfdir/preferences ] && cp -v $cfdir/preferences etc/apt
     echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
     echo "Adding additional packages to $NFSROOT:"
