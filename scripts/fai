@@ -89,12 +89,14 @@ fai_init() {
     }
 
     # HG: are we called as an init substitute ?
+    DO_INIT_TASKS=0
     [ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
+    [ $DO_INIT_TASKS -eq 1 ] && renewclass=1 # always renew class list when installing
 
     DEBIAN_FRONTEND=noninteractive
     # local disks are mounted to $FAI_ROOT
     if [ -z "$FAI_ROOT" ] ; then
-      [ "$DO_INIT_TASKS" ] && FAI_ROOT=/tmp/target || FAI_ROOT=/
+      [ $DO_INIT_TASKS -eq 1 ] && FAI_ROOT=/tmp/target || FAI_ROOT=/
     fi
     # executed command in the environment of the new system
     ROOTCMD="chroot $FAI_ROOT"
@@ -102,7 +104,7 @@ fai_init() {
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
 
     # Solaris has already a writable /tmp directory
-    [ "$oclass" = LINUX -a "$DO_INIT_TASKS" ] && create_ramdisk
+    [ "$oclass" = LINUX -a $DO_INIT_TASKS -eq 1 ] && create_ramdisk
     unset oclass
 
     # directory where temporary log files are stored
@@ -111,7 +113,7 @@ fai_init() {
 	LOGDIR=/tmp/fai
 	mkdir -p $LOGDIR
     fi
-    [ "$DO_INIT_TASKS" ] || LOGDIR=$(mktemp -t -d fai.XXXXXX)
+    [ $DO_INIT_TASKS -eq 0 ] && LOGDIR=$(mktemp -t -d fai.XXXXXX)
     ln -s $LOGDIR $rundir/current_log
 
     # several log files
@@ -123,7 +125,7 @@ fai_init() {
     files=$FAI/files
     target=$FAI_ROOT
 
-    if [ "$DO_INIT_TASKS" ]; then
+    if [ $DO_INIT_TASKS -eq 1 ]; then
         trap 'echo "Now rebooting";faireboot' INT QUIT ;
     else
         trap "echo 'Aborted';rm -f $stamp" INT QUIT ;
@@ -140,7 +142,7 @@ fai_init() {
 
     if [ X$OS_TYPE = Xlinux ]; then
 	osname='Debian GNU/Linux'
-	if [ "$DO_INIT_TASKS" ]; then
+	if [ $DO_INIT_TASKS -eq 1 ]; then
 	    grep -q '[[:space:]]sysfs' /proc/filesystems && mount -t sysfs sysfs /sys
 	    ifup lo
 	    [ -x /sbin/portmap ] && /sbin/portmap
@@ -158,7 +160,7 @@ fai_init() {
     # set red color, but not on sparc
     case $HOSTTYPE in
 	sparc*|powerpc*) ;;
-	*)  test -e /.nocolorlogo || echo -ne "\ec\e[1;31m" ;;
+	*)  [ -e /.nocolorlogo ] || echo -ne "\ec\e[1;31m" ;;
     esac
 
     prcopyleft | tee -a $rcslog
@@ -167,8 +169,10 @@ fai_init() {
     case $HOSTTYPE in
 	sparc*) ;;
 	*) 
-	    test -e /.nocolorlogo || echo -ne "\e[7;0r"
-	    test -e /.nocolorlogo || echo -ne "\e[9B\e[1;m"
+	    if [ ! -e /.nocolorlogo ]; then
+		echo -ne "\e[7;0r"
+		echo -ne "\e[9B\e[1;m"
+	    fi
 	    ;;
     esac
     save_dmesg
@@ -182,6 +186,7 @@ usage() {
 	Options:
 	   -v|--verbose      display more information during the update
 	   -h|--help         display this help message
+	   -N|--new          renew list of classes
 EOF
     exit 0
 }
@@ -194,13 +199,13 @@ fstart() {
     task defclass
     set_disk_info
     task defvar
-    [ "$DO_INIT_TASKS" ] && load_keymap_consolechars
+    [ $DO_INIT_TASKS -eq 1 ] && load_keymap_consolechars
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
 
 # Parse commandline options
-TEMP=$(getopt -o hv --long help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o Nhv --long new,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -214,6 +219,10 @@ while true ; do
 	-v|--verbose)
 	    shift
 	    verbose=1
+	    ;;
+	-N|--new)
+	    shift
+	    export renewclass=1
 	    ;;
         --) 
             shift
