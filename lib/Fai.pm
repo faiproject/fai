@@ -52,7 +52,7 @@ sub class {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub testsize {
 
-  # test, if value is within a range
+  # test if value is within a range
   # return 1 if size within range
 
   my ($value,$lower,$upper) = @_;
@@ -65,7 +65,7 @@ sub read_disk_info {
   # disk_info set variables containing the information
 
   my ($size,$bytes_per_block);
-  $bytes_per_block= 1024; # should be constant for /proc/partitions; must be proofed !
+  $bytes_per_block= 1024; # should be constant for /proc/partitions; must be proofed!
 
   while ($ENV{device_size}=~ /(\S+)\s+(\d+)/g)  {
     my ($device,$blocks) = ($1,$2);
@@ -87,7 +87,7 @@ sub disksize {
 sub read_memory_info {
 
   $size = -s "/proc/kcore";
-  $size -=4*1024; # man 5 proc says, that kcore is phys. mem + 4KB
+  $size -=4*1024; # man 5 proc says that kcore is phys. mem + 4KB
   $size /=(1024*1024); # return RAM in MB
 }
 
