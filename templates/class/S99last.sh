@@ -1,3 +1,4 @@
 #! /bin/sh
 
-echo LAST
+# class hostname has hightest priority
+echo LAST $HOSTNAME
