@@ -64,9 +64,9 @@ define_variables() {
     for class in $classes ; do
 	if [ -f $class.var ]; then
 	    [ "$verbose" ] && echo "Executing $class.var"
-	    [ "$debug" ] && set -v
+	    [ "$debug" ] && set -vx
 	    . $class.var </dev/null
-	    [ "$debug" ] && set +v
+	    [ "$debug" ] && set +vx
 	fi
     done
 }
@@ -75,7 +75,7 @@ define_classes() {
 
     local newclasses class f
 
-    cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the server."
+    cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the install server."
     echo "Now defining classes"
 
     [ -f $HOSTNAME ] && newclasses=`cat $HOSTNAME`
@@ -85,7 +85,6 @@ define_classes() {
     for f in `ls S[0-9]*.{sh,pl}` ; do
 	if [ -x $f -a -f $f ]; then
 	[ "$verbose" ] && echo "Executing $f"
-
 	case $f in
 	    *.pl) newclasses=`perl $f </dev/null` ;;
 	    *.sh) newclasses=`sh $f </dev/null | grep -v '^#'` ;;
@@ -102,9 +101,9 @@ define_classes() {
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
-    cfclass=`echo $classes`
-    cfclass=${cfclass// /.}
-    [ "$debug" ] && echo "cfclass: $cfclass"
+    cfclasses=`echo $classes`
+    cfclasses=${cfclasses// /.}
+    [ "$debug" ] && echo "cfclasses: $cfclasses"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
@@ -114,7 +113,6 @@ fai_init() {
     . /etc/fai.conf
     . /usr/share/fai/subroutines
     # ulimit -c 90000
-    FAI_ARCH=`dpkg --print-installation-architecture`
     # location of master files for cfengine
     FAI_FILES=/fai/files
     # local disks are mounted on this directory
@@ -174,8 +172,8 @@ fai_setup() {
       Copyright (c) 1999-2001, Thomas Lange
               lange@informatik.uni-koeln.de
     -----------------------------------------------------
-    Press ctrl-c to interrupt FAI and to get a shell
 
+Press ctrl-c to interrupt FAI and to get a shell
 EOF
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     echo -n "Kernel parameters:"; cat /proc/cmdline
@@ -266,13 +264,15 @@ if [ -x $class -a -f $class ]; then
 	*"Bourne shell script"*|*"Bourne-Again shell script"*)
 	    echo "Executing shell: $class"
 	    echo "=====   shell: $class   =====" >> /tmp/shell.log 2>&1
+	    [ "$debug" ] && set -xv
 	    ./$class >> /tmp/shell.log 2>&1
+	    [ "$debug" ] && set +xv
 	;;
 
 	*"cfengine script"*)
 	    echo "Executing cfengine: $class"
 	    echo "=====   cfengine: $class   =====" >> /tmp/cfengine.log 2>&1
-	    ./$class --no-lock -v -f $class -D${cfclass} >> /tmp/cfengine.log 2>&1
+	    ./$class --no-lock -v -f $class -D${cfclasses} >> /tmp/cfengine.log 2>&1
 	;;
 
 	*"perl script"*)
@@ -306,7 +306,7 @@ prepare_apt() {
     $ROOTCMD apt-get check
     [ $? -ne 0 ] && $ROOTCMD apt-get -f -y install </dev/null 
     $ROOTCMD dpkg -C
-    [ $? -ne 0 ] && yes ''|  $ROOTCMD dpkg --configure -a 
+    [ $? -ne 0 ] && yes '' | $ROOTCMD dpkg --configure -a 
     $ROOTCMD apt-get -f -y remove pcmcia-cs
     $ROOTCMD apt-get -f -y upgrade </dev/null
     # update dpkg info which packages are available
@@ -349,7 +349,7 @@ fai_install() {
     [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
     mount2target $FAI_ROOT
 
-    echo "Unpacking Debian base archive."
+    echo "Unpacking Debian base archive"
     cd $FAI_ROOT
     tar zxpf /var/tmp/base?_?.tgz
     # now we can copy fstab
@@ -382,21 +382,13 @@ fai_install() {
 #    rmdivert /usr/sbin/ypbind
     rmdivert /usr/bin/ypwhich
 
-    case "$UTC" in
-       no|"") hwopt="--localtime" ;;
-       yes)   hwopt="--utc"       ;;
-    esac
-    $ROOTCMD hwclock $hwopt --systohc
     date
     echo -e "FAI finished.\a"
 
-    # now change boot device (local disk or network)
-    [ "$LOGUSER" -a "$TFTPLINK" ] &&
-	$FAI_REMOTESH -l $LOGUSER ${SERVER} \
-	    "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
+    change_boot
 
     rm -f $stamp
-    # a second time, because loading modules can create new messages
+    # save again, because new messages could be created
     save_dmesg
     ) > >( tee -a $rcslog )  2>&1
 
