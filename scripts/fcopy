@@ -1,4 +1,4 @@
-#! /usr/bin/perl
+#! /usr/bin/perl -w
 
 # $Id$
 #*********************************************************************
@@ -27,8 +27,9 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.9.1, 22-feb-2002";
+my $version = "Version 1.9.2, 6-apr-2002";
 
+#use strict;
 use File::Copy;
 use File::Compare;
 use File::Find;
@@ -37,7 +38,25 @@ use File::Basename;
 use Getopt::Std;
 
 use vars qw/*name/;
-*ffname   = *File::Find::name;
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Global variables
+my $debug;
+my $error;
+my $verbose;
+my $target;
+my $source;
+my @classes;
+
+my @opt_modes;
+my @rlist;
+my %changed;
+my %lastclass;
+my $modeset;
+
+# getopts:
+#our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_v, $opt_d, $opt_D);
+#our ($opt_c, $opt_C, $opt_h, $opt_F, $opt_l, $opt_L, $opt_P);
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub copy_one {
@@ -48,16 +67,14 @@ sub copy_one {
   my $ps = "$prefix/$source";
   my $tpath = "$target/" . dirname $source;
   my $preserve = 0;
+  my $logcomment = "";
 
   warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debug;
 
   # $prefix/$source must be a directory
   unless (-d $ps) { ewarn("$ps is not a directory. Not copied.");return }
-
   # use the last class for which a file exists
   foreach (@classes) { $class = $_,last if -f "$ps/$_"; }
-
-  $sourcefile = "$ps/$class";
   $destfile = "$target/$source";
 
   unless (defined $class) {
@@ -66,8 +83,8 @@ sub copy_one {
     $opt_d and -f $destfile and move($destfile,"$destfile.pre_fcopy");
     return;
   }
-
   warn "using class: $class\n" if $debug;
+  $sourcefile = "$ps/$class";
 
   # do nothing if source and destination files are equal 
   if ($opt_P) {
@@ -228,8 +245,8 @@ sub ewarn {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub read_status {
-  my $n=my @status_files=split(/,/,$opt_P);
-  ($n!=2) && die "fcopy: need both log and changes file\n";
+  my $n = my @status_files=split(/,/,$opt_P);
+  ($n != 2) && die "fcopy: need both log and changes file\n";
 
   open(LASTLOG,$status_files[0]);
   while (<LASTLOG>) {
@@ -245,7 +262,7 @@ sub read_status {
   while (<CHANGES>) {
     s/\#.*//g;
     chomp;
-    m#files/\S+$# && $changed{$1} = 1;
+    m#files/\S+$# and $changed{$1} = 1;
   }
   close(CHANGES);
 }
@@ -302,7 +319,7 @@ sub rfilter {
   my $nlink;
   -d && ! ($_ =~ /^CVS$/) && ($nlink=(lstat($_))[3]) && 
     ( (-d 'CVS') && ($nlink==3) || ($nlink==2) ) && 
-      push @rlist,$ffname;
+      push @rlist,$File::Find::name;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
@@ -316,14 +333,14 @@ $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
 $source  = $opt_s || "$ENV{FAI}/files" || `pwd`;
 $target  = $opt_t || $ENV{FAI_ROOT} || $ENV{target};
-$opt_L and { open(LOGFILE,">> $opt_L") or die("can't open logfile: $!")};
+$opt_L and (open(LOGFILE,">> $opt_L") || die("can't open logfile: $!"));
 $opt_P and read_status();
 
 #for postinst scripts
 $ENV{'FAI_ROOT'}=$ENV{'target'}=$target;
 
 # last class has highest priority
-@classes = reverse split /\s+/,$ENV{classes};
+$ENV{classes} and @classes = reverse split /\s+/,$ENV{classes};
 $opt_c and @classes = split /,/,$opt_c;
 $opt_C and @classes = read_classes($opt_C);
 warn join ' ','Classes:',@classes,"\n" if $debug;
