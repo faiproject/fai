@@ -91,8 +91,6 @@ task_install() {
     > $stamp
 
     save_dmesg
-    ( # execute in a subshell to get all output
-
     load_keymap_consolechars
 
     task partition
@@ -110,8 +108,6 @@ task_install() {
     rm -f $stamp
     # save again, because new messages could be created
     save_dmesg
-    ) > >( tee -a $rcslog )  2>&1
-
     task savelog
 
     if [ -f $stamp ]; then
@@ -119,7 +115,6 @@ task_install() {
 	echo "$stamp was not removed."
 	die "Please look at the log files in /tmp for errors."
     fi
-
     wait_for_jobs
     task faiend
 }
@@ -138,4 +133,4 @@ task defvar
 # if you want to recall rcS_fai
 # [ -n $callarg ] && FAI_ACTION=$callarg
 
-( task action | tee -a $rcslog 2>&1 )
+(task action > >( tee -a $rcslog ) 2>&1)
