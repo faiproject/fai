@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # source this file, then you have these function available in the shell
-# TODO: umount not yet perfect, mount and modprobe print many errors
+# TODO: umount not yet perfect
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -97,29 +97,10 @@ umount_local_disks() {
     umount $FAI_ROOT
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-mount_via_fstab() {
-    _mount_via_fstab < $FAI_ROOT/etc/fstab
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rwmount() {
 
     # remount partition read/write
     mount -o rw,remount $1
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-_mount_via_fstab() {
-
-    local device mntpoint fstype options opt
-    while read device mntpoint fstype options ; do
-	case $device in
-	    ""|\#*) continue ;;
-
-	    /dev/[sh]*)
-		opt="-o ro"
-#		[ "$options" ] && opt="$opt,$options"
-		mount $opt $device $FAI_ROOT$mntpoint
-	esac
-    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fstab_mount() {
@@ -127,11 +108,11 @@ fstab_mount() {
     if [ $fstabcount -eq 1 ]; then
 	umount_local_disks
 	mount -o ro /dev/$fstabpart $FAI_ROOT
-	mount_via_fstab
+	mount2dir $FAI_ROOT $FAI_ROOT/etc/fstab
 	df
     fi
     [ $fstabcount -eq 0 ] && echo "No /etc/fstab found"
-    [ $fstabcount -ge 2 ] && echo "Found multiple /etc/fstab files in : $fstablist"
+    [ $fstabcount -ge 2 ] && echo -n "Found multiple /etc/fstab files in : $fstablist.\nUse mount2dir for mounting."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_local() {

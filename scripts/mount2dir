@@ -1,0 +1,80 @@
+#! /bin/sh
+
+# $Id$
+#*********************************************************************
+#
+# mount2dir -- mount partitions to a directory using a fstab file
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2001 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+# examples:
+# mount new created partitions to /tmp/target
+# mount2dir /tmp/target /tmp/fstab 1
+#
+# root filesystem already mounted. Found a fstab inside. Now mount
+# the remaining partitons
+# mount2dir $target $target/etc/fstab 0 ro
+
+target=$1 # where to mount
+fstab=$2
+fscheck=$3 # make fsck if 1
+moptions=$4 # if set, use only this mount option (mostly -r)
+
+# exit if too few parameters given
+[ "$fstab" ] || {
+    echo "Too few parameters."
+    echo "usage: mount2dir targetdir fstab [ fscheck mopt ]"
+    exit 1
+}
+
+[ -f $fstab ] || {
+    echo "No fstab file $fstab found."
+    exit 2
+}
+
+(
+while read device mountpoint fstype mopt dummy; do
+
+    case $mopt in
+	*noauto*) continue ;;
+    esac
+
+    [ "$mountpoint" == "none" ]  && continue
+
+    case $device in
+	""|\#*) continue ;;
+
+	/dev/*)
+
+	    # overwrite mount options
+	    mopt="-o $mopt"
+	    [ "$moptions" ] && mopt="-o $moptions"
+	    [ -d $$target/$mountpoint ] || mkdir -p $target$mountpoint
+	    [ $verbose ] && echo "mounting $device to $target$mountpoint type: $fstype opt: $mopt"
+	    # should we fsck the partition first ?
+	    [ "$fscheck" = 1 ] && fsck -nt $fstype $device
+	    mount -t $fstype $mopt $device $target$mountpoint
+    esac
+done
+
+) < $fstab
