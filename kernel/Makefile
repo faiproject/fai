@@ -9,7 +9,6 @@ BOOTP_REVISION=BOOTP1
 DHCP_REVISION=DHCP1
 BOOTPKERNEL=kernel-image-$(KERNELVERSION)_$(BOOTP_REVISION)_$(DEB_HOST_ARCH).deb
 DHCPKERNEL=kernel-image-$(KERNELVERSION)_$(DHCP_REVISION)_$(DEB_HOST_ARCH).deb
-KERNEL_FILES = emptydosdisk.gz imagegen_firstblock
 
 $(KERNEL): /usr/src/kernel-source-$(KERNELVERSION).tar.bz2
 	mkdir -p $(kerneldir); cd $(kerneldir) ;\
@@ -49,7 +48,7 @@ kernels: $(KERNEL) $(BOOTPKERNEL) $(DHCPKERNEL)
 all: $(BOOTPKERNEL) $(DHCPKERNEL)
 
 install:
-	install -m644 $(BOOTPKERNEL) $(DHCPKERNEL) $(KERNEL_FILES) $(LIBDIR)/kernel
+	install -m644 $(BOOTPKERNEL) $(DHCPKERNEL) $(LIBDIR)/kernel
 
 
 clean:
