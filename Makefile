@@ -9,7 +9,7 @@ SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup
 CONFFILES= apt.conf dhclient.conf
 
 # files with variable KERNLEVERSION in it
-KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/ALL.source $(DESTDIR)/$(DOCDIR)/templates/class/faisimple.source
+KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/DEFAULT.source $(DESTDIR)/$(DOCDIR)/templates/class/faisimple.source
 
 all:
 	$(MAKE) -C doc all
