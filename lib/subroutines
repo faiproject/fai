@@ -191,7 +191,7 @@ wait_for_jobs() {
     # wait for running jobs to finish (eg. update-auctex-elisp)
     local i=0
     while (ps r | egrep -qv "ps r|TIME COMMAND"); do
-	[ $(($i % 10)) -eq 0 ] && echo Waiting for Jobs to finish
+	[ $(($i % 10)) -eq 0 ] && echo "Waiting for background jobs to finish."
 	i=$(($i+1))
 	sleep 3
     done
@@ -200,7 +200,7 @@ wait_for_jobs() {
 create_ramdisk() {
 
     local ramdevice=/dev/ram0
-    mke2fs -q -m 0 $ramdevice && echo "ramdisk created"
+    mke2fs -q -m 0 $ramdevice && echo "ramdisk $ramdevice created"
     mount -n $ramdevice /tmp
     # now create the required subdirectories
     mkdir /tmp/var /tmp/etc /tmp/target
@@ -293,3 +293,14 @@ eval_cmdline() {
 	esac
     done
 }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mount_debian_mirror() {
+
+    # mount debian directory
+    if [ "$FAI_DEBMIRROR" ]; then
+	mkdir -p $FAI_ROOT/$MNTPOINT
+	mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT ||
+	    die "Can't mount $FAI_DEBMIRROR"
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
