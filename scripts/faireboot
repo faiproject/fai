@@ -1,18 +1,19 @@
-#! /bin/sh
+#! /bin/bash
 
 # $Id$
-# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000-2003
+# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000-2004
 
-. /etc/fai/fai.conf
+faimond=0
+. /usr/share/fai/subroutines
+. /usr/share/fai/subroutines-`uname -s | tr /A-Z/ /a-z/`
+
+[ -f /tmp/fai/variables.sh ] && . /tmp/fai/variables.sh
 
 while getopts s opt ; do
         case "$opt" in
         s) fai-savelog -r ;;
         esac
 done
-FAI_ROOT=/tmp/target
-ROOTCMD="chroot $FAI_ROOT"
-export ROOTCMD
 
 cd /
 killall -STOP rcS
@@ -25,6 +26,7 @@ fai-divert -R
 umount $FAI_ROOT/proc $FAI_ROOT/dev/pts
 umount -ar
 
+sndmon "FAIREBOOT"
 echo "$HOSTNAME now rebooting"
 
 if [ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ]; then
