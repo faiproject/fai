@@ -33,7 +33,7 @@ install:
 	install -m644 conf/fai.conf $(DESTDIR)/etc/fai/
 	cp -a examples $(DESTDIR)/$(DOCDIR)
 	cp -a utils templates $(SHAREDIR)
-	cd $(SHAREDIR)/templates/scripts ; mv NETWORK1 NETWORK
+	cd $(SHAREDIR)/templates/scripts ; mv NETWORK1 NETWORK; mv DEFAULT1 DEFAULT
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(LIBDIR)/sbin/rcS_fai
 	ln -fs installimage_3com $(DESTDIR)/boot/fai/bigfoot
