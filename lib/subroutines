@@ -154,10 +154,11 @@ save_log_remote() {
     # save log files to $SERVER
     [ "$LOGUSER" ] || return
 
-    echo "Saving log files remote to $LOGUSER@$SERVER $HOSTNAME/$FAI_ACTION-RUNDATE"
+    echo "Saving log files remote to $LOGUSER@$SERVER $HOSTNAME/$FAI_ACTION-$RUNDATE"
     local thislog=$HOSTNAME/$FAI_ACTION-$RUNDATE
     find $LOGDIR -size 0 | xargs -r rm
-    $FAI_REMOTESH -l $LOGUSER $SERVER "mkdir -p $thislog; ln -sf $FAI_ACTION-$RUNDATE $HOSTNAME/last-$FAI_ACTION"
+    $FAI_REMOTESH -l $LOGUSER $SERVER "mkdir -p $thislog; cd $HOSTNAME; \
+        rm -f last-$FAI_ACTION; ln -sf $FAI_ACTION-$RUNDATE last-$FAI_ACTION"
     $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$SERVER:$thislog
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
