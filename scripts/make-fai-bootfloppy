@@ -28,13 +28,10 @@
 #*********************************************************************
 # Thomas Lange, Universitaet Koeln, 10/2000
 
+version="version 1.2.2, april 2001"
 set -e
-
-version="version 1.2.1, april 2001"
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
-
 
     echo -e $*
     exit 99
@@ -42,7 +39,7 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
 
-cat <<EOF
+    cat <<EOF
 make-fai-bootfloppy, create a boot floppy for FAI. $version
 
    Copyright (C) 2000, 2001 by Thomas Lange
@@ -62,16 +59,14 @@ EXAMPLE
     # make-fai-bootfloppy "reserve=0x300,32 ether=10,0x300,eth0"
 
 EOF
-exit 0
+    exit 0
 }
-
 
 while getopts h opt ; do
         case "$opt" in
         h) usage ;;
         esac
 done
-
 
 if [ "$UID" -ne 0 ]; then
  echo "You must be root!"
@@ -88,10 +83,12 @@ grep -q ic_dhcp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
 
 [ "$TYPE" ] || die "Can't determine kernel boot protocol.\nMaybe there's no $NFSROOT/boot/System.map-$KERNELVERSION"
 
+ndevices=0
 devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: '{print $1}'`
 for dev in $devices; do
     ndevices=$((ndevices+1))
 done
+[ $ndevices = 0 ] && die "No network interface found. Can't determine IP address."
 if [ $ndevices = 1 ]; then
     SERVERINTERFACE=$dev
 else
