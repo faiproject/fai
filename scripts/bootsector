@@ -1,0 +1,55 @@
+#! /bin/bash
+# bash is important because for echo -e
+
+# edit the magic number of boot sector (the last two bytes)
+# (c) 2001, Thomas Lange, lange@informatik.uni-koeln.de
+
+seek=510
+
+usage() {
+
+cat <<EOF
+    bootsector [-edl] diskdevice
+
+Read the magic number (the last two bytes) of a boot sector or write
+it. Writing 0000 to it disables bootig of the boot sector, writing
+0xAA55 to it enablaes booting this boot sector.
+
+    -e    enable the boot sector
+    -d    disable the boot sector
+    -l    list the magic number
+    -v    list the magic number
+
+Examples:
+
+# bootsector -e /dev/hda
+# bootsector -l /dev/hda
+0000000 aa55
+# bootsector -d /dev/hda
+# bootsector -l /dev/hda
+0000000 0000
+# bootsector -v /dev/hda
+Boot sector /dev/hda disabled.
+EOF
+}
+
+[ "$1" = "-h" ] && usage
+
+[ "$2" ] || {
+
+    echo "Specify a disk device."
+    exit 0
+}
+
+      case $1 in
+
+	   -e) echo -ne "\x55\xaa" | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
+	   -d) echo -ne "\x0\x0"   | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
+	   -l) dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002 ;;
+	   -v) bs=`dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002`
+	   case $bs in
+	   "0000000 0000") echo "Boot sector $2 disabled." ;;
+	   "0000000 aa55") echo "Boot sector $2 enabled." ;;
+	   esac
+      esac
+exit
