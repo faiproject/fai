@@ -25,10 +25,13 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.4, 8-july-2004";
+my $version = "Version 2.4.1, 14-july-2004";
 
 use strict;
 use Getopt::Std;
+use AptPkg::Config '$_config';
+use AptPkg::System '$_system';
+use AptPkg::Cache;
 # global variables
 our ($opt_l,$opt_v,$opt_h,$opt_t,$opt_m);
 my @commands;
@@ -44,12 +47,15 @@ my @preloadrmlist;
 my %list;
 my %classisdef;
 my $maxpl;  # maximum length of package list
+my $cache;  # instance of AptPkg::Cache
+my @unknown; # unknown packages
+my @known;   # list of all known packages
 
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 
 $| = 1;
 # order of commands to execute
-@commands = qw/hold taskinst clean install clean remove clean dselect-upgrade/;
+@commands = qw/hold taskinst clean install remove dselect-upgrade/;
 %command = (
 	    install => 'apt-get -y --force-yes --fix-missing install',
 	    remove  => 'apt-get -y --purge remove',
@@ -75,6 +81,13 @@ $classpath = "$ENV{FAI}/package_config";
 $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
 @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 foreach (@classes) { $classisdef{$_}=1;}
+
+
+$_config->init;                 # initialize AptPkg
+$_config->set("Dir",$FAI_ROOT); # simulate "chroot"
+$_config->{quiet}=2;            # don't show cache initialization messages
+$_system = $_config->system;
+$cache = new AptPkg::Cache;
 
 # read all package config files
 foreach (@classes) {
@@ -118,33 +131,16 @@ foreach my $type (@commands) {
   }
 
   if ($type eq "install" || $opt_l) {
-    # check for packages which don't exist
-    # do not try to check packages that end in + or -
-    # it's not easy to determine the real package name
-    # example: g++; is the package called g+ and should be installed, or just g++?
-    $packlist = join(' ',grep {! /[+-]$/} @{$list{$type}});
-    my $packlistnover=$packlist;
-    $packlistnover =~ s/=\w+//g;
-    my $misspelt = qx{$rootcmd apt-cache show $packlistnover 2>&1 1>/dev/null};
-    $misspelt =~ s/W: Couldn't stat source .+?\n//g;
-    $misspelt =~ s/W: Unable to locate package //g;
-    $misspelt =~ s/\n/ /g;
-    warn "WARNING: These unknown packages are removed from the installation list: $misspelt\n" if $misspelt;
-    # remove misspelt package names from packlist
-    my %misspelt = map { $_ => 1 } split /\s+/,$misspelt;
-    my $newlist = "";
-    grep { $misspelt{$_} or $newlist .= "$_ "} @{$list{install}};
-    $packlist = $newlist;
+
+    mkpackagelist(); # create lists of know and unknow packages
     if ($opt_l) {
       # only print the package list
-      print "$packlist\n";
+      print join ' ',@known,"\n";
       exit 0;
     }
     # pass only maxpl packages to apt-get
-    $_ = $packlist;
-    my @spl = split;
-    while (@spl) {
-      my $shortlist = join(' ', splice @spl,0,$maxpl);
+    while (@known) {
+      my $shortlist = join(' ', splice @known,0,$maxpl);
       # print "SL $shortlist\n";
       execute("$rootcmd $command{install} $shortlist") if $shortlist;
       execute("$rootcmd apt-get clean");
@@ -242,6 +238,49 @@ sub dselectupgrade {
   execute("$rootcmd dpkg --set-selections < $tempfile");
   execute("$rootcmd $command{$type}");
   unlink $tempfile;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub mkpackagelist {
+
+  # create two list of packages
+  # @unknown contains the unkown packages
+  # @known contains the kown packages
+  foreach my $pack (@{$list{install}}) {
+
+    if ($pack =~ /[$\`]/) {
+      # add to known if backtick or $ is found
+      push @known, $pack;
+      next;
+    }
+
+    if ($cache->exists($pack)) { # simple package name
+      # check for packages with no installation candidates
+      # explicitely don't check if the name is provided by some other package:
+      # apt-get install <virtual> fails with newer apt
+
+      if (defined ($cache->{$pack}{VersionList})) {
+	push @known, $pack;
+      } else {
+	push @unknown, $pack;
+      }
+
+    }
+
+    # simulate APTs understanding of "special" package names
+    # suffixed by -, +
+    elsif ( $pack =~ /^(.*)[+-]$/ and $cache->exists($1)) {
+
+      if (defined ($cache->{$1}{VersionList})) {
+	push @known, $1;
+      } else {
+	push @unknown, $1;
+      }
+
+    } else {
+      push @unknown, $pack;
+    }
+  }
+  warn "WARNING: These unknown packages are removed from the installation list: " . join(' ',sort @unknown) . "\n" if @unknown;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
