@@ -1,9 +1,4 @@
 #! /usr/bin/cfengine
-##############################################################
-#
-# cf.network - for informatik.uni-koeln.de
-#
-#################################################################
 
 control:
    OutputPrefix = ("${cf_prefix}")
@@ -11,11 +6,6 @@ control:
 
 editfiles:
    any::
-	# root login also allowed
-#	{ ${target}/etc/pam.d/login
-#	  HashCommentLinesContaining "pam_securetty.so"
-#	}
-
 	{ ${target}/etc/inetd.conf
 	  HashCommentLinesContaining "in.fingerd"
 	  HashCommentLinesContaining "in.talkd"
@@ -39,4 +29,10 @@ editfiles:
 		With "/usr/sbin/rpc.rstatd${tab}rpc.rstatd"
 	  ReplaceAll "/usr/sbin/tcpd.+/usr/sbin/rpc.rusersd" 
 		With "/usr/sbin/rpc.rusersd${tab}rpc.rusersd"
+	}
+
+   NOSECURETTY::
+	# allow remote root login
+	{ ${target}/etc/pam.d/rlogin
+	  HashCommentLinesContaining "pam_securetty.so"
 	}
