@@ -62,6 +62,17 @@ ifclass() {
     return 1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_resolv_conf() {
+
+    # create a resolv.conf
+    if [ "$DNSSRVS" ]; then
+	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
+	for dnshost in $DNSSRVS ; do
+	    echo "nameserver $dnshost" >>/tmp/etc/resolv.conf
+	done
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 list_disks() {
 
     # print only every second entry
@@ -169,12 +180,12 @@ save_dmesg() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
-    # wait for running jobs to finish (eg. update-auctex-elisp)
+    # wait for running (background) jobs to finish (eg. update-auctex-elisp)
     local i=0
-    while (ps r | egrep -qv "ps r|TIME COMMAND"); do
-	[ $(($i % 6)) -eq 0 ] && echo "Waiting for background jobs to finish."
+    while (jobsrunning); do
+	[ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
 	i=$(($i+1))
-	sleep 5
+	sleep 10
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -272,31 +283,6 @@ define_fai_flags() {
 	eval "$flag=1"
 	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
     done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-task_confdir() {
-
-    local dnshost
-    eval_cmdline
-
-    # TODO: only start on demand; use FAI_FLAGS for that
-    echo "*.* $LOGDIR/syslog.log" > /tmp/etc/syslog.conf
-    syslogd -m 0 -p /tmp/etc/syslogsocket
-    klogd -c1 -f $LOGDIR/kernel.log
-
-    netdevice_info
-    dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
-    dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
-
-    # create a resolv.conf
-    if [ "$DNSSRVS" ]; then
-	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
-	for dnshost in $DNSSRVS ; do
-	    echo "nameserver $dnshost" >>/tmp/etc/resolv.conf
-	done
-    fi
-
-    get_fai_dir
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_setup() {
