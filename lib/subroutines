@@ -37,6 +37,11 @@ disk_info() {
     disklist=`list_disks`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ether_info() {
+
+    ethers=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 diskandsize() {
 
     local isdisk major minor blocks device
@@ -240,7 +245,7 @@ get_bootp_info() {
 
     local bootlog=/tmp/bootp.log
     # define all bootpc information as variables
-    bootpc --returniffail > $bootlog
+    bootpc --timeoutwait $timeout --returniffail > $bootlog
     [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
     eval `cat $bootlog`
     FAI_LOCATION=$T170
@@ -269,17 +274,6 @@ load_keymap_consolechars() {
     fi
     [ "$FAI_CONSOLEFONT" ] &&
 	consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-myyes() {
-# now unused
-    # prints maxyes times string $yes
-    local yes=$1
-    local loopcount=0
-    while  [ $loopcount -lt $maxyes ]; do
-	loopcount=$(($loopcount+1))
-	echo -ne $1
-    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 eval_cmdline() {
@@ -418,7 +412,7 @@ prepare_apt() {
     $ROOTCMD apt-get -f -y remove pcmcia-cs
     $ROOTCMD apt-get -f -y upgrade </dev/null
     # update dpkg info which packages are available
-    $ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
+    $ROOTCMD apt-cache dumpavail > /tmp/dumpavail
     $ROOTCMD dpkg --update-avail /tmp/dumpavail
     rm -f $FAI_ROOT/tmp/dumpavail
 
@@ -431,10 +425,11 @@ prepare_apt() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
 
+    echo "Updating base"
     if [ "$debug" ]; then
-	prepare_apt | tee -a /tmp/prepare-apt.log 2>&1
+	prepare_apt | tee -a /tmp/updatebase.log 2>&1
     else
-	prepare_apt  > /tmp/prepare-apt.log 2>&1
+	prepare_apt  > /tmp/updatebase.log 2>&1
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -454,26 +449,28 @@ task_chboot() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_sysinfo() {
 
+    local disk
     # show some system information and save it on the server
-    ( 
+    { 
     lspci
-    hdparm -iv /dev/hd[a-h]
-    fdisk -s /dev/hd? /dev/sd?
-    fdisk -lu
+    ether_info
+    echo "Ethernet cards found: $ethers"
+    
     [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
     cat /proc/partitions
-    LC_ALL=C file -s /dev/hd* /dev/sd* | egrep -v " can't read | empty$"
+    disk_info
+    for disk in $disklist; do
+	hdparm -iv /dev/$disk
+	fdisk -s /dev/$disk
+	LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
+    done
+    fdisk -lu
     echo -n "xserver for graphic card: "; xviddetect -q
     #si -p -o shm
     mount_local_disks
     fstab_mount
-    ) > >( tee -a $rcslog ) 2>&1
 
-    classes=
     task defclass
-
-    # after all classes are defined, define variables
-    # source files *.var , which can set variables
     task defvar
 
     echo The defined classes are:
@@ -481,6 +478,8 @@ task_sysinfo() {
     echo The classes are also saved in /tmp/FAI_CLASSES
 
     load_keymap_consolechars
+    } | tee -a $rcslog  2>&1
+
     save_dmesg
     save_log_remote
     task_faiend
@@ -488,7 +487,7 @@ task_sysinfo() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_backup() {
 
-# FAI_B ACKUP_LIST contains backup options
+# FAI_BACKUP_LIST contains backup options
 # proposed format: "hda1 hda3 hda12 sda2 '0 0 1 1'"
 #                  list of devices  list of backup levels
 # this subroutine is not yet tested, not yet used
