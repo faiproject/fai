@@ -152,12 +152,12 @@ get_fai_dir() {
 
     # get /fai directory; mount it or get it from a cvs repository
     if [ -z "$FAI_LOCATION" ]; then
-       [ "$debug" ] && echo "Warning $0: \$FAI_LOCATION not defined."
        get_fai_cvs
     else
         mount $romountopt $FAI_LOCATION $FAI &&
 	    echo "Configuration space $FAI mounted from $FAI_LOCATION"
     fi
+    ln -s $FAI $rundir/current_config
     if [ ! -d $FAI/class ]; then
 	echo "WARNING: directory $FAI/class not found."
     fi
@@ -171,21 +171,24 @@ get_fai_cvs() {
 
     if [ "$FAI_CVSROOT" ] ; then
         local TAG=""
-	echo "Checking out CVS"
 	[ -n "$FAI_CVSTAG" ] && TAG="-r $FAI_CVSTAG"
-        export FAI_CONFIG_AREA=$FAI
-        export FAI=/tmp/$(basename $FAI_CONFIG_AREA)
+        export FAI_CONFIG_AREA=$FAI_ROOT$FAI
+        export FAI=$(mktemp -t -d fai-config.XXXXXX)
         
 	[ "$debug" ] && echo "\$FAI now points to $FAI"
         
-	if [ -d "$FAI_CONFIG_AREA" -a -z "$DONTCOPYCVS" ] ; then
+	if [ -d "$FAI_CONFIG_AREA/CVS" -a -z "$FORCE" ] ; then
 	   echo "Config found at $FAI_CONFIG_AREA: Copying"
-	   cp -a $FAI_CONFIG_AREA $FAI 
+	   cp -a $FAI_CONFIG_AREA/. $FAI
 	   echo "Updating CVS"
+	   cd $FAI
+           cvs -q -d"$FAI_CVSROOT" up -P $TAG -d -C > $LOGDIR/cvs.log
+	else 
+	   echo "Checking out CVS"
+	   cd /tmp
+	   cvs -q -d"$FAI_CVSROOT" co -P -d $(basename "$FAI") \
+	     $TAG $FAI_CVSMODULE > $LOGDIR/cvs.log
 	fi
-	cd /tmp
-	cvs -q -d"$FAI_CVSROOT" co -P -d $(basename "$FAI") \
-	  $TAG $FAI_CVSMODULE > $LOGDIR/cvs.log
     else
 	echo "Warning $0: Neither \$FAI_LOCATION nor \$FAI_CVSROOT are defined."
     fi
@@ -208,22 +211,26 @@ task_setup() {
 
     # source user specific subroutines
     [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
-    # set the system time and date using rdate or/and ntpdate
-    [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
-    [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
+    if [ "$DO_INIT_TASKS" ]; then
+        # set the system time and date using rdate or/and ntpdate
+        [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
+        [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
+    fi
 
     define_fai_flags
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
 
-    [ "$createvt" ] && {
-	# create two virtual terminals; acces via alt-F2 and alt-F3
-	echo "Press ctrl-c to interrupt FAI and to get a shell"
-	openvt -c2 /bin/bash ; openvt -c3 /bin/bash
-	trap 'echo "You can reboot with faireboot";bash' INT QUIT
-    }
-
-    # start secure shell daemon for remote access
-    [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+    if [ "$DO_INIT_TASKS" ] ; then
+        [ "$createvt" ] && {
+	    # create two virtual terminals; acces via alt-F2 and alt-F3
+	    echo "Press ctrl-c to interrupt FAI and to get a shell"
+	    openvt -c2 /bin/bash ; openvt -c3 /bin/bash
+	    trap 'echo "You can reboot with faireboot";bash' INT QUIT
+        }
+    
+        # start secure shell daemon for remote access
+	[ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+    fi
 
     # when did FAI start, using localtime
     FAI_RUNDATE=$(date +'%Y%m%d_%H%M%S')
@@ -247,6 +254,10 @@ task_action() {
 	    echo  -e "\a"; sleep 5
 	    task install
 	    task faiend
+	    ;;
+	softupdate)
+	    echo Performing FAI system update. All data may be overwritten!
+	    task softupdate
 	    ;;
 	sysinfo)
 	    echo Showing system information.
@@ -337,6 +348,7 @@ task_savelog() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
 
+    [ "$DO_INIT_TASKS" ] || exit 0
     wait_for_jobs
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
     # reboot without prompting if FAI_FLAG reboot is set
@@ -372,6 +384,7 @@ task_install() {
     task extrbase
     task mirror
     task debconf
+    task prepareapt
     task updatebase
     task instsoft
     task configure
@@ -391,6 +404,37 @@ task_install() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_softupdate() {
+
+    > $stamp
+
+    save_dmesg
+
+    local start_seconds=$(cut -d . -f 1 /proc/uptime)
+    task mirror
+    task debconf
+    task prepareapt
+    task updatebase
+    task instsoft
+    task configure
+    date
+    echo "The update took $[$(cut -d . -f 1 /proc/uptime)-$start_seconds] seconds."
+
+    rm -f $stamp
+    # save again, because new messages could be created
+    save_dmesg
+    task savelog
+
+    if [ -f $stamp ]; then
+	echo "Error while executing commands in subshell."
+	echo "$stamp was not removed."
+	sndmon "TASKERROR softupdate 21"
+	die "Please look at the log files in $LOGDIR for errors."
+    fi
+    umount $FAI_ROOT/fai
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 catnc() {
     # cat but no comment lines
     egrep -v "^#" $@
