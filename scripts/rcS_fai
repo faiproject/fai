@@ -122,7 +122,7 @@ fai_init() {
     mount -n -o remount,rw,rsize=8192 /dev/root /
     cat /proc/kmsg >/dev/tty4 &
     create_ramdisk
-    trap 'echo "You can reboot with faireboot";bash' INT QUIT
+    trap 'echo "Now rebooting";faireboot' INT QUIT
     save_dmesg
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -138,7 +138,6 @@ fai_setup() {
               lange@informatik.uni-koeln.de
     -----------------------------------------------------
 
-Press ctrl-c to interrupt FAI and to get a shell
 EOF
 
     call_hook first
@@ -184,8 +183,13 @@ EOF
 #	mount $romountopt -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
 #    fi
 
-    # create two virtual terminals
-    openvt -c2; openvt -c3
+    [ "$createvt" ] && {
+	# create two virtual terminals
+	echo "Press ctrl-c to interrupt FAI and to get a shell"
+	openvt -c2; openvt -c3
+	trap 'echo "You can reboot with faireboot";bash' INT QUIT
+    }
+
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
     disk_info
 }
