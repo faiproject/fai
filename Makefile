@@ -9,7 +9,7 @@ SCRIPTSDIR = $(LIBDIR)/sbin
 SCRIPTS = rcS_fai setup_harddisks faireboot dhclient-perl dhclient-script  device2grub
 USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar install_packages fai-chboot faimond
 SBIN= fai-start-stop-daemon
-USRBIN_SCRIPTS = fai-class fai-do-scripts
+USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror
 CONFDIR= $(SHAREDIR)/etc
 CONFFILES= apt.conf dhclient.conf fai_modules_off
 ADEXAMPLE=$(DOCDIR)/examples/advanced
@@ -39,6 +39,7 @@ install:
 	install -m755 share/subroutines* $(SHAREDIR)
 	install -m644 share/Fai.pm $(DESTDIR)/usr/share/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(CONFDIR)
+	install -m644 conf/install_packages.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/fai.conf conf/sources.list $(DESTDIR)/etc/fai/
 	install -m600 conf/make-fai-nfsroot.conf $(DESTDIR)/etc/fai/
 	cp -a examples $(DOCDIR)
