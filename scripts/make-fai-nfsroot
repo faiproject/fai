@@ -156,11 +156,7 @@ create_base() {
         tar -C $NFSROOT -cf - . | gzip > $NFSROOT/../base.tgz
         mv $NFSROOT/../base.tgz $NFSROOT/var/tmp/base.tgz
     else
-        # old method for potato
-        call_with_stamp get_basetgz
-        echo "Unpacking base2_2.tgz"
-        zcat /tmp/base2_2.tgz | tar -C $NFSROOT -xpf -
-        cp -p /tmp/base2_2.tgz $NFSROOT/var/tmp/base.tgz
+	die "\$FAI_DEBOOTSTRAP not defined"
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -188,8 +184,6 @@ create_nfsroot() {
     mkdir -p etc/ssh
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
-    # potato only
-    > etc/ssh/NOSERVER
     # woody uses debconf
 
     if [ "$FAI_SOURCES_LIST" ]; then
@@ -275,30 +269,6 @@ add_packages_nfsroot() {
         $ROOTCMD apt-get -y --fix-missing install $NFSROOT_PACKAGES </dev/null
     fi
     $ROOTCMD apt-get clean
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_basetgz() {
-
-    [ -f /tmp/base2_2.tgz ] && return
-    [ "$FAI_BASETGZ" ] || die "No /tmp/base2_2.tgz found and FAI_BASETGZ not defined."
-    case $FAI_BASETGZ in
-        ftp:*|http:*)
-            echo "Fetching $FAI_BASETGZ via wget. This may take some time."
-            TMPBDIR=`mktemp /tmp/FAI-wget-XXXXXX` || exit 1
-            rm $TMPBDIR; mkdir $TMPBDIR || exit
-            wget -P$TMPBDIR $FAI_BASETGZ
-            mv $TMPBDIR/base2_2.tgz /tmp
-            rm -rf $TMPBDIR
-            ;;
-        /*/base2_2.tgz)
-            rm -f /tmp/base2_2.tgz
-            test -r $FAI_BASETGZ || die "Can't read $FAI_BASETGZ. Check FAI_BASETGZ in fai.conf."
-            ln -s $FAI_BASETGZ /tmp
-            ;;
-        *)
-            die "FAI_BASETGZ in fai.conf is $FAI_BASETGZ and looks very strange."
-            ;;
-    esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
