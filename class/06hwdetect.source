@@ -1,7 +1,9 @@
 #! /bin/sh
 
+# (c) Thomas Lange, 2002-2004, lange@informatik.uni-koeln.de
+
 echo 0 > /proc/sys/kernel/printk
-# let discover do the work
+# let discover do most of the job
 /etc/init.d/discover start
 
 # load all IDE drivers
@@ -21,14 +23,6 @@ for mod in $kernelmodules; do
 done
 # now we can mount the usb file system
 mount -t usbfs  usbfs /proc/bus/usb
-
-
-# enable DMA mode on als IDE drives
-#for disk in $(ls /proc/ide/hd[a-z]/settings 2>/dev/null); do
-#    echo $disk
-#    echo "using_dma:1" > $disk
-#done
-# unset disk
 
 modprobe -a sd_mod sr_mod
 # are any SCSI devices attached?
@@ -52,4 +46,4 @@ esac
 echo "Video card detected: $videodrv"
 
 set_disk_info  # calculate number of available disks
-save_dmesg # save new boot messages (from loading modules)
+save_dmesg     # save new boot messages (from loading modules)
