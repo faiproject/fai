@@ -7,6 +7,7 @@ LIBDIR = $(DESTDIR)/usr/lib/fai
 SHAREDIR = $(DESTDIR)/usr/share/fai
 SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon dhclient-perl dhclient-script fcopy ftar mount2dir bootsector device2grub
 SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar bootsector
+BIN_SCRIPTS = fai-class
 CONFFILES= apt.conf dhclient.conf fai_modules_off pxelinux.cfg
 
 # files with variable KERNLEVERSION in it; this string will be substituted
@@ -25,6 +26,7 @@ install:
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
 	-install -m755 lib/* $(LIBDIR)
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
+	cd scripts ; install $(BIN_SCRIPTS) $(DESTDIR)/usr/bin
 	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
 	install -m644 share/subroutines* $(SHAREDIR)
 	install -m644 share/Fai.pm $(DESTDIR)/usr/share/perl5/Debian

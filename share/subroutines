@@ -396,42 +396,15 @@ task_action() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defclass() {
 
-    local newclasses addclasses class f
+    local class
 
-    cd $FAI/class || die "No directory $FAI/class found. No configuration in $FAI_LOCATION on the install server."
-    echo "Defining classes"
+    # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
+    fai-class $FAI/class $LOGDIR/FAI_CLASSES
 
-    [ -f $HOSTNAME ] && newclasses=`grep -v '^#' $HOSTNAME`
-    [ "$debug" ] && echo "newclasses= $newclasses"
-    classes="DEFAULT $newclasses"
-
-    # alphabetical sort is important
-    for f in `ls S[0-9]*.{sh,pl,source}` ; do
-	if [ -x $f -a -f $f ]; then
-	newclasses=
-	[ "$verbose" ] && echo "Executing $f"
-	case $f in
-	    *.pl) newclasses=`perl $f </dev/null | grep -v '^#'` ;;
-	    *.sh) newclasses=`sh $f </dev/null | grep -v '^#'` ;;
-	    *.source) . $f ;; # this script can define $newclasses!
-	esac
-	[ "$debug" ] && echo "newclasses= $newclasses"
-	classes="$classes $newclasses"
-	fi
-    done
-
-    # scripts can also write additional classes to a file if they
-    # can't print them to stdout. Now read this file and define the classes
-    [ -f $LOGDIR/additional-classes ] && addclasses=`grep -v '^#' $LOGDIR/additional-classes`
-    [ "$debug" ] && echo "additonal classes: $addclasses"
-
-    # now add the hostname (the only class in lowercase) and LAST to
-    # the list of classes
-    classes="$classes $addclasses $HOSTNAME LAST"
+    classes=`cat $LOGDIR/FAI_CLASSES`
 
     # also define all classes in reverse order ($revclasses)
     for class in $classes ; do
-	echo $class >> $LOGDIR/FAI_CLASSES
 	revclasses="$class $revclasses"
     done
 
