@@ -197,12 +197,13 @@ copy_fai_files() {
     perl -pi -e "s#^root::#root:${FAI_ROOTPW}:#" etc/passwd
     mkdir -p $NFSROOT/$SHAREFAI $NFSROOT/$LIBFAI $NFSROOT/etc/fai
     cd $NFSROOT
+    fdivert /etc/dhcp3/dhclient-script /etc/dhcp3/dhclient.conf
     cp -p $SHAREFAI/etc/dhclient.conf etc/dhcp3
-    ln -fs ../../sbin/dhclient-script etc/dhcp3/dhclient-script
     cp -Rpv $cfdir/* $NFSROOT/etc/fai
     rm -f $NFSROOT/etc/fai/make-fai-nfsroot.conf
     [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass $NFSROOT/.cvspass
     cp -p $LIBFAI/sbin/* sbin/
+    mv sbin/dhclient-script etc/dhcp3
     cp -p /usr/sbin/{ftar,fcopy,install_packages} usr/sbin/
     cp -p /usr/bin/{fai-do-scripts,fai-class} usr/bin/
     cp -p $LIBFAI/* usr/lib/fai 2>/dev/null || true  # cp will complain about directories
@@ -281,7 +282,6 @@ create_nfsroot() {
     # make little changes to nfsroot, because nfsroot is
     # read only for the install clients 
     rm -rf etc/mtab var/run etc/sysconfig
-    mv etc/init.d/rcS etc/init.d/rcS.orig
     ln -s /proc/mounts etc/mtab
     ln -s /tmp/var/run var/run
     ln -sf /tmp/var/state/discover var/state/discover
@@ -336,11 +336,9 @@ upgrade_nfsroot() {
     $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
-#    $ROOTCMD apt-get --purge -y install debconf </dev/null
 
     # fake start-stop-dameon
-    $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
-    $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/discover-modprobe
+    fdivert /etc/init.d/rcS /sbin/start-stop-daemon /sbin/discover-modprobe
     cp /sbin/fai-start-stop-daemon $NFSROOT/sbin/
     ln -s /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
     $ROOTCMD apt-get -y dist-upgrade
@@ -402,6 +400,13 @@ setup_dhcp(){
     [ -f $pxebin ] && cp $pxebin /boot/fai
     [ -d /boot/fai/pxelinux.cfg ] || mkdir -p /boot/fai/pxelinux.cfg || true
     echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fdivert() {
+
+    for item in "$@"; do
+	LC_ALL=C $ROOTCMD dpkg-divert --quiet --package fai --add --rename $item
+    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
