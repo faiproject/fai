@@ -6,12 +6,12 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.4.1">
+<!entity faikernelver "1.5">
 <!entity faiver "2.4">
 <!entity faiverdate "XXX dec 2002">
 
 <!entity version "1.5.2">
-<!entity date    " XXX nov 2002">
+<!entity date    " XXX dec 2002">
 ]>
 
 <debiandoc>
@@ -1029,7 +1029,7 @@ advisable to document the job a new class performs. Then, this
 documentation is the base for composing a configuration from classes.
 
 <p>
-The scripts <prgn>S05modules.source</prgn> loads kernel modules
+The scripts <prgn>05modules.source</prgn> loads kernel modules
 on demand. So you can use classes when loading modules and also define
 more classes after the kernel has loaded modules and recognized new hardware.
 The complete description of all these scripts can be found in <ref id="cscripts">.
@@ -1539,19 +1539,16 @@ then added for a given host.
 
 <sect id=s2> Defining classes<p>
 
-The default task <em>defclass</em> defines the classes <tt>DEFAULT</tt>,
-<tt>LAST</tt>, <var>$HOSTNAME</var> and all classes in the file
-<file>/fai/class/</file><var>$HOSTNAME</var> for every host.
-Additionally, all files that are executable and match the shell
-regular expression <tt>S[0-9]*.{sh,pl,source}</tt> are called in alphabetical
-order. Every output from these scripts is used to define
-classes. Multiple classes in one line must be space separated. If a
-hook has written classes to the file
-<file>/tmp/fai/additional-classes</file>, these classes are also defined.
+The default task <em>defclass</em> calls the script <manref
+name="fai-class" section="1"> to define classes. Therefore scripts in 
+<tt>/fai/class</tt> are executed. Additionally file in this directory
+can contain a list of classes. For more information read the manual
+pages for <manref name="fai-class" section="1">.
+
 The list of all defined classes is stored in the variable
 <var>$classes</var> and saved to <file>/tmp/fai/FAI_CLASSES</file>. The list of
 all classes is transfered to <prgn>cfengine</prgn>, so it can use them
-too. The script <file>S01alias.sh</file> (see below) is used to define
+too. The script <file>01alias</file> (see below) is used to define
 classes for groups of hosts. All hosts with the prefix <var>ant</var> use
 all classes in the file <file>anthill</file>. Hosts which have an IP
 address in subnet 134.95.9.0 also belong to the class
@@ -1561,7 +1558,7 @@ file <file>atoms</file>. Finally this script defines the class with the name
 of the hardware architecture in uppercase letters.
 
 <example>
-# cat S01alias.sh
+# cat 01alias
 
 # echo architecture in upper case
 dpkg --print-installation-architecture | tr /a-z/ /A-Z/
@@ -1585,7 +1582,7 @@ case $IPADDR in
 esac
 </example>
 
-Script <file>S07disk.pl</file> can be used to define classes depending
+Script <file>18disk</file> can be used to define classes depending
 on the number of local disks or the size of these disks<footnote>
 <p>It uses the library <file>Fai.pm</file>, which includes some useful
 subroutines, e.g. <tt>class</tt>, <tt>classes</tt>,
@@ -1597,7 +1594,7 @@ need a class for every different disk size.
 <p>
 
 The script
-<file>S24nis.sh</file> automatically defines classes corresponding to
+<file>24nis</file> automatically defines classes corresponding to
 NIS. The name of the NIS domain (defined via BOOTP or DHCP) will also
 become a class (only uppercase letters and minus is replaced by
 underscore). If no NIS domain is defined, then only the NONIS class is
@@ -1607,14 +1604,14 @@ defined.
 
 Depending on partition names defined in the first matching
 <file>disk_config</file> found,
-<file>S90partitions.pl</file> defines additional classes. For example, if a
+<file>70partitions</file> defines additional classes. For example, if a
 partition
 <file>/files/scratch</file> exists, the install client will export
 this directory via NFS; therefore NFS server packages will be installed.
 
 <p>
 
-The script <prgn>S05modules.source</prgn> does not define any class, but
+The script <prgn>11modules.source</prgn> does not define any class, but
 is responsible for loading kernel modules. Kernel modules are
 important for detecting hardware. This script calls the script
 <var>$HOSTNAME</var><tt>.mod</tt> and all scripts that have the format
