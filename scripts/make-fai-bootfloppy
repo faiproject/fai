@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.5.5, 3-jan-2005"
+version="Version 2.5.5, 7-jan-2005"
 set -e
 timeout=15
 mkimage=0
@@ -49,14 +49,6 @@ die() {
 
     echo -e "$@"
     exit 99
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-determine_kernel_version() {
-
-    local all
-    # choose last installed kernel of nfsroot
-    all=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1)
-    KERNELVERSION=$(echo "kernel version $all" | sed -e 's#.*/vmlinuz-##')
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -83,7 +75,7 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
    -g         use GRUB loader on bootfloppy (default)
    -i FILE    make a 1440k iso9660 image in FILE
    -l         use LILO loader on bootfloppy
-   -m DIR     use DIR as mountpoint [/floppy]
+   -m DIR     use DIR as mountpoint [/floppy or /media/floppy]
    -s HOST    use this static ip for FAI client; try to get all info from DNS
    -v         print verbose output
 
@@ -329,7 +321,8 @@ fi
 [ "$verbose" ] && echo "Using configuration files from directory $cfdir."
 . $cfdir/fai.conf
 
-determine_kernel_version
+# use newest kernel if several are installed
+KERNELVERSION=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 determine_network_parameters
 
 if [ $mkimage -eq 1 ]; then 
