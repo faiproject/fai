@@ -52,7 +52,7 @@ writing to the &fsf-addr;.
 The homepage of FAI is
 <httpsite>http://www.informatik.uni-koeln.de</httpsite><httppath>/fai</httppath>.
 There you will find any information about FAI, for e.g. the mailing
-list archive. The FAI package is available as a Debian package from
+list archive. The FAI package is also available as a Debian package from
 &faidownload;. It's an official Debian package and is available from
 all Debian mirrors. Send any bug or comment to
 <email>fai@informatik.uni-koeln.de</email>. You can also use the
@@ -150,7 +150,7 @@ First, some terms used in this manual are described.
 	  <tag>install client : <item> A host, which will be installed using
 	  FAI and a configuration from the install server. Also called
 	  client for short. In this manual the example hosts are
-	  called <tt>bigfoot, ant01, ant02,...</tt></p> </item>
+	  called <tt>bigfoot, ant01, ant02, nucleus, atom01, atom02,...</tt></p> </item>
 	  <tag> configuration : <item> The details, how the installation
 	  of the clients should be performed. This includes information about:
 <list>
@@ -223,6 +223,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Easily add your own functions via hooks</p> </item>
 	    <item> <p>Easily change the default behavior via hooks</p> </item>
 	    <item> <p>Lilo and grub support</p> </item>
+	    <item> <p>ReiserFS support</p> </item>
 </list>
 
 <chapt id="inst">Installing FAI
@@ -237,7 +238,7 @@ Following items are required for an installation via FAI.
 	  <tag>BOOTP or DHCP server: </tag><item> <p> 
 The clients need one of these daemons to obtain boot information.<footnote>
 		  <p>It's also possible without a server, if all
-information is put on the boot disk.</p>
+information is put on the boot floppy.</p>
 		</footnote>
  </p> </item>
 
@@ -268,14 +269,14 @@ which is recognized by the install kernel.
 <sect id="debian-mirror">How to create a local Debian mirror<p> 
 
 The script <prgn>mkdebmirror</prgn> <footnote> Available in
- <p><file>/usr/share/doc/fai/utils/</file>.</p> </footnote> can be
+ <p><file>/usr/share/fai/utils/</file>.</p> </footnote> can be
  used for creating your own local Debian mirror. This script uses the
  script <prgn>debmirror</prgn><footnote> Available at
  <httpsite>http://cvs.kitenet.net/</httpsite><httppath>joey-cvs/bin/debmirror</httppath>
  or at the FAI homepage.</footnote> and <manref name="rsync"
  section="1">.
 
-A partitial Debian mirror only for i386 architecture for Debian 2.2r3
+A partitial Debian mirror only for i386 architecture for Debian 2.2r4
 (aka potato) without the source packages needs about 2.4 GB of disk
 space.
 
@@ -482,9 +483,9 @@ install clients. This is described in section <ref id="bootfloppy">.
 When you make changes to &fc; or want to install a new kernel to
 nfsroot, the nfsroot has to be rebuild by calling <prgn>make-fai-nfsroot</prgn>.
 
-<sect1 id=troublefaisetup> Troubleshooting set up<p>
+<sect1 id=troublefaisetup> Troubleshooting the setup<p>
 
-The set up of FAI adds the FAI account, exports file systems and calls
+The setup of FAI adds the FAI account, exports file systems and calls
 <prgn>make-fai-nfsroot</prgn>. If you call <tt>make-fai-nfsroot -v</tt> you
 will see more messages. When using a local Debian mirror it's
 important, that the install server can mounted this directory via
@@ -720,7 +721,8 @@ the section <tt>.failocal</tt> in <file>/etc/bootptab</file>, which
 is a definition for all clients.
 
 <sect1 id=troublebootp>Troubleshooting BOOTP daemon<p>
-The BOOTP daemon can also be started in debug modus:
+The BOOTP daemon can also be started in debug modus, if it is not
+enabled in <file>inetd.conf</file>:
 <example># bootpd -d7</example>
 
 <sect id="bootdhcp">Configuration of the DHCP daemon <p>
@@ -1684,7 +1686,7 @@ If the video card isn't detected, the software installation tries to
 install the package <tt>xserver-unknown</tt>. It will not start
 because this package doesn't exist. You can test all software package
 configuration files with the utility <prgn>chkdebnames</prgn>, which
-is available in <file>/usr/share/doc/fai/utils/</file>.
+is available in <file>/usr/share/fai/utils/</file>.
 <example>
 > chkdebnames stable /usr/local/share/fai/package_config/*
 </example>
@@ -1904,25 +1906,49 @@ available on the FAI homepage.
 
 This chapter describes the particularities about building a Beowulf
 cluster using &dgl; and FAI. For more information about the Beowulf
-concept look at <httpsite>http://www.beowulf.org</httpsite>. Here,
-the master node (or master server) is called <em>nucleus</em>. It has
-two network cards. One for the connection to the external Internet,
-one for the connection to the internal cluster network. If connected
-from the external Internet, it's called <em>nucleus</em>, but the
-cluster nodes accesses the master node with name <em>atom00</em>,
-which is a name for the second network interface. The master server is
-also the install server for the computing nodes.
+concept look at <httpsite>http://www.beowulf.org</httpsite>. 
+
+<sect id=beoplan> Planing the Beowulf setup<p>
+
+The example of a Beowulf cluster consists of one master node and 25
+clients. A big rack was assembled where all the cases were put into. A
+keyboard and a monitor were also put into the rack, which are most of
+the time connected to the master server. But since we have a very long
+cables for monitor and keyboard, they can also be connected to all
+nodes, if something has to be changed in BIOS or when looking for
+errors, when a node does not boot. Power supply is another topic you
+have to think about. Don't connect many nodes to one power cord and
+one outlet. Distribute them among several breakout boxes and outlets.
+And what about the heat emission ? A dozen nodes in a small room can
+create to much heat, so you will need an air condition.  Will the
+power supplies of each node go to stand by mode or are all nodes are
+turned on simultaneously after a power failure ?
 
 <p>
-All client nodes <em>atom01</em> to <em>atom99</em> are connected via
-a switch with the second interface card of the master node. They can
+
+All computers are connected to a Fast Ethernet switch. The master node
+(or master server) is called <em>nucleus</em>. It has two network
+cards. One for the connection to the external Internet, one for the
+connection to the internal cluster network. If connected from the
+external Internet, it's called <em>nucleus</em>, but the cluster nodes
+accesses the master node with name <em>atom00</em>, which is a name
+for the second network interface. The master server is also the
+install server for the computing nodes. A local Debian mirror will be
+installed on the local harddisk. The home directories of all user
+accounts is also located on the master server. It will be exported via
+NFS to all computing nodes. NIS will be used to distribute account,
+host and printer information to all nodes.
+
+<p>
+All client nodes <em>atom01</em> to <em>atom25</em> are connected via
+the switch with the second interface card of the master node. They can
 only connect to the other nodes or the master, but can't communicate
 to any host outside their cluster network. So, all services (NTP, DNS,
-NIS, ...) must be available on the master server.
-I choose the class C network address <em>192.168.42.0</em> for building
-the local Beowulf cluster network. You can replace the subnet 42 with any
-other number you like. I you have more that 253 computing nodes,
-choose a class A network address (10.X.X.X).
+NIS, ...) must be available on the master server. I choose the class C
+network address <em>192.168.42.0</em> for building the local Beowulf
+cluster network. You can replace the subnet 42 with any other number
+you like. I you have more that 253 computing nodes, choose a class A
+network address (10.X.X.X).
 
 <p>
 In the phase of preparing the installation, you have to boot the first
@@ -1968,7 +1994,7 @@ line to <file>/etc/networks</file>:
 
 Activate the second network interface with: <tt>/etc/init.d/networking start</tt>.
 
-<sect1 id=beonis> Set up NIS<p>
+<sect1 id=beonis> Setting up NIS<p>
 
 Add a normal user account <var>tom</var> which is the person how edits
 the configuration space and manages the local Debian mirror:
@@ -2055,7 +2081,7 @@ symlinks for booting via network card, so change the group and add
 some utilities.
 
 <example># chgrp -R linuxadmin /boot/fai; chmod -R g+rwx /boot/fai
-# cp /usr/share/doc/fai/utils/* /usr/local/bin
+# cp /usr/share/fai/utils/* /usr/local/bin
 </example>
 
 Now, the user <var>tom</var> can create a symlink in
