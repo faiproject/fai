@@ -70,7 +70,7 @@ diskandsize() {
 
     while read major minor blocks device; do
 	isdisk=1
-	# skip ide cdrom; what about SCSI cdroms ?
+	# skip ide cdrom
 	[ -f /proc/ide/$device/media ] && grep -q cdrom /proc/ide/$device/media && isdisk=0
 	[ $isdisk -eq 1 ] && echo "$device $blocks"
     done
@@ -276,6 +276,7 @@ eval_cmdline() {
     # parse kernel parameters and eval variables
     local word
 
+    echo -n "Kernel parameters:"; cat /proc/cmdline
     for word in `cat /proc/cmdline` ; do
 	case $word in
 	    [a-zA-Z]*=*)
@@ -337,7 +338,6 @@ skiptask() {
 task_confdir() {
 
     local dnshost
-    echo -n "Kernel parameters:"; cat /proc/cmdline
     eval_cmdline
 
     # TODO: only start on demand; use FAI_FLAGS for that
@@ -443,7 +443,7 @@ task_defclass() {
 	if [ -x $f -a -f $f ]; then
 	[ "$verbose" ] && echo "Executing $f"
 	case $f in
-	    *.pl) newclasses=`perl $f </dev/null` ;;
+	    *.pl) newclasses=`perl $f </dev/null | grep -v '^#'` ;;
 	    *.sh) newclasses=`sh $f </dev/null | grep -v '^#'` ;;
 	esac
 	[ "$debug" ] && echo "newclasses= $newclasses"
@@ -451,7 +451,7 @@ task_defclass() {
 	fi
     done
 
-    [ -f /tmp/additional-classes ] && addclasses=`cat /tmp/additional-classes`
+    [ -f /tmp/additional-classes ] && addclasses=`grep -v '^#' /tmp/additional-classes`
     [ "$debug" ] && echo "additonal classes: $addclasses"
     classes="$classes $addclasses $HOSTNAME LAST"
 
