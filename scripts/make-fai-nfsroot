@@ -29,7 +29,7 @@
 
 # Packages that are install to nfsroot by default
 # Additional packages are defined with $NFSROOT_PACKAGES in fai.conf
-packages="dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize strace hdparm parted dnsutils grub ntpdate"
+packages="dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize strace hdparm parted dnsutils grub ntpdate psmisc"
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
@@ -146,11 +146,12 @@ create_nfsroot() {
     fi
 
     # hoaks some packages
-    touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
+    > etc/fstab # dump and raidtool2 needs these files
+    > etc/raidtab
     mkdir -p lib/modules/$KERNELVERSION           # dirty trick to hoax lvm
-    touch lib/modules/$KERNELVERSION/modules.dep  # dirty trick to hoax lvm
+    >  lib/modules/$KERNELVERSION/modules.dep  # dirty trick to hoax lvm
     mkdir -p etc/ssh
-    touch etc/ssh/NOSERVER
+    > etc/ssh/NOSERVER
 
     echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     upgrade_nfsroot  
