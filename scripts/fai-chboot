@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.4, 30-june-2004";
+$version="version 1.4.1, 3-july-2004";
 
 use Socket;
 use Net::hostent;
@@ -78,7 +78,7 @@ sub lsdir {
 #    prtipa if /^[0-9A-F]{2}$/;
 #    prtipb if /^[0-9A-F]{4}$/;
 #    prthostname if /^[0-9A-F]{6}/;
-    next unless /^[0-9A-F]+/;
+    next unless /^[0-9A-F]+|default/;
     $hex = $_;
 
     # hex to ip address
@@ -98,6 +98,7 @@ sub lsdir {
     open (CFG,"$pxedir/$hex") || die "$! $@\n";
     while (<CFG>) {
       /^kernel (\S+)/ and $kernelname = $1;
+      /^(localboot.+)/ and $kernelname = $1;
       /^append (.+)/ and $append = $1;
     }
     close (CFG);
