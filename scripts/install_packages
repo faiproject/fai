@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.5, 4-november-2004";
+my $version = "Version 2.5.1, 9-november-2004";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -40,6 +40,7 @@ our ($opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 my @commands;
 my %command;
+our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
 my $test;
 my $verbose;
 my $FAI_ROOT;
@@ -114,32 +115,32 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
 }
 
 # call apt-get or tasksel for each type of command whith the list of packages
-foreach my $type (@commands) {
-  if ($type eq "clean") {
+foreach $atype (@commands) {
+  if ($atype eq "clean") {
     execute("$rootcmd apt-get clean") unless $listonly;
     next;
   }
 
   # skip if empty list
-  next unless defined $list{$type};
+  next unless defined $list{$atype};
 
-  if ($type eq "dselect-upgrade") {
-    dselectupgrade($type);
+  if ($atype eq "dselect-upgrade") {
+    dselectupgrade($atype);
     next;
   }
 
-  my $packlist = join(' ',@{$list{$type}});
+  my $packlist = join(' ',@{$list{$atype}});
 
-  if ($type eq "hold") {
+  if ($atype eq "hold") {
     my $hold = join " hold\n", @{$list{hold}};
     $hold .= " hold\n";
     execute("echo \"$hold\" | $rootcmd $command{hold}");
     next;
   }
 
-  if ($type eq "install" || $type eq "aptitude" || $opt_l || $opt_L) {
+  if ($atype eq "install" || $atype eq "aptitude" || $opt_l || $opt_L) {
 
-    mkpackagelist(); # create lists of known and unknown packages
+    mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
     if ($opt_l) {
       # only print the package list
       print join ' ',@known,"\n";
@@ -154,21 +155,21 @@ foreach my $type (@commands) {
     while (@known) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
       # print "SL $shortlist\n";
-      execute("$rootcmd $command{$type} $shortlist") if $shortlist;
+      execute("$rootcmd $command{$atype} $shortlist") if $shortlist;
       execute("$rootcmd apt-get clean");
     }
     next;
   }
 
-  if ($type eq "taskinst" || $type eq "taskrm") {
-    foreach my $tsk (@{$list{$type}}) {
-      execute("$rootcmd $command{$type} $tsk");
+  if ($atype eq "taskinst" || $atype eq "taskrm") {
+    foreach my $tsk (@{$list{$atype}}) {
+      execute("$rootcmd $command{$atype} $tsk");
     }
     next;
   }
 
   # other types
-  execute("$rootcmd $command{$type} $packlist") if $packlist;
+  execute("$rootcmd $command{$atype} $packlist") if $packlist;
 }
 
 # remove prelaoded files
@@ -266,16 +267,26 @@ sub dselectupgrade {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub mkpackagelist {
 
+  my @orig = @_; # copy original list
+  @unknown = @known = ();
+
   # create two list of packages
   # @unknown contains the unkown packages
   # @known contains the kown packages
-  foreach my $pack (@{$list{aptitude}},@{$list{install}}) {
+  foreach my $pack (@orig) {
 
     if ($pack =~ /[$\`]/) {
       # add to known if backtick or $ is found
       push @known, $pack;
       next;
     }
+
+    if ($atype eq "aptitude" && $pack =~ /^~/) {
+      # add to known if is it an aptitude search pattern
+      push @known, $pack;
+      next;
+    }
+# TODO: aptitude also can install tasks. How do we check them? Currently they will push to @unknown
 
     if ($cache->exists($pack)) { # simple package name
       # check for packages with no installation candidates
@@ -290,9 +301,9 @@ sub mkpackagelist {
 
     }
 
-    # simulate APTs understanding of "special" package names
+    # simulate APTs and aptitudes understanding of "special" package names
     # suffixed by -, +
-    elsif ( $pack =~ /^(.*)[+-]$/ and $cache->exists($1)) {
+    elsif ( $pack =~ /^(.*)[_=+-]$/ and $cache->exists($1)) {
 
       if (defined ($cache->{$1}{VersionList})) {
 	push @known, $pack;
