@@ -324,73 +324,7 @@ task_mountdisks() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_configure() {
 
-    # execute all scripts that match the name of a class.
-    # If class is a directory, execute all $class/S[0-9]* scripts in
-    # it, but do not execute files ending in ~
-    
-    local class f
-
-    cd $FAI/scripts
-    for class in $classes ; do
-	[ -x $class -a -f $class ] && do_script $class
-	if [ -d $class ]; then
-	   for f in `ls $class/S[0-9]*[^~]` ; do
-	       [ -x $f -a -f $f ] && do_script $f
-	   done
-	fi
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-do_script() {
-
-    # execute scripts and save their output in log files
-    # cfengine, shell, perl and expect scripts are known types
-    local shelldebug file filetype
-
-    file=$1
-
-    cd $FAI/scripts
-    filetype=`file $file`
-    shelldebug=
-    case $filetype in
-	*"Bourne shell script"*)
-	    [ "$debug" ] && shelldebug="sh -x" ;;
-	*"Bourne-Again shell script"*)
-	    [ "$debug" ] && shelldebug="bash -x" ;;
-    esac
-
-    case $filetype in
-
-	*"executable shell script"*|*"/bash script"*|*"Bourne shell script"*|*"Bourne-Again shell script"*)
-	    echo "Executing   $shelldebug shell: $file"
-	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
-	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
-	    check_status $file $? | tee -a $LOGDIR/shell.log
-	;;
-
-	*"cfengine script"*)
-	    echo "Executing cfengine: $file"
-	    echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
-	    ./$file --no-lock -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
-	    check_status $file $? | tee -a $LOGDIR/cfengine.log
-	;;
-
-	*"perl script"*)
-	    echo "Executing    perl: $file"
-	    echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
-	    ./$file >> $LOGDIR/perl.log 2>&1
-	    check_status $file $? | tee -a $LOGDIR/perl.log
-	;;
-
-	*"expect script"*)
-	    echo "Executing  expect: $file"
-	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
-	    ./$file >> $LOGDIR/expect.log 2>&1
-	    check_status $file $? | tee -a $LOGDIR/expect.log
-	;;
-
-	*) echo "File $file has unsupported type $filetype." ;;
-    esac
+    fai-do-scripts $FAI/scripts
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_savelog() {
