@@ -44,7 +44,8 @@ defnop() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 islinux() {
 
-    if [ X$arch = Xlinux ]; then
+#    [ X$OSTYPE = X ] && OSTYPE=`uname -s | tr '[A-Z]' '[a-z]'
+    if [ X$OSTYPE = Xlinux ]; then
        return 0
     else
        return 1
@@ -139,27 +140,30 @@ fstab_mount() {
 save_log_local() {
 
     # save log files on local disk
-    local logdir=$FAI_ROOT/var/log/fai
-    find $FTMP -size 0 | xargs -r rm
-    mkdir -p $logdir/$HOSTNAME/$FAI_ACTION
-    cp -p $FTMP/* $logdir/$HOSTNAME/$FAI_ACTION 2> $devnull
-    ln -s $HOSTNAME $logdir/localhost
+    local logbase=$FAI_ROOT/var/log/fai
+    local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$RUNDATE
+    find $LOGDIR -size 0 | xargs -r rm
+    mkdir -p $thislog
+    cp -p $LOGDIR/* $thislog
+    ln -sf $HOSTNAME $logbase/localhost
+    ln -sf $FAI_ACTION-$RUNDATE $logbase/$HOSTNAME/last-$FAI_ACTION
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote() {
 
     # save log files to $SERVER
     [ "$LOGUSER" ] || return
-    local logdir=$HOSTNAME/$FAI_ACTION
-    find $FTMP -size 0 | xargs -r rm
-    $FAI_REMOTESH -l $LOGUSER $SERVER "rm -f $logdir/* ; \
-	test -d $logdir || mkdir -p $logdir" 2> $devnull
-    $FAI_REMOTECP -p $FTMP/* $LOGUSER@$SERVER:$logdir
+
+    echo "Saving log files remote to $LOGUSER@$SERVER"
+    local thislog=$HOSTNAME/$FAI_ACTION-$RUNDATE
+    find $LOGDIR -size 0 | xargs -r rm
+    $FAI_REMOTESH -l $LOGUSER $SERVER "mkdir -p $thislog; ln -sf $FAI_ACTION-$RUNDATE $HOSTNAME/last-$FAI_ACTION"
+    $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$SERVER:$thislog
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
 
-    dmesg > $FTMP/dmesg.log
+    dmesg > $LOGDIR/dmesg.log
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
@@ -176,8 +180,8 @@ wait_for_jobs() {
 task() {
 
     local taskname=$1
-    if [ -f $FTMP/skip.$taskname ]; then
-	rm $FTMP/skip.$taskname
+    if [ -f $LOGDIR/skip.$taskname ]; then
+	rm $LOGDIR/skip.$taskname
 	[ "$verbose" ] && echo "Skiping task_$taskname"
     else
 	echo "Calling task_$taskname"
@@ -217,14 +221,14 @@ skiptask() {
     local task
 
     for task in $tasklist; do
-	> $FTMP/skip.$task
+	> $LOGDIR/skip.$task
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_fai_dir() {
 
     if [ -z "$FAI_LOCATION" ]; then
-       echo "Warning $0: \$FAI_LOCATION not defined."
+       [ "$debug" ] && echo "Warning $0: \$FAI_LOCATION not defined."
        get_fai_cvs
     else
         mount $romountopt $FAI_LOCATION $FAI &&
@@ -241,10 +245,21 @@ get_fai_cvs() {
     # access via ftp, http, or from a database
 
     if [ "$FAI_CVSROOT" ] ; then
-       cd /tmp
-       cvs -P -q -d"$FAI_CVSROOT" co "$FAI_CVSMODULE" > /tmp/cvs-co.log
-       export FAI_CONFIG_AREA=$FAI
-       export FAI=/tmp/$FAI_CVSMODULE
+        local TAG
+	echo "Checking out CVS"
+	[ -n "$FAI_CVSTAG" ] && TAG="-r $FAI_CVSTAG"
+        if [ -w $(dirname "$FAI") ] ; then
+	   cd $(dirname "$FAI") 
+	else
+	   cd /tmp
+	   export FAI_CONFIG_AREA=$FAI
+	   export FAI=/tmp/$(basename $FAI_CONFIG_AREA)
+	   echo "\$FAI now points to $FAI"
+	fi
+	cvs -q -d"$FAI_CVSROOT" co -P -d $(basename "$FAI") \
+	  $TAG $FAI_CVSMODULE > ${THISLOG}/cvs.log
+    else
+	echo "Warning $0: Neither \$FAI_LOCATION nor \$FAI_CVSROOT are defined."
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -264,8 +279,9 @@ task_confdir() {
     eval_cmdline
 
     # TODO: only start on demand; use FAI_FLAGS for that
+    echo "*.* $LOGDIR/syslog.log" > /tmp/etc/syslog.conf
     syslogd -m 0 -p /tmp/etc/syslogsocket
-    klogd -c1 -f $FTMP/kernel.log
+    klogd -c1 -f $LOGDIR/kernel.log
 
     netdevice_info
     dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
@@ -309,6 +325,9 @@ task_setup() {
 
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
     disk_info
+
+    # when did FAI start, using localtime
+    RUNDATE=$(date +'%Y%m%d_%H%M%S')
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_action() {
@@ -366,12 +385,12 @@ task_defclass() {
 	fi
     done
 
-    [ -f $FTMP/additional-classes ] && addclasses=`grep -v '^#' $FTMP/additional-classes`
+    [ -f $LOGDIR/additional-classes ] && addclasses=`grep -v '^#' $LOGDIR/additional-classes`
     [ "$debug" ] && echo "additonal classes: $addclasses"
     classes="$classes $addclasses $HOSTNAME LAST"
 
     for class in $classes ; do
-	echo $class >> $FTMP/FAI_CLASSES
+	echo $class >> $LOGDIR/FAI_CLASSES
 	revclasses="$class $revclasses"
     done
     # revclass is the list of classes in reversed order
@@ -397,14 +416,14 @@ task_defvar() {
     done
 
     [ "$debug" ] && set -vx
-    [ -f $FTMP/additional.var ] && . $FTMP/additional.var
+    [ -f $LOGDIR/additional.var ] && . $LOGDIR/additional.var
     [ "$debug" ] && set +vx
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mountdisks() {
 
-    [ ! -f $FTMP/$fstab ] && die "No $FTMP/$fstab created."
-    mount2dir $FAI_ROOT $FTMP/$fstab
+    [ ! -f $LOGDIR/$fstab ] && die "No $LOGDIR/$fstab created."
+    mount2dir $FAI_ROOT $LOGDIR/$fstab
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_configure() {
@@ -443,26 +462,26 @@ do_script() {
 
 	*"Bourne shell script"*|*"Bourne-Again shell script"*)
 	    echo "Executing $shelldebug shell: $file"
-	    echo "=====   shell: $file   =====" >> $FTMP/shell.log 2>&1
-	    $shelldebug ./$file >> $FTMP/shell.log 2>&1
+	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
+	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
 	;;
 
 	*"cfengine script"*)
 	    echo "Executing cfengine: $file"
-	    echo "=====   cfengine: $file   =====" >> $FTMP/cfengine.log 2>&1
-	    ./$file --no-lock -v -f $file -D${cfclasses} >> $FTMP/cfengine.log 2>&1
+	    echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
+	    ./$file --no-lock -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
 	;;
 
 	*"perl script"*)
 	    echo "Executing perl: $file"
-	    echo "=====   perl: $file   =====" >> $FTMP/perl.log 2>&1
-	    ./$file >> $FTMP/perl.log 2>&1
+	    echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
+	    ./$file >> $LOGDIR/perl.log 2>&1
 	;;
 
 	*"expect script"*)
 	    echo "Executing expect: $file"
-	    echo "=====   expect: $file   =====" >> $FTMP/expect.log 2>&1
-	    ./$file >> $FTMP/expect.log 2>&1
+	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
+	    ./$file >> $LOGDIR/expect.log 2>&1
 	;;
 
 	*) echo "File $file has unsupported type $filetype." ;;
@@ -492,6 +511,7 @@ task_savelog() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
 
+    wait_for_jobs
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
     # $reboot is a FAI_FLAG
     [ -z $reboot ] && read
@@ -545,9 +565,8 @@ task_install() {
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
 	echo "$stamp was not removed."
-	die "Please look at the log files in $FTMP for errors."
+	die "Please look at the log files in $LOGDIR for errors."
     fi
-    wait_for_jobs
     task faiend
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
