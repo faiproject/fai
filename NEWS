@@ -3,16 +3,16 @@ New in FAI 2.3
     - /etc/fai.conf moved to /etc/fai/fai.conf
     - moved some variables from fai.conf to class/*.var
     - if a task is skipped, also all its hooks are skipped
+    - all class/S[0-9]*.source scripts are sourced by defclass
     - hook that end in .source are sourced (formerly .sh), so they can
       define variables
     - add adddivert routine; make a diversion for a file and add it to
       the list of all diversions; you need not care about removing the
       diversion, task finish will do this for you
     - class/*.mod file can now define variables
-    - all class/S[0-9]*.source scripts are sourced by defclass
     - new examples class/S30menu.source (was hook/install.MENU)
     - /fai can be a different location using $FAI in fai.conf
-    - /fai can be retieved from a CVS repository: (see variables
+    - /fai can be retrieved from a CVS repository: (see variables
       FAI_LOCATION, FAI_CVSROOT, FAI_CVSMODULE) and create a
       /etc/fai/.cvspass
     - /etc/apt/preferences will be copied to nfsroot
@@ -22,17 +22,20 @@ New in FAI 2.3
       support for disk controllers using /dev/ida/ and /dev/rd/
       (Compaq SMART2 raid array and Mylex DAC960 PCI RAID controller)
     - make-fai-bootfloppy can write to a file, creates environment for
-      DHCP using pxelinux
+      DHCP using pxelinux, does not copy System.map to floppy (now
+      more space left for the kernel image)
     - bootpc and dhcp request will use only active network devices
       ($netdevices_up determined by netdevice_info()) by default,
       which can be overwritten with $netdevices 
     - add a hint how to set up the kernel automounter for scratch
       partitions
     - fcopy skips CVS directories, executes postinst script if file
-      was copied
+      was copied, new options -L and -P
     - added prtnetgr script which prints a flat list of all hosts
       belonging to a netgroup
-    - execute S[0-9]* scripts if directory /fai/scripts/$class/ exists
+    - execute all /fai/scripts/$class/S[0-9]* scripts if this
+      directory exists, so it's possible to execute multiple scripts
+      for one class 
     - if variable $USER_TMPFS is defined, use shm (was tmpfs) for ramdisk
       (kernel 2.4 only)
     - mkdebmirror uses passive ftp mode
