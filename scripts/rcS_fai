@@ -36,7 +36,6 @@ dhcplog=/tmp/dhcp.log
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 globalconf=/fai/fai_config/global.conf
 logdir=/var/log/fai
-maxyes=2000
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mount_debian_mirror() {
@@ -304,9 +303,12 @@ prepare_apt() {
     chroot $FAI_ROOT apt-get check
     [ $? -ne 0 ] && chroot $FAI_ROOT apt-get -f -y install </dev/null 
     chroot $FAI_ROOT dpkg -C
-    [ $? -ne 0 ] && myyes ''|  chroot $FAI_ROOT dpkg --configure -a 
+    [ $? -ne 0 ] && yes ''|  chroot $FAI_ROOT dpkg --configure -a 
     chroot $FAI_ROOT apt-get -f -y remove pcmcia-cs
     chroot $FAI_ROOT apt-get -f -y upgrade </dev/null
+    # update dpkg info which packages are available
+    chroot $FAI_ROOT apt-cache dumpavail > /tmp/dumpavail
+    chroot $FAI_ROOT dpkg --update-avail /tmp/dumpavail
 
     # fake some programs
     mkdivert /usr/sbin/xserver-configure
@@ -349,9 +351,9 @@ fai_install() {
     if [ "$debug" ]; then
 	install_packages | tee -a /tmp/software.log
     elif [ "$verbose" ]; then
-	myyes '' | install_packages | tee -a /tmp/software.log
+	yes '' | install_packages | tee -a /tmp/software.log
     else
-	myyes '' | install_packages >> /tmp/software.log 2>&1
+	yes '' | install_packages >> /tmp/software.log 2>&1
     fi
 
     fai_configure
