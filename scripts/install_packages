@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.1.2, 15-may-2003";
+my $version = "Version 2.1.3, 1-aug-2003";
 
 use strict;
 use Getopt::Std;
@@ -119,6 +119,7 @@ foreach my $type (@commands) {
     # example: g++; is the package called g+ and should be installed, or just g++?
     $packlist = join(' ',grep {! /[+-]$/} @{$list{$type}});
     my $misspelt = qx{$rootcmd apt-cache show $packlist 2>&1 1>/dev/null};
+    $misspelt =~ s/W: Couldn't stat source .+?\n//g;
     $misspelt =~ s/W: Unable to locate package //g;
     $misspelt =~ s/\n/ /g;
     warn "WARNING: These unknown packages are removed from the installation list: $misspelt\n" if $misspelt;
