@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # $Id$
 #
@@ -145,8 +145,8 @@ task_finish() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
 
-    local frsh doexit
-    doexit=0
+    local frsh
+    local doexit=0
     frsh="$FAI_REMOTESH -l $LOGUSER ${SERVER}"
 
     if [ -z "$LOGUSER" ] ; then
@@ -195,11 +195,15 @@ task_chboot() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sndmon () {
+sndmon() {
 
     # send message to monitor daemon
     [ "$faimond" -eq 0 ] && return 0
-    echo "$HOSTNAME $*" | nc $monserver 4711
+    if [ "$debug"];then
+	echo "$HOSTNAME $*" | nc $monserver 4711
+    else
+	echo "$HOSTNAME $*" | nc $monserver 4711 2>/dev/null
+    fi
     return $?
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
