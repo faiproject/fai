@@ -52,7 +52,6 @@ netdevice_info() {
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
     netdevices_all=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
-
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
@@ -203,6 +202,25 @@ create_ramdisk() {
     cd    /tmp/var && mkdir tmp log lock run spool
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+adddivert() {
+    # add an executable to the list of diversions
+    local item
+    for item in "$@"; do
+	mkdivert $item
+	echo $item >> $divertlist
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+rmalldivert() {
+    # remove all diversions
+    local item
+    [ -s $divertlist ] || return
+    for item in `cat $divertlist`; do
+	rmdivert $item
+    done
+    rm $divertlist
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkdivert() {
 
     # make a diversion of a file
@@ -295,12 +313,12 @@ eval_cmdline() {
 task() {
 
     local taskname=$1
-    call_hook $taskname
     if [ -f /tmp/skip.$taskname ]; then
 	rm /tmp/skip.$taskname
 	[ "$verbose" ] && echo "Skiping task_$taskname"
     else
 	echo "Calling task_$taskname"
+	call_hook $taskname
 	task_$taskname
     fi
 }
@@ -308,24 +326,24 @@ task() {
 call_hook() {
 
     local hook=$1
-    local cl
-    [ "$debug" ] && local dflag="-d"
+    local cl dflag hfile
+    [ "$debug" ] && dflag="-d"
 
     for cl in $classes; do
-	local hfile=$FAI/hooks/${hook}.$cl
+	hfile=$FAI/hooks/${hook}.$cl
 	if [ -x $hfile ]; then
-	   	echo "Call hook: $hook.$cl"
-		# execute the hook
-		$hfile $dflag
-		# is that really good ? Makes sense, if hostname would
-		# be the first hook
-		# execute only one hook if return value is 42
-		# [ $? -eq 42 ] && return
+	    echo "Call hook: $hook.$cl"
+	    # execute the hook
+	    $hfile $dflag
+	    # is that really good ? Makes sense, if hostname would
+	    # be the first hook
+	    # execute only one hook if return value is 42
+	    # [ $? -eq 42 ] && return
 	fi
-	if [ -x $hfile.sh ]; then
-	   	echo "Source hook: $hook.$cl.sh"
-		# source this hook
-		. $hfile.sh $dflag
+	if [ -x $hfile.source ]; then
+	    echo "Source hook: $hook.$cl.source"
+	    # source this hook
+	    . $hfile.source $dflag
 	fi
      done
 }
@@ -569,9 +587,8 @@ prepare_apt() {
     mount -t proc proc $FAI_ROOT/proc
 
     # if libc is upgraded init u is called in chroot environment and
-    #  init will eat up much cpu time
-    mkdivert /sbin/init
-    mkdivert /usr/sbin/liloconfig
+    # then init will eat up much cpu time
+    adddivert /sbin/init /usr/sbin/liloconfig
 
     $ROOTCMD apt-get update
     $ROOTCMD apt-get check
@@ -585,11 +602,8 @@ prepare_apt() {
     $ROOTCMD dpkg --update-avail /tmp/dumpavail
     rm -f $FAI_ROOT/tmp/dumpavail
 
-    rmdivert /usr/sbin/liloconfig
-    # fake some programs
-    mkdivert /usr/sbin/xserver-configure
-    mkdivert /etc/init.d/nis
-    mkdivert /sbin/start-stop-daemon
+    # fake some more programs
+    adddivert /usr/sbin/xserver-configure /etc/init.d/nis /sbin/start-stop-daemon
     cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -671,11 +685,8 @@ cd $FAI/scripts
 task_finish() {
 
     umount -n $FAI_ROOT/proc
-    # undo fake of programs
-    rmdivert /sbin/start-stop-daemon
-    rmdivert /usr/sbin/xserver-configure
-    rmdivert /etc/init.d/nis
-    rmdivert /sbin/init
+    # undo fake of all programs in file $divertlist
+    rmalldivert
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
