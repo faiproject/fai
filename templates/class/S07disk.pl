@@ -4,8 +4,8 @@
 
 # global variables:
 # $numdisks             # number of disks
-# %disksize{$device}    # size for each device in Mb
-# $sum_disk_size        # sum of all disksizes in Mb
+# %disksize{$device}    # size for each device in MB
+# $sum_disk_size        # sum of all disksizes in MB
 
 use Debian::Fai;
 
