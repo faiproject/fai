@@ -17,5 +17,12 @@ ifclass TMP_PARTITION || {
 [ "$FAI_DEBMIRROR" ] && 
 echo "#$FAI_DEBMIRROR $MNTPOINT nfs ro,rsize=8192,wsize=8192 0 0" >> $target/etc/fstab
 
+
+case "$UTC" in
+   no|"") hwopt="--localtime" ;;
+   yes)   hwopt="--utc"       ;;
+esac
+$ROOTCMD hwclock $hwopt --systohc
+
 # the system is now configured
 rm -f $FAI_ROOT/sbin/unconfigured.sh
