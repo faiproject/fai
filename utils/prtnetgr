@@ -4,7 +4,7 @@
 #
 # prtnetgr -- print a host netgroup, convert the netgroup tree to a flat listing
 #
-# (c) 11/2001 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2001-2002 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -12,6 +12,15 @@
 # global variable
 # %netgroup
 
+# - - - - - - - - - - - - - - - - - - - - -
+sub usage {
+
+  print <<EOM
+  Usage: prtnetgrp netgroup_name
+
+  prtnetgrp prints a plain list of all hosts belonging to the netgroup
+EOM
+}
 # - - - - - - - - - - - - - - - - - - - - -
 sub mklist {
 
@@ -21,8 +30,12 @@ sub mklist {
 }
 # - - - - - - - - - - - - - - - - - - - - -
 
-open NET, "<netgroup " or die "Can't read NIS netgroup info\n";
-#open NET, "ypcat -k netgroup |" or die "Can't read NIS netgroup info\n";
+&usage unless @ARGV;
+
+# for debugging
+#open NET, "<netgroup " or die "Can't read NIS netgroup info\n";
+
+open NET, "ypcat -k netgroup |" or die "Can't read NIS netgroup info\n";
 while (<NET>) {
   next if /^\s*$/;
   next if /\(/;
