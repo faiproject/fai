@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.1, 11-jan-2005"
+version="Version 1.2, 12-jan-2005"
 
 # additional files: install_packages.conf
 # variables: NFSROOT, FAI_CONFIGDIR
@@ -101,7 +101,7 @@ umount_dirs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 cleandirs() {
 
-echo "nothing to clean up"
+    return # currently nothing to do
 #    rm $statefile
 #    rm -rf $mirrordir/.apt-move  $statefile
 #    [ $debug -eq 1 ] || rm -rf $aptcache $archivedir
@@ -165,7 +165,7 @@ delete_base_packages() {
 
 preserve=0
 verbose=0
-while getopts "hx:p" opt ; do
+while getopts "vhx:p" opt ; do
     case "$opt" in
 	h) usage ;;
 	x) exclasses="$OPTARG";;
@@ -180,7 +180,10 @@ debug=0
 [ $debug -eq 0 ] && quiet=-q
 
 mirrordir=$1
-[ -z "$mirrordir" ] && mirrordir=/files/scratch/mirror
+if [ -z "$mirrordir" ]; then
+    echo "Please give the directory for the mirror."
+    exit 2
+fi
 if [ -d $mirrordir/pool -o -d $mirrordir/dists ]; then
     echo "Please first remove $mirrordir/pool and $mirrordir/dists"
     exit 3
@@ -210,7 +213,7 @@ echo "Downloading packages for classes:" $classes
 FAI=$FAI_CONFIGDIR install_packages -i $vflag -f /etc/fai
 get_addpackages
 umount_dirs
-trap "" EXIT
+trap "" EXIT ERR
 delete_base_packages
 
 # create mirror directory structure
