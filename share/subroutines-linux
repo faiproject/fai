@@ -58,6 +58,16 @@ task_confdir() {
     echo "SERVER=$SERVER" >> $rcsfaivar
     create_resolv_conf
     get_fai_dir
+
+    # check if monitor server is available
+    [ -z "$monserver" ] && monserver=$SERVER
+    monitor=1
+    if sndmon $HOSTNAME check; then
+	echo "Monitoring to server $monserver enabled."
+    else
+	monitor=0
+	echo "Can't connect $monserver. Disabling monitoring."
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_partition() {
@@ -178,5 +188,13 @@ task_chboot() {
 	  $frsh /usr/sbin/fai-chboot -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
         fi
     fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sndmon () {
+
+    # send message to monitor daemon
+    [ "$monitor" -eq 0 ] && return 0
+    echo "$HOST $*" | nc $monserver 4711
+    return $?
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
