@@ -1,7 +1,7 @@
 FILES = fai-guide.sgml common.ent
 docname = fai-guide
 fdocname = $(docname).sgml
-MISC_DOC = FAQ QUESTIONAIRE classes_description.txt links.html changelog.old README*
+MISC_DOC = FAQ QUESTIONNAIRE classes_description.txt links.html changelog.old README*
 
 %.html: %.sgml
 	debiandoc2html $<
