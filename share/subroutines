@@ -69,6 +69,7 @@ ifclass() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_resolv_conf() {
 
+    # can be an extern script
     # create a resolv.conf using the DHCP or BOOTP information
     if [ "$DNSSRVS" ]; then
 	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
@@ -80,6 +81,7 @@ create_resolv_conf() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 list_disks() {
 
+    # can be an extern script
     # print only every second entry; used by disk_info
     local i ent list
     list="$@"
@@ -124,6 +126,7 @@ mount_local_disks() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_local_disks() {
 
+    # can be an extern script
     local part
     test -d $FAI_ROOT || return
     for part in `grep $FAI_ROOT /proc/mounts | cut -d ' ' -f 2| sort -r`; do
@@ -156,7 +159,12 @@ fstab_mount() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_local() {
 
+
+    # can be an extern script
     # save log files on local disk
+
+    # LOGSERVER is overridable until now
+    [ -z "$LOGSERVER" ] && LOGSERVER=$LOGSERVER
     local logbase=$FAI_ROOT/var/log/fai
     local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$RUNDATE
     find $LOGDIR -size 0 -type f | xargs -r rm
@@ -164,22 +172,32 @@ save_log_local() {
     cp -p $LOGDIR/* $thislog
     ln -sf $HOSTNAME $logbase/localhost
     ln -sf $FAI_ACTION-$RUNDATE $logbase/$HOSTNAME/last-$FAI_ACTION
+    ln -sf $FAI_ACTION-$RUNDATE $logbase/$HOSTNAME/last
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote() {
 
-    # save log files to $LOGUSER/$HOSTNAME/.. on $SERVER
+    # can be an extern script
+    # save log files to $LOGUSER/$HOSTNAME/.. on $LOGSERVER
     # also create a link last-$FAI_ACTION the the directory of the
     # last action. The name of the log directory contains date and
     # time of the action performed
-    [ "$LOGUSER" ] || return
 
-    echo "Saving log files remote to $LOGUSER@$SERVER $HOSTNAME/$FAI_ACTION-$RUNDATE"
+    [ "$LOGUSER" ] || return
+    # LOGSERVER is overridable until now
+    [ -z "$LOGSERVER" ] && LOGSERVER=$SERVER
+
+    echo "Saving log files remote to $LOGUSER@$LOGSERVER $HOSTNAME/$FAI_ACTION-$RUNDATE"
     local thislog=$HOSTNAME/$FAI_ACTION-$RUNDATE
     find $LOGDIR -size 0 -type f | xargs -r rm
-    $FAI_REMOTESH -l $LOGUSER $SERVER "mkdir -p $thislog; cd $HOSTNAME; \
-        rm -f last-$FAI_ACTION; ln -sf $FAI_ACTION-$RUNDATE last-$FAI_ACTION"
-    $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$SERVER:$thislog
+    $FAI_REMOTESH -l $LOGUSER $LOGSERVER " \
+       mkdir -p $thislog ;\
+       cd $HOSTNAME ;\
+       rm -f last-$FAI_ACTION ;\
+       ln -sf $FAI_ACTION-$RUNDATE last-$FAI_ACTION ;\
+       ln -sf $FAI_ACTION-$RUNDATE last"
+
+    $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$LOGSERVER:$thislog
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
@@ -189,6 +207,7 @@ save_dmesg() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
+    # can be an extern script
     # wait for running (background) jobs to finish (e.g. update-auctex-elisp)
     local i=0
     while (jobsrunning); do
