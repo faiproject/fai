@@ -228,12 +228,13 @@ get_bootp_info() {
     local bootlog=/tmp/bootp.log
     # define all bootpc information as variables
     for device in $netdevices; do
-	echo "# --- network device $device ---" >> $bootlog
-	bootpc --dev $device --timeoutwait $timeout --returniffail >> $bootlog
+	echo "Sending BOOTP request using device $device"
+	echo "* --- network device $device ---" >> $bootlog
+	bootpc --dev $device --timeoutwait $timeout --returniffail >> $bootlog 2>&1
     done
 
     [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
-    eval `grep -v "^#" $bootlog`
+    eval `grep -v "^\*" $bootlog`
     FAI_LOCATION=$T170
     FAI_ACTION=$T171
     FAI_FLAGS=$T172
@@ -362,6 +363,8 @@ task_setup() {
 
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
 
+    # FAI_FLAGS are now comma separated
+    FAI_FLAGS=`echo $FAI_FLAGS | sed -e 's/,/ /g'` 
     for flag in $FAI_FLAGS; do
 	eval "$flag=1"
 	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
