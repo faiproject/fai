@@ -179,7 +179,7 @@ inspect the hardware or do any other task.
 <list>
 	    <item> <p> </p> </item>
 
-	    <item> <p>A fully automatic installation can be perfomed</p> </item>
+	    <item> <p>An unattended and fully automated installation can be perfomed</p> </item>
 	    <item> <p>Very quick unattended installation</p> </item>
 	    <item> <p>Hosts can boot from floppy or from network card </p> </item>
 	    <item> <p>BOOTP and DHCP protocol are supported</p> </item>
@@ -702,7 +702,7 @@ Press &lt;RETURN&gt; to reboot or ctrl-c to execute a shell
 When the copyright message is shown, the install client has mounted
 the nfsroot<footnote> <p><file>/usr/lib/fai/nfsroot</file> from the
 install server</p> </footnote> to the directory <file>/</file>. This
-is the whole filesystem for the client at this moment.  When
+is the whole filesystem for the client at this moment. When
 <file>/fai</file> is mounted, the configuration data from the install
 server is available on the client.
 <p>
@@ -976,8 +976,9 @@ device (local disk).
 Before starting your installation, you should spend much time in
 planing your installation. When you're happy with your installation
 concept, FAI can do all the boring, repeating tasks to put your plans
-into practice. FAI can't do good installations, if your concept isn't
-complete or lacks some important details. Start answering following
+into practice. FAI can't do good installations, if your concept is
+imperfect or lacks some important details. Start planing the
+installations by answering yourself following
 questions:
 
 <taglist>
@@ -991,8 +992,8 @@ questions:
   <tag></tag> <item> <p>Which software should be installed ?</p> </item>
   <tag></tag> <item> <p>Which daemons should be started, and how
   should the configuration for these looks like ?</p> </item>
-  <tag></tag> <item> <p>Do I need a special kernel running my hardware
-  ?</p> </item>
+  <tag></tag> <item> <p>Which remote filesystems should be mounted ?</p> </item>
+  <tag></tag> <item> <p>Does the hardware needs a special kernel ?</p> </item>
   <tag></tag> <item> <p></p> </item>
 </taglist>
 
@@ -1013,6 +1014,50 @@ A good paper with more aspects of building an infrastructure is
 "Bootstrapping an Infrastructure".
 
 <chapt id=config>Installation details<p>
+
+<sect id=c3> Configuration<p>
+
+The configuration is the collection of information how exactly to
+install a computer. The central configuration space for all install clients is 
+located on the server in <file>/usr/local/share/fai</file> and all its
+subdirectories. This will be mounted by the install
+clients to <file>/fai</file>. Following subdirectories are available:
+
+<taglist>
+<!-- 
+	  <tag><tt>fai_config/</tt></tag> <item> <p>global parameters</p> </item>
+!-->
+
+	  <tag><tt>class/</tt></tag> <item> <p>scripts and files to
+	  load kernel modules and define classes and variables</p> </item>
+	  <tag><tt>disk_config/</tt></tag> <item> <p>configuration
+	  files for disk partitioning and file system creation</p> </item>
+	  <tag><tt>package_config/</tt></tag> <item> <p>software
+	  packages to be installed or removed</p> </item>
+	  <tag><tt>scripts/</tt></tag> <item> <p>script for customization</p> </item>
+	  <tag><tt>files/</tt></tag> <item> <p>files used by
+	  customization scripts</p> </item>
+</taglist>
+
+The main installation script <prgn>rcS_fai</prgn> uses these
+subdirectories in the order listed. 
+
+<p>
+The configuration space contains some examples if you copy them from
+<file>/usr/share/doc/fai/templates/</file>. 
+
+<taglist>  
+   <tag>bigfoot</tag>  <item> <p>is a server with much software. It
+   hold the home directory and all programs for its clients. Also some
+   daemons are installaed and activated by default.</p> </item>
+   <tag>ant01,...</tag>  <item> <p>are dataless clients, which
+mounts <file>/usr</file> and <file>/home</file> from bigfoot. Most of
+   the disk space is spend for a scratch partition, which is exported
+   to a netgroup of hosts.</p> </item>
+</taglist>
+Start looking at these examples and study them. Then you can change or
+add things to these examples. But don't forget to plan your own
+installation !
 
 <sect id=s1> Set up FAI<p>
 
@@ -1090,7 +1135,7 @@ Following <var>FAI_FLAGS</var> (T172) are known:
 </taglist>
 
 
-<sect id=s2> Details of scripts in <tt>class/</tt><p>
+<sect id=s2> Scripts in <tt>class/</tt><p>
 
 All words in the file <tt>class/$HOSTNAME</tt> are defined as classes.
 Additionally, all files that are executable and match the shell
@@ -1221,58 +1266,13 @@ a file <file>$HOSTNAME.var</file>.
 </taglist>
 
 
-<sect id=c3> Configuration<p>
-
-The configuration is the collection of information how exactly to
-install a computer. The central configuration space for all install clients is 
-located on the server in <file>/usr/local/share/fai</file> and all its
-subdirectories. This will be mounted by the install
-clients to <file>/fai</file>. Following subdirectories are available:
-
-<taglist>
-<!-- 
-	  <tag><tt>fai_config/</tt></tag> <item> <p>global parameters</p> </item>
-!-->
-
-	  <tag><tt>class/</tt></tag> <item> <p>scripts and files to
-	  load kernel modules and define classes and variables</p> </item>
-	  <tag><tt>disk_config/</tt></tag> <item> <p>configuration
-	  files for disk partitioning and file system creation</p> </item>
-	  <tag><tt>package_config/</tt></tag> <item> <p>software
-	  packages to be installed or removed</p> </item>
-	  <tag><tt>scripts/</tt></tag> <item> <p>script for customization</p> </item>
-	  <tag><tt>files/</tt></tag> <item> <p>files used by
-	  customization scripts</p> </item>
-</taglist>
-
-The main installation script <prgn>rcS_fai</prgn> uses these
-subdirectories in the order listed. 
-
-<p>
-The configuration space contains some examples if you copy them from
-<file>/usr/share/doc/fai/templates/</file>. 
-
-<taglist>  
-   <tag>bigfoot</tag>  <item> <p>is a server with much software. It
-   hold the home directory and all programs for its clients. Also some
-   daemons are installaed and activated by default.</p> </item>
-   <tag>ant01,...</tag>  <item> <p>are dataless clients, which
-mounts <file>/usr</file> and <file>/home</file> from bigfoot. Most of
-   the disk space is spend for a scratch partition, which is exported
-   to a netgroup of hosts.</p> </item>
-</taglist>
-Start looking at these examples and study them. Then you can change or
-add things to these examples. But don't forget to plan your own
-installation !
-
-<sect id=classes>Defining classes<p>
-All defined classes are listed in <file>/tmp/FAI_CLASSES</file> and in
-the variable <var>$classes</var>.
 
 <sect id=diskconfig>Hard disk configuration<p>
-Please read
-<file>/usr/share/doc/fai/README.disk_config.gz</file>. There's a Linux
-Parition Mini HOWTO, which contains general information about disk partitions.
+The format of the hard disk configuration files is described in
+<file>/usr/share/doc/fai/README.disk_config.gz</file>.
+The config file <file>/fai/disk_config/CS_KOELN</file> is a generic description for one
+IDE hard disk, which should be OK for most installations.
+
 
 <sect id=packageconfig>Software package configuration<p>
 The script <prgn>install_packages</prgn> installs the selected software
@@ -1334,19 +1334,39 @@ this archive is downloaded to the directory
 the packages.
 
 
-<sect id=cscripts>Scripts in <tt>/fai/class</tt><p>
+<sect id=cscripts>Scripts in <tt>/fai/scripts</tt><p>
 
 The default set of scripts in this directory is only an example. But
-they should do a reasonable jobs for installation. You can edit them
+they should do a reasonable jobs for your installation. You can edit them
 or add new scripts to match your local needs.
 
 
 
+<sect1 id=cfengine>Pro's and Cons for different script languages in <tt>/fai/scripts</tt><p>
+It's possible to use several languages for scripts in
+<file>/fai/scripts</file>. Currently these script languages are
+supported:
+<enumlist>
+ <item><p>Bourne and Bash shell</p> </item>
+ <item><p>Perl</p> </item>
+ <item><p>cfengine</p> </item>
+ <item><p>expect</p> </item>
+ </enumlist>
+
+Most script examples are Bourne shell script. Some cfengine are also
+used. Cfengine has a rich set of functions to edit existing
+configuration files, e.g <tt>LocateLineMatching, ReplaceAll,
+InsertLine, AppendIfNoSuchLine, HashCommentLinesContaining</tt>. But
+it can't handle variables, that are undefined. Shell scripts are good,
+if the configuration task only have to call some commands or create a
+file from scratch. Using the command <prgn>ifclass</prgn>, you can
+write script that are useful for multiple classes. But now have a look
+at the scripts and see what they are doing.
 
 <sect id=errors>Looking for errors<p>
 If the installation process stops or even it finishes, parse all log files for errors using:
 <example>
-> egrep "no such variable|bad variable|E:|ERROR" *.log
+# egrep "no such variable|bad variable|E:|ERROR" *.log
 </example>
 
 You can find sample log files from successful installed computers on the FAI homepage.
