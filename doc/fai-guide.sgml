@@ -6,12 +6,12 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.1.4">
+<!entity faikernelver "1.2">
 <!entity faiver "2.3">
-<!entity faiverdate "15 XXX, 2002">
+<!entity faiverdate "9 apr, 2002">
 
-<!entity version "1.3.2">
-<!entity date    "20 feb 2002">
+<!entity version "1.4">
+<!entity date    "9 apr 2002">
 ]>
 
 <debiandoc>
@@ -213,7 +213,7 @@ inspect the hardware or do any other task.
 	    during installation</p> </item>
 	    <item> <p>All similar configuration are shared among
 	    all install clients</p> </item>
-	    <item> <p>Log files are saved on to the installation server</p> </item>
+	    <item> <p>Log files for all installations are saved on to the installation server</p> </item>
 	    <item> <p>Shell, perl, expect and cfengine scripts are
 	    supported for the configuration setup</p> </item>
 	    <item> <p>Access to a Debian mirror via NFS, FTP or HTTP</p> </item>
@@ -327,23 +327,6 @@ These are important variables in &fc;:
 	  system should be build.
 	    </p> </item>
 
-	    <tag><var>FAI_BASETGZ</var></tag>
-	    <item>
-	      <p>The location, where the the base file is fetched
-	      from. For building the nfsroot, the Debian base system
-	      is needed. It's a big tar file (&basetgzsize for
-	      &basetgz), which is a minimal collection of all required
-	      packages for Debian. If a file &basetgz is already
-	      available in <file>/tmp</file> this file will be used
-	      instead and no file will be fetched from the defined
-	      location. Fetching via ftp or http could take much time,
-	      if you do not have a fast connection to your Debian
-	      mirror. You can find the current version of this archive
-	      in the directory
-	      <tt>debian/dists/stable/main/disks-i386/current/</tt> of
-	      a Debian mirror.</p>
-	    </item>
-
 	    <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>This
 	    multi line string is the definition for
 	    <file>sources.list</file> (used by <manref name="apt-get"
@@ -398,45 +381,54 @@ cards from 3Com. Put that executable in your path
 <prgn>fai-setup</prgn>.
 
 <example>
-kueppers# fai-setup 
-Adding system user fai...
-Stopping Name Service Cache Daemon: nscd.
-Adding new user fai (100) with group nogroup.
-Starting Name Service Cache Daemon: nscd.
-Creating home directory /home/fai.
+kueppers[~]# fai-setup
+Account $LOGUSER=fai already exists.
+Make sure, that all install clients can
+log into this account without a password.
 /home/fai/.rhosts created.
-User account fai created.
+User account fai set up.
 Creating FAI nfsroot can take a long time and will
-need more than 100MB disk space in /usr/lib/fai/nfsroot.
-Unpacking /tmp/base2_2.tgz
+need more than 150MB disk space in /usr/lib/fai/nfsroot.
+dpkg: base-passwd: dependency problems, but configuring anyway as you request:
+ base-passwd depends on libc6 (>= 2.2.4-4); however:
+  Package libc6 is not installed.
+dpkg: base-files: dependency problems, but configuring anyway as you request:
+.
+.
+.
+Automatically converting /etc/network/interfaces succeeded.
+Old interfaces file saved as interfaces.dpkg-old.
+Creating base.tgz
 Upgrading /usr/lib/fai/nfsroot
 Adding additional packages to /usr/lib/fai/nfsroot:
 dhcp-client file rdate cfengine bootpc wget rsh-client less dump
-ext2resize strace hdparm parted dnsutils grub ntpdate psmisc hwtools
-dosfstools sysutils ssh expect5.31
-grep: /etc/ssh/sshd_config: No such file or directory
-grep: /etc/ssh/sshd_config: No such file or directory
-Not starting OpenBSD Secure Shell server (/etc/ssh/NOSERVER)
+ext2resize strace hdparm parted dnsutils grub ntpdate psmisc
+dosfstools sysutils dialog
+Creating SSH2 RSA key
+Creating SSH2 DSA key
+Restarting OpenBSD Secure Shell server: sshd.
+Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-2.2.20
+Output file name        = /boot/fai/installimage
+Kernel command line     = "auto rw root=/dev/nfs nfsroot=kernel nfsaddrs=kernel"
+
+Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001
+Design and Coding by Nick Kroupetski &lt;NickKroupetski@hotmail.com&gt;
+Usage: imggen [OPTION] inputfile outputfile
+  -a,	Add 3Com MBA/BootWare support
+  -r,	Remove 3Com MBA/BootWare support from image file
+  -i,	Show information on an image
+  -h,	Help screen
+
+In filename: /boot/fai/installimage
+Out filename: /boot/fai/installimage_3com
+Adding MBA support...
+MBA support has been succesfully added 
+BOOTP environment prepared.
 make-fai-nfsroot finished.
 Stopping NFS kernel daemon: mountd nfsd.
 Unexporting directories for NFS kernel daemon...done.
 Starting NFS kernel daemon: nfsd mountd.
 Exporting directories for NFS kernel daemon...done.
-Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-&kver;
-Output file name        = /boot/fai/installimage
-Kernel command line     = "auto rw root=/dev/nfs nfsroot=kernel nfsaddrs=kernel"
-
-Image Creator for MBA ROMs v1.00
-Usage: imggen [OPTION] inputfile outputfile
-  -a,   Add 3Com MBA/BootWare support
-  -r,   Remove 3Com MBA/BootWare support from image file
-  -i,   Show information on an image
-  -h,   Help screen
-
-In filename: /boot/fai/installimage
-Out filename: /boot/fai/installimage_3com
-Adding MBA support...
-MBA support has been successfully added 
 You have no FAI configuration. Copy FAI template files with:
 cp -a /usr/share/fai/templates/* /usr/local/share/fai
 Then change the configuration files to meet your local needs.
@@ -458,12 +450,12 @@ map. An example for the netgroup file can be found in
 <file>/usr/share/doc/fai/examples/etc/netgroup</file>. For more
 information, read the manual pages <manref name="netgroup"
 section="5"> and the NIS HOWTO. After changing the netgroups , the NFS
-server has to reload its configuration.  Use one of the following
+server has to reload its configuration. Use one of the following
 commands, depending on which NFS server you are using:
 
 <example>
 kueppers# /etc/init.d/nfs-kernel-server reload
-kueppers# /etc/init.d/nfs-server reload
+kueppers# /etc/init.d/nfs-user-server reload
 </example>
 
 <p>
@@ -533,12 +525,21 @@ Boot Failure Prompt:        Wait for key
 
 Set the boot method to <tt>TCP/IP</tt> and the protocol to either
 <tt>BOOTP</tt> or <tt>DHCP</tt>. I prefer BOOTP because the daemon
-automaticly reloads its configuration when it has changed.
-Make a symbolic link from the hostname of your client to the
-appropriate kernel image in <file>/boot/fai</file>. In the following
-example the host is called <tt>bigfoot</tt>. The file
+automaticly reloads its configuration when it has changed.  Make a
+symbolic link from the hostname of your client to the appropriate
+kernel image in <file>/boot/fai</file>. In the following example the
+host is called <tt>bigfoot</tt>. The file
 <file>installimage_3com</file> is created by <prgn>imggen</prgn> and
-suitable for booting 3Com network cards. You can also use the utility
+suitable for booting 3Com network cards<footnote> <p>If you have
+problems booting with a 3Com network card and get the error "BOOTP
+record too large" after the kernel is transfered to the computer, try
+the imggen-1.00 program to convert the netboot image to a
+installimage_3com image. I had this problem using netboot 0.8.1-4 and
+Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001 but only on an
+Athlon computer.
+</p>
+	  </footnote>
+. You can also use the utility
 <prgn>tlink</prgn> (<file>/usr/share/fai/utils/tlink</file> to create
 this link).
 
@@ -783,7 +784,7 @@ IP-Config: Complete:
      FAI &faiver;, &faiverdate;
      Fully Automatic Installation for Debian GNU/Linux
 
-     Copyright (c) 1999-2001, Thomas Lange
+     Copyright (c) 1999-2002, Thomas Lange
              lange@informatik.uni-koeln.de
    ------------------------------------------------------
 
