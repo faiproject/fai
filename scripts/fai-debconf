@@ -1,0 +1,108 @@
+#! /bin/bash
+
+#*********************************************************************
+#
+# fai-debconf - set debconf values for the install client
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2005 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+version="version 0.2, 7-mar-2005"
+
+# variables needed: $classes, $ROOTCMD, $LOGDIR
+# 
+    
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+call_conf() {
+
+    # loop over all files in debconf
+    local class f
+    cd $debconfdir
+    for class in $classes ; do
+	[ -f $class ] && add_data $class
+	if [ -d $class ]; then
+	   for f in $(ls $class/* | grep -v ~$) ; do
+	       [ -f $f ] && add_data $f
+	   done
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_data() {
+
+    # add debconf data
+    local file=$1
+
+    [ "$verbose" ] && echo "Adding debconf data from $file."
+    $ROOTCMD debconf-set-selections -v < $debconfdir/$file 2> $LOGDIR/debconf.log
+    grep -v ^# $debconfdir/$file >> $LOGDIR/debconf.data
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+reconfigure_packages() {
+
+     local packages p
+     packages=$(awk '{print $1}' $LOGDIR/debconf.data | sort | uniq)
+     for p in $packages; do
+	 # test if package is installed
+	 if [ -f $target/var/lib/dpkg/info/$p.list ]; then
+	     DEBCONF_FRONTEND=noninteractive $ROOTCMD dpkg-reconfigure $p
+	 else
+	     echo "Package $p is not installed. Skip reconfiguration."
+	 fi
+     done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    local ex=$1
+    cat <<-EOF
+        fai-debconf $version. Copyright (C) 2005 Thomas Lange
+        Report bugs to <fai@informatik.uni-koeln.de>.
+
+        Usage: fai-debconf [OPTION] DIRECTORY
+
+EOF
+    exit $ex
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ # main program
+
+reconf=1 # call dpkg-reconfigure by default
+while getopts "hvs" opt ; do
+    case "$opt" in
+	h) usage 0 ;;
+	s) reconf=0 ;;
+	v) verbose=1 ;;
+    esac
+done
+shift $(($OPTIND - 1))
+[ -z "$1" ] || [ -n "$2" ] && usage 1
+
+if [ "x$classes" = "x" ]; then
+    echo "No classes are defined."
+    exit 9
+fi
+
+debconfdir=$1 # will be /fai/debconf
+
+call_conf # add data to debconf database
+[ $reconf -eq 1 ] && reconfigure_packages
