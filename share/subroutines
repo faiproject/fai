@@ -162,8 +162,6 @@ get_fai_dir() {
         mount $romountopt $FAI_LOCATION $FAI &&
 	    echo "Configuration space $FAI mounted from $FAI_LOCATION"
     fi
-    # source user specific subroutines
-    [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_fai_cvs() {
@@ -207,17 +205,14 @@ define_fai_flags() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_setup() {
 
+    # source user specific subroutines
+    [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
     # set the system time and date using rdate or/and ntpdate
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
 
     define_fai_flags
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
-
-#    not yet used, maybe use a hook for that
-#    if [ "$FAI_EXTRA_MOUNT" ]; then
-#	mount $romountopt -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
-#    fi
 
     [ "$createvt" ] && {
 	# create two virtual terminals; acces via alt-F2 and alt-F3
@@ -228,14 +223,12 @@ task_setup() {
 
     # start secure shell daemon for remote access
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
-    disk_info # get and define all information of local disks
 
     # when did FAI start, using localtime
     FAI_RUNDATE=$(date +'%Y%m%d_%H%M%S')
 
     cat >> $rcsfaivar <<-EOM
 	FAI_RUNDATE=$FAI_RUNDATE
-	FAI_ACTION=$FAI_ACTION
 	LOGDIR=$LOGDIR
 EOM
 }
@@ -259,10 +252,6 @@ task_action() {
 	    task sysinfo
 	    die Now you have a shell.
 	    ;;
-	backup)
-	    echo Doing backup of multiple partitions.
-	    task backup
-	    ;;
 	*)
 	    if [ -f $FAI/hooks/$FAI_ACTION ]; then
 		echo "Calling user defined action: $FAI_ACTION"
@@ -281,7 +270,7 @@ task_defclass() {
 
     # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
     fai-class $FAI/class $LOGDIR/FAI_CLASSES
-    classes=`cat $LOGDIR/FAI_CLASSES`
+    classes=$(< $LOGDIR/FAI_CLASSES)
 
     # also define all classes in reverse order ($revclasses)
 #    for class in $classes ; do
@@ -325,7 +314,6 @@ task_mountdisks() {
        local sd
        for sd in $SWAPLIST; do
 	   swapon $sd && [ "$verbose" ] && echo "Enable swap device $sd"
-
        done
     fi
     mount2dir $FAI_ROOT $LOGDIR/$fstab
@@ -423,20 +411,7 @@ task_faiend() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_backup() {
 
-die "Task backup not yet used. But you can use the hook backup."
-# NOT YET USED. IT'S ONLY AN IDEA
-
-# FAI_BACKUP_LIST contains backup options
-# proposed format: "hda1 hda3 hda12 sda2 '0 0 1 1'"
-#                  list of devices  list of backup levels
-# this subroutine is not yet tested, not yet used
-# It's only an idea how a backup could be made
-#    local partition
-#    fai-mount-disk
-#    for partition in $SAVE_DEVICES ; do
-	# tar cf - $FAI_ROOT/$partition | $FAI_REMOTESH -l $LOGUSER $SERVER dd if= of=$HOSTNAME.$partition.tar
-#	dump 0f $LOGUSER@$SERVER:backup/$HOSTNAME/$partition.dmp $FAI_ROOT/$partition
-#    done
+    die "Task backup not yet used. But you can use the hook backup."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_install() {
@@ -444,7 +419,6 @@ task_install() {
     > $stamp
 
     save_dmesg
-    load_keymap_consolechars
 
     task partition
     task mountdisks
