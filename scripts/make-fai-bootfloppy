@@ -27,11 +27,17 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.6, january 2001"
+version="version 1.7, february 2001"
 set -e
 MKIMAGE=0
 floppydev=/dev/fd0
 mountopts=""
+trap "umount_dirs" EXIT
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+umount_dirs() {
+    cd /
+    umount /floppy
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
@@ -130,8 +136,10 @@ fi
 
 mke2fs $mkfsopt -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
 mount $mountopts $floppydev /floppy || die "Can't mount floppy $floppydev"
-cp -ad $NFSROOT/boot /floppy
-mkdir -p /floppy/etc
+mkdir /floppy/boot /floppy/etc
+cd $NFSROOT/boot
+# do not copy System.map*
+cp -dp map chain* boot* vmlinuz-$KERNELVERSION /floppy/boot 2>/dev/null || true
 ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
 # since lilo 21.5, boot.b is a link
 [ -e /floppy/boot/boot.b ] || ln -fs /floppy/boot/boot-compat.b /floppy/boot/boot.b
@@ -157,13 +165,10 @@ cat >> /floppy/etc/lilo.conf <<-EOF
     read-only
 EOF
 
-echo now writing boot data to floppy
 $NFSROOT/sbin/lilo -C /floppy/etc/lilo.conf
-cd /
-umount /floppy
 
 cat <<EOF
-FAI boot floppy created.
+Writing boot data to floppy.
    boot protocol : $TYPE
    nfsroot       : $SERVERIP:$NFSROOT
    parameters    : $params
