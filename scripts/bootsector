@@ -9,7 +9,7 @@ seek=510
 usage() {
 
 cat <<EOF
-    bootsector [-edl] diskdevice
+    bootsector [-edlv] diskdevice
 
 Read the magic number (the last two bytes) of a boot sector or write
 it. Writing 0000 to it disables bootig of the boot sector, writing
@@ -17,8 +17,8 @@ it. Writing 0000 to it disables bootig of the boot sector, writing
 
     -e    enable the boot sector
     -d    disable the boot sector
-    -l    list the magic number
-    -v    list the magic number
+    -l    list the magic number hexadecimal
+    -v    list the magic number is a verbose way
 
 Examples:
 
@@ -35,21 +35,28 @@ EOF
 
 [ "$1" = "-h" ] && usage
 
-[ "$2" ] || {
+arch=`dpkg --print-installation-architecture`
+[ "$arch" = "i386" ] || {
+    Currently only i386 architecure is supported.
+    exit 1
+}
 
+[ "$2" ] || {
     echo "Specify a disk device."
     exit 0
 }
 
-      case $1 in
+case $1 in
 
-	   -e) echo -ne "\x55\xaa" | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
-	   -d) echo -ne "\x0\x0"   | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
-	   -l) dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002 ;;
-	   -v) bs=`dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002`
-	   case $bs in
-	   "0000000 0000") echo "Boot sector $2 disabled." ;;
-	   "0000000 aa55") echo "Boot sector $2 enabled." ;;
-	   esac
-      esac
+    -e) echo -ne "\x55\xaa" | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
+    -d) echo -ne "\x0\x0"   | dd bs=1c seek=$seek of=$2 2>/dev/null ;;
+    -l) dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002 ;;
+    -v) bs=`dd bs=1c skip=$seek count=2 if=$2 2>/dev/null|od -x|grep -v 0000002`
+	case $bs in
+	    "0000000 0000") echo "Boot sector $2 disabled." ;;
+	    "0000000 aa55") echo "Boot sector $2 enabled." ;;
+	esac
+	;;
+esac
+
 exit
