@@ -76,11 +76,9 @@ fai_init() {
     if [ X$OSTYPE = Xlinux ];then
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
-	mount -n -t proc proc /proc
 	mount -n -t devpts devpts /dev/pts
 	mount -n -o remount,rw,rsize=8192 /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
-	create_ramdisk
     fi
 
     {
@@ -100,11 +98,26 @@ EOF
     } > >( tee -a $rcslog )  2>&1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Main routine
+create_ramdisk() {
 
+    mount -n -t proc proc /proc
+    mount -t shm shm /tmp || {
+	local ramdevice=/dev/ram0
+	mke2fs -q -m 0 $ramdevice && echo "ramdisk $ramdevice created"
+	mount -n $ramdevice /tmp
+    }
+    # now create the required subdirectories
+    mkdir /tmp/var /tmp/etc /tmp/target /tmp/fai
+    cd    /tmp/var && mkdir tmp log lock run spool
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Main routine
 # callarg=$1
-fai_init
+
+[ `uname -s` = Linux ] && create_ramdisk
+
 {
+fai_init
 task confdir
 task setup
 task defclass
