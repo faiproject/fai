@@ -36,13 +36,16 @@ if [ `id -u` -ne 0 ]; then
 fi
 
 merror="properly"
-while getopts rvc:f:k opt ; do
+# option e currently does nothing
+while getopts ervc:f:kK opt ; do
     case "$opt" in
         c) cfdir=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
         r) recover=1 ;;
         f) cfg=$OPTARG ;;
         k) kinstall=1 ;;
+        K) kremove=1; kinstall=1 ;;
+	e) expert=1 ;;
         ?) exit 5 ;; # error in option parsing
     esac
 done
@@ -440,7 +443,12 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
 
-
+# remove all kernels from nfsroot
+[ -n "$kremove" ] && {
+    echo "Removing all kernels from NFSROOT."
+    rm -f $NFSROOT/boot/{System.map,vmlinuz,config}*
+    rm -rf $NFSROOT/lib/modules/2.*
+}
 # just install a new kernel to the nfsroot
 [ -n "$kinstall" ] && {
     trap "true" EXIT
