@@ -9,27 +9,29 @@
 rsync_disks() {
 
     # get the boot disks
-    rsync --delete -av $rsynchost::debian/dists/$1/main/disks-$arch $destdir/dists/$1/main/
+    rsync --delete -av $rsynchost::debian/dists/$1/main/disks-$arch $destdir/debian/dists/$1/main/
 }
 
-rsynchost=ftp2.de.debian.org
+rsynchost=ftp.de.debian.org
 host=ftp2.de.debian.org
 destdir=/files/scratch
 
 arch=i386
 #debug="--debug"
 debug="$*"
-defopt="$debug --getcontents --arch=$arch --host=$host --nosource --dist=potato,sid,woody"
+defopt="$debug --getcontents --arch=$arch --host=$host --nosource --dist=potato,sid,woody --ignore=Release"
 
 echo "------------------ create mirror for debian ------------------"
 debmirror $destdir/debian $defopt --ignore="disks-$arch/" --adddir="dists/potato-proposed-updates"
+rsync -vrR $rsynchost::debian/dists/\*/Release/ $destdir/debian
 
 echo "------------------ create mirror for debian-non-US ------------------"
 debmirror $destdir/debian-non-US $defopt -r /debian-non-US -s non-US/main,non-US/contrib,non-US/non-free
+rsync -vrR $rsynchost::debian-non-US/dists/\*/Release/ $destdir/debian-non-US
 
 echo "------------------ create mirror for debian-security ------------------"
 # even one should not mirror the security site, but I will do it.
-debmirror $destdir/debian-security $debug --getcontents --nosource --arch=$arch --host=security.debian.org -r debian-security -d potato/updates --ignore=Release --ignore=Packages.gz --ignore=Contents-$arch.gz
+debmirror $destdir/debian-security $debug --getcontents --nosource --arch=$arch --host=security.debian.org -r debian-security -d potato/updates
 
 rsync_disks potato
 rsync_disks woody
