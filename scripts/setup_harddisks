@@ -37,6 +37,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes:  8.11.2004 by Thomas Lange add $devdisklist when calling sfdisk
 # Last changes:   3.2.2004 by Thomas Lange typos
 # Last changes: 14.07.2003 by Thomas Lange add xfs filesystem support
 # Last changes: 23.01.2003 by Thomas Lange print info data to stdout
@@ -147,7 +148,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-my $Version = "0.29fai";
+my $Version = "0.30fai";
 
 my $megabyte = 1024 * 1024;    # guess
 # $gigabyte = 1024 * $megabyte;
@@ -257,8 +258,14 @@ sub PartName {
 #****************************************************
 sub GetAllDisks{
     my $line=""; my $disk=""; my $device=""; my $rest; my $result; my $divi;
+    my $devdisklist="";
+
+    foreach my $device(split(/\s/,$ENV{disklist})){
+      $devdisklist = "$devdisklist /dev/$device";
+    }
+    print "Probing disks: $devdisklist\n";
     print "Disks found:";
-    $result = `sh -c "LC_ALL=C sfdisk -g -q"`;
+    $result = `sh -c "LC_ALL=C sfdisk -g -q $devdisklist"`;
     foreach my $line(split(/\n/,$result)){
 	if($line =~ m'^/dev/(.+?):\s+(\d+)\s+cylinders,\s+(\d+)\s+heads,\s+(\d+)\s+sectors'i){
 	    $disk = $1;
@@ -268,7 +275,7 @@ sub GetAllDisks{
 	    print " $disk";
 	}
     }
-    $result = `sh -c "LC_ALL=C sfdisk -d -q"`;
+    $result = `sh -c "LC_ALL=C sfdisk -d -q $devdisklist"`;
     foreach my $line(split(/\n/,$result)){
 #	if($line =~ m'# partition table of /dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|[a-z]+)'i){
 # now just match all devices
