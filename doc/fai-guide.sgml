@@ -130,7 +130,7 @@ operating system can be made by cfengine, shell, perl and expect scripts.
 <p>
 FAI's target group are system administrators how have to install
 Debian onto one or even hundreds of computers. Because it's a general
-purpose installation tool, it can be used for installing a beowulf
+purpose installation tool, it can be used for installing a Beowulf
 cluster, a rendering farm or a linux laboratory or a classroom. Also
 large-scale linux networks with different hardware or different installation
 requirements are easy to establish using FAI. But don't forget to plan
@@ -376,7 +376,7 @@ These are important variables in &fc;:
 The variables <var>FAI_SOURCES_LIST</var> and <var>FAI_DEBMIRROR</var>
 are used by the install server and also by the clients. If your
 install server has multiple network card and different host names for
-each card (as for a beowulf server), use the install
+each card (as for a Beowulf server), use the install
 server name which is known by the install clients.<p>
 
 FAI uses <manref name="apt-get" section="8"> to create the nfsroot
@@ -474,12 +474,14 @@ install clients. This is described in section <ref id="bootfloppy">.
 When you make changes to &fc; or want to install a new kernel to
 nfsroot, the nfsroot has to be rebuild by calling <prgn>make-fai-nfsroot</prgn>.
 
-<sect1 id=troublefaisetup> Troubleshooting set up
-The set up of FAI add the FAI account, exports file systems and calls
-<prgn>make-fai-nfsroot</prgn>. If you call make-fai-nfsroot
-X-v you will see more messages. When using a local Debian
-mirror it's important, that the install server can mounted this
-directory via NFS. Sometimes it has to mount it from itself.
+<sect1 id=troublefaisetup> Troubleshooting set up<p>
+
+The set up of FAI adds the FAI account, exports file systems and calls
+<prgn>make-fai-nfsroot</prgn>. If you call <tt>make-fai-nfsroot -v</tt> you
+will see more messages. When using a local Debian mirror it's
+important, that the install server can mounted this directory via
+NFS. If this mount fails, check <file>/etc/exports</file> and <file>/etc/netgroup</file>.
+An example can be found in <file>/usr/share/doc/fai/examples/etc/netgroup</file>.
 
 
 <chapt id="booting">Preparing booting <p> 
@@ -925,11 +927,11 @@ software to local disk. An installation with 90 MB software (a
 dataless client) only needs two minutes. The checking for bad blocks
 on a 4 GB partition needs additional 6 minutes. Using a 100 Mbit LAN does
 not decrease the installation time considerable, so the network will
-not be the bottleneck when installing multiple clients simultaneously.
+not be the bottleneck when installing several clients simultaneously.
 
 <sect id=isetup>Set up FAI<p>
 
-After the install client has booted, only the program
+After the install client has booted, only the script
 <file>/sbin/rcS_fai</file><footnote><p>Since the root filesystem on
 the clients is mounted via NFS, <prgn>rcS_fai</prgn> is located in
 <file>/usr/lib/fai/nfsroot/sbin</file> on the install server.</p>
@@ -957,7 +959,7 @@ to these classes. A class is defined or undefined and has no
 value. Only defined classes are of interest for an install client.  A
 description of all classes can be found in
 <file>/usr/share/doc/fai/classes_description.txt</file>. It is
-advisable to document the task a new class performs. Then, this
+advisable to document the job a new class performs. Then, this
 documentation is the base for composing a configuration from classes.
 
 <p>
@@ -967,24 +969,19 @@ more classes after the kernel has loaded modules and recognized new hardware.
 A complete description of all these scripts can be found in <ref id="cscripts">.
 <p>
 
-After defining the classes, every file
-matching <tt>*.var</tt>, which prefix is a defined class, is executed
-to define variables.
+After defining the classes, every file matching <tt>*.var</tt>, which
+prefix is a defined class, is executed to define variables.
 
 <sect id=ipartition>Partitioning local disks, creating filesystems<p>
 
-Then one (only one) disk configuration file from
+Then exactly one disk configuration file from
 <file>/fai/disk_config</file> is selected using classes. It's the
 description how all the local disks will be partitioned, which
 filesystems should be created and how they are mounted. It's also
 possible to preserve the disk layout or to preserve the data on a
-partition. It's done by the command <prgn>setup_harddisks</prgn>
-<footnote> <p>If <prgn>/usr/local/bin/my-fdisk</prgn> exists, this
-command is used instead. In future, this script will be completely
-rewritten. Plans are to use <prgn>parted</prgn> or <prgn>fdisk</prgn>
-and the device filesystems <tt>devfs</tt>. </footnote>, which uses
-<prgn>sfdisk</prgn> for obtaining disk information and for
-partitioning. The format of the configuration file is described in
+partition. It's done by the command <prgn>setup_harddisks</prgn>,
+which uses <prgn>sfdisk</prgn> for partitioning. The format of the
+configuration file is described in
 <file>/usr/share/doc/fai/README.disk_config</file>.
 <p>
 During the installation process all local filesystems are mounted
@@ -1099,16 +1096,17 @@ and its subdirectories. This will be mounted by the install clients to
 
 <taglist>
 	  <tag><tt>class/</tt></tag> <item> <p>Scripts and files to
-	  load kernel modules and define classes and variables.</p> </item>
+	   define classes and variables and to load kernel modules.</p> </item>
 	  <tag><tt>disk_config/</tt></tag> <item> <p>Configuration
 	  files for disk partitioning and file system creation.</p> </item>
-	  <tag><tt>package_config/</tt></tag> <item> <p>Software
+	  <tag><tt>package_config/</tt></tag> <item> <p>File with
+	   lists of software
 	  packages to be installed or removed.</p> </item>
 	  <tag><tt>scripts/</tt></tag> <item> <p>Script for customization.</p> </item>
 	  <tag><tt>files/</tt></tag> <item> <p>Files used by
-	  customization scripts.</p> </item>
+	  customization scripts, eg. user created kernel packages.</p> </item>
 	  <tag><tt>hooks/</tt></tag> <item> <p>Hooks are user defined
-	  programs, which are called during the installation process.
+	  programs or scripts, which are called during the installation process.
 </taglist>
 
 The main installation script <prgn>rcS_fai</prgn> uses these
@@ -1120,7 +1118,7 @@ to the configuration space and start an installation.
 </example>
 
 These files contain configuration for some example hosts. Thers a
-clsuter of workstation (<em>bigfoot, ant01, ant02,...</em>) and a beowulf
+clsuter of workstation (<em>bigfoot, ant01, ant02,...</em>) and a Beowulf
 cluster with a mster node called <em>nucleus</em> and computing nodes
 <em>atom01, atom02,...</em>.
 
@@ -1129,11 +1127,11 @@ cluster with a mster node called <em>nucleus</em> and computing nodes
    provides the home directory and all programs for its NFS clients. Also some
    daemons are installed and activated by default.</p> </item>
    <tag>ant01,...</tag>  <item> <p>These dataless clients mount
-   <file>/usr</file> and <file>/home</file> from bigfoot. Most of
+   <file>/usr</file> and <file>/home</file> from <em>bigfoot</em>. Most of
    the disk space is spend for a scratch partition, which is exported
    to a netgroup of hosts.</p> </item>
 
-   <tag>nucleus</tag>  <item> <p>This beowulf master node is a server with much software. It
+   <tag>nucleus</tag>  <item> <p>This Beowulf master node is a server with much software. It
    provides the home directory and all programs for its computing nodes. Also some
    daemons are installed and activated by default.</p> </item>
    <tag>atom01,...</tag>  <item> <p>These clients mount
@@ -1144,6 +1142,108 @@ cluster with a mster node called <em>nucleus</em> and computing nodes
 Start looking at these examples and study them. Then change or add
 things to these examples. But don't forget to plan your own
 installation !
+
+<sect id=tasks>The default tasks<p>
+
+After the kernel has booted it mounts the root file system via NFS
+from the install server and init starts the script
+<file>/sbin/rcS_fai</file>. This is the script which controls the
+whole sequence of the installation. No other scripts in
+<file>/etc/init.d</file> are used.
+<p>
+
+The installation script <file>rcS_fai</file> uses many subroutines,
+which are defined in <file>/usr/share/fai/subroutines</file>. All
+important tasks of the installation are called via the call <tt>task
+<em>name</em></tt>. This subroutine calls hooks with prefix
+<em>name</em> if available and then calls the default task (defined as <tt>task_<em>name</em></tt>) if it shouldn't be skiped.
+<p>
+
+This is the description of all default tasks.
+<taglist>
+
+      <tag>confdir</tag> <item><p>The kernel append parameters define
+variables the syslog and kernel log daemon are started. The list of
+network devices is stored in <var>$netdevices</var>. Then additional
+parameters are fetched from a DHCP or BOOTP server and also define
+variables.  The resolver configuration file is created and the
+configuration space is mounted from the install server to
+<file>/fai</file>. The last step is to mount the configuration
+directory to <file>/fai</file> and to source the file
+<file>/fai/hooks/subroutines</file> if it exists. Using this file, you
+can define your own subroutines or override the definition of FAI's
+subroutines.
+
+      <tag>setup</tag> <item><p>The system time is set, all FAI_FLAGS
+      are defined and two additional virtual terminals are opened. A
+      secure shell daemon is started on demand for remote login. A
+      list of all local hard disks is stored to <var>$disklist</var>
+      and <var>$device_size</var> contains a list of devices and their size.
+
+      <tag>action</tag> <item><p>This subroutine decides depending on
+      the value of <var>$FAI_ACTION</var> which action FAI should
+      perform. The default actions are: <tt>sysinfo, install,
+      backup</tt>. A user defined action is called, if a file
+      <file>/fai/hooks/$FAI_ACTION</file> exists.
+
+      <tag>sysinfo</tag> <item><p>Called when no installation is
+      performed but the action is <tt>sysinfo</tt>. Show information
+      about the detected hardware. Mounts the local hard disks read
+      only to <file>/tmp/target/partitionname</file> or with regard to a
+      <file>fstab</file> file. Log files are stored to the install server.</p> </item>
+
+     <tag>backup</tag> <item><p>Called when action is
+     <tt>backup</tt>. Currently no default backup subroutine is defined.</p>
+     </item>
+
+     <tag>install</tag> <item><p>This task controls the installation
+     sequence. The major work is to call other tasks.</p> </item>
+
+      <tag>defclass</tag> <item><p>Defines classes using scripts and
+      files in <file>/fai/class</file>.</p> </item>
+
+      <tag>defvar</tag> <item><p>Sources all files in
+      <file>/fai/class/*.var</file> for every defined class.</p>
+
+      </item> <tag>partition</tag> <item><p>Calls
+      <prgn>setup_harddisk</prgn> to partition the hard disks. Defines
+      variables for the root and boot device
+      (<var>$ROOT_PARTITION, $BOOT_PARTITION</var>)</p> </item>
+
+      <tag>mountdisks</tag> <item><p>Mounts the created partitions
+      according to the created <file>fstab</file> file.
+      XXX relativ to <var>$FAI_ROOT</var>.</p> </item>
+
+    <tag>extrbase</tag> <item><p>Extracts the base tar file <file>base.tgz</file>.</p> </item>
+
+      <tag>mirror</tag> <item><p>If a local mirror is accessed via
+      NFS, this directory will be mounted.</p> </item>
+
+      <tag>updatebase</tag> <item><p>Prepares the extracted base
+      system for futher installation XXXX and updates the list of available
+      packages. Updates the packages to the newest version.</p> </item>
+
+      <tag>instsoft</tag> <item><p>Install the desired software
+      packages using class files in <file>/fai/packages_config</file>.</p> </item>
+
+	<tag>configure</tag> <item><p>Call scripts in
+      <file>/fai/scripts/</file>.</p> </item>
+
+      <tag>finish</tag> <item><p>Umounts the proc filesystem in the
+new installed system and removes diversions of files.</p> </item>
+
+      <tag>faiend</tag> <item><p>Automaticly reboot the install
+      clients or waits for manuals input before reboot.</p> </item>
+
+      <tag>chboot</tag> <item><p>Change sysbolic link on install
+      server, which indicates which kernel image to load on next boot
+      from network card.</p> </item>
+
+      <tag>savelog</tag> <item><p>Save log file to local disk and to
+      the install server.</p> </item>
+
+ </taglist>
+
 
 <sect id=s1> Set up FAI<p>
 
@@ -1289,7 +1389,7 @@ then added to the host.
 
 <sect id=s2> Defining classes<p>
 
-This part is done by the task <em>defclass</em><p>
+This part is done by the task: <em>defclass</em><p>
 
 The main FAI script <file>rcS_fai</file> defines the classes
 <tt>DEFAULT, LAST, $HOSTNAME</tt> and all classes in the file
@@ -1368,7 +1468,7 @@ the on the fourth console terminal (pressing <tt>Alt-F4</tt>).<p>
 
 <sect id=classvariables> Variables in <tt>class/*.var</tt><p>
 
-This part is done by the task <em>defvar</em><p>
+This part is done by the task: <em>defvar</em><p>
 
 All variables can be set global in <file>DEFAULT.var</file>. For
 certain groups of hosts use a class file or for a single host use
@@ -1647,79 +1747,14 @@ be bourne shell scripts and are sourced. So it's possible to
 redefine variables for the installation scripts.
 <p>
 This is the complete list of hooks and when they will be called.
-
-<taglist>
-      <tag>confdir</tag> <item><p>After some basic initialization,
+XXXXXXXXXXXXX
+ After some basic initialization,
       all hooks with prefix <tt>confdir</tt> are called. Since the
       configuration directory <file>/fai</file> is not yet mount on
       the install client, these are the only hooks located in
       <tt>$</tt><file>nfsroot/fai/hooks</file> on the install server.
       All other hooks are found in
-      <file>/usr/local/share/fai/hooks</file>. The last step is to
-      mount the configuration directory to <file>/fai</file> and to
-      source the file <file>/fai/hooks/subroutines</file> if it
-      exists. Using this file, you can define your own subroutines or
-      override the definition of FAI's subroutines.</p>
-      </item>
-
-      <tag>setup</tag> <item><p>These hooks are immediately called
-      after the configuration directory is mounted to
-      <file>/fai</file>. </p> </item>
-
-      <tag>action</tag> <item><p>Hooks called before the variable
-      <var>FAI_ACTION</var> is evaluated and it's decided which action
-      to perform.</p> </item>
-
-      <tag>sysinfo</tag> <item><p>Called when no installation is
-      performed but the action is <tt>sysinfo</tt>.</p>
-      </item>
-
-     <tag>backup</tag> <item><p>Called when action is
-     <tt>backup</tt>. Here you can define your own backup taks.</p>
-     </item>
-
-     <tag>install</tag> <item><p>These hooks are called when the
-      <var>FAI_ACTION</var> is <em>install</em> and a automatic
-      installation should be performed.</p> </item>
-
-      <tag>defclass</tag> <item><p>Called before defining classes.</p>
-      </item>
-
-      <tag>defvar</tag> <item><p>Called before defining variables.</p>
-      </item> <tag>partition</tag> <item><p>Called before partitioning
-      the local hard disks.</p> </item>
-
-      <tag>mountdisks</tag> <item><p>Called before the local disks are
-      mounted to <var>$FAI_ROOT</var>.</p> </item>
-
-    <tag>extrbase</tag> <item><p>Called before the base archive
-    <file>base.tgz</file> in unpacked.</p> </item>
-
-      <tag>mirror</tag> <item><p>Called before the Debian mirror would
-      be mounted when accessing he Debian mirror via NFS.</p> </item>
-
-      <tag>updatebase</tag> <item><p>Called before the base system is
-      upgraded.</p> </item>
-
-      <tag>instsoft</tag> <item><p>Called before the software packages
-      are installed.</p> </item>
-
-	<tag>configure</tag> <item><p>Called before the scripts in
-      <file>/fai/scripts/</file> are called.</p> </item>
-
-      <tag>finish</tag> <item><p>Called after the coniguration is
-finished.</p> </item>
-
-      <tag>faiend</tag> <item><p>Called when the installation is
-      finished, but before the automatic reboot is performed.</p> </item>
-
-      <tag>chboot</tag> <item><p>Called before the boot device should
-      be changed.</p> </item>
-
-      <tag>savelog</tag> <item><p>Called before are log files are save
-      to local disk and to the install server.</p> </item>
-
- </taglist>
+      <file>/usr/local/share/fai/hooks</file>.
 
 FAI has default jobs for following values of <var>FAI_ACTION</var>.
 
@@ -1804,10 +1839,10 @@ mailing list or to <email>fai@informatik.uni-koeln.de</email> if you
 have any questions. Sample log files from successful
 installed computers are available on the FAI homepage.
 
-<chapt id=beowulf>How to build a beowulf cluster using FAI<p>
+<chapt id=beowulf>How to build a Beowulf cluster using FAI<p>
 
 This chapter describes the particularities about building a beowuld
-cluster. For maore information about the beowulf concept, look at
+cluster. For maore information about the Beowulf concept, look at
 <httpsite>http://www.beowulf.org/</httpsite>. The master node (in my
 examples I call it <em>nucleus</em>) has two
 network cards. One for the connection to the external Internet, one for
@@ -1850,7 +1885,7 @@ Debian 2.2 (aka potato).
 
 Add following lines for the second network card to <file>/etc/network/interfaces</file>:
 <example>
-# beowulf cluster connection
+# Beowulf cluster connection
 iface eth1 inet static
 address 192.168.49.200
 netmask 255.255.255.0
@@ -1859,7 +1894,7 @@ broadcast 192.168.49.255
 
 <file>/etc/hosts</file>:
 <example>
-# beowulf nodes
+# Beowulf nodes
 # atom00 is the master server
 192.168.49.200 atom00
 192.168.49.1 atom01
@@ -1872,6 +1907,12 @@ Add following packages to the install server
 
 It's very important to use the network name of the cluster network for
 the master node in <file>/etc/bootptab</file> and <file>/etc/fai.conf</file>.
+
+Adjust this file in <file>/etc/fai.conf</file> so the Beowulf nodes
+can use the name for connecting their master server.
+<example>
+NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
+</example>
 
 <file>/etc/bootptab:</file>
 <example>
