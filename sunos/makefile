@@ -16,7 +16,7 @@ tar: install
 
 install: 
 	rm -rf $(DESTDIR)
-	mkdir -p $(FAI) $(DESTDIR)/lib
+	mkdir -p $(FAI) $(DESTDIR)/lib $(DESTDIR)/hooks
 	cp -a README.sunos bin $(DESTDIR)
 	cp -a class disk_config package_config scripts files $(FAI)
 	cd ../scripts ; install $(SCRIPTS) $(DESTDIR)/bin
