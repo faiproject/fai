@@ -211,7 +211,7 @@ task_setup() {
 
     # source user specific subroutines
     [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
-    if [ "$DO_INIT_TASKS" ]; then
+    if [ $DO_INIT_TASKS -eq 1 ]; then
         # set the system time and date using rdate or/and ntpdate
         [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
         [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
@@ -220,7 +220,7 @@ task_setup() {
     define_fai_flags
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
 
-    if [ "$DO_INIT_TASKS" ] ; then
+    if [ $DO_INIT_TASKS -eq 1 ] ; then
         [ "$createvt" ] && {
 	    # create two virtual terminals; acces via alt-F2 and alt-F3
 	    echo "Press ctrl-c to interrupt FAI and to get a shell"
@@ -248,6 +248,10 @@ task_action() {
     case $FAI_ACTION in
 
 	install)
+	    if [ $DO_INIT_TASKS -eq 0 ]; then
+		echo "Cowardly refusing to run a FAI installation on a running system."
+		return
+	    fi
 	    echo Performing FAI installation. All data may be overwritten!
 	    echo -ne "\a"; sleep 1
 	    echo -ne "\a"; sleep 1
@@ -288,8 +292,17 @@ task_defclass() {
     fi
 
     # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
-    fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
-    classes=$(< $LOGDIR/FAI_CLASSES)
+    if [ $renewclass -eq 1 ]; then
+	# reevaluate new list of classes
+	fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
+	classes=$(< $LOGDIR/FAI_CLASSES)
+    else
+	# use classes defined at installation time
+	if [ ! -f /var/log/fai/FAI_CLASSES ]; then
+	    die "Try to read classes from /var/log/fai/FAI_CLASSES. Failed. Aborting."
+	fi
+	classes=$(< /var/log/fai/FAI_CLASSES)
+    fi
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
@@ -348,7 +361,7 @@ task_savelog() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
 
-    [ "$DO_INIT_TASKS" ] || exit 0
+    [ $DO_INIT_TASKS -eq 0 ] && exit 0
     wait_for_jobs
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
     # reboot without prompting if FAI_FLAG reboot is set
