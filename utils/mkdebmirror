@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # $Id$
-# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001
+# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001-2003
 
 # create partitial debian mirror using debmirror new in unstable/sarge
 # needs debmirror 20020427-1 or newer
@@ -14,12 +14,12 @@ rsync_disks() {
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-update_mi() {
+update_from() {
 
     # update local mirror from host $1
     host=$1
     allopt="$debug --passive --getcontents --nosource --arch=$arch --ignore=disks-$arch/"
-    defopt="$allopt --host=$host --dist=woody,sid,sarge,woody-proposed-updates,sarge-proposed-updates"
+    defopt="$allopt --host=$host --dist=$dist,$dist-proposed-updates"
 
     echo "------------------ create mirror for debian ------------------"
     debmirror $destdir/debian $defopt
@@ -31,20 +31,19 @@ update_mi() {
 # main program
 
 arch=i386
+dist=woody
 debug="$@"
 destdir=/files/scratch
 
 # first sync to a mirror near to you
-update_mi ftp.uni-koeln.de
+update_from ftp.uni-koeln.de
 
 # since this mirror is not always up to date, sync now to an official mirror
-update_mi ftp.de.debian.org
+update_from ftp.de.debian.org
 
 # even one should not mirror the security site, but I will do it.
 echo "------------------ create mirror for debian-security ------------------"
-debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d woody/updates -d sarge/updates
-
+debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security -d $dist/updates
 
 rsynchost=ftp2.de.debian.org
-rsync_disks woody
-#rsync_disks sarge
+rsync_disks $dist
