@@ -30,7 +30,7 @@ test:
 	nsgmls -wall -E20 -gues $(fdocname)
 
 clean:
-	rm -rf $(docname).txt $(docname).dvi $(docname).pdf $(docname).html $(docname).sasp *~ $(docname).texinfo $(docname).ps
+	rm -rf $(docname).txt $(docname).dvi $(docname).pdf $(docname).html $(docname).sasp* *~ $(docname).texinfo $(docname).ps $(docname).out $(docname).tpt $(docname).tex
 
 print: dvi
 	dvips -f $(docname) | lpr
