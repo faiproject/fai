@@ -33,10 +33,6 @@
 # Additional packages are defined with $NFSROOT_PACKAGES in fai.conf
 packages="perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils grub"
 
-
-# TODO: trap "umount nfsroot/proc $NFSROOT/dev/pts"
-
-
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
 if [ "$UID" -ne 0 ]; then
@@ -64,6 +60,7 @@ else
 	devnull=/dev/null
 fi
 
+trap "umount_dirs" EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
@@ -86,10 +83,7 @@ setup_ssh() {
     # nothing to do if no ssh is available in nfsroot
     [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return 0
     mkdir -p -m 700 $NFSROOT/root/.ssh
-    hkey=`cat /etc/ssh/ssh_host_key.pub`
-    # get ipaddress of server; try using ifconfig eth0
-    hname=`$NFSROOT/usr/bin/host $HOST |  perl -pe 's/\s+A\s+/,/'`
-    echo "$hname  $hkey " > $NFSROOT/root/.ssh/known_hosts
+    [ -f /etc/ssh/ssh_known_hosts ] && cp /etc/ssh/ssh_known_hosts $NFSROOT/root/.ssh/known_hosts
     loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
     [ -d $loguserhome/.ssh ] && cp -p $loguserhome/.ssh/identity* $NFSROOT/root/.ssh/
 
@@ -120,7 +114,7 @@ copy_fai_files() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
-    mkdir -p $NFSROOT
+    mkdir -p $NFSROOT/fai
     cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
     get_basetgz
     echo -n "Unpacking " ; ls /tmp/base?_?.tgz
@@ -142,8 +136,6 @@ create_nfsroot() {
     echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     upgrade_nfsroot  
     copy_fai_files
-
-
 
     # set timezone
     rm -f etc/localtime
@@ -231,6 +223,19 @@ get_basetgz() {
     esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+umount_dirs() {
+
+    cd /
+    sleep 2
+    umount $NFSROOT/proc 1>/dev/null 2>&1 || true
+    umount $NFSROOT/dev/pts 1>/dev/null 2>&1 ||true
+    if [ "$FAI_DEBMIRROR" ]; then
+	test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
+    fi
+    # show directories still mounted on nfsroot
+    mount | grep " on $NFSROOT "
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
 
 if [ -d $NFSROOT/fai ]; then
@@ -255,10 +260,6 @@ else
     echo "No install kernel installed in /boot/fai,"
     echo "no kernel modules available in nfsroot."
 fi
-
-umount $NFSROOT/dev/pts 2>/dev/null || true
-# TODO: only umount if created (debian mirror via NFS)
-test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
 
 echo make-fai-nfsroot finished.
 exit 0
