@@ -6,7 +6,7 @@ DOCDIR=/usr/share/doc/fai
 LIBDIR = $(DESTDIR)/usr/lib/fai
 SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon dhclient-perl dhclient-script fcopy ftar mount2dir bootsector device2grub
 SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar bootsector
-CONFFILES= apt.conf dhclient.conf fai_modules_off
+CONFFILES= apt.conf dhclient.conf fai_modules_off pxelinux.cfg
 
 # files with variable KERNLEVERSION in it
 KVERSION_FILES = $(DESTDIR)/usr/share/fai/templates/class/DEFAULT.var $(DESTDIR)/etc/fai/fai.conf
