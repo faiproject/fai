@@ -53,9 +53,11 @@ disk_info() {
     disklist=`list_disks $device_size`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-ether_info() {
+netdevice_info() {
 
-    ethers=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
+    # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
+    # if not defined, use boot messages to determine network devices
+    [ -n "$netdevices" ] || netdevices=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 diskandsize() {
@@ -212,7 +214,7 @@ rmdivert() {
 get_dhcp_info() {
 
     local dhcplog=/tmp/dhcp.log
-    dhclient -lf /dev/null >$dhcplog 2>/tmp/dhclient.log
+    dhclient -lf /dev/null $netdevices >$dhcplog 2>/tmp/dhclient.log
     [ -n "$verbose" -a -f $dhcplog ] && echo "Reading $dhcplog"
     eval `cat $dhcplog`
     killall dhclient-2.2.x
@@ -220,9 +222,14 @@ get_dhcp_info() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_bootp_info() {
 
+    local device
     local bootlog=/tmp/bootp.log
     # define all bootpc information as variables
-    bootpc --timeoutwait $timeout --returniffail > $bootlog
+    for device in $netdevices; do
+	echo "# --- network device $device ---" >> $bootlog
+	bootpc --dev $device --timeoutwait $timeout --returniffail >> $bootlog
+    done
+
     [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
     eval `cat $bootlog`
     FAI_LOCATION=$T170
@@ -468,8 +475,7 @@ task_sysinfo() {
     # show some system information and save it on the server
     { 
     lspci
-    ether_info
-    echo "Ethernet cards found: $ethers"
+    echo "Ethernet cards found: $netdevices"
     
     [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
     cat /proc/partitions
@@ -577,6 +583,7 @@ task_confdir() {
     syslogd -m 0 -p /tmp/etc/syslogsocket
     klogd -c1 -f /tmp/kernel.log
 
+    netdevice_info
     dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
     dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
 
