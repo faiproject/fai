@@ -3,23 +3,28 @@ include ../VERSION
 # don't forget 3c90x patch, Thomas !
 
 # where I can build the kernel
-ramdisk=/tmp/ram
+kerneldir=/tmp/ram
+
 DEB_HOST_ARCH=$(MACHTYPE)
-KERNEL=/$(ramdisk)/kernel-source-$(KERNELVERSION)
+KERNEL=$(kerneldir)/kernel-source-$(KERNELVERSION)
 BOOTP_REVISION=BOOTP1
 DHCP_REVISION=DHCP1
 BOOTPKERNEL=kernel-image-$(KERNELVERSION)_$(BOOTP_REVISION)_$(DEB_HOST_ARCH).deb
 DHCPKERNEL=kernel-image-$(KERNELVERSION)_$(DHCP_REVISION)_$(DEB_HOST_ARCH).deb
 KERNEL_FILES = emptydosdisk.gz imagegen_firstblock
 
+$(KERNEL):
+	mkdir -p $(kerneldir); cd $(kerneldir) ;\
+	tar Ixf /usr/src/kernel-source-$(KERNELVERSION)
+
 # kernel using BOOTP protocol
 .config-bootp: kernel-config fai-kernel-config-bootp
 	cat kernel-config fai-kernel-config-bootp > .config-bootp
 
-$(BOOTPKERNEL): $(ramdisk)/$(BOOTPKERNEL)
-	cp -p $(ramdisk)/$(BOOTPKERNEL) .
+$(BOOTPKERNEL): $(kerneldir)/$(BOOTPKERNEL)
+	cp -p $(kerneldir)/$(BOOTPKERNEL) .
 
-$(ramdisk)/$(BOOTPKERNEL): .config-bootp
+$(kerneldir)/$(BOOTPKERNEL): $(KERNEL) .config-bootp
 	cp -p .config-bootp $(KERNEL)
 	cd $(KERNEL) ; \
 	echo -e "\t\n\n" | make menuconfig ; \
@@ -30,10 +35,10 @@ $(ramdisk)/$(BOOTPKERNEL): .config-bootp
 .config-dhcp: kernel-config fai-kernel-config-bootp enable-dhcp
 	cat kernel-config fai-kernel-config-bootp enable-dhcp > .config-dhcp
 
-$(DHCPKERNEL): $(ramdisk)/$(DHCPKERNEL)
-	cp -p $(ramdisk)/$(DHCPKERNEL) .
+$(DHCPKERNEL): $(kerneldir)/$(DHCPKERNEL)
+	cp -p $(kerneldir)/$(DHCPKERNEL) .
 
-$(ramdisk)/$(DHCPKERNEL): .config-dhcp
+$(kerneldir)/$(DHCPKERNEL): $(KERNEL) .config-dhcp
 	cp -p .config-dhcp $(KERNEL)
 	cd $(KERNEL) ; \
 	echo -e "\t\n\n" | make menuconfig ; \
@@ -49,3 +54,8 @@ install:
 clean:
 	cd $(KERNEL) ; make-kpkg clean
 	rm -f .config-bootp .config-dhcp $(BOOTPKERNEL) $(DHCPKERNEL)
+
+veryclean:
+	rm -rf $(kerneldir)
+
+.PHONY: clean veryclean
