@@ -109,6 +109,7 @@ copy_fai_files() {
     cd $NFSROOT
     cp -p $LIBFAI/sbin/dhclient-script $SHAREFAI/etc/dhclient.conf etc/
     cp -p /etc/fai/* etc/fai/
+    [ -f /etc/fai/.cvspass] && cp -p /etc/fai/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
     cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
 
@@ -283,6 +284,12 @@ umount_dirs() {
     mount | grep " on $NFSROOT " || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_kernel_version() {
+
+    local package=$1
+    KERNELVERSION=`dpkg --info $1 | grep "Package: kernel-image" | sed -e 's/.*kernel-image-'//`
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
 
 if [ -d $NFSROOT/$FAI ]; then
@@ -296,6 +303,9 @@ fi
 create_nfsroot
 
 if [ -f $KERNELPACKAGE ]; then
+
+    # determine kernel version
+    get_kernel_version $KERNELPACKAGE
     # create tftp boot images
     install_kernel_nfsroot
 
