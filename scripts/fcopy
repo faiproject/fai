@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.21, 4-july-2004";
+my $version = "Version 1.22, 11-november-2004";
 
 use strict;
 use File::Copy;
@@ -57,10 +57,12 @@ my $modeset;
 my $nobackup;
 my $opt_update;
 my $backupdir;
+my @ignoredirs = qw'CVS .svn .arch-ids {arch}';
 
 # getopts:
 our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_M, $opt_v, $opt_d, $opt_D, $opt_i);
 our ($opt_B, $opt_c, $opt_C, $opt_h, $opt_F, $opt_l, $opt_L, $opt_P, $opt_b);
+our $opt_I;
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub copy_one {
@@ -322,13 +324,14 @@ Usage: fcopy [OPTION] ... SOURCE ...
    -F file              Read list of sources from file.
    -h                   Show summary of options.
    -i                   Exit with 0 when no class applies.
+   -I dir[,dir]         Override default list of ignored subdirectories
    -l                   Do not copy if destination is a symbolic link.
    -L file              Log destination and used class to file
    -m user,group,mode   Set user, group and mode for copied files.
    -M                   Same as -m root,root,0644
    -P log,changes       Copy if class or source for class has changed since
                         previous run
-   -r                   Copy recursivly but skip CVS directories.
+   -r                   Copy recursivly but skip ignored directories.
    -s source_dir        Look for source files relative to source_dir.
    -t target_dir        Copy files relativ to target_dir.
    -b backup_dir        Where to save backups of overwritten files
@@ -342,16 +345,21 @@ EOF
 sub rfilter {
 
   # Filter for recursive copying
-  my $nlink;
-  -d && ! ($_ =~ /^CVS$/) && ($nlink=(lstat($_))[3]) && 
-    ( (-d 'CVS') && ($nlink==3) || ($nlink==2) ) && 
-      push @rlist,$File::Find::name;
+  
+  # are we in a directory ? should we ignore it ?
+  my $location=$_;
+  (-d and (! grep $location eq $_,@ignoredirs )) or return 0;
+  # a directory without subdirs has two hard links
+  # don't count @ignoredirs as subdirs
+  my $subdirs=(lstat($_))[3] - 2 - grep(-d,@ignoredirs);
+  # push leaf
+  push @rlist,$File::Find::name unless $subdirs;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
 
 $|=1;
-getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:');
+getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:');
 $opt_h && usage;
 $opt_M and $opt_m="root,root,0644";  # set default modes
 $opt_m && check_mopt();
@@ -380,6 +388,9 @@ $opt_c and @classes = split /,/,$opt_c;
 $opt_C and @classes = read_classes($opt_C);
 warn join ' ','Classes:',@classes,"\n" if $debug;
 $opt_F and @ARGV = read_files($opt_F);
+$ENV{'FCOPY_IGNOREDIRS'} and @ignoredirs = split /\s+/,$ENV{'FCOPY_IGNOREDIRS'};
+$opt_I and @ignoredirs = split /,/,$opt_I;
+
 die "fcopy: source undefined\n" unless $source;
 die "fcopy: target undefined\n" unless $target;
 
