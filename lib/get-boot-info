@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # $Id$
 #*********************************************************************
@@ -6,7 +6,7 @@
 # bootinfo -- get boot information via DHCP or BOOTP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2004 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -32,7 +32,7 @@
 # a list of devices
 #
 
-# writes received information to boot.log in $LOGDIR
+# this script writes received information to $LOGDIR/boot.log 
 
 bootlog=$LOGDIR/boot.log
 timeout=30 # bootpc timeout
@@ -94,13 +94,14 @@ EOM
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setnet() {
 
-    IPADDR=$1
-    shift
-    SERVER=$1
-    shift
-    GATEWAYS=$1
-    shift
-    NETMASK=$1
+    local ips=$1
+    IPADDR=${ips%%:*}
+    ips=${ips#*:}
+    SERVER=${ips%%:*}
+    ips=${ips#*:}
+    GATEWAYS=${ips%%:*}
+    ips=${ips#*:}
+    NETMASK=${ips%%:*}
     BROADCAST=${IPADDR%\.*}.255
 
     cat >> $bootlog <<EOF
@@ -117,8 +118,7 @@ get_fixed_info() {
     boot=1
     # ip contains the network parameters
     echo $ip | grep -q : || echo "Kernel parameter ip= does not contain network parameters."
-    ips=${ip//:/ }
-    setnet $ips
+    setnet $ip
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
