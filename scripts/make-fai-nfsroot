@@ -93,13 +93,12 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
-    mkdir -p $NFSROOT
+    mkdir -p $NFSROOT/$MNTPOINT
     cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
     get_basetgz
     echo -n "Unpacking " ; ls /tmp/base?_?.tgz
     tar -C $NFSROOT -zxpf /tmp/base?_?.tgz
     mknod $NFSROOT/dev/boot255 c 0 255
-    mkdir -p $NFSROOT/$MNTPOINT
 
     if [ "$FAI_PACKAGEDIR" ]; then
 	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $NFSROOT/$MNTPOINT || die "Can't mount $FAI_PACKAGEDIR"
@@ -194,9 +193,8 @@ get_basetgz() {
 	    rm -rf $TMPBDIR
 	    ;;
 	/*/base?_?.tgz)
-	    cd /tmp
-	    rm -f base?_?.tgz
-	    ln -s $FAI_BASETGZ
+	    rm -f /tmp/base?_?.tgz
+	    ln -s $FAI_BASETGZ /tmp
 	    ;;
 	*)
 	    die "FAI_BASETGZ $FAI_BASETGZ looks strong."
