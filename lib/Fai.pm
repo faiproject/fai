@@ -62,34 +62,32 @@ sub testsize {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub read_disk_info {
 
-    # use "sfdisk -s" to get disk size in units of blocks
-    open ( DISK,"sfdisk -s|");
-    while (<DISK>) {
-	if (m!^/dev/(.+):\s+(\d+)!) {
-	    my ($device,$blocks) = ($1,$2);
-	    $numdisks++;
-	    push @devicelist,$device;
-	    $blocks{$device} = $blocks;
-	}
-    }
-    close DISK;
+  # disk_info set variables containing the information
 
-    # use "sfdisk -l" to get the size of a block
-    my $device;
-    open ( DISK,"sfdisk -l|");
-    while (<DISK>) {
-	if (m!^Disk\s/dev/(\w+)!) {
-	    $device = $1;
-	}
-	if (m!blocks of\s*(\d+)\s*bytes!) {
-	    my $bytes_per_block = $1;
-	    # blocks -> Mbytes:
-	    $size = $blocks{$device} * $bytes_per_block / (1024*1024) ;
-	    $sum_disk_size += $size;
-	    $disksize{$device} = $size;
-	}
-    }
-    close DISK;
+  foreach ($ENV{device_size}=~ m#([a-z])\s+(\d+)#g) {
+    my ($device,$blocks) = ($1,$2);
+    $numdisks++;
+    push @devicelist,$device;
+    $blocks{$device} = $blocks;
+  }
+
+# I hope blocksize is constant !!!
+
+#      my $device;
+#      open ( DISK,"sfdisk -l|");
+#      while (<DISK>) {
+#  	if (m!^Disk\s/dev/(\w+)!) {
+#  	    $device = $1;
+#  	}
+#  	if (m!blocks of\s*(\d+)\s*bytes!) {
+#  	    my $bytes_per_block = $1;
+#  	    # blocks -> Mbytes:
+#  	    $size = $blocks{$device} * $bytes_per_block / (1024*1024) ;
+#  	    $sum_disk_size += $size;
+#  	    $disksize{$device} = $size;
+#  	}
+#      }
+#      close DISK;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub disksize {
