@@ -7,11 +7,11 @@
   <!entity cvs-rev "$Id$">
 
 <!entity faikernelver "1.5">
-<!entity faiver "2.4">
-<!entity faiverdate "12 feb 2003">
+<!entity faiver "2.4.1">
+<!entity faiverdate "2 apr 2003">
 
-<!entity version "2.0">
-<!entity date    " 13 feb 2003">
+<!entity version "2.1">
+<!entity date    " 2 apr 2003">
 ]>
 
 <debiandoc>
@@ -283,8 +283,19 @@ The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
  or at the FAI homepage.</footnote> and <manref name="rsync"
  section="1">. A partial Debian mirror only for i386 architecture for
  Debian 3.0 (aka woody) without the source packages needs about
- &mirrorsize of disk space.
+ &mirrorsize of disk space. Accessing the mirror via NFS will be the
+ normal and fastest way in most cases.
 
+To use HTTP access to the local Debian mirror, install the webserver
+software and create a symlink to the local directory where you mirror
+is located:
+
+<example># apt-get install apache
+# ln -s /files/scratch/debmirror /var/www/debmirror
+</example>
+
+Don't forget to adjust the variable <var>FAI_SOURCES_LIST</var> in &fc
+to access the Debian mirror.
 
 <sect id=faisetup> Setting up FAI<p>
 
@@ -302,10 +313,10 @@ The following NEW packages will be installed:
 Need to get 0B/12.7MB of archives. After unpacking 13.9MB will be used.
 Selecting previously deselected package fai.
 (Reading database ... 48317 files and directories currently installed.)
-Unpacking fai (from .../main/f/fai/fai_2.4_all.deb) ...
+Unpacking fai (from .../main/f/fai/fai_2.4.1_all.deb) ...
 Selecting previously deselected package fai-kernels.
 Unpacking fai-kernels (from .../fai-kernels_1.5_i386.deb) ...
-Setting up fai (2.4) ...
+Setting up fai (2.4.1) ...
 To set up FAI, edit /etc/fai/fai.conf and call fai-setup.
 
 Setting up fai-kernels (1.5) ...
@@ -391,10 +402,15 @@ kueppers[~]# fai-setup
 Account $LOGUSER=fai already exists.
 Make sure that all install clients can
 log into this account without a password.
-/home/fai/.rhosts created.
+Using interface eth0 to determine local hostname.
+Adding kueppers to known_hosts.
+/home/fai/.ssh/known_hosts created.
+/home/fai/.ssh/authorized_keys created.
 User account fai set up.
 Creating FAI nfsroot can take a long time and will
-need more than &nfsrootsize disk space in /usr/lib/fai/nfsroot.
+need more than  &nfsrootsize disk space in /usr/lib/fai/nfsroot.
+/usr/lib/fai/nfsroot already exists. Removing /usr/lib/fai/nfsroot
+Creating nfsroot for woody using debootstrap
 dpkg: base-passwd: dependency problems, but configuring anyway as you request:
  base-passwd depends on libc6 (>= 2.2.4-4); however:
   Package libc6 is not installed.
@@ -589,7 +605,7 @@ configuration for pxelinux is written to
 <p>
 If your network card can't boot itself, you have to boot via floppy
 disk. To create the boot floppy use the command <manref
-name="make-fai-nfsroot" section="8">. Since there's no client specific
+name="make-fai-bootfloppy" section="8">. Since there's no client specific
 information on this floppy, it's suitable for all your install
 clients. You can also specify additional kernel parameters for this
 boot floppy or set other variables, if desired. Do not enable BOOTP
@@ -712,7 +728,7 @@ an additional kernel parameter, the flags must be separated with a
 comma.
 If you do not have full control over the BOOTP or DHCP daemon (because
 this service is managed by a central service group) you can also
-define the variable <var>FAI_FLAGS</var> in
+define the variable <var>FAI_ACTION</var> in
 a <file>/fai/class/*.var</file> scripts. Look at
 <file>LAST.var</file> for an example. The variable <var>T170</var>
 can also be defined by a daemon. It's better to use a script for that.
@@ -2425,6 +2441,11 @@ and a HOWTO can be found at
 
 This chapter has various hints which may not always be explained in great
 detail.
+<p>
+When using HTTP access to a Debian mirror, the local <tt>/var</tt>
+partition on all install clients must be big enough to keep the
+downloaded Debian packages. Do not try with less than 250 Mbytes
+unless you know why.
 <p>
 
 
