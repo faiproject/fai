@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.4, july 2001"
+version="version 1.4.1, august 2001"
 set -e
 floppydev=/dev/fd0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -106,9 +106,14 @@ unset SERVERINTERFACE ndevices devices dev
 
 mke2fs -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
 mount $floppydev /floppy || die "Can't mount floppy $floppydev"
-cp -au $NFSROOT/boot /floppy
+cp -ad $NFSROOT/boot /floppy
 mkdir -p /floppy/etc
 ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
+[ -L /floppy/boot/boot.b ] && {
+    # since lilo 21.5, boot.b is a link
+    rm /floppy/boot/boot.b
+    ln -s /floppy/boot/boot-compat.b /floppy/boot/boot.b
+}
 
 cat > /floppy/etc/lilo.conf <<-EOF
     boot=$floppydev
