@@ -11,7 +11,6 @@ for module in $moduleslist; do
 done
 
 if ifclass LILO; then
-set -xv 
   fcopy /etc/lilo.conf || {
     # if the installed kernel is using an initial ramdisk
     if [ -L $target/initrd.img ]; then
@@ -29,7 +28,7 @@ set -xv
 
 	image=/vmlinuz
 	append="devfs=nomount"
-        $initrdopt
+	$initrdopt
 	label=linux
         read-only
 
@@ -52,6 +51,9 @@ if ifclass GRUB; then
     echo "Installing grub and boot entry for $kernelname"
     grub-install --root-directory=$target $BOOT_DEVICE
     broot=`device2grub $ROOT_PARTITION`
+    if [ -L $target/initrd.img ]; then
+	initrdopt="initrd $broot/initrd.img"
+    fi
 
     cat > $target/boot/grub/menu.lst <<-EOF
 
@@ -64,8 +66,9 @@ if ifclass GRUB; then
 	title Debian GNU/Linux, $kernelname $kernelimage
 	root $broot
 	kernel $kernelname
+	$initrdopt
 EOF
-#    rdev $target/$kernelname $ROOT_PARTITION
+    rdev $target/$kernelname $ROOT_PARTITION
     echo "Grub installed for $kernelimage $broot"
     }
 fi
