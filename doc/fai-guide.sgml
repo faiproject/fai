@@ -10,8 +10,8 @@
 <!entity faiver "2.3">
 <!entity faiverdate "9 apr, 2002">
 
-<!entity version "1.4">
-<!entity date    "9 apr 2002">
+<!entity version "1.4.1">
+<!entity date    "12 apr 2002">
 ]>
 
 <debiandoc>
@@ -219,7 +219,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Access to a Debian mirror via NFS, FTP or HTTP</p> </item>
 	    <item> <p>Keyboard layout selectable</p> </item>
 	    <item> <p>Can be used as a rescue system</p> </item>
-	    <item> <p>Tested on SUN SPARC hardware</p> </item>
+	    <item> <p>Tested on SUN SPARC hardware running Linux or Solaris</p> </item>
 	    <item> <p>Flexible system through easy class concept </p> </item>
 	    <item> <p>Predefined Beowulf classes included </p> </item>
 	    <item> <p>Diskless client support</p> </item>
@@ -278,8 +278,8 @@ The script <prgn>mkdebmirror</prgn> <footnote> Available in
  or at the FAI homepage.</footnote> and <manref name="rsync"
  section="1">.
 
-A partitial Debian mirror only for i386 architecture for Debian 2.2r5
-(aka potato) without the source packages needs about 2.4 GB of disk
+A partitial Debian mirror only for i386 architecture for Debian 3.0
+(aka woody) without the source packages needs about 4.2 GB of disk
 space.
 
 
@@ -287,30 +287,34 @@ space.
 <p>
 
 Before installing FAI, you have to install the package <package>fai-kernels</package>,
-which contains the install kernels for FAI. <footnote> <p><tt># apt-get
-install fai</tt> should also work.</p></footnote>
+which contains the install kernels for FAI. You can install both
+packages using
 
 <example>
-kueppers# dpkg -i fai-kernels_&faikernelver;_i386.deb 
-Selecting previously deselected package fai-kernels.
-(Reading database ... 40562 files and directories currently installed.)
-Unpacking fai-kernels (from .../lange/fai-kernels_&faikernelver;_i386.deb) ...
-Setting up fai-kernels (&faikernelver;) ...
-</example>
-
-Get the newest version of FAI and install it using the
-<prgn>dpkg</prgn> command:
-
-<example>
-kueppers# dpkg -i fai_&faiver;_all.deb
+kueppers[~]# apt-get install fai fai-kernels
+Reading Package Lists... Done
+Building Dependency Tree... Done
+The following NEW packages will be installed:
+  fai fai-kernels 
+0 packages upgraded, 2 newly installed, 0 to remove and 1  not upgraded.
+Need to get 0B/11.0MB of archives. After unpacking 12.1MB will be used.
 Selecting previously deselected package fai.
-(Reading database ... 39564 files and directories currently installed.)
-Unpacking fai (from fai_&faiver;_all.deb) ...
-Setting up fai (&faiver;) ...
-To set up FAI edit /etc/fai/fai.conf and call fai-setup
-</example>
-<p>
+(Reading database ... 48317 files and directories currently installed.)
+Unpacking fai (from .../main/f/fai/fai_2.3_all.deb) ...
+Selecting previously deselected package fai-kernels.
+Unpacking fai-kernels (from .../fai-kernels_1.1.5_i386.deb) ...
+Setting up fai (2.3) ...
+To set up FAI, edit /etc/fai/fai.conf and call fai-setup.
 
+Setting up fai-kernels (1.1.5) ...
+</example>
+
+
+You can also get the newest version of <package>fai</package> and
+<package>fai-kernels</package> from the download page of fai and
+install the packages using the
+<prgn>dpkg</prgn> command.
+<p>
 All definitions for the FAI package (not the configuration data) are defined in
 &fc;. Since FAI doesn't use <prgn>debconf</prgn>
 yet, edit this file before calling <prgn>fai-setup</prgn>.
@@ -323,7 +327,7 @@ These are important variables in &fc;:
 	  <manref name="debootstrap" section="8">, which replaces the
 	  use of the <var>FAI_BASETGZ</var> variable. It needs
 	  the location of a Debian mirror and the distribution
-	  (potato,woody,stable,unstable) for which the basic Debian
+	  (woody,stable,unstable) for which the basic Debian
 	  system should be build.
 	    </p> </item>
 
@@ -341,8 +345,7 @@ These are important variables in &fc;:
 	    <item>
 	      <p> If you have NFS access to your local Debian mirror,
 	      specify the remote filesystem. It will be mounted to
-	      <var>$MNTPOINT</var> (defined in
-	      &fc;). It's not needed if you use access via FTP
+	      <var>$MNTPOINT</var>. It's not needed if you use access via FTP
 	      or HTTP.</p> </item>
 
 	    <tag><var>KERNELPACKAGE</var></tag>
@@ -553,7 +556,8 @@ kueppers# ln -s installimage_3com bigfoot
 <p>
 Some network cards (e.g. Intel EtherExpress PRO 100) have a fixed
 configuration for booting using the PXE protocol. This requires a PXE
-Linux boot loader an a special version of the <tt>TFTP</tt> daemon.
+Linux boot loader an a special version of the <tt>TFTP</tt> daemon,
+which is available in the Debian package <package>tftpd-hpa</package>.
 First set up the DHCP daemon. A sample configuration files can be
 found in <file>/usr/share/doc/fai/examples/etc/dhcpd.conf</file>.
 If you specify a kernel package in &fc; using the variable
@@ -562,7 +566,7 @@ protocol for obtaining boot information, the pxelinux environment will
 be set up automatically. You only have to enable the special tftp daemon
 using this line in file <file>/etc/inetd.conf</file>: 
 <example>
-tftp dgram udp wait nobody /usr/local/sbin/tftpd -s -r blksize /boot/fai
+tftp dgram udp wait root /usr/sbin/in.tftpd -s -r blksize /boot/fai
 </example>
 
 See <file>/usr/share/doc/syslinux/pxelinux.doc.gz</file> for more
@@ -570,7 +574,7 @@ information, how to boot such an environment. There are also some
 mails in the FAI mailing list archive concerning this topic.  The PXE
 environment uses the original kernel image (not using mknbi-linux)
 which is copied to <file>/boot/fai/installkernel</file>.  A default
-configuration for pxelinux is created in
+configuration for pxelinux is written to
 <file>/boot/fai/pxelinux.cfg/default</file>.
 
 <sect id="bootfloppy">Creating a boot floppy
@@ -884,10 +888,10 @@ without using the local hard disk. Use this as a rescue system, if
 your local disk is damaged or the computer can't boot properly from
 hard disk. You will get a shell and can execute various commands
 (dmesg, lsmod, df, lspci, ...). Look at the log file in
-<file>/tmp</file>. There you can find much information about the boot
+<file>/tmp/fai</file>. There you can find much information about the boot
 process.
 
-All log files from <file>/tmp </file> are also written to the install server
+All log files from <file>/tmp/fai</file> are also written to the install server
 into the directory <tt>~fai/ant01/sysinfo/</tt><footnote>More
 general: <tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION/</tt>. Examples of the log
 files can be found on the FAI homepage.
@@ -926,9 +930,9 @@ filesystems. If you need a filesystem with read-write access use the
 If the install client boots with action <em>sysinfo</em>, you can also
 check if all information from the BOOTP or DHCP daemons are received
 correctly. If the kernel uses BOOTP requests to receive data, these
-information will be written to <file>/tmp/bootp.log</file>. If the
+information will be written to <file>/tmp/fai/bootp.log</file>. If the
 kernel support the DHCP protocol all is written to
-<file>/tmp/dhcp.log</file>. And example for the result of a BOOTP
+<file>/tmp/fai/dhcp.log</file>. And example for the result of a BOOTP
 requests can be found in <ref id="s1">.
 
 
@@ -1065,7 +1069,7 @@ nearly ready to go. But not all default configurations of the software
 packages will meet your site specific needs. So you can call arbitrary
 scripts, which adjust the system configuration. Therefore scripts,
 that match a class name in <file>/fai/scripts</file> will be executed. If
-<file>/fai/scripts/<tt>classname</tt></file> is a directory, all
+<file>/fai/scripts/</file><var>classname/</var> is a directory, all
 scripts that match <tt>S[0-9]*</tt> in this directory are executed. So
 it is possible to have several scripts of different types (perl,
 shell,...) to be executed for one class. FAI comes with some templates
@@ -1259,12 +1263,12 @@ subroutines or override the definition of FAI's subroutines.
 
      <tag>defclass</tag> <item><p>Defines classes using scripts and
       files in <file>/fai/class</file> and classes from
-      <file>/tmp/additional-classes</file>.</p> </item>
+      <file>/tmp/fai/additional-classes</file>.</p> </item>
 
      <tag>defvar</tag> <item><p>Sources all files
       <file>/fai/class/*.var</file> for every defined class. If a hook
       has written some variable definitions to the file
-      <file>/tmp/additional.var</file>, this file is also
+      <file>/tmp/fai/additional.var</file>, this file is also
       sourced.</p></item>
 
       <tag>action</tag> <item><p>Depending on the value of
@@ -1290,7 +1294,7 @@ subroutines or override the definition of FAI's subroutines.
 
      <tag>install</tag> <item><p>This task controls the installation
      sequence. The major work is to call other tasks and to save the
-     output to <file>/tmp/rcS.log</file>. If you have any problems
+     output to <file>/tmp/fai/rcS.log</file>. If you have any problems
      during installation, look for errors there. You can find examples
      of the log files for some hosts in the download directory of the
      FAI homepage.</p> </item>
@@ -1299,10 +1303,10 @@ subroutines or override the definition of FAI's subroutines.
       to partition the hard disks. The task writes variable
       definitions for the root and boot device (<var>$ROOT_PARTITION,
       $BOOT_PARTITION</var>) to
-      <file>/tmp/disk_var.sh</file> and create a fstab file.</p></item>
+      <file>/tmp/fai/disk_var.sh</file> and create a fstab file.</p></item>
 
       <tag>mountdisks</tag> <item><p>Mounts the created partitions
-      according to the created <file>/tmp/fstab</file> file relative to
+      according to the created <file>/tmp/fai/fstab</file> file relative to
       <var>$FAI_ROOT</var>.</p> </item>
 
       <tag>extrbase</tag> <item><p>Extracts the base tar file
@@ -1350,10 +1354,10 @@ initialization, the setup continues by calling the task
 <tt>confdir</tt> and the task <tt>setup</tt>. The command <manref name="bootpc"
 section="8"> is called and its output is used to define the
 corresponding global variables which are save in
-<file>/tmp/bootp.log</file>. This is an example for this log file.
+<file>/tmp/fai/bootp.log</file>. This is an example for this log file.
 
 <example>
-/tmp/bootp.log:
+/tmp/fai/bootp.log:
 
 # --- network device eth0 ---
 SERVER='134.95.9.149'
@@ -1504,9 +1508,9 @@ regular expression <tt>S[0-9]*.{sh,pl,source}</tt> are called in alphabetical
 order. Every output from these scripts is used to define
 classes. Multiple classes in one line must be space separated. If a
 hook has written classes to the file
-<file>/tmp/additional-classes</file>, these classes are also defined.
+<file>/tmp/fai/additional-classes</file>, these classes are also defined.
 The list of all defined classes is stored in the variable
-<var>$classes</var> and saved to <file>/tmp/FAI_CLASSES</file>. The list of
+<var>$classes</var> and saved to <file>/tmp/fai/FAI_CLASSES</file>. The list of
 all classes is transfered to <prgn>cfengine</prgn>, so it can use them
 too. Script <file>S01alias.sh</file> (see below) is used to define
 classes for groups of hosts. All hosts with prefix <var>ant</var> use
@@ -1589,7 +1593,7 @@ modprobe parport_probe
 modprobe serial
 </example>
 
-You can find messages from modprobe in <file>/tmp/dmesg.log</file> and
+You can find messages from modprobe in <file>/tmp/fai/dmesg.log</file> and
 the on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
 
 <sect id=classvariables> Defining Variables<p>
@@ -1673,7 +1677,7 @@ can't partition your hard disk using this script <footnote><p>Currently
 this script uses the command <tt>sfdisk(8)</tt>, which isn't available
 on SUN SPARC.</p> </footnote>, use a hook instead. The hook should
 write the new partition table, create the file systems and create the
-file <file>/tmp/fstab</file> and <file>/tmp/disk_var.sh</file>, which
+file <file>/tmp/fai/fstab</file> and <file>/tmp/fai/disk_var.sh</file>, which
 contains definitions of boot and root partitions.
 <p>
 
@@ -1752,19 +1756,8 @@ installing the packages this file will be removed. If the file
 shouldn't be removed, use the the command <tt>PRELOAD</tt> instead.
 
 <p>
-If you specify a package that does not exists (e.g. you make a typo),
-the the whole installation of software package will not be started.
-This could also happen when the command <manref name="xviddetect"
- section="1"> does not recognize the video card, because the
-configuration file <file>SERVER</file> contains following line:
-
-<example>
- xserver-`xviddetect -q`
-</example>
-
-If the video card isn't detected, the software installation tries to
-install the package <tt>xserver-unknown</tt>. It will not start
-because this package doesn't exist. You can test all software package
+If you specify a package that does not exists this package will be
+removed from the installation list. You can also test all software package
 configuration files with the utility <prgn>chkdebnames</prgn>, which
 is available in <file>/usr/share/fai/utils/</file>.
 <example>
@@ -1896,9 +1889,9 @@ called, if the class if defined for the install client. For example,
 the hook <file>partition.DISKLESS</file> is called for every client
 belonging to the class <tt>DISKLESS</tt> before the local disks would
 be partitioned. If it should become a diskless client, this hook
-can mount remote filesystems via NFS and create a <tt>/tmp/fstab</tt>.
+can mount remote filesystems via NFS and create a <tt>/tmp/fai/fstab</tt>.
 After that, the installation process would not try to partition and
-format a local hard disk, because a file <file>/tmp/fstab</file>
+format a local hard disk, because a file <file>/tmp/fai/fstab</file>
 already exists.
 <p>
 A hook of the form <tt>hookprefix.classname</tt>  can't define
@@ -2111,7 +2104,7 @@ Rebuild the NIS maps: <tt> # cd /var/yp; make</tt>
 
 Now user <var>tom</var> can create a local Debian mirror on
 <file>/files/scratch/</file> using <prgn>mkdebmirror</prgn>. This will
-need about 2.6 GB disk space for Debian 2.2 (aka potato). Export this
+need about 4.2 GB disk space for Debian 3.0 (aka woody). Export this
 directory to the netgroup <tt>@faiclients</tt> read only.
 
 <sect1 id=fai1> Install FAI package on the master server<p>
@@ -2228,7 +2221,7 @@ To wake up a computer use the tool etherwake (in woody) or get the
 single C source file. For more information look at
 <httpsite>http://www.scyld.com/</httpsite><httppath>expert/wake-on-lan.html</httppath>.
 
-<chapt id=sparc>FAI on SUN SPARC<p>
+<chapt id=sparc>FAI on SUN SPARC hardware running Linux<p>
 Even FAI is architecture independent, there are some packages, that
 are only available for certain architectures (eg. silo, sparc-utils).
 
@@ -2310,19 +2303,14 @@ diversions are removed.</p> </item>
 <tag>skiptask</tag> <item> <p>This given list of tasks are
 skipped. For e.g use in <file>partition.DISKLESS</file>.</p> </item> </taglist>
 
-<example>
-</example>
+<chapt id=solaris>Using fai for installing Solaris on SUN SPARC hardware<p>
 
-
-
-<chapt id=solaris>FAI for SUN Solaris<p> 
-
-Currently, FAI will be extended to be used with Solaris Jumpstart. The
-part of partitioning the local disks and installing the operating
-software packes is done using Solaris Jumpstart function. Then the
-postinstall script defines the classes and variables and runs all
-configuration scripts depending on classes.
-
+Currently, FAI is being extended to support installation of Solaris
+operating system with the help of Solaris Jumpstart. The part of
+partitioning the local disks and installing the operating software
+packages is done using the Solaris Jumpstart functions. Then the
+postinstall script calls the fai script to define the classes and
+variables and runs all configuration scripts depending on classes.
 </book>
 </debiandoc>
 
