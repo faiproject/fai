@@ -460,7 +460,7 @@ do_script() {
 
     case $filetype in
 
-	*"Bourne shell script"*|*"Bourne-Again shell script"*)
+	*"executable shell script"*|*"/bash script"*|*"Bourne shell script"*|*"Bourne-Again shell script"*)
 	    echo "Executing $shelldebug shell: $file"
 	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
 	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
@@ -486,21 +486,6 @@ do_script() {
 
 	*) echo "File $file has unsupported type $filetype." ;;
     esac
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-task_finish() {
-
-    umount -n $FAI_ROOT/proc
-    # undo fake of all programs in file $divertlist
-    rmalldivert
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-task_chboot() {
-
-    # change boot device (local disk or network)
-    [ "$LOGUSER" -a "$TFTPLINK" ] &&
-	$FAI_REMOTESH -l $LOGUSER ${SERVER} \
-	    "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_savelog() {
