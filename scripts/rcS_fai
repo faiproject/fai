@@ -251,7 +251,7 @@ make_backup() {
 # It's only an idea how a backup could be made
     mount_local_disks
     for partition in $SAVE_DEVICES ; do
-	# tar cf - $FAI_ROOT/$partition | rsh -l $LOGUSER $SERVER dd if= of=$partition.tar
+	# tar cf - $FAI_ROOT/$partition | $FAI_REMOTESH -l $LOGUSER $SERVER dd if= of=$partition.tar
 	dump 0f $LOGUSER@$SERVER:backup/$HOSTNAME/$partition.dmp $FAI_ROOT/$partition
     done
 }
@@ -304,7 +304,7 @@ prepare_apt() {
     cp /tmp/etc/resolv.conf $FAI_ROOT/etc
     cp /etc/apt/* $FAI_ROOT/etc/apt/
     # some packages must access /proc even in chroot environment
-    chroot $FAI_ROOT mount /proc /proc -t proc
+    mount -t proc /proc $FAI_ROOT/proc
 
     chroot $FAI_ROOT apt-get update
     chroot $FAI_ROOT apt-get check
@@ -392,9 +392,13 @@ fai_install() {
     date
     echo -e "FAI finished.\a"
 
+# DEBUG XXXX to be removed
+echo "DEBUG: $HOSTNAME"
+$FAI_REMOTESH -l $LOGUSER ${SERVER} echo "rsh HOSTNAME: $HOSTNAME"
+
     # now change boot device (local disk or network)
-    [ "$FAI_USER" -a "$TFTPLINK" ] &&
-	rsh -l $FAI_USER ${SERVER} \
+    [ "$LOGUSER" -a "$TFTPLINK" ] &&
+	$FAI_REMOTESH -l $LOGUSER ${SERVER} \
 	    "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
 
     rm -f $stamp
