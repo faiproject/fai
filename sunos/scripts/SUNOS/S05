@@ -1,0 +1,64 @@
+#!/bin/bash -xv
+
+#
+# add lpd server on machines who have a local printer
+#
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+make_spool_dir() {
+    queue_files="acct control.pr status status.pr unspooler.pr"
+    
+    queue=$1
+  
+    [ ! -d $target/var/spool/lpd ] && { 
+	mkdir $target/var/spool/lpd
+	chmod 0755 $target/var/spool/lpd
+    }
+    
+    [ ! -d $target/var/spool/lpd/$queue ] && {
+	mkdir $target/var/spool/lpd/$queue
+	chown 0700 $target/var/spool/lpd/$queue
+    }
+
+    for file in $queue_files; do
+	touch $target/var/spool/lpd/$queue/$file
+    done
+
+    chmod 0600 $target/var/spool/lpd/$queue/*
+    chown daemon:daemon $target/var/spool/lpd/$queue/*    
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+echo "XXX start S05"
+echo $classes
+
+if ifclass LPD; then
+
+    echo " xxx in ifclass xxx "
+    
+    ECP="/dev/ecpp0"
+    BPP="/dev/bpp0"
+    oldmachine=0
+    
+    case $HOSTNAME in 
+	jever) 
+	    make_spool_dir sek-j
+	    ;;
+	reissdorf) 
+	    make_spool_dir juenger
+	    ;;
+	rubens) 
+	    rubens_queues="fs-1700 hp1600c hp4100 hp4si hpcolor optra"
+	    for printer in $rubens_queues; do
+		make_spool_dir $printer
+	    done
+	    ;;
+	malzmuehle)
+	    make_spool_dir sek-j
+	    ;;
+    esac
+fi
+
+echo "XXX end S05"

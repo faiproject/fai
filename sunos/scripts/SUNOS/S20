@@ -1,0 +1,169 @@
+#!/tmp/install_config/bin/cfagent
+
+control:
+   OutputPrefix = ("cfagent")
+   actionsequence = ( files directories links editfiles )
+   EditFileSize = ( 30000 )
+
+files:
+    any::
+        ${target}/etc/.mnttab.lock mode=644 owner=root group=other action=touch
+        ${target}/var/adm/daemon.log mode=750 owner=root group=other action=touch
+        ${target}/var/adm/loginlog mode=600 owner=root group=sys action=touch
+    CS_KOELN::
+	${target}/var/adm/MvLogs.log mode=0644 owner=root group=other action=touch
+
+directories:
+    any::
+        ${target}/vol mode=755 owner=root group=sys
+        ${target}/cdrom mode=755 owner=root group=sys
+        ${target}/var/run mode=755 owner=root group=other
+        ${target}/var/cache mode=755 owner=root group=sys
+        ${target}/var/spool/mqueue mode=755 owner=root group=sys
+        ${target}/files mode=755 owner=root group=sys
+	${target}/home mode=755 owner=root group=root
+	${target}/usr/local mode=755 owner=root group=root
+	${target}/vld mode=555 owner=root group=root
+
+     SCRATCH::
+	${target}/scratch mode=177 owner=root group=root
+
+     FILES_SCRATCH::
+	${target}/files/scratch mode=1777 owner=root group=root
+
+links:
+
+    CS_KOELN::
+	${target}/var/news -> /home/softmgr/news nofile=force
+	${target}/Vol -> /vol nofile=force
+	${target}/usr/bin/mailq -> ../lib/sendmail nofile=force
+	${target}/usr/bin/newaliases -> ../lib/sendmail nofile=force
+        ${target}/etc/rc0.d/K20amd -> /etc/init.d/ctl-amd nofile=force
+        ${target}/etc/rc2.d/S80amd -> /etc/init.d/ctl-amd nofile=force
+	${target}/etc/rc3.d/S18screenblank -> /etc/init.d/screenblank nofile=force
+	${target}/usr/dt/appconfig/SUNWns/plugins/ShockwaveFlash.class -> /usr/local/share/flash_solaris/ShockwaveFlash.class nofile=force
+	${target}/usr/dt/appconfig/SUNWns/plugins/libflashplayer.so -> /usr/local/share/flash_solaris/libflashplayer.so nofile=force
+
+    LPD::
+        ${target}/etc/rc0.d/K20lprng -> /etc/init.d/lprng nofile=force
+        ${target}/etc/rc2.d/S80lprng -> /etc/init.d/lprng nofile=force
+	
+    SERVER::
+    	${target}/usr/local/bin/netscape7 -> /usr/dt/appconfig/SUNWns/netscape nofile=force
+
+    VOLD::
+        ${target}/etc/rc0.d/K35volmgt -> /etc/init.d/volmgt nofile=force
+        ${target}/etc/rc1.d/K35volmgt -> /etc/init.d/volmgt nofile=force
+        ${target}/etc/rc2.d/S92volmgt -> /etc/init.d/volmgt nofile=force
+        ${target}/etc/rcS.d/K35volmgt -> /etc/init.d/volmgt nofile=force
+
+editfiles:
+    any::
+	{ ${target}/etc/default/login
+	  HashCommentLinesContaining "CONSOLE="
+        }
+
+	{ ${target}/etc/default/passwd
+	  ReplaceAll "^PASSLENGTH=6" With "PASSLENGTH=8"
+        }
+
+        { ${target}/etc/default/su
+	  AppendIfNoSuchLine "SUPATH=/usr/local/bin:/vol/gnu/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/vol/X11R5/bin:/usr/ccs/bin:/opt/SUNWspro/bin"
+        }
+	
+        { ${target}/etc/passwd
+          AppendIfNoSuchLine "roott:x:0:1:Super-User:/:/usr/local/bin/tcsh"
+        }
+
+	{ ${target}/etc/shadow
+	  LocateLineMatching "^root:.*"
+          InsertLine         "roott::11017::::::"
+	  ReplaceAll         "^root::" With "root:${rootpw}:"
+	  ReplaceAll         "^roott::" With "roott:${rootpw}:"
+        }
+
+	{ ${target}/etc/inet/hosts
+	  AppendIfNoSuchLine "134.95.9.10     ${bserver}"
+	}
+
+	{ ${target}/etc/init.d/volmgt
+	  ReplaceAll	"/usr/sbin/vold >/dev/.*" With "/usr/sbin/vold -d /vld >/dev/msglog 2>&1 &"
+	}
+
+	{ ${target}/var/spool/cron/crontabs/root
+	  HashCommentLinesContaining "logadm"
+	  HashCommentLinesContaining "rtc"
+	  HashCommentLinesContaining "gsscred_clean"
+	  AppendIfNoSuchLine "10 3 * * 0,4 /etc/cron.d/logchecker" 
+	  AppendIfNoSuchLine "15 3 * * 0 /usr/lib/fs/nfs/nfsfind" 
+	  AppendIfNoSuchLine "55 22 * * * /usr/local/sbin/backup_varspool" 
+	  AppendIfNoSuchLine "55 23 * * 6 /vol/local/share/MvLogs" 
+	  AppendIfNoSuchLine "57 22 * * * /usr/local/sbin/checksecurity" 
+	  AppendIfNoSuchLine "23 10,13,16,19,22 * * * /usr/lib/sendmail -q"
+	}
+	
+	{ ${target}/etc/services
+	  AppendIfNoSuchLine "ta-rauth        601/tcp         rauth           # AFS ticket forwarding"
+	  AppendIfNoSuchLine "auth            113/tcp         authentication  # identd"
+	}
+
+ 	{ ${target}/etc/system
+ 	  AppendIfNoSuchLine "* for increased fileserver security."
+ 	  AppendIfNoSuchLine "set nfssrv:nfs_portmon = 1"
+ 	  AppendIfNoSuchLine "* more filedescriptors"
+ 	  AppendIfNoSuchLine "set rlim_fd_cur=128"
+ 	  AppendIfNoSuchLine "* Max number of processes per user."
+ 	  AppendIfNoSuchLine "set maxuprc = 300"
+ 	  AppendIfNoSuchLine "* wegen xntpd"
+ 	  AppendIfNoSuchLine "set dosynctodr=0"
+ 	}
+
+    !rubens::
+        { ${target}/etc/vfstab
+	  AppendIfNoSuchLine "${bserver}:/vol - /vol nfs - yes -"
+	  AppendIfNoSuchLine "${hserver}:/home - /home nfs - yes -"
+	  AppendIfNoSuchLine "${bserver}:/usr/local - /usr/local nfs - yes -"
+	  AppendIfNoSuchLine "${hserver}:/var/mail - /var/mail nfs - yes nosuid,actimeo=0"
+	}
+
+    DATALESS::
+        { ${target}/etc/vfstab
+	  AppendIfNoSuchLine "hellers:/usr - /usr nfs - no -"
+	}
+
+	{ ${target}/etc/inet/hosts
+	  AppendIfNoSuchLine "134.95.9.137	hellers"
+	}
+
+    hellers::
+        { ${target}/etc/dfs/dfstab
+	  AppendIfNoSuchLine "share -F nfs -o nosuid,rw=domain	  /usr"
+	}
+
+    FILES_SCRATCH::
+        { ${target}/etc/dfs/dfstab
+	  AppendIfNoSuchLine "share -F nfs -o nosuid,rw=domain	  /files/scratch"
+	}
+
+    VOLD::
+        # vold needs this daemon in
+	{ ${target}/etc/inet/inetd.conf
+	  AppendIfNoSuchLine "100155/1  tli  rpc/ticotsord  wait  root  /usr/lib/smedia/rpc.smserverd rpc.smserverd"
+	}
+
+	# do not manage floppy with vold
+        { ${target}/etc/vold.conf
+	  HashCommentLinesContaining "rdiskette"
+	  HashCommentLinesContaining "floppy"
+	}
+
+
+    BACKUPSERVER::
+ 	{ ${target}/var/spool/cron/crontabs/root
+	  AppendIfNoSuchLine "20 5 * * * /usr/local/sbin/save-var-mail"
+	  AppendIfNoSuchLine "53 1 * * * /usr/local/sbin/backup_www"
+	  AppendIfNoSuchLine "10 0 * * * /usr/local/sbin/cleanup_backup"
+	  AppendIfNoSuchLine "10 4 * * 6 /usr/local/sbin/tar-usr-local"
+	}
+
+	
