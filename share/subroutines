@@ -207,7 +207,6 @@ task_setup() {
     # set the system time and date using rdate or/and ntpdate
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
-    SECONDS=0 # set wall clock time to 0
 
     define_fai_flags
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
@@ -366,7 +365,7 @@ task_install() {
     task configure
     task finish
     date
-    echo "The installation took $SECONDS seconds."
+    echo "The installation took `cut -d . -f 1 /proc/uptime` seconds."
     task chboot
 
     rm -f $stamp
