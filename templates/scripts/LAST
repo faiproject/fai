@@ -1,17 +1,18 @@
 #! /bin/sh
 
 # copyright Thomas Lange 2001, lange@debian.org
+
 # remove backup files from cfeninge (*.cfedited)
-
 dirs="root etc var"
-
 for path in $dirs; do
-    find $FAI_ROOT/$path -maxdepth 25 -name \*.cfedited -o -name \*.cfsaved | xargs rm
+    find $FAI_ROOT/$path -maxdepth 25 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
 done
+
+# if not TMP_PARTITION
+ifclass TMP_PARTITION || {
+    rm -rf $target/tmp
+    ln -s  /var/tmp $target/tmp
+}
 
 # the system is now configured
 rm -f $FAI_ROOT/sbin/unconfigured.sh
-
-
-# insert hostname to /etc/hosts
-echo -e "$IPADDR\t$hostname >> $target/etc/hosts

@@ -12,42 +12,15 @@ control:
    OutputPrefix = ("${cf_prefix}")
 
    actionsequence = ( 
-		      tidy
-                      files
-		      copy
 		      editfiles
-		      shellcommands
 		    )
-
-tidy:
-
-   !TMP_PARTITION::
-	${target}/tmp  pat=*   age=0 rmdirs=true
-	${target}/     pat=tmp age=0 rmdirs=true
-
-copy:
-   any::
-	${files}/root/.bash_profile	dest=${target}/root/.bash_profile
-           m=640 o=root g=root  
-	   force=${force} backup=${backup}
-	${files}/root/.bashrc		dest=${target}/root/.bashrc
-           m=640 o=root g=root  
-	   force=${force} backup=${backup}
-	${files}/root/.cshrc	dest=${target}/root/.cshrc
-           m=640 o=root g=root  
-	   force=${force} backup=${backup}
-	${files}/root/.login	dest=${target}/root/.login
-           m=640 o=root g=root  
-	   force=${force} backup=${backup}
-	${files}/root/.alias	dest=${target}/root/.alias
-           m=640 o=root g=root  
-	   force=${force} backup=${backup}
-	${files}/root/.emacs	dest=${target}/root/.emacs
-           m=640 o=root g=root  
-	   force=${force} backup=${backup}
 
 editfiles:
    any::
+	{ ${target}/etc/hosts
+	  AutoCreate
+	  AppendIfNoSuchLine	'${IPADDR}${tab}${HOSTNAME}'
+	}
 
 	{ ${target}/etc/default/rcS
 	  ReplaceAll "^UTC=.*" With "UTC=${UTC}"
@@ -106,14 +79,7 @@ editfiles:
 	  AppendIfNoSuchLine "/files/scratch${tab}${tab}@sundomain(rw) @faiclients(rw,no_root_squash)"
 	}
 
-
    FAISERVER::
 	{ ${target}/etc/exports
 	  AppendIfNoSuchLine "/usr${tab}${tab}@faiclients(ro,no_root_squash)"
 	}
-
-shellcommands:
-   # create this tar-file on your debian-binserver with:
-   # tar -cf FAICLIENT -C /etc/alternatives .
-   FAICLIENT.DATALESS::
-	"/bin/tar -C ${target}/etc/alternatives -xvpf ${files}/etc/alternatives/FAICLIENT"

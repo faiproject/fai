@@ -3,32 +3,27 @@
 echo $hostname     > $target/etc/hostname
 
 echo $time_zone    > $target/etc/timezone
-ln -s $target/etc/localtime /usr/share/zoneinfo/${time_zone}
+ln -fs /usr/share/zoneinfo/${time_zone} $target/etc/localtime
 
-ifclass USSR_LOCAL_COPY && cp -dpR /usr/local $target/usr
-
-ifclass FAICLIENT && ln -s $target/vol /usr/local/vol
-
-# if TMP_PARTITION is not defined
-ifclass TMP_PARTITION || $target/tmp /var/tmp
-
-# make floppy read and writeable for all
-chmod a+rw $target/dev/fd*
-
+# make /tmp writeable for all, but only the user can remove his/her files
 chmod 1777 $target/tmp
 chown root:root $target/tmp
-
-touch $target/etc/mailname
-
-
-
-# create NIS/NONIS config
-# fcopy /etc/nsswitch.conf /etc/host.conf
-ifclass NONIS && rm -f $target/etc/defaultdomain
 
 # dump keytable
 echo dump keyboard table
 dumpkeys | gzip -9f >$target/etc/console-tools/default.kmap.gz
+
+# create NIS/NONIS config
+fcopy /etc/nsswitch.conf /etc/host.conf
+ifclass NONIS && rm -f $target/etc/defaultdomain
+
+if ifclass NIS; then
+    echo $YPDOMAIN > $target/etc/defaultdomain
+    rm -f $target/etc/yp.conf
+    for s in $YPSRVR; do
+	echo "ypserver $s" >> $target/etc/yp.conf
+    done
+fi
 
 if [ -n "$hdparm" ]; then
 
@@ -42,9 +37,18 @@ EOF
     ln -s ../init.d/hdparm $FAI_ROOT/etc/rcS.d/S61hdparm
 fi
 
-# if $kernelimage if not a debfile, then it's the kernel version
+# copy default dotfiles for root account
+fcopy /root/.bash_profile /root/.bashrc /root/.cshrc /root/.login /root/.alias /root/.emacs
 
-# create dummy link, so package kernel-image-* makes new correcxt link
+touch $target/etc/mailname
+
+ifclass USR_LOCAL_COPY && cp -dpR /usr/local $target/usr
+
+# make floppy read and writeable for all
+chmod a+rw $target/dev/fd*
+
+# if $kernelimage if not a debfile, then it's the kernel version
+# create dummy link, so package kernel-image-* makes new correct link
 ln -s /boot/vmlinuz-nolink $target/vmlinuz
 
 if [ -f $files/packages/$kernelimage ]; then
