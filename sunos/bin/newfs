@@ -1,0 +1,32 @@
+#!/sbin/sh
+#
+# Wrapper round newfs to change the default parameters for the
+# standard filesystems. Expanded to deal with options
+#
+# expanded from Thomas Lange, Uni Koeln, May 1997
+#
+# $@ contains /dev/rdsk/.......  very nice
+
+DISK=`echo $@ | cut -f4 -d/ -`
+echo $SI_PROFILE
+
+#SI_PROFILE=${SI_CONFIG_DIR}/${SI_CLASS}
+OPTIONS=`grep  "^#NEWFS" ${SI_PROFILE}|grep ${DISK}| expand -1 | tr -s '/ / /'| cut -s -d' ' -f3-`
+
+# if options empty use defaults
+if [ "$OPTIONS" = "" ]
+then
+	# if there are no options use default values
+	OPTIONS="-m 3 -c 32 -i 12000 -C 16"
+fi
+echo "        - newfs $OPTIONS"
+
+# Should check usage.
+/usr/lib/fs/ufs/newfs.bin $OPTIONS "$@"
+status=$?
+# Get last argument in $1
+shift `shift; echo $#`
+# Newfs won't allow you to specify -o time, so we'll use tunefs.
+# Prevents NOTICE: blah during installation
+tunefs -o time $1
+exit $status

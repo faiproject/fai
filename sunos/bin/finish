@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Thomas Lange, lange@informatik.uni-koeln.de, 2003
+
+set -a
+. /tmp/install_config/bin/subroutines
+. /tmp/install_config/bin/subroutines-sunos
+fai_init 
+[ "$debug" ] && set | perl -ne 'print if /^\w\w+=/' > $LOGDIR/finish-variables.sh
+
+#cp -rp $LOGDIR $target/var/log
+
+# classes are defined in start
+classes=`cat $LOGDIR/FAI_CLASSES`
+cfclasses=`echo $classes | sed -e 's/ /./g'`
+
+{
+echo -n "Staring Installation: finish script "; date -u
+task confdir
+task setup
+task defvar
+} > >( tee -a $rcslog )  2>&1
+
+(task action > >( tee -a $rcslog ) 2>&1)
