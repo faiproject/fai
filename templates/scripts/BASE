@@ -7,13 +7,8 @@
 #################################################################
 
 control:
-
-
    OutputPrefix = ("${cf_prefix}")
-
-   actionsequence = ( 
-		      editfiles
-		    )
+   actionsequence = ( editfiles )
 
 editfiles:
    any::
@@ -25,6 +20,8 @@ editfiles:
 	  ReplaceAll "^SYSLOGD=.*" With "SYSLOGD=${dblquote}-m 240${dblquote}"
 	}
 
+# add second root account using tcsh
+# insert encrypted root password
 	{ ${target}/etc/passwd
 	  LocateLineMatching 	"^root:.*"
 	  InsertLine 		"roott::0:0:root:/root:/usr/bin/tcsh"
@@ -40,17 +37,13 @@ editfiles:
 	  AppendIfNoSuchLine "local6.debug${tab}${tab}${tab}/var/log/daemon.log"
 	}
 
-	{ ${target}/etc/fstab
-	  AppendIfNoSuchLine "#${FAI_PACKAGEDIR} /mnt nfs ro,rsize=8192,wsize=8192 0 0"
-	}
-
    HOME_CLIENT::
 	{ ${target}/etc/fstab
 	  HashCommentLinesContaining "/home"
 	  AppendIfNoSuchLine "${hserver}:/home /home nfs rw,nosuid,rsize=8192,wsize=8192 0 0"
 	}
 
-   USR_MOUNT::
+   DATALESS::
 	{ ${target}/etc/fstab
 	  HashCommentLinesContaining "/usr"
 	  AppendIfNoSuchLine "${bserver}:/usr /usr nfs ro,rsize=8192,wsize=8192 0 0"
