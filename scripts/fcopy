@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.8.1, 23-jan-2002";
+my $version = "Version 1.9, 21-feb-2002";
 
 use File::Copy;
 use File::Compare;
@@ -56,24 +56,57 @@ sub copy_one {
   # use the last class for which a file exists
   foreach (@classes) { $class = $_,last if -f "$ps/$_"; }
 
+  $sourcefile = "$ps/$class";
+  $destfile = "$target/$source";
+
   unless (defined $class) {
     ewarn("no matching file for any class for $source defined.");
     # do not copy
     $opt_d and -f $destfile and move($destfile,"$destfile.pre_fcopy");
     return;
   }
+
   warn "using class: $class\n" if $debug;
 
-  $sourcefile = "$ps/$class";
-  $destfile = "$target/$source";
-  # do nothing if source and destination files are equal
-  compare($sourcefile,$destfile) || return;
+  # do nothing if source and destination files are equal 
+  if ($opt_P) {
+    # compare logically
+    if ($lastclass{$source}) {
+      # $source has already been copied last time
+
+      if ($lastclass{$source} ne $class) {
+        $logcomment = "\t# changed class" if $opt_L;
+      } else {
+        if ($changed{"$source/$class"} or 
+            $changed{"$source/postinst"} or 
+            $changed{"$source/file-modes"}) {
+          $logcomment = "\t# changed file" if $opt_L;
+        } else {
+          $logcomment = "\t# preserved (logical)" if $opt_L;
+          $preserve = 1;
+        }
+      }
+    } else {
+      $logcomment = "\t# new (logical)" if $opt_L;
+    }
+  } else {
+    # compare literally
+
+    if ( compare($sourcefile,$destfile)) {
+      $logcomment="\t# new (literal)";
+    } else {
+      $logcomment="\t# preserved (literal)" if $opt_L;
+      $preserve=1;
+    }
+  }
+  print LOGFILE "$source\t$class$logcomment\n" if $opt_L;
+  $preserve && return;
 
   # if destination is a symlink and -l is given, complain about it
   if ($opt_l && -l $destfile) {
     ewarn("Destination $destfile is a symlink");
     return;
-  } 
+  }
 
   # create subdirectories, if they do not exist
   mkpath($tpath,$debug,0755) unless -d $tpath;
@@ -87,7 +120,7 @@ sub copy_one {
     set_mode($ps,$destfile,$class);
   } else {
     ewarn("copy $sourcefile to $destfile failed. $!") ;
-  } 
+  }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub postinst {
@@ -188,6 +221,29 @@ sub ewarn {
   warn "fcopy: @_\n";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub read_status {
+  my $n=my @status_files=split(/,/,$opt_P);
+  ($n!=2) && die "fcopy: need both log and changes file\n";
+
+  open(LASTLOG,$status_files[0]);
+  while (<LASTLOG>) {
+    s/\#.*//g;
+    chomp;
+    my ($source,$class) = split(/\s/,$_,2);
+    $class=~s/\s*//g;
+    $lastclass{$source} = $class;
+  }
+  close(LASTLOG);
+
+  open(CHANGES,$status_files[1]);
+  while (<CHANGES>) {
+    s/\#.*//g;
+    chomp;
+    $changed{$_} = 1;
+  }
+  close(CHANGES);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub read_files {
 
   # read list of files
@@ -220,7 +276,10 @@ Usage: fcopy [OPTION] ... SOURCE ...
    -F file              Read list of sources from file.
    -h                   Show summary of options.
    -l                   Do not copy if destination is a symbolic link.
+   -L file              Log destination and used class to file
    -m user,group,mode   Set user, group and mode for copied files.
+   -P log,changes       Copy if class or source for class has changed since
+                        previous run
    -r                   Copy recursivly but skip CVS directories.
    -s source_dir        Look for source files relative to source_dir.
    -t target_dir        Copy files relativ to target_dir.
@@ -244,13 +303,19 @@ sub rfilter {
 
 $|=1;
 $error = 0;
-getopts('s:t:rm:vdDc:C:hF:l');
+getopts('s:t:rm:vdDc:C:hF:lL:P:');
 $opt_h && usage;
 $opt_m && check_mopt();
 $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
 $source  = $opt_s || $ENV{FAI_FILES} || `pwd`;
 $target  = $opt_t || $ENV{FAI_ROOT};
+$opt_L and { open(LOGFILE,">> $opt_L") or die("can't open logfile: $!")};
+$opt_P and read_status();
+
+#for postinst scripts
+$ENV{'FAI_ROOT'}=$ENV{'target'}=$target;
+
 # last class has highest priority
 @classes = reverse split /\s+/,$ENV{classes};
 $opt_c and @classes = split /,/,$opt_c;
