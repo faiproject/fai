@@ -4,7 +4,7 @@
 # print errors and warnings found to error.log
 # WARNING: This will only work with english error messages!
 
-errfile=/tmp/fai/error.log
+errfile=$LOGDIR/error.log
 
 # Define grep patterns. Do not start or end with an empty line!
 globalerrorpatterns="error
@@ -80,7 +80,12 @@ $myerrorpatterns"
 ignorepatterns="$globalignorepatterns
 $myignorepatterns"
 
-cd /tmp/fai/ || exit 3
+cd $LOGDIR || exit 3
+if [ -s $errfile ]; then
+    echo "Errorfile already exists. Aborting."
+    exit
+fi
+
 grep -i "$errorpatterns" *.log | grep -vi "$ignorepatterns" > $errfile
 
 if [ -s $errfile ]; then
