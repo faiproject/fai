@@ -16,12 +16,12 @@
 #
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 # General Public License for more details.
 # 
 # A copy of the GNU General Public License is available as
 # `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
-# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
 # can also obtain it by writing to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
@@ -100,6 +100,7 @@ define_classes() {
 
     for class in $classes ; do
 	echo $class >> /tmp/FAI_CLASSES
+	revclasses="$class $revclasses"
     done
 
     # define classes as: a.b.c.d for cfengine -D
@@ -138,7 +139,6 @@ fai_init() {
     mount -n -o remount,rw,rsize=8192 /dev/root /
     cat /proc/kmsg >/dev/tty4 &
     create_ramdisk
-    # init should eat up less CPU time # renice 19 1
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
     save_dmesg
 
@@ -216,19 +216,15 @@ fai_sysinfo() {
 
     # show some system information and save it on the server
     ( # execute in a subshell to get all output
-	if [ -x /usr/local/bin/fai_sysinfo ]; then
-	    /usr/local/bin/fai_sysinfo
-	else
-	    lspci
-	    hdparm -iv /dev/hd[a-h]
-	    fdisk -s /dev/hd? /dev/sd?
-	    fdisk -lu
-	    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
-	    cat /proc/partitions
-	    LC_ALL=C file -s /dev/hd* /dev/sd* | egrep -v " can't read | empty$"
-	    echo -n "xserver for graphic card: "; xviddetect -q
-	    #si -p -o shm
-	fi
+	lspci
+	hdparm -iv /dev/hd[a-h]
+	fdisk -s /dev/hd? /dev/sd?
+	fdisk -lu
+	[ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
+	cat /proc/partitions
+	LC_ALL=C file -s /dev/hd* /dev/sd* | egrep -v " can't read | empty$"
+	echo -n "xserver for graphic card: "; xviddetect -q
+	#si -p -o shm
 	mount_local_disks
 	fstab_mount
     ) > >( tee -a $rcslog )  2>&1
@@ -339,17 +335,17 @@ fai_install() {
 
     > $stamp
 
-    call_hook class
+    call_hook defclass
     define_classes > >( tee -a $rcslog )  2>&1
-    call_hook var
+    call_hook defvar
     define_variables > >( tee -a $rcslog )  2>&1
     save_dmesg
     ( # execute in a subshell to get all output
 
     load_keymap_consolechars
 
-    call_hook part
-    if [ ! -s $diskvar ];then
+    call_hook partition
+    if [ ! -s /tmp/fstab ];then
 	echo "Partitioning local harddisks"
 	setup_harddisks -X > /tmp/format.log 2>&1
     fi
@@ -359,10 +355,10 @@ fai_install() {
     fi
     . $diskvar
     [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
-    call_hook mount
+    call_hook mountdisks
     mount2dir $FAI_ROOT /tmp/fstab
 
-    call_hook base
+    call_hook extrbase
     echo "Unpacking Debian base archive"
     zcat /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
     call_hook mirror
@@ -371,7 +367,7 @@ fai_install() {
     cp -p /tmp/fstab $FAI_ROOT/etc/fstab
     mount_debian_mirror
 
-    call_hook baseupdate
+    call_hook updatebase
     echo "Installing software may take a while"
     if [ "$debug" ]; then
 	prepare_apt | tee -a /tmp/prepare-apt.log 2>&1
@@ -379,7 +375,7 @@ fai_install() {
 	prepare_apt  > /tmp/prepare-apt.log 2>&1
     fi
 
-    call_hook soft
+    call_hook instsoft
     if [ "$debug" ]; then
 	install_packages | tee -a /tmp/software.log
     elif [ "$verbose" ]; then
@@ -388,7 +384,7 @@ fai_install() {
 	yes '' | install_packages >> /tmp/software.log 2>&1
     fi
 
-    call_hook conf
+    call_hook configure
     fai_configure
 
     umount -n $FAI_ROOT/proc
@@ -420,7 +416,7 @@ fai_install() {
     fi
 
     wait_for_jobs
-    call_hook end
+    call_hook faiend
     fai_boot
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
