@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.5.2, 18-Apr-2001";
+my $version = "Version 1.5.3, 7-may-2001";
 
 use File::Copy;
 use File::Compare;
@@ -176,6 +176,22 @@ sub ewarn {
   warn "fcopy: $message\n";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub read_files {
+
+  # read list of files
+  # lines starting with # are comments
+  my $file = shift;
+  my @list;
+
+  open(LIST,"<$file") || die "fcopy: Can't open file $file\n";
+  while (<LIST>) {
+    next if /^#/;
+    chomp;
+    push @list, $_;
+  }
+  return @list;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
 
   print << "EOF";
@@ -201,22 +217,6 @@ Usage: fcopy [OPTION] ... SOURCE ...
 Report bugs to <lange\@informatik.uni-koeln.de>.
 EOF
   exit 0;
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub read_files {
-
-  # read list of files
-  # lines starting with # are comments
-  my $file = shift;
-  my @list;
-
-  open(LIST,"<$file") || die "fcopy: Can't open file $file\n";
-  while (<LIST>) {
-    next if /^#/;
-    chomp;
-    push @list, $_;
-  }
-  return @list;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
