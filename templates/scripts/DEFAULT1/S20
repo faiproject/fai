@@ -2,7 +2,17 @@
 
 control:
    OutputPrefix = ("${cf_prefix}")
-   actionsequence = ( editfiles )
+   actionsequence = ( files editfiles )
+
+files:
+   any::
+	${target}/tmp mode=1777 owner=root group=root act=fixdirs
+   
+   BSDAMD|SCRATCH::
+        ${target}/scratch mode=1777 owner=root group=root act=create
+
+   FILES_SCRATCH::
+        ${target}/files/scratch mode=1777 owner=root group=root act=fixdirs
 
 editfiles:
    any::
@@ -127,3 +137,22 @@ editfiles:
         { ${target}/etc/fstab
 	  AppendIfNoSuchLine "none         /dev/shm        shm           defaults       0 0"
         }
+
+# add NIS printcap
+   NISLPRCLIENT::
+        { ${target}/etc/lprng/lpd.conf
+	  AppendIfNoSuchLine "printcap_path=|/usr/local/share/LPRng/pcfilter"
+	}
+
+# add scratch.map 
+   BSDAMD::
+        { ${target}/etc/am-utils/amd.conf
+	  AppendIfNoSuchLine "### scratch"      
+	  AppendIfNoSuchLine "[ /scratch ]"
+	  AppendIfNoSuchLine "map_name = amd.scratch"
+	}
+
+	{ ${target}/etc/default/am-utils
+	  ReplaceAll "AM_UTILS_MAP_NET='true'"
+	        With "AM_UTILS_MAP_NET='false'"
+	}
