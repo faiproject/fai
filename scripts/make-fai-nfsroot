@@ -29,11 +29,7 @@
 
 # Thomas Lange, Universitaet Koeln, 2000
 
-# configuration of some packages will need some interactive input
-# lilo, netbase,... will not be set up correctly, but that doesn't matter
-# apt-get must been working on your server (sources.list must be OK)
-
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
 while getopts v opt ; do
         case "$opt" in
@@ -46,7 +42,7 @@ done
 conffile=$NFSROOT/etc/rcS_fai.conf
 
 # Additional packages that are install to nfsroot
-packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm strace expect5.31"
+packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 lvm strace expect5.31"
 
 export DEBIAN_FRONTEND=Noninteractive
 
@@ -70,13 +66,13 @@ setup_ssh() {
     if [ -f "$SSH_IDENTITY" ]; then
 	mkdir -p -m 700 $NFSROOT/root/.ssh
 	cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
-	echo You can log in install clients without password using $SSH_IDENTITY
+	echo You can log into install clients without password using $SSH_IDENTITY
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 copy_fai_files() {
 
-    perl -pi -e "s/^root::/root:${ROOTPW}:/" etc/passwd
+    perl -pi -e "s/^root::/root:${FAI_ROOTPW}:/" etc/passwd
     mkdir -p $NFSROOT/fai/fai_config $NFSROOT/usr/share/fai
     cp -p $LIBFAI/sbin/dhclient-script $LIBFAI/etc/dhclient.conf $NFSROOT/etc
     cp -p $LIBFAI/sbin/* $NFSROOT/sbin
@@ -91,16 +87,17 @@ copy_fai_files() {
 	FAI_PACKAGEDIR=$FAI_PACKAGEDIR
 	FAI_BASETGZ=$FAI_BASETGZ
 	MNTPOINT=$MNTPOINT
+	UTC=$UTC
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
     mkdir -p $NFSROOT
-    cd $NFSROOT
+    cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
     get_basetgz
     echo -n "Unpacking " ; ls /tmp/base?_?.tgz
-    tar zxpf /tmp/base?_?.tgz
+    tar -C $NFSROOT -zxpf /tmp/base?_?.tgz
     mknod $NFSROOT/dev/boot255 c 0 255
     mkdir -p $NFSROOT/$MNTPOINT
 
@@ -110,9 +107,10 @@ create_nfsroot() {
 
     # hoaks some packages
     touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
-    mkdir -p lib/modules/`uname -r`             # dirty trick to hoax lvm
-    touch lib/modules/`uname -r`/modules.dep    # dirty trick to hoax lvm
-    mkdir -p $NFSROOT/etc/ssh ; touch $NFSROOT/etc/ssh/NOSERVER
+    mkdir -p lib/modules/$KERNELVERSION           # dirty trick to hoax lvm
+    touch lib/modules/$KERNELVERSION/modules.dep  # dirty trick to hoax lvm
+    mkdir -p $NFSROOT/etc/ssh
+    touch $NFSROOT/etc/ssh/NOSERVER
 
     echo "$FAI_SOURCES_LIST" > $NFSROOT/etc/apt/sources.list
     upgrade_nfsroot
@@ -120,9 +118,10 @@ create_nfsroot() {
 
     # set timezone
     rm -f $NFSROOT/etc/localtime
-    cp -dp /etc/localtime /etc/timezone $NFSROOT/etc
+    cp -d /etc/localtime /etc/timezone $NFSROOT/etc
 
-    # make little changes to nfsroot, because most file systems are read only
+    # make little changes to nfsroot, because file systems are
+    # read only for the install clients 
     rm -rf etc/mtab var/run
     mv $NFSROOT/etc/init.d/rcS $NFSROOT/etc/init.d/rcS.orig
     ln -s /proc/mounts $NFSROOT/etc/mtab
@@ -130,21 +129,21 @@ create_nfsroot() {
     ln -s /tmp/etc/resolv.conf $NFSROOT/etc/resolv.conf
     ln -s /sbin/rcS_fai $NFSROOT/etc/init.d/rcS
 
-    # kernel with modules do not log loading of modules
+    # turn off logging of loading kernel modules
     rmdir $NFSROOT/var/log/ksymoops/
     ln -s /dev/null $NFSROOT/var/log/ksymoops
 
-
-    # set up loopback device
+    # definition for loopback device
     echo >$NFSROOT/etc/network/interfaces <<-EOF
 	iface lo inet static
 	address 127.0.0.1
 	netmask 255.0.0.0
 EOF
-    setup_ssh
+    # if package ssh is installed
+    [ -f /var/lib/dpkg/info/ssh.list ] && setup_ssh
     umount $NFSROOT/dev/pts 2>/dev/null
 
-    cat >$NFSROOT/etc/rcS.d/S01fai_abort <<-EOF
+    cat >$NFSROOT/etc/rc2.d/S01fai_abort <<-EOF
 	#!/bin/sh
 	echo FAI: installation aborted.
 	echo reboot with: faireboot
@@ -154,7 +153,7 @@ EOF
 	umount -ar
 	reboot -dfi
 EOF
-    chmod a+rx $NFSROOT/etc/rcS.d/S01fai_abort
+    chmod a+rx $NFSROOT/etc/rc2.d/S01fai_abort
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
@@ -167,11 +166,10 @@ upgrade_nfsroot() {
     rm -rf $NFSROOT/etc/pcmcia $NFSROOT/etc/apm
     chroot $NFSROOT apt-get -y remove pcmcia-cs </dev/null
 
-    # because start-stop-dameon must be faked do it here
-    chroot $NFSROOT apt-get -y install dpkg </dev/null
-    cp -p $LIBFAI/sbin/start-stop-daemon $NFSROOT/sbin
-
-    chroot $NFSROOT apt-get -y upgrade </dev/null
+    # fake start-stop-dameon
+    chroot $NFSROOT dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
+    cp $LIBFAI/sbin/start-stop-daemon $NFSROOT/sbin
+    chroot $NFSROOT apt-get -y upgrade
     } > $devnull
     echo "Adding additional packages to $NFSROOT:"
     echo "$packages"
@@ -188,28 +186,23 @@ get_basetgz() {
     case $BASETGZ in
 	ftp:*|http:*)
 	    echo "Getting $BASETGZ via wget. This may take some time."
-
 	    TMPBDIR=`mktemp /tmp/FAI-wget-XXXXXX` || exit 1
 	    rm $TMPBDIR; mkdir $TMPBDIR || exit
-	    wget -q -P$TMPBDIR $BASETGZ
+	    wget -P$TMPBDIR $BASETGZ
 	    mv $TMPBDIR/base?_?.tgz /tmp
 	    rm -rf $TMPBDIR
 	    ;;
-	*)
+	/*/base?_?.tgz)
 	    cd /tmp
 	    rm -f base?_?.tgz
 	    ln -s $BASETGZ
 	    ;;
+	*)
+	    die "BASETGZ $BASETGZ seems strong."
+	    ;;
     esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-install_kernel_nfsroot() {
-    rm -rf $NFSROOT/boot/*-$KERNELVERSION $NFSROOT/lib/modules/$KERNELVERSION
-    dpkg -x $KERNELPACKAGE $NFSROOT
-    chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 # main routine
 
 if [ -d $NFSROOT/fai ]; then
@@ -220,14 +213,5 @@ fi
 
 create_nfsroot
 test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT
-
-# create tftp boot images
-install_kernel_nfsroot
-mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
-# imggen is a free software from 3com
-imggen=`which imggen || true`
-if [ -x $imggen ]; then
-    imggen -a /boot/fai/installimage /boot/fai/installimage_3com
-fi
 
 exit 0
