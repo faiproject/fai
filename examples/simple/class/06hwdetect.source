@@ -16,7 +16,12 @@ done
 
 # load additional kernel modules (from old 11modules.source)
 # this order should also enable DMA for all IDE drives
-kernelmodules="rtc floppy usbkbd keybdev mousedev hid ide-detect ide-disk ide-cd isa-pnp"
+kernelmodules="rtc floppy usbkbd ide-disk ide-cd"
+case `uname -r` in
+    2.4*) kernelmodules="$kernelmodules keybdev mousedev hid ide-detect isa-pnp" ;;
+    2.6*) kernelmodules="$kernelmodules usbhid usbmouse ide-generic" ;;
+esac
+
 for mod in $kernelmodules; do
     [ "$verbose" ] && echo loading kernel module $mod
     modprobe -a $mod
