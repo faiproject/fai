@@ -3,13 +3,13 @@
 # copyright Thomas Lange 2001, lange@debian.org
 
 # this is the function: AppendIfNoSuchLine
-egrep "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/modules
+egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/modules
 
 # if class MBR is defined, write lilo into master boot record
 ifclass MBR || BOOT_DEVICE=$ROOT_PARTITION
 
 # write lilo.conf
-cat > ${target}/etc/lilo.conf <<EOF
+cat > $target/etc/lilo.conf <<EOF
 
 boot=$BOOT_DEVICE
 root=$ROOT_PARTITION
@@ -23,4 +23,4 @@ label=linux
 $liloappend
 EOF
 
-${target}/sbin/lilo -r ${target}
+$target/sbin/lilo -r $target
