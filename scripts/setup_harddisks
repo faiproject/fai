@@ -7,6 +7,7 @@
 #
 # This script is part of FAI (Fully Automatic Installation)
 # Copyright (c) 1999, 2000 by ScALE Workgroup, Universitaet zu Koeln
+# Copyright (c) 2000-2001 by Thomas Lange, Uni Koeln
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -25,21 +26,18 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 #
-# This program first read the configfiles and then umounts the
-# devices, partitions and formats the harddisks, produces fstab and
-# FAI-variables-file and mounts the devices.  It uses sfdisk, mke2fs,
-# e2fsck mkswap, mkdir, cp, mount and umount.
+# This program first read the configfiles, partitions and formats the harddisks,
+# produces fstab and FAI-variables-file.  It uses sfdisk, mke2fs, mkswap
 #
 # Parameters:
 # [-X]                     no test, your harddisks will be formated
 #                          default: only test, no real formating
 # [-f<config-filename>]    default: parse classes
 # [-c<class-path>]         default: /fai/disk_config/
-# [-i<install-directory>]  default: /tmp/
-# [-m<install-mountpoint>] default: /target/
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes: 06.05.2001 by Thomas Lange
 # Last changes: 09.03.2001 by Thomas Lange
 # Last changes: 05.12.2000 by Thomas Lange
 # Last changes: 03.05.2000 by Thomas Lange
@@ -118,19 +116,13 @@
 #     winfat32     : Win95 FAT32 file system
 #     writable     : mounts a preserved partition writable
 #
-#----------------------------------------------------
-#  ToDo:  Testing of boot flag
-#----------------------------------------------------
-
 $| = 1;                     # flush always
 
 #****************************************************
 # Variables
 #****************************************************
 
-$Version = "0.5fai";
-
-$test = 1;                  # 1 = testing, no real changes
+$Version = "0.6fai";
 
 $megabyte = 1024 * 1024;    # guess
 $gigabyte = 1024 * $megabyte;
@@ -140,15 +132,9 @@ $sectorsize = 512;
 $sfdisk_options = "-q";     # be quiet
 $mke2fs_options = "-q";     # be quiet
 $mkswap_options = "";
-$mkdir_options = "-p";      # create missing parent directories
-$mount_options = "";
-$umount_options = "";
 
 # FAI input variables
 $ClassPath = "/fai/disk_config";# this directory contains the classes
-$InstallDir = "/tmp";   # this directory gathers all produced files
-                        # and the mountpoint of the root-directory
-$InstallMountPoint = $ENV{FAI_ROOT}; # mountpoint of root-directory
 $ConfigFileName = "";   # alternative classfile, only for tests
 $DOS_Alignment = "";    # align partitions for tracks
 
@@ -195,16 +181,13 @@ $NofNotMoPart = 0;      # number of not mountet partitions
 # Parse command line
 
 use Getopt::Std;
-&getopts('Xf:c:i:m:d') || die "
+&getopts('Xf:c:d') || die "
 USAGE: [-X]                     no test, your harddisks will be formated
                                 default: only test, no real formating
        [-f<config-filename>]    default: parse classes
        [-c<class-path>]         default: /fai/disk_config/
-       [-i<install-directory>]  default: /tmp/
-       [-m<install-mountpoint>] default: /target/
        [-d]                     default: no DOS alignment
 ";
-
 
 print "FAI: setup harddisks V$Version\n";
 if (defined $opt_X){
@@ -215,43 +198,17 @@ if (defined $opt_X){
 }
 $ConfigFileName = $opt_f if $opt_f;# alternative config file
 $ClassPath      = $opt_c if $opt_c;# search classes here
-$InstallDir     = $opt_i if $opt_i;# this directory gathers all
-$InstallMountPoint = $opt_m if $opt_m;# mount root here
 $DOS_Alignment  = "yes" if $opt_d; # track alignment
 
-($InstallMountPoint) || die "ERROR: No Install-Mountpoint. (Option -m)\n";
-
-# Read partition tables
+# main part
 &GetAllDisks;
-
 &ParseAllConfigFiles;
-
 &BuildNewPartTables;
-
-&UmountDevices;
-
 &PartitionPersfdisk;
-
 &FormatDisks;
-
-# Mount all disks in a subdirectory
-#&MountDisks;
-
 &WriteFSTab;
-
-# Write FAI variables to file
 &WriteFAIVariables;
-
-print "\n";
 exit 0;
-
-
-
-
-#****************************************************
-#
-# subroutines
-#
 #****************************************************
 
 #****************************************************
@@ -531,8 +488,8 @@ sub BuildNewPartTables{
     # Build PartMountpoint array
     foreach $disk(keys %DiskMountpoints) {
 	$DiskMountpoints{$disk} =~ s/\s\s/\s/g;
-	$DiskMountpoints{$disk} =~ s/^\s//g;
-	$DiskMountpoints{$disk} =~ s/\s$//g;
+	$DiskMountpoints{$disk} =~ s/^\s//;
+	$DiskMountpoints{$disk} =~ s/\s$//;
 	foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
 	    $PartMountpoint{$MountpointPart{$mountpoint}} = $mountpoint;
 	}
@@ -575,7 +532,7 @@ sub BuildNewPartTables{
 	  ($MPPrimary{$mountpoint} eq "yes") ? ($PrimaryMP .= " $mountpoint") : ($LogicalMP .= " $mountpoint");
 	}
 	$DiskMountpoints{$disk} = "$PrimaryMP$LogicalMP";
-	$DiskMountpoints{$disk} =~ s/^\s//g;
+	$DiskMountpoints{$disk} =~ s/^\s//;
 	# print partition table
         ($test != 1) || (PrintPartitionTable($disk));
     }
@@ -622,7 +579,7 @@ sub SetPartitionPositions{
 #****************************************************
 sub SetGroupPos{
     my ($PartGroup,$Start,$End) = @_;
-    $PartGroup =~ s/^ //g;
+    $PartGroup =~ s/^ //;
     ($PartGroup) || return;
     my $totalsize = $End - $Start + 1;
     ($totalsize <= 0) && return;
@@ -696,46 +653,10 @@ sub PrintPartitionTable{
 	    $mountpointname = $mountpoint;
 	}
 	$end = $MPStart{$mountpoint} + $MPSize{$mountpoint} - 1;
-	print AddSpacesRight("/dev/$part",10).AddSpacesRight($mountpointname,17).
-              AddSpacesRight("start=$MPStart{$mountpoint}",14).
-	      AddSpacesRight("size=$MPSize{$mountpoint}",14).
-	      AddSpacesRight("end=$end",14).
-	      "id=$MPID{$mountpoint}\n";
-    }
-}
-
-#****************************************************
-# unmount devices.
-# does not find mountpoints without partition
-#****************************************************
-sub UmountDevices{
-    print "\nUmount Devices:\n";
-    ($test != 1) && (system "sync;sync");
-    my %MountPointPerDir = (); my $disk; my $device; my $dir; my $command;
-    # read all mountet ide and scsi devices
-    open(FILE, "/proc/mounts") ||
-        die "ERROR: unable to read /proc/mounts\n";
-    while ($line = <FILE>){
-	chomp($line);
-	if($line =~ /^\/dev\/(.*?)\s+(.*?)\s/){
-	    $device = $1;
-	    $dir = $2;
-	    ($device =~ /^(.*?)\d/);
-	    $disk = $1;
-	    if ($DiskMountpoints{$disk}){
-		$dir =~ s#//#/#g;
-		$MountPointPerDir{$dir} = $device;
-	    }
-	}
-    }
-    close(FILE);
-    # Unmount devices
-    foreach $dir (reverse sort keys %MountPointPerDir){
-	$device = $MountPointPerDir{$dir};
-	$command = "umount $umount_options /dev/$device";
-	print "  $command\n";
-	($test != 1) && (system "$command");
-    }
+	print <<"EOM";
+/dev/$part $mountpointname start=$MPStart{$mountpoint} size=$MPSize{$mountpoint} end=$end id=$MPID{$mountpoint}
+EOM
+      }
 }
 
 #****************************************************
@@ -746,27 +667,23 @@ sub PartitionPersfdisk{
     my ($command, $result, $filename, $number);
     print "\nPartition with sfdisk:\n";
     foreach $disk(keys %DiskMountpoints) {
-        $sfdiskTables{$disk} = "# partition table of device: /dev/$disk\n";
-        $sfdiskTables{$disk} .= "unit: sectors\n";
-        $sfdiskTables{$disk} .= "\n";
+        $sfdiskTables{$disk} = "# partition table of device: /dev/$disk\nunit: sectors\n\n";
 	$PrimaryNo = 1;
         foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
 	    $part = $MountpointPart{$mountpoint};
-	    ($part =~ /(\d+)/);
+	    $part =~ /(\d+)/;
 	    ($1 < 5) && ($PrimaryNo++);
 	    if ( ($1 == 5) && ($PrimaryNo < 5) ){
 	        for $number($PrimaryNo..4) {
 		    $sfdiskTables{$disk} .= BuildsfdiskDumpLine("$disk$number",0,0,0)."\n";
 	        }
 	    }
-	    $line = BuildsfdiskDumpLine($MountpointPart{$mountpoint},$MPStart{$mountpoint}
-                        ,$MPSize{$mountpoint},$MPID{$mountpoint});
+	    $line = BuildsfdiskDumpLine($MountpointPart{$mountpoint},$MPStart{$mountpoint},$MPSize{$mountpoint},$MPID{$mountpoint});
             ($part eq $BootPartition) && ($line .= ", bootable");
             $sfdiskTables{$disk} .= "$line\n";
 	}
 	print $sfdiskTables{$disk};
-	$filename = "$InstallDir/$disk.sfdisk";
-        $filename =~ s#//#/#g;
+	$filename = "/tmp/$disk.sfdisk";
 	if(($test != 1) && ($filename)){
 	    open(FILE, ">$filename") || die "unable to write temporary file $filename\n";
 	    print FILE $sfdiskTables{$disk};
@@ -779,19 +696,14 @@ sub PartitionPersfdisk{
 	    (($? >> 8) == 0) || (die "\nSFDISK ERROR:\n $result\n");
 	}
     }
-    print "\n";
 }
 
 #****************************************************
 # build a sfdisk dump line
 #****************************************************
 sub BuildsfdiskDumpLine{
-    my ($device,$start,$size,$id) = @_;
-    return  AddSpacesRight("/dev/$device",10).": "
-            ."start=".AddSpacesLeft($start,10)
-            .", size=".AddSpacesLeft($size,10)
-            .", Id=".AddSpacesLeft($id,2);
-    return
+
+  sprintf "/dev/%-5s: start=%10s, size=%10s, Id=%3s",@_;
 }
 
 #****************************************************
@@ -880,14 +792,13 @@ sub FormatDisks{
 sub WriteFSTab{
     my ($FileSystemTab, $device, $type, $filename);
     print "\nWrite fstab:\n";
-    $FileSystemTab  = "";
-    $FileSystemTab .= "# /etc/fstab: static file system information.\n";
-    $FileSystemTab .= "#\n";
-    $FileSystemTab .= BuildfstabLine("#<file sys>","<mount point>","<type>","<options>","<dump>","<pass>");
+    $FileSystemTab  = << "EOM";
+# /etc/fstab: static file system information.
+#
+#<file sys>          <mount point>     <type>   <options>   <dump>   <pass>
+EOM
     # 1. /
-    $mountpoint = "/";
-    $type = "ext2";
-    $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/","$type",$MPfstaboptions{'/'},0,1);
+    $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/","ext2",$MPfstaboptions{'/'},0,1);
     # 2. swap partitions
     foreach $mountpoint (%PartMountpoint){
 	next if( $mountpoint !~ /^swap/i);
@@ -902,11 +813,11 @@ sub WriteFSTab{
 	$device = $MountpointPart{$mountpoint};
 	$type = "ext2";
 	($MPOptions{$mountpoint} =~ /\b(dosfat16|winfat32)\b/i) && ($type = "vfat");
-	$FileSystemTab .= BuildfstabLine("/dev/$device","$mountpoint","$type",$MPfstaboptions{$mountpoint},0,2);
+	$FileSystemTab .= BuildfstabLine("/dev/$device",$mountpoint,$type,$MPfstaboptions{$mountpoint},0,2);
     }
     # write it
     $filename = "/tmp/fstab";
-    print "$FileSystemTab\n";
+    print $FileSystemTab;
     if($test != 1){
 	open(FILE, ">$filename") || die "unable to write fstab $filename\n";
 	print FILE $FileSystemTab;
@@ -918,51 +829,22 @@ sub WriteFSTab{
 # Build fstab line
 #****************************************************
 sub BuildfstabLine{
-    my ($device,$mountpoint,$type,$options,$dump,$pass) = @_;
-    return AddSpacesRight($device,20)." "
-	  .AddSpacesRight($mountpoint,14)." "
-          .AddSpacesRight($type,6)." "
-          .AddSpacesRight($options,24)." "
-	  .AddSpacesRight($dump,4)."$pass\n";
-}
 
-#****************************************************
-# Adds space characters right to string
-#****************************************************
-sub AddSpacesRight{
-    my ($line,$spaces) = @_;
-    my $s=($spaces-(length($line)));
-    for (0..$s){
-	$line .= " ";
-    }
-    return $line;
-}
-
-#****************************************************
-# Adds space characters left to string
-#****************************************************
-sub AddSpacesLeft{
-    my ($line,$spaces) = @_;
-    my $s=($spaces-(length($line)));
-    for (0..$s){
-	$line = " $line";
-    }
-    return $line;
+    sprintf "%-10s   %-15s   %-6s  %-8s  %-4s %-4s\n",@_;
 }
 
 #****************************************************
 # Write all FAI variables of this program to file
 #****************************************************
 sub WriteFAIVariables{
-    my $filename = $FAIOutputFile;
-    $filename =~ s#//#/#g;
-    ($filename) || return;
-    print "Write FAI variables to file $filename\n";
-    if($test != 1){
-	open(FILE, ">$filename") || die "unable to write file $filename\n";
-	print FILE "export BOOT_DEVICE=/dev/$BOOT_DEVICE\n";
-	print FILE "export ROOT_PARTITION=/dev/$MountpointPart{'/'}\n";
-	print FILE "export BOOT_PARTITION=/dev/$BootPartition\n";
-	close(FILE);
-    }
+
+    print "Write FAI variables to file $FAIOutputFile\n";
+    return if ($test == 1);
+    open(FILE, ">$FAIOutputFile") || die "Unable to write file $FAIOutputFile\n";
+    print FILE << "EOM";
+BOOT_DEVICE=/dev/$BOOT_DEVICE
+ROOT_PARTITION=/dev/$MountpointPart{'/'}
+BOOT_PARTITION=/dev/$BootPartition
+EOM
+    close(FILE);
 }
