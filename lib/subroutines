@@ -44,6 +44,13 @@ ifclass() {
     return 1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+netdevice_info() {
+
+    # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
+    # if not defined, use boot messages to determine network devices
+    [ -n "$netdevices" ] || netdevices=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
 
     # the variable holds a space separated list of devices and their block size
@@ -51,13 +58,6 @@ disk_info() {
 
     # a list of all local disks, without size
     disklist=`list_disks $device_size`
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-netdevice_info() {
-
-    # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
-    # if not defined, use boot messages to determine network devices
-    [ -n "$netdevices" ] || netdevices=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 diskandsize() {
@@ -76,7 +76,7 @@ list_disks() {
 
     # print only every second entry
     local i ent list
-    list=$1
+    list=$*
     i=0
 
     for ent in $list; do
@@ -313,6 +313,16 @@ call_hook() {
 		. $hfile.sh $dflag
 	fi
      done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+skiptask() {
+
+    local tasklist="$*"
+    local task
+
+    for task in $tasklist; do
+	> /tmp/skip.$task
+    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_confdir() {
