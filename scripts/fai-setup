@@ -32,6 +32,7 @@ PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 set -e
 . /etc/fai/fai.conf
 
+options=$@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_export_line() {
 
@@ -94,7 +95,7 @@ setup_fai_account() {
 	if [ ! -f $sshdir/known_hosts ]; then
 	    echo "Using interface $SERVERINTERFACE to determine local hostname."
 	    SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
-	    HOSTNAME=`grep $SERVERIP /etc/hosts | perl -p -e 's/[\d.\s]*(\w*).*// && print $1'`
+	    HOSTNAME=`grep $SERVERIP /etc/hosts | perl -p -e 's/[\d.\s]*([\w-]*).*// && print $1'`
 	    echo "Adding $HOSTNAME to known_hosts."
 	    [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=` cat /etc/ssh/ssh_host_dsa_key.pub | sed -e "s/= .*$/=/"`
 	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=` cat /etc/ssh/ssh_host_rsa_key.pub | sed -e "s/= .*$/=/"`
@@ -126,7 +127,7 @@ if [ -n "$LOGUSER" ]; then
     setup_fai_account
 fi
 
-make-fai-nfsroot
+make-fai-nfsroot $options
 
 if [ -n "$LOGUSER" ]; then
     # chown only if cd was successful
