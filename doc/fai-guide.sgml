@@ -10,8 +10,8 @@
 <!entity faiver "2.3">
 <!entity faiverdate "15 XXX, 2002">
 
-<!entity version "1.3.1">
-<!entity date    "15 XXX 2002">
+<!entity version "1.3.2">
+<!entity date    "20 feb 2002">
 ]>
 
 <debiandoc>
@@ -989,13 +989,16 @@ the secure shell daemon for remote access is started on demand.
 
 Now scripts in <file>/fai/class/</file> are executed to define classes
 and variables that are later used in the site specific configuration
-scripts.  All scripts matching <tt>S[0-9]*.{sh,pl}</tt> are executed
-in alphabetical order. Every word that these scripts print to the
-standard output are interpreted as class names. These classes are
-defined for this install client. You can also say this client belongs
-to these classes. A class is defined or undefined and has no
-value. Only defined classes are of interest for an install client.  A
-description of all classes can be found in
+scripts.  All scripts matching <tt>S[0-9]*.{sh,pl,source}</tt> are
+executed in alphabetical order. Scripts ending in <tt>.source</tt> are
+sourced, so they can define new classes by adding these calsses to
+variable <var>newclasses</var> (see <file>S30menu.source</file> for an
+example). Every word that these scripts print to the standard output
+are interpreted as class names. These classes are defined for this
+install client. You can also say this client belongs to these
+classes. A class is defined or undefined and has no value. Only
+defined classes are of interest for an install client.  A description
+of all classes can be found in
 <file>/usr/share/doc/fai/classes_description.txt</file>. It is
 advisable to document the job a new class performs. Then, this
 documentation is the base for composing a configuration from classes.
@@ -1006,6 +1009,13 @@ on demand. So you can use classes when loading modules and also define
 more classes after the kernel has loaded modules and recognized new hardware.
 A complete description of all these scripts can be found in <ref id="cscripts">.
 <p>
+
+<p>Script <file>S30menu.source</file> pops up a little menu and ask
+the user, which kind of installation should be performed (eg. CAD
+workstation, notebook, scientific workstation, workgroup server, Gnome
+desktop...). Keep in mind that this won't lead to a fully automatic
+installation ;-)
+</p>
 
 After defining the classes, every file matching <tt>*.var</tt>, which
 prefix is a defined class, is executed to define variables.
@@ -1881,13 +1891,6 @@ scriptname=$(basename $0 .DEFAULT)
 <item> <p>Use <prgn>ssh</prgn> in the very beginning to verify that
 you mounted the configuration from the correct server and not a
 possible spoofing host.</p></item>
-
-<item> <p>Pop up a little menu and ask the user, which kind of
-installation should be performed (eg. CAD workstation, notebook,
-scientific workstation, workgroup server, Gnome desktop...). See
-<file>hooks/install.MENU</file> for an example how to use this. Keep
-in mind that this won't lead to a fully automatic installation ;-)
-</p></item>
 
 <item> <p>Do not mount the configuration directory, instead get a
 compressed archive via HTTP or from floppy disk and extract it into a
