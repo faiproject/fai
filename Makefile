@@ -10,7 +10,7 @@ SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar bootsec
 CONFFILES= apt.conf dhclient.conf fai_modules_off pxelinux.cfg
 
 # files with variable KERNLEVERSION in it; this string will be substituted
-KVERSION_FILES = $(SHAREDIR)/templates/class/DEFAULT.var $(DESTDIR)/etc/fai/fai.conf
+KVERSION_FILES = $(SHAREDIR)/templates/class/DEFAULT.var $(SHAREDIR)/templates/class/ATOMCLIENT.var $(SHAREDIR)/templates/class/pittermaennche.var
 
 all:
 	$(MAKE) -C doc all
