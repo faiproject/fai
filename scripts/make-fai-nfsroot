@@ -79,13 +79,20 @@ if [ -z "$FAI_SOURCES_LIST" -a ! -s "$cfdir/sources.list" -a ! -f /etc/apt/sourc
     exit 7
 fi
 
+kfile="vmlinuz"
 case `uname -m` in
     i386|i486|i586|i686) 
 	arch_packages="grub read-edid kudzu hwtools" ;;
+
     ia64) 
 	arch_packages="elilo gnu-efi efibootmgr" ;;
-    sparc) 
+
+    sparc|sparc64) 
 	arch_packages="silo sparc-utils" ;;
+
+    ppc) 
+	arch_packages=""
+        kfile="vmlinux" ;;
 
     *)  arch_packages="" ;;
 esac
@@ -368,7 +375,7 @@ setup_bootp(){
 
     if [ -x "`which mknbi-linux`" ]; then
 	mknbi-linux --ip=any --output=/boot/fai/installimage \
-	  $NFSROOT/boot/vmlinuz-$KERNELVERSION 
+	  $NFSROOT/boot/$kfile-$KERNELVERSION 
     else
         echo "Command mknbi-linux not found. Can not set up BOOTP booting. Please install the package mknbi and rerun fai-setup."
 	return
@@ -387,7 +394,7 @@ setup_dhcp(){
 
     # pxe and dhcp environment
     local pxebin=/usr/lib/syslinux/pxelinux.0
-    cp -p $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/vmlinuz-install
+    cp -p $NFSROOT/boot/$kfile-$KERNELVERSION /boot/fai/$kfile-install
     [ -f $pxebin ] && cp $pxebin /boot/fai
     [ -d /boot/fai/pxelinux.cfg ] || mkdir -p /boot/fai/pxelinux.cfg || true
     echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
