@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.0.3, 5-june-2003";
+$version="version 1.0.4, 6-june-2003";
 
 use Socket;
 use Net::hostent;
@@ -66,7 +66,7 @@ sub host2hex {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub lsdir {
 
-  my (@n,$host,$ip,$iaddr,$hex,$kernelname);
+  my (@n,$host,$ip,$iaddr,$hex,$kernelname,$append);
 
   opendir(DIR, $pxedir) || die "can't opendir $pxedir: $!";
   foreach (readdir(DIR)) {
@@ -88,11 +88,13 @@ sub lsdir {
     undef $kernelname;
     open (CFG,"$pxedir/$hex") || die "$! $@\n";
     while (<CFG>) {
-      /^kernel (\S+)/ and $kernelname = $1 and last;
+      /^kernel (\S+)/ and $kernelname = $1;
+      /^append (.+)/ and $append = $1;
     }
     close (CFG);
 
-    printf "%-16s %-12s $kernelname\n",$hex,$host;
+    $opt_L or undef $append;
+    printf "%-8s %-12s $kernelname $append\n",$hex,$host;
   }
   exit;
 }
@@ -142,13 +144,14 @@ sub disable {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-getopts('d:hnvlip:f:Frk:');
+getopts('d:hnvlLip:f:Frk:');
 $opt_h and usage;
 defined @ARGV or usage;
 
 $opt_n and $opt_v = 1;
 $opt_v and $verbose = 1;
 $pxedir = $opt_d || '/boot/fai/pxelinux.cfg';
+$opt_L and $opt_l = 1;
 $opt_l and lsdir;
 
 if ($opt_r) {
