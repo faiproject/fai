@@ -34,6 +34,7 @@ FAI_VERSION=FAIVERSIONSTRING
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 fstab=fstab  # Solaris uses vfstab
+lpipe=/tmp/logfifo
 
 # default classes before calling task defvar. Will be overwritten by task defvar
 # the type of operating system (linux, sunos)
@@ -41,6 +42,18 @@ oclass=$(uname -s | tr /a-z/ /A-Z/)
 classes="DEFAULT $oclass $HOSTNAME LAST"
 faimond=0
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+prcopyleft() {
+
+    cat <<-EOF
+             -----------------------------------------------------
+               Fully Automatic Installation for $osname
+               $FAI_VERSION     Copyright (c) 1999-2004
+
+               Thomas Lange      <lange@informatik.uni-koeln.de>
+             -----------------------------------------------------
+EOF
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
@@ -94,27 +107,42 @@ fai_init() {
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -t devpts devpts /dev/pts
 	# add other options for nfs mount of /dev/root to root-path in dhcpd.conf
-	mount -o remount,ro /dev/root /
+	mount -t nfs -o remount,ro /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
     fi
     if [ X$OS_TYPE = Xsunos ]; then
 	osname='Sun Solaris'
     fi
 
-    echo -ne "\ec\e[1;31m"
-    {
-    cat <<-EOF
-             -----------------------------------------------------
-               Fully Automatic Installation for $osname
-               $FAI_VERSION     Copyright (c) 1999-2004
+    # set red color, but not on sparc
+    case $HOSTTYPE in
+	sparc*) ;;
+	*) echo -ne "\ec\e[1;31m" ;;
+    esac
 
-               Thomas Lange      <lange@informatik.uni-koeln.de>
-             -----------------------------------------------------
-EOF
+    prcopyleft
+    prcopyleft > $rcslog
+
+    # set scroll regio, but not on sparc
+    case $HOSTTYPE in
+	sparc*) ;;
+	*) 
+	    echo -ne "\e[7;25r"
+	    echo -ne "\e[9B\e[1;m"
+	    ;;
+    esac
     save_dmesg
-    } > >( tee -a $rcslog )  2>&1
-    echo -ne "\e[7;25r"
-    echo -ne "\e[9B\e[1;m"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fstart() {
+
+    # these tasks can define variables, that are needed later
+    task confdir
+    task setup
+    task defclass
+    task defvar
+    load_keymap_consolechars
+    set_disk_info
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
@@ -125,14 +153,24 @@ EOF
 unset oclass
 
 fai_init
-{
-task confdir
-task setup
-task defclass
-task defvar
-load_keymap_consolechars
-set_disk_info
-} > >( tee -a $rcslog )  2>&1
+
+mkfifo $lpipe
+tee -a $rcslog < $lpipe &
+# in bash &> redirect stdout and stderr to file
+fstart &> $lpipe
+rm $lpipe
+sleep 1 # wait for tee to complete. One second should be ok
+
+# old code
+# {
+# # a bash group command with { does not work on sparc
+# task confdir
+# task setup
+# task defclass
+# task defvar
+# load_keymap_consolechars
+# set_disk_info
+# } > >( tee -a $rcslog )  2>&1
 
 # if you want to recall rcS_fai
 # [ -n $callarg ] && FAI_ACTION=$callarg
