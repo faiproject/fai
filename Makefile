@@ -21,7 +21,7 @@ install:
 #	$(MAKE) -C kernel install LIBDIR=$(LIBDIR)
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
-	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
+	cd scripts ; install $(SCRIPTS) fcopy $(LIBDIR)/sbin
 	install -m644 lib/subroutines $(DESTDIR)/usr/share/fai
 	install -m644 lib/Fai.pm $(DESTDIR)/usr/lib/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(LIBDIR)/etc/
