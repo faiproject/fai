@@ -39,7 +39,6 @@ install:
 	install -m755 share/subroutines* $(SHAREDIR)
 	install -m644 share/Fai.pm $(DESTDIR)/usr/share/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(CONFDIR)
-	install -m644 conf/install_packages.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/fai.conf conf/sources.list $(DESTDIR)/etc/fai/
 	install -m600 conf/make-fai-nfsroot.conf $(DESTDIR)/etc/fai/
 	cp -a examples $(DOCDIR)
