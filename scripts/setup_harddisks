@@ -37,6 +37,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes: 09.07.2001 by Thomas Lange
 # Last changes: 04.07.2001 by Thomas Lange
 # Last changes: 06.05.2001 by Thomas Lange
 # Last changes: 09.03.2001 by Thomas Lange
@@ -218,7 +219,7 @@ exit 0;
 sub GetAllDisks{
     my $line=""; my $disk=""; my $device=""; my $rest; my $result; my $divi;
     print "disks found:";
-    $result = `sfdisk -l -q`;
+    $result = `sh -c "LC_ALL=C sfdisk -l -q"`;
     foreach $line(split(/\n/,$result)){
         # old sfdisk format
 	if($line =~ /^Disk\s+\/dev\/(.+?):\s+(\d+)\s+heads,\s+(\d+)\s+sectors,\s+(\d+)\s+cylinders/i){
@@ -237,7 +238,7 @@ sub GetAllDisks{
 	    print " $disk";
 	}
     }
-    $result = `sfdisk -d -q`;
+    $result = `sh -c "LC_ALL=C sfdisk -d -q"`;
     foreach $line(split(/\n/,$result)){
 	if($line =~ /# partition table of \/dev\/([a-z]+)/i){
 	   $disk = $1;
@@ -348,8 +349,6 @@ sub ParseConfigFile{
 		  && die "SYNTAX ERROR in config file line $a. Mountpoint $mountpoint redefined.\n$line\n";
 		if($mountpoint eq "/"){
 		    ($BootPartition) || ($BOOT_DEVICE = $disk);
-		    ($command eq "primary")
-                        || die "SYNTAX ERROR in config file line $a, root partition must be primary:\n$line\n";
 		}
 		if($mountpoint eq "-"){
 		    $NofNotMoPart++;
@@ -686,10 +685,10 @@ sub PartitionPersfdisk{
 	    print FILE $sfdiskTables{$disk};
 	    close(FILE);
         }
-	$command = "sfdisk $sfdisk_options /dev/$disk < $filename";
+	$command = "LC_ALL=C sfdisk $sfdisk_options /dev/$disk < $filename";
 	if($test != 1){
             print "  $command\n";
-	    $result = `$command`;
+	    $result = `sh -c "$command"`;
 	    (($? >> 8) == 0) || (die "\nSFDISK ERROR:\n $result\n");
 	}
     }
