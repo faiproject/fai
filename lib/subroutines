@@ -105,8 +105,8 @@ mount_local_disks() {
 	    mkdir -p $FAI_ROOT/$partition
 	    mount -o $mountoption /dev/$partition $FAI_ROOT/$partition
 	    # \ && echo $partition mounted successfully
-	    if [ -f $FAI_ROOT/$partition/etc/fstab ]; then
-		echo "/etc/fstab found in $partition"
+	    if [ -f $FAI_ROOT/$partition/etc/$fstab ]; then
+		echo "/etc/$fstab found in $partition"
 		fstabpart=$partition   # used in fstab_mount
 		fstablist="$fstablist $partition"
 		fstabcount=$((fstabcount+1))
@@ -138,11 +138,11 @@ fstab_mount() {
     if [ $fstabcount -eq 1 ]; then
 	umount_local_disks
 	mount -o ro /dev/$fstabpart $FAI_ROOT
-	mount2dir $FAI_ROOT $FAI_ROOT/etc/fstab
+	mount2dir $FAI_ROOT $FAI_ROOT/etc/$fstab
 	df
     fi
-    [ $fstabcount -eq 0 ] && echo "No /etc/fstab found"
-    [ $fstabcount -ge 2 ] && echo -n "Found multiple /etc/fstab files in : $fstablist.\nUse mount2dir for mounting."
+    [ $fstabcount -eq 0 ] && echo "No /etc/$fstab found"
+    [ $fstabcount -ge 2 ] && echo -n "Found multiple /etc/$fstab files in : $fstablist.\nUse mount2dir for mounting."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_local() {
@@ -428,7 +428,8 @@ task_defclass() {
     cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the install server."
     echo "Defining classes"
 
-    [ -f $HOSTNAME ] && newclasses=`cat $HOSTNAME`
+    [ -f $HOSTNAME ] && newclasses=`grep -v '^#' $HOSTNAME`
+    [ "$debug" ] && echo "newclasses= $newclasses"
     classes="DEFAULT $newclasses"
 
     # alphabetical sort is important
@@ -492,8 +493,8 @@ task_partition() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mountdisks() {
 
-    [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
-    mount2dir $FAI_ROOT /tmp/fstab
+    [ ! -f /tmp/$fstab ] && die "No /tmp/$fstab created."
+    mount2dir $FAI_ROOT /tmp/$fstab
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_extrbase() {
@@ -501,8 +502,8 @@ task_extrbase() {
     echo "Unpacking Debian base archive"
     zcat /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
     # now we can copy fstab
-    [ -f $FAI_ROOT/etc/fstab ] && mv $FAI_ROOT/etc/fstab $FAI_ROOT/etc/fstab.old
-    cp -p /tmp/fstab $FAI_ROOT/etc/fstab
+    [ -f $FAI_ROOT/etc/$fstab ] && mv $FAI_ROOT/etc/$fstab $FAI_ROOT/etc/$fstab.old
+    cp -p /tmp/$fstab $FAI_ROOT/etc/$fstab
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mirror() {
