@@ -42,7 +42,7 @@ extract() {
     echo "ftar: extracting $file to $target/$dir"
     tar -C $target/$dir $vflag $option -xf $file
     # if option -1 is set, only one class will be used
-    $single && exit
+    $single && exit 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -91,8 +91,8 @@ shift $(($OPTIND - 1))
 [ "$1" ] || usage
 # last class in FAI_CLASSES has highest priority
 [ -f /tmp/FAI_CLASSES ] && classes=`tac /tmp/FAI_CLASSES`
-[ "$debug" -ne 0 ] && vflag="-v"
-[ "$debug" -ne 0 ] && echo "ftar: classes : $classes"
+[ "$debug" ] && vflag="-v"
+[ "$debug" ] && echo "ftar: classes : $classes"
 [ -z "$source" ] && die "Source directory undefined."
 [ -z "$target" ] && die "Target directory undefined."
 
@@ -109,3 +109,5 @@ for c in $classes ; do
     [ -f $fpath/$c.tar.gz ]   && extract $fpath/$c.tar.gz -z
     [ -f $fpath/$c.tar.bz2 ]  && extract $fpath/$c.tar.bz2 -I
 done
+
+exit 0
