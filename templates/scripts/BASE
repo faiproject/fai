@@ -16,23 +16,14 @@ control:
                       files
 		      copy
 		      editfiles
-		      links  
 		      shellcommands
 		    )
 
 tidy:
-#   any::
-#	${target}/root/ pat=* R=10 age=0 rmdirs=true
 
    !TMP_PARTITION::
 	${target}/tmp  pat=*   age=0 rmdirs=true
 	${target}/     pat=tmp age=0 rmdirs=true
-
-files:
-   any::
-	${target}/dev rec=1 inc=fd* m=a+rw action=fixall
-	${target}/tmp m=1777 o=root g=root action=fixall
-        ${target}/etc/mailname m=644 o=root g=root action=touch
 
 copy:
    any::
@@ -55,28 +46,8 @@ copy:
            m=640 o=root g=root  
 	   force=${force} backup=${backup}
 
-links:
-   any::
-	${target}/etc/localtime ->! /usr/share/zoneinfo/${time_zone}
-	   nofile=force
-   FAICLIENT::
-	${target}/vol ->! /usr/local/vol  nofile=force
-
-   !TMP_PARTITION::
-   	${target}/tmp ->! /var/tmp	  nofile=force
-
 editfiles:
    any::
-	{ ${target}/etc/hostname
-	  AutoCreate
-	  EmptyEntireFilePlease
-	  Append	'${HOSTNAME}'
-	}
-
-	{ ${target}/etc/hosts
-	  AutoCreate
-	  AppendIfNoSuchLine	'${IPADDR}${tab}${HOSTNAME}'
-	}
 
 	{ ${target}/etc/default/rcS
 	  ReplaceAll "^UTC=.*" With "UTC=${UTC}"
@@ -91,12 +62,6 @@ editfiles:
 	  InsertLine 		"roott::0:0:root:/root:/usr/bin/tcsh"
 	  ReplaceAll 		"^root::" With "root:${rootpw}:"
 	  ReplaceAll		"^roott::" With "roott:${rootpw}:"
-	}
-
-	{ ${target}/etc/timezone
-	  AutoCreate
-	  EmptyEntireFilePlease	  
-	  Append "${time_zone}"
 	}
 
 	{ ${target}/etc/syslog.conf
@@ -152,6 +117,3 @@ shellcommands:
    # tar -cf FAICLIENT -C /etc/alternatives .
    FAICLIENT.DATALESS::
 	"/bin/tar -C ${target}/etc/alternatives -xvpf ${files}/etc/alternatives/FAICLIENT"
-
-   USR_LOCAL_COPY::
-	"/bin/cp -dpR /usr/local ${target}/usr"
