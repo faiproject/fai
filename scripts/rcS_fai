@@ -49,8 +49,9 @@ install_base() {
 
     # mount debian directory; get baseX_Y.tgz and unpack it
     if [ "$FAI_PACKAGEDIR" ]; then
-	mkdir $FAI_ROOT/mnt
-	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $FAI_ROOT/mnt || die "Can't mount $FAI_PACKAGEDIR"
+	mkdir -p $FAI_ROOT/$MNTPOINT
+	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $FAI_ROOT/$MNTPOINT || \
+	    die "Can't mount $FAI_PACKAGEDIR"
     fi
 
     # use wget if FAI_BASETGZ is an URL
@@ -63,7 +64,7 @@ install_base() {
 	    rm -f $FAI_ROOT/tmp/$basefile
 	;;
 
-	*) extract_base $FAI_ROOT/mnt/$FAI_BASETGZ ;;
+	*) extract_base $FAI_ROOT/$MNTPOINT/$FAI_BASETGZ ;;
     esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -184,7 +185,9 @@ fai_init() {
     dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
     dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
 
-    read_config   # this reads nfsroot/fai/fai_config/; only usefull, if you don't use bootpc or dhcp
+    # this reads nfsroot/fai/fai_config/
+    # only usefull, if you don't use bootpc or dhcp
+    read_config
 
     # create a resolv.conf
     if [ "$DNSSRVS" ]; then
@@ -233,15 +236,17 @@ fai_setup() {
     # support for other keyboards
     if [ "$FAI_KEYMAP" ]; then
 	for mapname in $FAI_KEYMAP; do
-	    keymapfile=`find /usr/share/keymaps/ ! -type d -name $mapname.kmap.gz -o -name $mapname.inc.gz`
+	    keymapfile=`find /usr/share/keymaps/ \ 
+	      ! -type d -name $mapname.kmap.gz -o -name $mapname.inc.gz`
 	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
 	done
 	[ "$keymaps" ] && loadkeys $keymaps
     else
-	    echo "$FAI_KEYMAP not found"
+	    echo "FAI_KEYMAP $FAI_KEYMAP not found"
     fi
 
-    [ "$FAI_CONSOLEFONT" ] && consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
+    [ "$FAI_CONSOLEFONT" ] && \
+	consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
     openvt bash; openvt bash
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
 }
