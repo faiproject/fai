@@ -118,3 +118,45 @@ save_log_remote() {
     rcp -p /tmp/* $LOGUSER@$SERVER:$logdir 2> $devnull
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+save_dmesg() {
+    dmesg > /tmp/dmesg.log
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    echo $*
+    exec bash
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fai_boot() {
+
+    echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
+    [ -z $reboot ] && read
+    echo "Rebooting now"
+    cd /
+    sync
+    umount -ar
+    exec reboot -dfi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+wait_for_jobs() {
+
+    # wait for running jobs to finish (eg. update-auctex-elisp)
+    i=0
+    while (ps r | egrep -qv "ps r|TIME COMMAND"); do
+	[ $(($i % 10)) -eq 0 ] && echo Waiting for Jobs to finish
+	i=$(($i+1))
+	sleep 3
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_ramdisk() {
+
+    ramdevice=/dev/ram0
+    mke2fs -q -m 0 $ramdevice && echo "ramdisk created"
+    mount -n $ramdevice /tmp
+    # now create the required subdirectories
+    mkdir /tmp/var /tmp/etc
+    cd    /tmp/var && mkdir tmp log lock run spool
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

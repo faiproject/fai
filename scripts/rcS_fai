@@ -2,7 +2,7 @@
 # $Id$
 #*********************************************************************
 #
-# rcS_fai -- main fai installation script executed after booting
+# rcS_fai -- main FAI installation script executed after booting
 #
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 1999, 2000 by Thomas Lange, lange@informatik.uni-koeln.de
@@ -41,48 +41,6 @@ globalconf=/fai/fai_config/global.conf
 logdir=/var/log/fai
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-save_dmesg() {
-    dmesg > /tmp/dmesg.log
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-die() {
-
-    echo $*
-    exec bash
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-fai_boot() {
-
-    echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
-    [ -z $reboot ] && read
-    echo "Rebooting now"
-    cd /
-    sync
-    umount -ar
-    exec reboot -dfi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-wait_for_jobs() {
-
-    # wait for running jobs to finish (eg. update-auctex-elisp)
-    i=0
-    while (ps r | egrep -qv "ps r|TIME COMMAND"); do
-	[ $(($i % 10)) -eq 0 ] && echo Waiting for Jobs to finish
-	i=$(($i+1))
-	sleep 3
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_ramdisk() {
-
-    ramdevice=/dev/ram0
-    mke2fs -q -m 0 $ramdevice && echo "ramdisk created"
-    mount -n $ramdevice /tmp
-    # now create the required subdirectories
-    mkdir /tmp/var /tmp/etc
-    cd    /tmp/var && mkdir tmp log lock run spool
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract_base() {
 
     echo "Unpacking Debian base: $1"
@@ -114,7 +72,7 @@ install_base() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 read_config() {
 
-    # read global config for fai
+    # read global config for FAI
     if [ -r $globalconf ]; then
 	[ "$verbose" ] && echo "Reading $globalconf"
 	. $globalconf
@@ -170,6 +128,7 @@ define_classes() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_dhcp_info() {
+
     dhclient -lf /tmp/dhcp-lease >$dhcplog 2>/tmp/dhclient.log
     rm -f /tmp/dhcp-lease
     [ -n "$verbose" -a -f $dhcplog ] && echo "Reading $dhcplog"
@@ -239,9 +198,10 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_setup() {
 
-    echo -e "\n------------------------------------------------------------"
-    echo "$0: $FAI_VERSION"
-    echo -e "------------------------------------------------------------\n"
+    echo -e "\n------------------------------------------------------"
+    echo "$FAI_VERSION"
+    echo "Fully Automatic Installation for Debian GNU/Linux"
+    echo -e "------------------------------------------------------\n"
     echo -e "Press ctrl-c to interrupt FAI and to get a shell\n"
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     echo -n "Kernel parameters:"; cat /proc/cmdline
@@ -249,6 +209,8 @@ fai_setup() {
     if [ "$FAI_LOCATION" ]; then
 	mount -o ro,rsize=8192 $FAI_LOCATION /fai &&
 	    echo "/fai mounted from $FAI_LOCATION"
+    else
+	die "\$FAI_LOCATION not defined."
     fi
 
     read_config # read config from mounted /fai
@@ -271,13 +233,15 @@ fai_setup() {
 
     # support for other keyboards
     if [ "$FAI_KEYMAP" ]; then
-	keymapfile=`find /usr/share/keymaps/ -name $FAI_KEYMAP.kmap.gz`
-	if [ "$keymapfile" ]; then
-	    loadkeys $keymapfile
-	else
+	for mapname in $FAI_KEYMAP; do
+	    keymapfile=`find /usr/share/keymaps/ ! -type d -name $mapname.kmap.gz -o -name $mapname.inc.gz`
+	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
+	done
+	[ "$keymaps" ] && loadkeys $keymaps
+    else
 	    echo "$FAI_KEYMAP not found"
-	fi
     fi
+
     [ "$FAI_CONSOLEFONT" ] && consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
     openvt bash; openvt bash
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
@@ -459,6 +423,8 @@ make_backup() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+# Main routine
+
 # callarg=$1
 fai_init
 fai_setup  > >( tee -a $rcslog ) 2>&1
@@ -473,7 +439,7 @@ case $FAI_ACTION in
 	fai_install
 	;;
     sysinfo)
-	echo Showing system information
+	echo Showing system information.
 	fai_sysinfo
 	;;
     showclasses)
@@ -481,16 +447,16 @@ case $FAI_ACTION in
 	echo The defined classes are:
 	echo $classes
 	echo The classes are also saved in /tmp/FAI_CLASSES
-	die Now you have shell
+	die Now you have shell.
 	;;
     backup)
-	echo Doing backup of multiple partitions
+	echo Doing backup of multiple partitions.
 	echo Sorry but not yet tested !
 	exit
 	make_backup
 	;;
     *)
-	echo ERROR: FAI action $FAI_ACTION not defined
+	echo ERROR: FAI action $FAI_ACTION not defined.
 	fai_boot
 	;;
 esac
