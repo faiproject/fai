@@ -1,14 +1,14 @@
 #! /bin/sh
 
 # This is for demonstration purpose
-# all faiclients except faiclient99 are dataless clients
+# all ants except ant99 are dataless clients
 
 case $HOSTNAME in
 
-    faiclient99)
+    ant99)
 	exit
 	;;
-    faiclient??)
+    ant??)
 	echo DATALESS
 	;;
 
