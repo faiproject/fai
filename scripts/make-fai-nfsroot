@@ -120,23 +120,23 @@ create_nfsroot() {
 
 
     # set up loopback device
-    echo >$NFSROOT/etc/network/interfaces <<EOF
-iface lo inet static
-address 127.0.0.1
-netmask 255.0.0.0
+    echo >$NFSROOT/etc/network/interfaces <<-EOF
+	iface lo inet static
+	address 127.0.0.1
+	netmask 255.0.0.0
 EOF
     setup_ssh
     umount $NFSROOT/dev/pts 2>/dev/null
 
-    cat >$NFSROOT/etc/rcS.d/S01fai_abort <<EOF
-    #!/bin/sh
-    echo FAI: installation aborted.
-    echo reboot with: faireboot
-    echo or after a logout
-    sh
-    cd /
-    umount -ar
-    reboot -dfi
+    cat >$NFSROOT/etc/rcS.d/S01fai_abort <<-EOF
+	#!/bin/sh
+	echo FAI: installation aborted.
+	echo reboot with: faireboot
+	echo or after a logout
+	sh
+	cd /
+	umount -ar
+	reboot -dfi
 EOF
     chmod a+rx $NFSROOT/etc/rcS.d/S01fai_abort
 }
