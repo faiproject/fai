@@ -47,6 +47,7 @@ sub copy_one {
   my ($class,$sourcefile,$destfile);
   my $ps = "$prefix/$source";
   my $tpath = "$target/" . dirname $source;
+  my $preserve = 0;
 
   warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debug;
 
@@ -96,11 +97,14 @@ sub copy_one {
       $logcomment="\t# new (literal)";
     } else {
       $logcomment="\t# preserved (literal)" if $opt_L;
-      $preserve=1;
+      $preserve = 1;
     }
   }
   print LOGFILE "$source\t$class$logcomment\n" if $opt_L;
-  $preserve && return;
+  if ($preserve) {
+    ewarn("preserving $source \n");
+    return;
+  }
 
   # if destination is a symlink and -l is given, complain about it
   if ($opt_l && -l $destfile) {
@@ -241,7 +245,7 @@ sub read_status {
   while (<CHANGES>) {
     s/\#.*//g;
     chomp;
-    $changed{$_} = 1;
+    m#files/\S+$# && $changed{$1} = 1;
   }
   close(CHANGES);
 }
@@ -310,7 +314,7 @@ $opt_h && usage;
 $opt_m && check_mopt();
 $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
-$source  = $opt_s || $ENV{FAI_FILES} || `pwd`;
+$source  = $opt_s || "$ENV{FAI}/files" || `pwd`;
 $target  = $opt_t || $ENV{FAI_ROOT} || $ENV{target};
 $opt_L and { open(LOGFILE,">> $opt_L") or die("can't open logfile: $!")};
 $opt_P and read_status();
