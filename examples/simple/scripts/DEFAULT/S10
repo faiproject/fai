@@ -101,7 +101,7 @@ EOF
     fi
 
     # add entry for memtest
-    if dpkg -l memtest86+ > /dev/null 2>&1 ; then
+    if [ -f $target/boot/memtest86+.bin ] ; then
     t="$target/boot"
     gpath=${t#$mntp}
     cat >> $gmenu <<-EOF
@@ -137,7 +137,7 @@ EOF
     ifclass GRUB && {
 
 	echo "Add /fai-boot partition to menu.lst for grub"
-	cd $target/fai-boot/ && kernelname=/$(ls boot/vmlinuz-*)
+	cd $target && kernelname=/$(ls fai-boot/boot/vmlinuz-*)
 	fullpath=$(ls $target/fai-boot/boot/vmlinuz-*)
 	grubvars $fullpath
 	cat >> $gmenu <<-EOF
