@@ -2,6 +2,8 @@ fai (2.4beta) unstable; urgency=low
 
   * use command fai-class to define classes, fai-class writes status of
     every script to status.log
+  * make variables local or unset them after use, unset function
+    definitions after use
   * create config files for XFree86 4.1
   * many changes in the package_config files
   * bootsector: do not use dpkg to get hardware architecture, add man page
@@ -15,7 +17,11 @@ fai (2.4beta) unstable; urgency=low
     rdev, remove packages that are already installed by debootstrap, new
     option for mknbi-linux, always do setup for dhcp and bootp, write PATH
     to /root/.profile, correct location for syslog.conf, copy sources.list
-    from /etc/fai if available, add diversion for discover
+    from /etc/fai if available, add diversion for discover, add rsync, ssh
+    to nfsroot, do not die when mknbi-linux is missing, do not create
+    device nodes (closes: #174844)
+  * class/70partition: bug fix. Use the same file as setup_harddisk to
+    determine classes which depend on partitions
   * scripts/*: convert some shell code to cfengine code, do not use fcopy
     if only a few lines has to be changed
   * scripts/BOOT: echo each kernel module to a seperate line in, add
@@ -26,15 +32,21 @@ fai (2.4beta) unstable; urgency=low
   * scripts/LAST: add call: apt-get -f install, copy sources.list
   * scripts/USB removed, now made in S20
   * scripts/FAI_BOOTPART: missing $target added, remove rdev call
-  * lib/subroutines*: better regex for matching disks in /proc/partitions,
+  * share/subroutines*: better regex for matching disks in /proc/partitions,
     task_sysinfo, prepare_apt, add link last to last action performed, new
     variable $LOGSERVER, list_disks move to a external script, disable
     debugging output in ifclass(), write exit status of scripts and hook
     to status.log and stdout, create_resolv_conf now an external script,
-    write exit status of hooks to status.log
+    write exit status of hooks to status.log, do not define $revclasses,
+    save variables to variables.sh, subroutine task unsets the definition
+    of the executed task after its execution, source hooks/subroutines now
+    in fai_setup, remove task_backup, move load_keymap_consolechars to
+    rcS_fai
+  * share/subroutines-linux: remove diskandsize(), disk_info now called
+    set_disk_info() which calls externel script 
   * task_instsoft(): mount --bind /fai /tmp/target/fai so packages in
     /fai/files/packages can be installed using apt-get
-
+  * new script disk-info prints a list of all disks and their sizes
   * new script get-boot-info contains subroutines for getting info via
     BOOTP or DHCP, also detects network devices
   * DEFAULT/S01: install $addpackages with one dpkg call, installation of
@@ -52,21 +64,28 @@ fai (2.4beta) unstable; urgency=low
   * NFS file systems are also mounted with noatime.
   * rcS_fai: create var/run/sshd directory, /usr/local/{bin,sbin} at the
     very beginning of PATH, add /usr/lib/fai to PATH, PATH is defined
-    before doing anything else, create_ramdisk is an extern script
+    before doing anything else, create_ramdisk is an extern script, new
+    options for remounting /, remove some unused variables
   * task_sysinfo now a separate script; add lsmod call, new test if
-    executables are available is using which
+    executables are available is using which, move log file from kudzu to
+    $LOGDIR
     * adddivert, mkdivert, rmalldivert, rmdivert moved to the new script
     fai-divert
   * fai-divert: be quiet unless debug is set
   * mount_local_disks, umount_local_disks, fstab_mount move to new script
     fai-mount-disk 
   * Fai.pm and subroutines* are moved from lib/ moved to share/
-  * fai-setup: ssh-keygen needs option -t (closes: #156947)
+  * Fai.pm: call disk-info to get size of all disks
+  * fai-setup: ssh-keygen needs option -t (closes: #156947), test if
+    nfsserver is set
   * fai.conf: correct line containing proposed-updates, new variable
-    FAI_LOCAL_REPOSITORY, new directory for debian mirror
+    FAI_LOCAL_REPOSITORY, new directory for debian mirror, add
+    architecture to debootstrap options, move some nfsroot packages to
+    make-fai-nfsroot script, add $FAI_LOCATION, remove FAI_SHAREDIR
   * setup_harddisks: allow more that 3 primary partitions, new regex for
     matching disks and partitions, write less info to stdout, do not write
-    info to stdout which is written to a separate file
+    info to stdout which is written to a separate file, name of partition
+    table changed from hda.sfdisk to partition.hda
   * fai_modules_off: add block-major-{104,105}
   * remove debian/undocumented
   * install_packages: add option -l, only print the list of packages,
@@ -78,17 +97,17 @@ fai (2.4beta) unstable; urgency=low
   * save_log_*(): do not create loops in symlinks, moved to external
     script fai-savelog
   * apt.conf: add option force-confdef to dpkg call
-  * 06hwdetect script loads scsi and ide modules and prints /proc/scsi
-    info, less messages in verbose mode
+  * 06hwdetect script loads SCSI and IDE modules and prints /proc/scsi
+    info, less messages in verbose mode, detect SCSI devices correctly
   * move mount2dir to lib directory, echo different messages for verbose
     and debug flags
   * fcopy bug fix: option -r does not work correctly, when no matching
-    file for a class is found, do not exit with error
+    file for a class is found, do not exit with error, add option -i, -B
   * templates/package_config: use nfs-kernel-server
   * debian/rules: use dh_installman to install manual pages
   * ATA33.var no longer needed, no tuning via hdparm in *.var
   
- -- Thomas Lange <lange@debian.org>  Mon, 13 Jan 2003 18:41:48 +0100
+ -- Thomas Lange <lange@debian.org>  Thu,  6 Feb 2003 17:55:51 +0100
 
 fai (2.3.4) unstable; urgency=low
 
