@@ -86,66 +86,6 @@ EOF
     } > >( tee -a $rcslog )  2>&1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-task_first() {
-
-    local dnshost
-    echo -n "Kernel parameters:"; cat /proc/cmdline
-    eval_cmdline
-
-    # TODO: only start on demand; use FAI_FLAGS for that
-    syslogd -m 0 -p /tmp/etc/syslogsocket
-    klogd -c1 -f /tmp/kernel.log
-
-    dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
-    dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
-
-    # create a resolv.conf
-    if [ "$DNSSRVS" ]; then
-	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
-	for dnshost in $DNSSRVS ; do
-	    echo "nameserver $dnshost" >>/tmp/etc/resolv.conf
-	done
-    fi
-
-    [ "$FAI_LOCATION" ] || die "\$FAI_LOCATION not defined."
-    mount $romountopt $FAI_LOCATION /fai &&
-	    echo "/fai mounted from $FAI_LOCATION"
-    # source user specific subroutines
-    [ -f /fai/hooks/subroutines ] && . /fai/hooks/subroutines
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-task_setup() {
-
-    local flag
-    [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
-    [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
-
-    DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
-
-    for flag in $FAI_FLAGS; do
-	eval "$flag=1"
-	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
-    done
-
-    devnull=/dev/null
-    [ "$debug" ] && devnull=/dev/console
-
-#    not yet used
-#    if [ "$FAI_EXTRA_MOUNT" ]; then
-#	mount $romountopt -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
-#    fi
-
-    [ "$createvt" ] && {
-	# create two virtual terminals
-	echo "Press ctrl-c to interrupt FAI and to get a shell"
-	openvt -c2; openvt -c3
-	trap 'echo "You can reboot with faireboot";bash' INT QUIT
-    }
-
-    [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
-    disk_info
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_install() {
 
     > $stamp
@@ -200,7 +140,7 @@ task_install() {
 
 # callarg=$1
 fai_init
-task first  > >( tee -a $rcslog ) 2>&1
+task confdir  > >( tee -a $rcslog ) 2>&1
 task setup  > >( tee -a $rcslog ) 2>&1
 
 # if you want to recall rcS_fai
