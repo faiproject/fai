@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.3, 19-Jan-2001";
+my $version = "Version 1.4, 19-Feb-2001";
 
 use File::Copy;
 use File::Compare;
@@ -44,7 +44,7 @@ sub copy_one {
   my $ps = "$prefix/$source";
   my $tpath = "$target/" . dirname $source;
 
-  warn "copy_one: source: $source: ps: $ps tpath: $tpath class: $class\n" if $debug;
+  warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debug;
 
   # $prefix/$source must be a directory
   unless (-d $ps) { ewarn("$ps is not a directory. Not copied.");return }
@@ -59,6 +59,7 @@ sub copy_one {
     # do not copy
     return;
   }
+  warn "using class: $class\n" if $debug;
 
   $sourcefile = "$ps/$class";
   $destfile = "$target/$source";
@@ -222,7 +223,7 @@ $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_d || $ENV{debug}   || 0;
 $source  = $opt_s || $ENV{FAI_FILES};
 $target  = $opt_t || $ENV{FAI_ROOT};
-@classes = qw/$ENV{classes}/;
+@classes = split /\s+/,$ENV{classes};
 $opt_c and @classes = split /,/,$opt_c;
 $opt_C and @classes = read_classes($opt_C);
 print join ' ','Classes:',@classes,"\n" if $debug;
