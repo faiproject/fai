@@ -31,7 +31,7 @@
 # if you need full debugging set -xv
 #set -xv
 
-FAI_VERSION="FAI Version  1.1beta2, june 20, 2000"
+FAI_VERSION="FAI Version  1.1beta3, july XX, 2000"
 
 rcslog=/tmp/rcS.log
 bootlog=/tmp/bootpc.log
@@ -179,6 +179,8 @@ fai_init() {
     [ -x /sbin/update ] && update
     create_ramdisk
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
+    mount -o remount,rw /dev/root /
+    openvt bash; openvt bash;
     dmesg > /tmp/dmesg.log
 
     echo -e "\n------------------------------------------------------------"
@@ -291,7 +293,7 @@ prepare_apt() {
 
     chroot $FAI_ROOT apt-get update
     chroot $FAI_ROOT apt-get check
-    chroot $FAI_ROOT apt-get upgrade
+    chroot $FAI_ROOT apt-get -f -y upgrade
     [ $? -ne 0 ] && chroot $FAI_ROOT apt-get -f -y install </dev/null 
     chroot $FAI_ROOT dpkg -C
     [ $? -ne 0 ] && nice yes 'n'|  chroot $FAI_ROOT dpkg --configure -a 
@@ -335,7 +337,7 @@ fai_install() {
     install_base
 
     echo "installing software may take a while"
-    prepare_apt >> /tmp/prepare-apt.log 2>&1
+    prepare_apt | tee -a /tmp/prepare-apt.log 2>&1
 
     # I'm no pessimist, but some packages needs "no" as input
     if [ "$debug" ]; then
