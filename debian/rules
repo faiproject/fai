@@ -8,13 +8,14 @@
 # This is the debhelper compatability version to use.
 export DH_COMPAT=1
 
+include VERSION
 
 build: build-stamp
 build-stamp:
 	dh_testdir
 
 	# Add here commands to compile the package.
-#	$(MAKE)
+	$(MAKE) all
 
 	touch build-stamp
 
@@ -22,11 +23,9 @@ clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
-
+	dh_clean
 	# Add here commands to clean up after the build process.
 	-$(MAKE) clean
-
-	dh_clean
 
 install: build
 	dh_testdir
@@ -60,6 +59,9 @@ binary-arch: build install
 	dh_fixperms
 	chmod a+rx `pwd`/debian/tmp/usr/share/doc/fai/templates/class/S[0-9]*.{source,sh,pl}
 	chmod a+rx `pwd`/debian/tmp/usr/share/doc/fai/templates/scripts/*
+	chmod a+rx `pwd`/debian/tmp/usr/lib/fai/sbin/rcS_fai
+	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' `pwd`/debian/tmp/usr/share/doc/fai/README
+	find `pwd`/debian/tmp -name CVS |xargs rm -rf
 	# You may want to make some executables suid here.
 	dh_installdeb
 	dh_gencontrol

@@ -1,0 +1,2 @@
+modprobe parport_probe
+modprobe serial

@@ -1,0 +1,76 @@
+#! /bin/sh
+
+# $Id$
+#*********************************************************************
+#
+# make-fai-bootfloppy -- create a boot floppy for FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2000 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+# Thomas Lange, Universitaet Koeln, 10/2000
+
+set -e
+
+if [ "$UID" -ne 0 ]; then
+ echo "You must be root!"
+ exit 9
+fi
+
+. /etc/fai.conf
+
+SERVERIP=`ifconfig eth0 | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
+
+grep -q ic_bootp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=BOOTP
+grep -q ic_dhcp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
+
+mke2fs -i 8192 -m 0 /dev/fd0 >/dev/null || exit
+mount /floppy || mount /dev/fd0 /floppy || exit
+cp -dpR $NFSROOT/boot /floppy
+mkdir -p /floppy/etc
+ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
+
+cat > /floppy/etc/lilo.conf <<EOF
+boot=/dev/fd0
+#root=/dev/boot255
+root=$NFSROOT/dev/boot255
+install=/floppy/boot/boot.b
+map=/floppy/boot/map
+append = "NFSROOT=$SERVERIP:$NFSROOT"
+delay=10
+compact
+image=/floppy/vmlinuz
+    label=FAI-$TYPE
+    read-only
+EOF
+
+echo now writing boot data to floppy
+lilo -C /floppy/etc/lilo.conf
+cd /
+umount /floppy
+
+cat <<EOF
+FAI bootfloppy ready
+   boot protocol : $TYPE
+   server        : $SERVERIP
+   nfsroot       : $SERVERIP:$NFSROOT
+EOF

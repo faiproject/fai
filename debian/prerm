@@ -1,4 +1,7 @@
 #! /bin/sh
+
+# $Id$
+#
 # prerm script for fai
 #
 # see: dh_installdeb(1)
@@ -15,28 +18,24 @@ set -e
 #          <conflicting-package> <version>
 # for details, see /usr/doc/packaging-manual/
 
-# the user space nfs server
-nfsserver=/etc/init.d/nfs-server
+. /etc/fai.conf
 
-
+test -f /etc/init.d/nfs-server && nfsserver=nfs-server
+test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 
 case "$1" in
     remove|upgrade|deconfigure)
 #       install-info --quiet --remove /usr/info/fai.info.gz
 
-rm -rf /usr/lib/fai/nfsroot
+umount -n $NFSROOT/proc 2>/dev/null || true
+umount -n $NFSROOT/dev/pts 2>/dev/null || true
+rm -rf $NFSROOT
 
 perl -ni.bak -e "print unless m#^/usr/local/share/fai\s#" /etc/exports
-perl -ni.bak -e "print unless m#^/usr/lib/fai/nfsroot\s#" /etc/exports
-    if [ -x $nfsserver ];then
-	$nfsserver reload
-    else
-	echo "You do not use the user space nfs-server"
-	echo "Please make your nfs server reload it's configuration"
-    fi
+perl -ni.bak -e "print unless m#^$NFSROOT\s#" /etc/exports
+/etc/init.d/$nfsserver reload
 
-# userdel sometimes does not success
-userdel -r fai || true
+[ -f /home/$LOGUSER/.account_created_by_fai_package ] && userdel -r $LOGUSER
 
         ;;
     failed-upgrade)

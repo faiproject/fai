@@ -1,16 +1,29 @@
-#! /bin/sh
+#! /bin/bash
 
 # reboot fai correctly
 
 FAI_ROOT=/tmp/target
 
 cd /
-umount $FAI_ROOT/proc
-if [ -L $FAI_ROOT/sbin/start-stop-daemon ];then
+killall -STOP rcS
+killall -q apt-get dpkg tar gzip yes
+[ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ] && killall -q sshd
+
+umount $FAI_ROOT/proc /dev/pts
+
+if [ -f $FAI_ROOT/sbin/start-stop-daemon.orig ]; then
     rm -f $FAI_ROOT/sbin/start-stop-daemon
     mv $FAI_ROOT/sbin/start-stop-daemon.orig $FAI_ROOT/sbin/start-stop-daemon
 fi
 umount -ar
-echo sleeping 3 seconds before rebooting
-sleep 3
-exec reboot -dfi
+
+echo sleeping 5 seconds before rebooting
+sleep 5
+
+if [ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ]; then
+    exec reboot -dfi
+else
+    shutdown -nr now &
+    killall -q sshd
+fi
+
