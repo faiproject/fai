@@ -179,16 +179,18 @@ delete_base_packages() {
 set-classes() {
 
     # if -c is given, ignore -x
-    if [ -n "cclasses" ]; then
+    if [ -n "$cclasses" ]; then
 	export classes=${cclasses//,/ }
 	return
     fi
 
+    set +e
     # all available file names are classes
     classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep "^[A-Z0-9_]+$")
     addclasses=$(grep -h PACKAGES $FAI_CONFIGDIR/package_config/* | awk '{printf $3"\n"$4"\n"$5"\n"$6"\n"}')
     export classes=$(echo -e "$classes\n$addclasses\n" | sort | uniq)
     [ -n "$exclasses" ] && excludeclass $exclasses
+    set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
