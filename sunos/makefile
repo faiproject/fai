@@ -1,7 +1,8 @@
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2004 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 
+SRCDIR = ../
 include ../VERSION
 
 DESTDIR=/tmp/jumpstart
