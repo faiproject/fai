@@ -48,7 +48,6 @@ writing to the &fsf-addr;.
 There was lot of motivation for creating FAI ! TODO ...
 
 <chapt id="overview">Overview and concepts of FAI<p>
-<em>Plan your installation, and FAI installs your plans.</em>
 <p>
 FAI is a non interactive system to install a &dgl operating system on
 a single computer or a whole cluster. You can take one or more virgin
@@ -62,7 +61,15 @@ operating system are made by cfengine, shell and perl scripts.
 
 <p>
 FAI's target group are system administrators how have to install
-Debian onto one or even hundreds of computers. First, some terms used
+Debian onto one or even hundreds of computers. Because it's a general
+purpose installation tool, it can be used for installing a beowulf
+cluster, a rendering farm or a linux laboratory or a classroom. Also
+large-scale linux networks with different hardware or different installation
+requirements are easy to establish using FAI.
+
+
+
+First, some terms used
 in this manual are described.
 
 <taglist>
@@ -81,7 +88,7 @@ in this manual are described.
 		<item> <p>Disk layout</p> </item>
 		<item> <p>Local filesystems</p> </item>
 		<item> <p>Software packages</p>	</item>
-		<item> <p>Keyboard layout, timezone, NIS,
+		<item> <p>Keyboard layout, time zone, NIS,
 		X11 configuration, remote filesystems, user accounts,
 		printers ...</p>	</item>
 </list>
@@ -94,13 +101,13 @@ booted from floppy disk or via network card. It gets an IP-address and
 boots a linux kernel which mounts all filesystems via NFS from a
 server. After the operating system is running the FAI startup script
 performs the automatic installation which doesn't need any
-interaction. First, the harddisks will be partitioned, filesystems are
+interaction. First, the hard disks will be partitioned, filesystems are
 created and then software packages will be installed. Then the new
 installed operating system is configured to your local needs. Finally
 the new system will be booted from the local disk. 
 <p>
 The details of how to install the computer (the configuration) are stored in the
-configuration space on the server. Configuration files can be shared
+configuration space on the server. Configuration files are shared
 among multiple computers if the are similar, so you need not to create a
 configuration for every new host. Hence FAI is a scalable method to
 install a big cluster with a great number of nodes.
@@ -124,7 +131,7 @@ inspect the hardware or do any other task.
 	    <item> <p>remote login via ssh during installation process</p> </item>
 	    <item> <p>two additional virtual terminals available
 	    during installation</p> </item>
-	    <item> <p>all similar configuration can be shared among
+	    <item> <p>all similar configuration are shared among
 	    all clients</p> </item>
 	    <item> <p>log files are copied to the installation server</p> </item>
 	    <item> <p>shell, perl, expect script supported for the configuration</p> </item>
@@ -165,7 +172,7 @@ which is recognized by the kernel.
 <p>
 
 The FAI package is available as a Debian package from &faidownload;
-until it will become an official Debian package (comming soon
+until it will become an official Debian package (coming soon
 ;-)). 
 
 
@@ -224,7 +231,7 @@ name="sources.list" section="5">.  </p> </item>
 
 FAI uses <prgn>apt-get</prgn> to create the nfsroot filesystem which
 needs about 90MB of free disk space. Additional software packages for
-nfsroot can be defined by the variable <var>NFSROOT_PACKAGES</var>.
+nfsroot are defined by the variable <var>NFSROOT_PACKAGES</var>.
 <p>
 
 Before setting up FAI, you should get the program <prgn>imggen</prgn>,
@@ -273,7 +280,7 @@ FAI set up finished.
 
 The installation process adds lines to <file>/etc/exports</file> to
 export some directories to all hosts that belong to the netgroup
-<em>faiclients</em>. Netgroups can be defined in
+<em>faiclients</em>. Netgroups are defined in
 <file>/etc/netgroup</file> or in the correspondening NIS map. An
 example for the netgroup file can be found
 <file>/usr/share/doc/fai/examples/etc/netgroup</file>. For more
@@ -288,10 +295,11 @@ reload its configuration.
 <p>
 After that, FAI is installed successfully on your server, but has no
 configuration for the install clients. Start with the templates from
-<tt> /usr/share/doc/fai/templates</tt> using the copy command above.
+<tt> /usr/share/doc/fai/templates</tt> using the copy command above
+and read <ref id="config">.
 <p>
 When you make changes to &fc or want to install a new kernel to
-nfsroot, the nfsroot has be be rebuild by calling <prgn>make-fai-nfsroot</prgn>.
+nfsroot, the nfsroot has be be rebuild by calling <prgn>fai-setup</prgn>.
 
 <chapt id="booting">Booting hosts <p>
 
@@ -314,8 +322,13 @@ floppy, so it's suitable for all your install clients.
 <p>
 You will find two install kernels in <file>/boot/fai</file>. Make a
 symbolic link from the hostname of your client to the appropriate
-kernel image. The file <file>isntallimage_3com</file> is created by
+kernel image. The file <file>installimage_3com</file> is created by
 <prgn>imggen</prgn> and suitable for booting 3Com network cards.
+
+<example> 
+# cd /boot/fai
+# ln -s installimage_3com faiserver
+</example>
 
 
 <sect id="mac">Collecting ethernet addresses
@@ -467,7 +480,7 @@ IP-Config: Complete:
 .
 .
 ------------------------------------------------------------
-FAI 1.4.0, november 17, 2000
+FAI 1.4.0, november 23, 2000
 Fully Automatic Installation for Debian GNU/Linux
 ------------------------------------------------------------
 .
@@ -508,7 +521,7 @@ All log files from <file>/tmp </file> are also written to the server in the dire
 
 <p>
 A very nice feature is, that FAI mounts all filesystems
-it finds on the local disks readonly. It also tells you on
+it finds on the local disks read only. It also tells you on
 which partition a file <file>/etc/fstab</file> exists. When only one
 fstab is found, the partitions are mounted according to this
 information. Here's an example:
@@ -540,21 +553,21 @@ Reboot the computer using the command <prgn>faireboot</prgn>.
 FAI can perform several action when the client is booting. This action
 is defined in the variable <var>FAI_ACTION</var><footnote>
 	  <p>Theses names are used in the main installation
-script. The configuration files for DHCP and BOOTP daemons use other
+script <file>rcS_fai</file>. The configuration files for DHCP and BOOTP daemons use other
 names. Example: <var>FAI_ACTION</var> is equal to <tt>T171</tt> in
-bootptab or <tt>option-171</tt> in dhcp.conf) </p>
+bootptab or <tt>option-171</tt> in dhcp.conf. </p>
 	</footnote>.
 
 Be very carefully if you set <var>FAI_ACTION </var> to
-<em>install</em>. This can destroy all your data on the install client
-(most time it will do this !). It's recommended to change this only
+<em>install</em>. This can destroy all your data on the install
+client, indeed most time it should do this ;-). It's recommended to change this only
 on a per client base in the BOOTP configuration. Do not change it in
 the section <tt>.failocal</tt> in <file>/etc/bootptab</file> which
 is a definition for all clients.
 <p>
 
-<sect id=xxxx>The installation sequence<p>
-Folloing steps are performed during an installation after the linux kernel
+<sect id=isequence>The installation sequence<p>
+Following steps are performed during an installation after the linux kernel
 has booted.
 
 <enumlist>
@@ -569,8 +582,47 @@ has booted.
 	    <item> <p>Reboot the new installed system</p> </item>
 	  </enumlist>
 
+
+<chapt id=config>The configuration<p>
+The configuration is the collection information how to partition local
+hard disks, where to mount the filesystems, which software packages to
+install, and how to make local customization to the installation. The
+configuration space is located on the server in
+<file>/usr/local/share/fai</file> and is mounted by the install
+clients to <file>/fai</file>. Following subdirectories are available:
+
+<taglist>
+	  <tag><tt>fai_config/</tt></tag> <item> <p>global parameters</p> </item>
+	  <tag><tt>class/</tt></tag> <item> <p>scripts and file to
+	  load kernel modules and define classes</p> </item>
+	  <tag><tt>disk_config/</tt></tag> <item> <p>configuration
+	  files for disk partitioning and file system creation</p> </item>
+	  <tag><tt>package_config/</tt></tag> <item> <p>software
+	  packages to be installed or removed</p> </item>
+	  <tag><tt>scripts/</tt></tag> <item> <p>script for customization</p> </item>
+	  <tag><tt>files/</tt></tag> <item> <p>files used by
+	  customization scripts</p> </item>
+</taglist>
+
+The main installation script <prgn>rcS_fai</prgn> uses these
+subdirectories in the listed order.
+
+
+
+
+<sect id=classes>Defining classes<p>
+All defined classes are listed in <file>FAI_CLASSES</file>. You can
+also set <var>FAI_ACTION</var> to <em>showclasses</em>.
+
+<sect id=diskconfig>Hard disk configuration<p>
+Please read <file>/usr/share/doc/fai/README.disk_config.gz</file>.
+
+<sect id=packageconfig>Software package configuration<p>
+Please read <file>/usr/share/doc/fai/README.package_config.gz</file>.
+
+
 <sect id=errors>Looking for errors<p>
-Parse all log file for error using:
+If the installation process stops or even it finishes, parse all log files for errors using:
 <example>
 > egrep "no such variable|bad variable|E:|ERROR" *.log
 </example>
@@ -583,11 +635,10 @@ load modules
 <sect id=diskpart>Disk partitioning<p>
 
 <sect id=instsoft>Installing Software<p>
-<sect id=config0>Configureing to local needs<p>
-
-
+<sect id=config0>Configuring to local needs<p>
 
 <chapt id=x1>Preparing your configuration<p>
+<em>Plan your installation, and FAI installs your plans.</em>
 <chapt id="details">Details<p>
 <sect id=bootpdsetup>bootp setup<p>
 <sect id=dhcpsetup>dhcp setup<p>
@@ -610,12 +661,8 @@ A CVS repository for the development version of FAI is available (the password i
 	    </item>
 	  </taglist>
 
-
-
 <chapt id="tutorial">A little tutorial
 <p>
-
-
 
 ERROR HINTS
 
@@ -629,7 +676,6 @@ The only task, which has to be done manually for new hardware, is to
 assign the MAC address to a hostname and to an IP-address and to
 define classes for this host, or all host which match a certain name
 (look at <file>class/S01alias.sh</file>).
-
 
 Before installing the FAI package on your server, you should plan your
 installation. 
