@@ -6,8 +6,8 @@ export DOCDIR = $(DESTDIR)/usr/share/doc/fai
 LIBDIR = $(DESTDIR)/usr/lib/fai
 SHAREDIR = $(DESTDIR)/usr/share/fai
 SCRIPTSDIR = $(LIBDIR)/sbin
-SCRIPTS = rcS_fai setup_harddisks faireboot dhclient-perl dhclient-script  device2grub
-USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd
+SCRIPTS =  setup_harddisks faireboot dhclient-perl dhclient-script
+USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai
 SBIN= fai-start-stop-daemon
 USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf
 CONFDIR= $(SHAREDIR)/etc
@@ -32,6 +32,7 @@ veryclean: clean
 install: 
 	$(MAKE) -C doc install
 	-install -m755 $(libfiles) $(LIBDIR)
+	-install -m755 scripts/device2grub $(LIBDIR)
 	cd scripts ; install $(SBIN) $(DESTDIR)/sbin
 	cd scripts ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
@@ -47,6 +48,6 @@ install:
 	cp -a templates/* $(DOCDIR)/examples/advanced
 	cd $(DOCDIR)/examples/advanced/scripts ; mv DEFAULT1 DEFAULT
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
-	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(SCRIPTSDIR)/rcS_fai
+	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 
 .PHONY: clean veryclean
