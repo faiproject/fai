@@ -27,13 +27,14 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.4.1, 9-feb-2004"
+version="Version 2.5, 25-feb-2004"
 set -e
 timeout=15
 mkimage=0
 floppydev=/dev/fd0
 mountpoint=/floppy
 mountopts="-t ext2"
+sd="savedefault"
 BTYPE=d # default boot protocol is DHCP
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
@@ -81,6 +82,7 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
               Same as "FAI_FLAGS=verbose,sshd,createvt,syslogd"
    -f FILE    make a 1440k floppy image in FILE
    -g         use GRUB loader on bootfloppy (default)
+   -i FILE    make a 1440k iso9660 image in FILE
    -l         use LILO loader on bootfloppy
    -m DIR     use DIR as mountpoint [/floppy]
    -s HOST    use this static ip for FAI client; try to get all info from DNS
@@ -218,23 +220,23 @@ timeout $timeout
 
 title FAI-ANY $KERNELVERSION
 kernel (fd0)/$kernel root=/dev/nfs ip=::::::any $params
-savedefault
+$sd
 
 title FAI-BOOTP $KERNELVERSION
 kernel (fd0)/$kernel root=/dev/nfs ip=::::::bootp $params
-savedefault
+$sd
 
 title FAI-DHCP $KERNELVERSION
 kernel (fd0)/$kernel root=/dev/nfs ip=::::::dhcp $params
-savedefault
+$sd
 
 title FAI-FIXED-IP $KERNELVERSION
 kernel (fd0)/$kernel root=/dev/nfs nfsroot=$SERVERIP:$NFSROOT $fixedparams $params
-savedefault
+$sd
 
 title FAI-RARP $KERNELVERSION
 kernel (fd0)/$kernel root=/dev/nfs ip=::::::rarp $params
-savedefault
+$sd
 "
     echo "$grubconf" > $mountpoint/boot/grub/menu.lst
     $NFSROOT/sbin/grub --batch --device-map=$mountpoint/boot/grub/device.map >/dev/null <<EOF
@@ -246,14 +248,37 @@ EOF
     umount $mountpoint
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+cd_image() {
+
+    [ -x "`which mkisofs`" ] || {
+	echo "Can't find command mkisofs."
+	exit 5
+    }
+    echo "Creating the iso9660 cd image in $cddev from floppy image $floppydev."
+    cd /tmp
+    TMPDIR=`mktemp -d`
+    cd $TMPDIR || exit 7
+
+    mkdir $TMPDIR/boot
+    cp $floppydev ./boot/boot.img
+    mkisofs -V "FAI boot CDROM" -b boot/boot.img -c boot/boot.catalog -o bootcd.iso .
+    rm -rf $TMPDIR/boot
+
+    mv $TMPDIR/bootcd.iso $cddev
+    echo "ISO-Image created in $cddev"
+
+    rmdir $TMPDIR
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
 
-while getopts "lgvf:s:m:hd:c:F" opt ; do
+while getopts "lgvf:s:m:hd:c:Fi:" opt ; do
     case "$opt" in
 	c) cfdir=$OPTARG ;;
 	l) lilo=1 ;;
 	g) grub=1 ;;
         h) usage ;;
+        i) mkcd=1; cddev="$OPTARG" ; sd='';;
 	f) mkimage=1; floppydev="$OPTARG" ;;
 	m) mountpoint="$OPTARG" ;;
 	s) TARGETHOST="$OPTARG" ;;
@@ -275,6 +300,7 @@ esac
 
 [ $lilo ] && [ $grub ] && die "Specify only one of -l or -g"
 [ $lilo ] || [ $grub ] || grub=1
+[ $mkcd ] && [ $mkimage -eq 0 ] && die "You must use -f with -i"
 [ `id -u` -eq 0 ] || die "You must be root! Or try $0 -h"
 
 trap "umount_dirs" EXIT
@@ -311,6 +337,7 @@ mount $mountopts $floppydev $mountpoint || die "Can't mount floppy $floppydev"
 
 [ $lilo ] && lilo_floppy
 [ $grub ] && grub_floppy
+[ $mkcd ] && cd_image
 echo "Using IP address $SERVERIP of $SERVERINTERFACE for the fixed boot menu."
 
 cat <<-EOF
