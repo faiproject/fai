@@ -25,7 +25,8 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.5.2, 9-november-2004";
+# TODO add opton -e
+my $version = "Version 2.6, 15-december-2004";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -37,12 +38,10 @@ use AptPkg::System '$_system';
 use AptPkg::Cache;
 
 # global variables
-our ($opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
-our $conffilename="/etc/fai/install_packages.conf"; # must me in perl syntax
-
+our ($opt_f,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
 my $listonly; # flag, that indicates that only a list of packages will be printed
-my @commands;
-my %command;
+our @commands;
+our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
 my $test;
 my $verbose;
@@ -74,10 +73,12 @@ $| = 1;
              "hold" => 'dpkg --set-selections',
             "clean" => 'apt-get clean',
          "aptitude" => 'aptitude -y install',
+          "pending" => 'dpkg --configure --pending',
+            "dpkgc" => 'dpkg -C',
 );
 
 $test = 0;
-getopts('thvlLm:');
+getopts('f:thvlLm:');
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
@@ -121,7 +122,7 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach $atype (@commands) {
   if ($atype eq "clean") {
-    execute("$rootcmd apt-get clean") unless $listonly;
+    execute("$rootcmd $command{clean}") unless $listonly;
     next;
   }
 
@@ -160,7 +161,7 @@ foreach $atype (@commands) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
       # print "SL $shortlist\n";
       execute("$rootcmd $command{$atype} $shortlist") if $shortlist;
-      execute("$rootcmd apt-get clean");
+      execute("$rootcmd $command{clean}"); # XXX do not execute always
     }
     next;
   }
@@ -185,16 +186,23 @@ foreach my $entry (@preloadrmlist) {
   unlink $file || warn "Can't remove $file\n";
 }
 
+
 # in case of unconfigured packages because of apt errors
 # retry configuration
-execute("$rootcmd dpkg --configure --pending");
+execute("$rootcmd $command{pending}");
 # check if all went right
-execute("$rootcmd dpkg -C");
+execute("$rootcmd $command{dpkgc}");
 # clean apt cache
-execute("$rootcmd apt-get clean");
+execute("$rootcmd $command{clean}");
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub read_config_file {
 
+  my $conffilename; # must be in perl syntax
+  if ($opt_f) {
+    $conffilename="$opt_f/install_packages.conf";
+  } else {
+    $conffilename="/etc/fai/install_packages.conf";
+  }
   if (-f $conffilename) {
     warn "Reading config file $conffilename\n" if $verbose;
     do "$conffilename";
