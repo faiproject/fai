@@ -40,9 +40,9 @@ url=ftp://ftp.debian.org/debian   # format for http or ftp
 #url=/mnt   # format for a mounted directory
 dversion=2_2
 dname=potato
-verbose=1
+verbose=
 # Additional packages that are install to nfsroot
-packages="dhcp-client debconf file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm"
+packages="dhcp-client file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm"
 
 
 basetgz=base${dversion}.tgz
@@ -58,18 +58,26 @@ else
 fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+setup_ssh() {
+
+    mkdir -p -m 700 $root/root/.ssh
+    echo "To get remote access to the install client via ssh"
+    echo "without a password, copy your ssh identity.pub to"
+    echo "$root/root/.shh/authorized_keys"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 recreate_nfsroot() {
 
-    echo Removing old nfsroot $root
+    echo "Removing old nfsroot $root"
     rm -rf $root/*
     cd $root
-    echo Unpacking $basetgz
+    get_basetgz
+    echo "Unpacking $basetgz"
     tar zxpf /tmp/$basetgz
     touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
-    mkdir -p etc/ssh
-    touch etc/ssh/NOSERVER      # don't start sshd on the host where fai is installed
     mkdir -p lib/modules/`uname -r`             # dirty trick to hoax lvm
     touch lib/modules/`uname -r`/modules.dep    # dirty trick to hoax lvm
+    mkdir -p $root/etc/ssh ; touch $root/etc/ssh/NOSERVER
     upgrade_nfsroot
     perl -pi -e "s/^root::/root:${rootpw}:/" etc/passwd
     mkdir -p $root/fai/fai_config
@@ -96,52 +104,52 @@ recreate_nfsroot() {
 EOF
     chmod a+rx $root/etc/rc2.d/S01fai_abort
 
-    touch $root/fai/BOOTP  && echo "enable BOOTP method for fai"
-#    touch $root/fai/DHCP  && echo "enable DHCP method for fai"
+    touch $root/fai/BOOTP  && echo "fai now using BOOTP protocol"
+#    touch $root/fai/DHCP  && echo "fai now using DHCP protocol"
+    setup_ssh
 
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
 
-    echo Upgrading $root
+    echo "Upgrading $root"
     apt-get -c $aptconf update  > $devnull 
     apt-get -c $aptconf check    > $devnull 
     chroot $root mount -n -t proc proc /proc
-    apt-get -c $aptconf -y remove pcmcia-cs </dev/null  > $devnull 
+    rm -rf $root/etc/pcmcia $root/etc/apm  2> $devnull 
+    apt-get -c $aptconf -y remove pcmcia-cs </dev/null 2>$devnull > $devnull 
 
     # because start-stop-dameon must be faked do it here
     apt-get -c $aptconf -y install dpkg </dev/null  > $devnull 
     cp -p /usr/lib/fai/sbin/start-stop-daemon $root/sbin
 
     apt-get -c $aptconf -y upgrade </dev/null  > $devnull 
-    echo Adding additional packages to $root
+    echo "Adding additional packages to $root:"
+    echo "$packages"
     apt-get -c $aptconf -y --fix-missing install $packages </dev/null  > $devnull 
     chroot $root umount -n /proc >/dev/null
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_basetgz() {
 
-# create installation filesystem that will be
-# mounted readonly by all clients during installation process
-# get base2_2.tgz via wget from ftp.debian.org (default no)
-
-
-# TODO: parse sources.list and guess location for baseX_X.tgz
-if [ ! -f /tmp/$basetgz ]; then
-    case $url in
-	ftp:*|http:*)
-	   echo "Getting base${dversion}.tgz from $url via wget"
-	   echo "This may take some time"
-	   wget -q -P/tmp $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz
-	   ;;
-        *) cp -p $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz /tmp
-	   ;;
-    esac
-fi
-
-if [ ! -f /tmp/$basetgz ]; then
-    echo "Please put the Debian $basetgz file into /tmp before creating nfsroot for fai."
-    exit 1
-fi
+    # TODO: parse sources.list and guess location for baseX_X.tgz
+    if [ ! -f /tmp/$basetgz ]; then
+	case $url in
+	    ftp:*|http:*)
+		echo "Getting base${dversion}.tgz from $url via wget"
+		echo "This may take some time"
+		wget -q -P/tmp $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz
+	        ;;
+	    *) cp -p $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz /tmp
+		;;
+	esac
+    fi
+    if [ ! -f /tmp/$basetgz ]; then
+	echo "Please copy the Debian $basetgz file into /tmp before creating nfsroot for fai."
+	exit 1
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 if [ -d $root/fai ]; then
     echo $root/fai already exists
