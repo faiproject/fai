@@ -2,7 +2,7 @@
 
 #*********************************************************************
 #
-# fai-debconf - set debconf values for the install client
+# fai-debconf - set debconf values using classes
 #
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 2005 by Thomas Lange, lange@informatik.uni-koeln.de
@@ -26,10 +26,9 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 0.2, 7-mar-2005"
+version="version 1.0, 8-mar-2005"
 
 # variables needed: $classes, $ROOTCMD, $LOGDIR
-# 
     
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_conf() {
@@ -46,15 +45,16 @@ call_conf() {
 	fi
     done
 }
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_data() {
 
     # add debconf data
     local file=$1
 
-    [ "$verbose" ] && echo "Adding debconf data from $file."
+    [ "$verbose" ] && echo "Adding debconf data from $debconfdir/$file"
     $ROOTCMD debconf-set-selections -v < $debconfdir/$file 2> $LOGDIR/debconf.log
-    grep -v ^# $debconfdir/$file >> $LOGDIR/debconf.data
+#    grep -v ^# $debconfdir/$file >> $LOGDIR/debconf.data
+    cat $debconfdir/$file >> $LOGDIR/debconf.data
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 reconfigure_packages() {
@@ -64,9 +64,12 @@ reconfigure_packages() {
      for p in $packages; do
 	 # test if package is installed
 	 if [ -f $target/var/lib/dpkg/info/$p.list ]; then
+	     echo "Reconfiguring package $p"
 	     DEBCONF_FRONTEND=noninteractive $ROOTCMD dpkg-reconfigure $p
 	 else
-	     echo "Package $p is not installed. Skip reconfiguration."
+	     :
+	     # for debugging only
+	     # echo "Package $p is not yet installed. Skipping reconfiguration."
 	 fi
      done
 }
@@ -75,11 +78,10 @@ usage() {
 
     local ex=$1
     cat <<-EOF
-        fai-debconf $version. Copyright (C) 2005 Thomas Lange
-        Report bugs to <fai@informatik.uni-koeln.de>.
+    fai-debconf $version. Copyright (C) 2005 Thomas Lange
+    Report bugs to <fai@informatik.uni-koeln.de>.
 
-        Usage: fai-debconf [OPTION] DIRECTORY
-
+    Usage: fai-debconf [OPTION] DIRECTORY
 EOF
     exit $ex
 }
@@ -96,13 +98,12 @@ while getopts "hvs" opt ; do
 done
 shift $(($OPTIND - 1))
 [ -z "$1" ] || [ -n "$2" ] && usage 1
+debconfdir=$1 # will be /fai/debconf
 
 if [ "x$classes" = "x" ]; then
     echo "No classes are defined."
     exit 9
 fi
-
-debconfdir=$1 # will be /fai/debconf
 
 call_conf # add data to debconf database
 [ $reconf -eq 1 ] && reconfigure_packages
