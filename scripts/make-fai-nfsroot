@@ -33,6 +33,10 @@
 # Additional packages are defined with $NFSROOT_PACKAGES in fai.conf
 packages="perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils grub"
 
+
+# TODO: trap "umount nfsroot/proc $NFSROOT/dev/pts"
+
+
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
 if [ "$UID" -ne 0 ]; then
@@ -65,6 +69,16 @@ die() {
 
     echo $*
     exit 99
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+install_kernel_nfsroot() {
+    rm -rf $NFSROOT/boot/*-$KERNELVERSION $NFSROOT/lib/modules/$KERNELVERSION
+    dpkg -x $KERNELPACKAGE $NFSROOT
+    # if $NFROOT/proc/modules exists, then update-modules calls depmod -a without
+    # these special flags; so umount first
+    umount $NFSROOT/proc
+    chroot $NFSROOT update-modules
+    chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION $KERNELVERSION
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
@@ -190,7 +204,6 @@ upgrade_nfsroot() {
     {
     $ROOTCMD apt-get -y --fix-missing install $packages </dev/null
     $ROOTCMD apt-get clean
-    umount $NFSROOT/proc
     } > $devnull
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -227,6 +240,21 @@ if [ -d $NFSROOT/fai ]; then
 fi
 
 create_nfsroot
+
+if [ -f $KERNELPACKAGE ]; then
+    # create tftp boot images
+    install_kernel_nfsroot
+    mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+    # imggen is a free software from 3com
+    imggen=`which imggen || true`
+    if [ -x $imggen ]; then
+	imggen -a /boot/fai/installimage /boot/fai/installimage_3com
+    fi
+else
+    echo "No kernel package $KERNELPACKAGE found."
+    echo "No install kernel installed in /boot/fai,"
+    echo "no kernel modules available in nfsroot."
+fi
 
 umount $NFSROOT/dev/pts 2>/dev/null || true
 # TODO: only umount if created (debian mirror via NFS)
