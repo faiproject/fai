@@ -66,19 +66,20 @@ foreach $type (@commands) {
     next;
   }
 
-  my $packlist = join(' ',@{$list{$type}});
-  my $plist = $packlist;
-  $plist =~ s/[+-] / /g; # remove +- suffix from package names
+   $packlist = join(' ',@{$list{$type}});
 
   if ($type eq "install") {
     # check for packages, that don't exists
-    $misspelt = qx{$rootcmd apt-cache show $plist 2>&1 1>/dev/null};
+    my $plist = $packlist;
+    $plist =~ s/[+-] / /g; # remove +- suffix from package names
+    my $misspelt = qx{$rootcmd apt-cache show $plist 2>&1 1>/dev/null};
     $misspelt =~ s/W: Unable to locate package //g;
     $misspelt =~ s/\n/ /g;
     warn "These unknown packages are removed from the installation list: $misspelt\n" if $misspelt;
     # remove misspelt package names from packlist
     my %misspelt = map { $_ => 1 } split /\s+/,$misspelt;
-    grep { $misspelt{$_} or $packlist .= "$_ "} @{$list{install}};
+    grep { $misspelt{$_} or $newlist .= "$_ "} @{$list{install}};
+    $packlist = $newlist;
   }
 
   execute("$rootcmd $command{$type} $packlist") if $packlist;
