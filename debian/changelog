@@ -5,11 +5,11 @@ fai (2.5.5beta) unstable; urgency=low
   * fix link in fai-guide.sgml (closes: #237794)
   * fix typo in make-fai-bootfloppy.8 (closes: #238608)
   * make-fai-bootfloppy: change lilo labels in (closes: #248955),
-    check if -s option is IP-address or hostname
+    check if -s option is IP-address or hostname, new path for stage files
   * make-fai-nfsroot: add package dmidecode for some archs, add
     module-init-tools, libapt-pkg-perl, smartmontools, usbutils, lvm2,
-    raindtools2 to nfsroot, do not copy bootsector, use mkelf-linux, new
-    code for creating timezone and localtime (closes: #201440), always
+    raidtools2, jove to nfsroot, do not copy bootsector, use mkelf-linux,
+    new code for creating timezone and localtime (closes: #201440), always
     show $NFSROOT when copying verbosely, insert newline before adding
     $FAI_LOCAL_REPOSITORY to sources.list, warning if $FAI_SOURCES_LIST is
     used, use new make-fai-nfsroot.conf file
@@ -19,21 +19,26 @@ fai (2.5.5beta) unstable; urgency=low
     logo and let scroll region unchanged
   * 06hwdetect.source: new call of discover (closes: #248532), be silent
     when loading modules, use pipe instead of exec for find, mount usbfs
-    after loading an usb module
-  * 11modules.source: now added to 06hwdetect.source
+    after loading an usb module, add $videodrv to additional.var
+  * 11modules.source: moved into 06hwdetect.source
   * lib/task_sysinfo: first call discover, then load modules using
-    discover, call smarctl for each disk, call lsusb
+    discover, call smarctl for each disk, call lsusb, print partition
+    table with parted
   * fai-divert: create dummy script only when dpkg-divert will succeeds
   * fai-savelog: copy LOGDIR recursively, add remote log method none,
     add -xdev to find
   * subroutines: use /proc/uptime to determine installation time, use $()
-    instead of backticks, set terror when error occurs, add catnc()
+    instead of backticks, set terror when error occurs, add catnc(),
+    report FAI_FLAGS in one line
   * subroutines-linux: set terror if error, add sndmon TASKERROR, do not
-    copy kernel image and initrd to install server
+    copy kernel image and initrd to install server, remove echo command
+    when defining kernel append parameters as variables
   * faimond: always flush output
   * fai-chboot: add option -o, special treatment of hostname default, also
     list default config file when using -l
-  * install_packages: calling system with array should be more efficient
+  * install_packages: add option -L, calling system with array should be
+    more efficient, new code for detecting unknown package names uses
+    AptPkg, add subroutine mkpackagelist()
   * bootsector, bootsector.8 removed
   * class/LAST.var: removed because $hdparm is not needed any more
   * class/70partition: remove definition of class FAI_BOOTPART
@@ -48,11 +53,12 @@ fai (2.5.5beta) unstable; urgency=low
     bigger, /usr smaller
   * package_config/*: adjust package names to sarge distribution
   * S40: remove NISLPRCLIENT and bootptab stuff
+  * examples/etc/sources.list: remove proposed updates lines
   * mkdebmirror: mirror woody and sarge in one directory
   * new FAQ
   * THANKS: juergen added
 
- -- Thomas Lange <lange@debian.org>  Fri,  9 Jul 2004 12:20:02 +0200
+ -- Thomas Lange <lange@debian.org>  Thu, 15 Jul 2004 10:39:54 +0200
 
 fai (2.5.4) unstable; urgency=low
 
@@ -236,7 +242,8 @@ fai (2.5) unstable; urgency=low
   * lib/task_sysinfo: call programm sysinfo if available
   * scripts/NETWORK1/S40: copy /etc/network/interfaces /etc/hosts /etc/networks
     using fcopy, add -i to fcopy calls
-  * scripts/DEFAULT1/S10: create etec/hostname only if fcopy fails
+  * scripts/DEFAULT1/S10: create etc/hostname only if fcopy fails, add
+    password protection to grub menu
   * class/01alias: use classes from file demo if hostname is demohost; add
     catnc(); use catnc instead of cat
   * class/11modules.source: now uses code from DEFAULT.mod
