@@ -27,12 +27,11 @@ test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 test -f /etc/init.d/nfs-user-server && nfsserver=nfs-user-server
 
 case "$1" in
-    remove|upgrade|deconfigure)
-#       install-info --quiet --remove /usr/info/fai.info.gz
+    upgrade) ;;
 
-umount -n $NFSROOT/proc 2>/dev/null || true
-umount -n $NFSROOT/dev/pts 2>/dev/null || true
-rm -rf $NFSROOT
+    remove|deconfigure)
+
+rmdir $NFSROOT || true
 
 perl -ni.bak -e "print unless m#^$FAI_CONFIGDIR\s#" /etc/exports
 perl -ni.bak -e "print unless m#^$NFSROOT\s#" /etc/exports
