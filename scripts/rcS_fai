@@ -57,12 +57,13 @@ fai_init() {
     [ -z "$FAI_ROOT" ] && FAI_ROOT=/tmp/target
     ROOTCMD="chroot $FAI_ROOT"
     # no chroot needed
-    [ "FAI_ROOT" = '/' ] && ROOTCMD=
-    FTMP=/tmp/fai   # directory where temporary log files are stored
-    diskvar=$FTMP/disk_var.sh
-    moduleslog=$FTMP/modules.log
-    rcslog=$FTMP/rcS.log
-    divertlist=$FTMP/divert.lis
+    [ "$FAI_ROOT" = '/' ] && ROOTCMD=
+    [ -z "$LOGDIR" ] && LOGDIR=/tmp/fai   # directory where temporary log files are stored
+    mkdir -p $LOGDIR
+    diskvar=$LOGDIR/disk_var.sh
+    moduleslog=$LOGDIR/modules.log
+    rcslog=$LOGDIR/rcS.log
+    divertlist=$LOGDIR/divert.lis
 
     # for cfengine
     chroot=/usr/sbin/chroot
@@ -74,7 +75,7 @@ fai_init() {
     PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
     trap 'echo "Now rebooting";faireboot' INT QUIT
 
-    if [ X$OSTYPE = Xlinux ];then
+    if [ X$OSTYPE = Xlinux ]; then
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -n -t devpts devpts /dev/pts
@@ -108,7 +109,7 @@ create_ramdisk() {
 	mount -n $ramdevice /tmp
     }
     # now create the required subdirectories
-    mkdir /tmp/var /tmp/etc /tmp/target /tmp/fai
+    mkdir /tmp/var /tmp/etc /tmp/target
     cd    /tmp/var && mkdir tmp log lock run spool
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -117,8 +118,8 @@ create_ramdisk() {
 
 [ `uname -s` = Linux ] && create_ramdisk
 
-{
 fai_init
+{
 task confdir
 task setup
 task defclass

@@ -77,8 +77,8 @@ rmdivert() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_dhcp_info() {
 
-    local dhcplog=$FTMP/dhcp.log
-    dhclient -lf /dev/null $netdevices >$dhcplog 2> $FTMP/dhclient.log
+    local dhcplog=$LOGDIR/dhcp.log
+    dhclient -lf /dev/null $netdevices >$dhcplog 2> $LOGDIR/dhclient.log
     [ -n "$verbose" -a -f $dhcplog ] && echo "Reading $dhcplog"
     eval `grep -v "^#" $dhcplog`
     killall dhclient-2.2.x
@@ -87,7 +87,7 @@ get_dhcp_info() {
 get_bootp_info() {
 
     local device
-    local bootlog=$FTMP/bootp.log
+    local bootlog=$LOGDIR/bootp.log
     # define all bootpc information as variables
     for device in $netdevices; do
 	echo "Sending BOOTP request using device $device"
@@ -146,9 +146,9 @@ eval_cmdline() {
 task_partition() {
 
     echo "Partitioning local harddisks"
-    [ ! -s $diskvar ] && setup_harddisks -d -X > $FTMP/format.log 2>&1
+    [ ! -s $diskvar ] && setup_harddisks -d -X > $LOGDIR/format.log 2>&1
     if [ ! -s $diskvar ]; then
-	cat $FTMP/format.log
+	cat $LOGDIR/format.log
 	die "Error: $diskvar not found."
     fi
     . $diskvar
@@ -160,7 +160,7 @@ task_extrbase() {
     gzip -dc /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
     # now we can copy fstab
     [ -f $FAI_ROOT/etc/$fstab ] && mv $FAI_ROOT/etc/$fstab $FAI_ROOT/etc/$fstab.old
-    cp -p $FTMP/$fstab $FAI_ROOT/etc/$fstab
+    cp -p $LOGDIR/$fstab $FAI_ROOT/etc/$fstab
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mirror() {
@@ -177,9 +177,9 @@ task_updatebase() {
 
     echo "Updating base"
     if [ "$debug" ]; then
-	prepare_apt | tee -a $FTMP/updatebase.log 2>&1
+	prepare_apt | tee -a $LOGDIR/updatebase.log 2>&1
     else
-	prepare_apt  > $FTMP/updatebase.log 2>&1
+	prepare_apt  > $LOGDIR/updatebase.log 2>&1
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -220,11 +220,11 @@ task_instsoft() {
 
     echo "Installing software may take a while"
     if [ "$debug" ]; then
-	install_packages | tee -a $FTMP/software.log
+	install_packages | tee -a $LOGDIR/software.log
     elif [ "$verbose" ]; then
-	yes '' | install_packages | tee -a $FTMP/software.log
+	yes '' | install_packages | tee -a $LOGDIR/software.log
     else
-	yes '' | install_packages >> $FTMP/software.log 2>&1
+	yes '' | install_packages >> $LOGDIR/software.log 2>&1
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -232,7 +232,7 @@ task_sysinfo() {
 
     echo The defined classes are:
     echo $classes
-    echo The classes are also saved in $FTMP/FAI_CLASSES
+    echo The classes are also saved in $LOGDIR/FAI_CLASSES
 
     # show some system information and save it on the server
     lspci
@@ -248,7 +248,7 @@ task_sysinfo() {
     [ -x /sbin/discover ] && discover --module ethernet cdrom scsi sound video
     [ -x /usr/sbin/kudzu ] && kudzu -q
     if [ -x /usr/sbin/detect ]; then
-       cd $FTMP
+       cd $LOGDIR
        detect && cat report.txt
     fi
 

@@ -701,7 +701,7 @@ sub PartitionPersfdisk{
             $sfdiskTables{$disk} .= "$line\n";
 	}
 	print $sfdiskTables{$disk};
-	$filename = "/tmp/fai/" . (($disk=~ m#/#) ? join('_', split('/', $disk)) : $disk) . ".sfdisk";
+	$filename = "$ENV{LOGDIR}/" . (($disk=~ m#/#) ? join('_', split('/', $disk)) : $disk) . ".sfdisk";
 	if(($test != 1) && ($filename)){
 	    open(FILE, ">$filename") || die "unable to write temporary file $filename\n";
 	    print FILE $sfdiskTables{$disk};
@@ -856,7 +856,7 @@ EOM
 	$FileSystemTab .= BuildfstabLine("/dev/$device",$mountpoint,$type,$MPfstaboptions{$mountpoint},0,2);
     }
     # write it
-    $filename = "/tmp/fai/fstab";
+    $filename = "$ENV{LOGDIR}/fstab";
     print $FileSystemTab;
     if($test != 1){
 	open(FILE, ">$filename") || die "unable to write fstab $filename\n";
