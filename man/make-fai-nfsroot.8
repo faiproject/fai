@@ -50,13 +50,78 @@ successfully  and !=0 if an error occurs.
 .TP
 .B \-v
 Create verbose output on stdout.
+.TP
+.B \-r
+Attempt to recover a previously failed run of this command.  
 
 .SH NOTES
 .PD 0
 make-fai-nfsroot will attempt to add the NFSROOT directory to your /etc/exports
 file for export via NFS.  If you do not use NFS, you may still use the NFSROOT
-directory as a staging point for building the base installation tarball.  See
-the FAI manual for more details.
+directory as a staging point for building the base installation tarball.  
+
+.SH RECOVERY
+.PD 0
+.B CAUTION!!  
+This is an advanced feature.  You should be willing to open up an
+editor and browse the make-fai-nfsroot code to understand what each task
+does and how your use of the recovery option can be impacted by fiddling
+around with the stamp files.
+
+You can call make-fai-nfsroot with the '-r' option to attempt a recovery of
+a previously run.  As tasks are completed, stamp files are generated in
+/var/run/fai/make-fai-nfsroot.  As each task is called in recovery mode, the
+stamp file is checked.  If it exists, the task is skipped.  This will save
+you much time during your initial install and debug phase.  It is not a very
+sophisticated mechanism, but it can help you on updating the nfsroot as
+well.  For example, if you want to update the kernel that is installed,
+remove the following stamp files: install_kernel_nfsroot_stamp,
+setup_bootp_stamp, setup_dhcp_stamp.
+
+The order in which the stamp files are created are as follows:
+
+.TP
+.B call_debootstrap_stamp | get_basetgz_stamp
+For woody, debootstrap was called successfully.  For potato, the base.tgz
+file was extracted.
+
+.TP
+.B create_base_stamp
+Created after successfully calling debootstrap or basetgz plus a couple
+other tasks.
+
+.TP
+.B upgrade_nfsroot_stamp
+The packages in $NFSROOT have successfully been upgraded with apt.
+
+.TP
+.B add_packages_nfsroot_stamp
+New packages have been installed with apt as specified by the $NFSPACKAGES
+environment variable in /etc/fai/fai.conf.
+
+.TP
+.B copy_fai_files_stamp
+FAI copies a base of files to the NFSROOT directory.
+
+.TP
+.B setup_ssh_stamp
+The SSH environment is set up.  You could probably remove this stamp alone
+to refresh your ssh setup.
+
+.TP
+.B create_nfsroot_stamp
+This stamp file is created when all the preceeding steps have been taken.
+You have a base nfsroot directory.  All you need now is the kernel and the
+BOOTP or DHCP setup.
+
+.TP
+.B install_kernel_nfsroot_stamp
+The kernel you specified in $KERNELPACKAGE has been installed.
+
+.TP
+.B setup_bootp_stamp | setup_dhcp_stamp
+Your kernel was either BOOTP or DHCP.  The appropriate setup has been completed.
+
 .PD
 .SH SEE ALSO
 .PD 0
@@ -64,7 +129,7 @@ The programs is part of FAI (fully automatic installation). See the FAI manual
 for more information how to use make-fai-nfsroot. The FAI homepage is
 http://www.informatik.uni-koeln.de/fai.
 .TP
-\fImake-fai-bootfloppy\fP(8), \fIexports\fP(5), \fInfsd\fP(8)
+\fImake-fai-bootfloppy\fP(8), \fIexports\fP(5), \fInfsd\fP(8), \fIfai-setup\fP(8)
 .PD
 .SH FILES
 .PD 0
@@ -72,7 +137,16 @@ http://www.informatik.uni-koeln.de/fai.
 .FN /etc/fai/fai.conf
 The FAI configuration file.
 
+.PD 0
+.TP
+.FN /var/run/fai/make-fai-nfsroot/*-stamp
+Stamp files used for recovery.
+
 .SH AUTHOR
 Thomas Lange <lange@informatik.uni-koeln.de>
 .\" This manpage was written by Chad Walstrom <chad@debian.or>.
 .\" Take my name out of this if this manpage makes it to the cvs tree.
+
+.SH BUGS
+.B FIXME: 
+Add pertinant bugs please
