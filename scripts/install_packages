@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.2, 4-aug-2003";
+my $version = "Version 2.3, 22-dec-2003";
 
 use strict;
 use Getopt::Std;
@@ -123,7 +123,9 @@ foreach my $type (@commands) {
     # it's not easy to determine the real package name
     # example: g++; is the package called g+ and should be installed, or just g++?
     $packlist = join(' ',grep {! /[+-]$/} @{$list{$type}});
-    my $misspelt = qx{$rootcmd apt-cache show $packlist 2>&1 1>/dev/null};
+    $packlistnover=$packlist;
+    $packlistnover =~ s/=\w+//g;
+    my $misspelt = qx{$rootcmd apt-cache show $packlistnover 2>&1 1>/dev/null};
     $misspelt =~ s/W: Couldn't stat source .+?\n//g;
     $misspelt =~ s/W: Unable to locate package //g;
     $misspelt =~ s/\n/ /g;
