@@ -42,6 +42,7 @@ dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
 
 # create NIS/NONIS config
 fcopy -M /etc/nsswitch.conf /etc/host.conf
+fcopy -i /etc/ypserv.securenets  # only for yp server
 ifclass NONIS && rm -f $target/etc/defaultdomain
 if ifclass NIS; then
     echo $YPDOMAIN > $target/etc/defaultdomain
@@ -97,6 +98,8 @@ ifclass NISLPRCLIENT && {
 
 # install local cron jobs
 ftar /etc/cron.d
+
+fcopy -iM /etc/auto.master /etc/auto.scratch
 
 # copy for all NET_9 Linux-Clients exim.conf
 fcopy -M /etc/exim/exim.conf /etc/aliases
