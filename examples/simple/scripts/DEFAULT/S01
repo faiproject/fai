@@ -83,16 +83,16 @@ fcopy -M /etc/X11/XF86Config-4 && rm -f $target/etc/X11/XF86Config
 # if cdromdevice is defined in *.var, use that value
 # if you have both a SCSI and an IDE CD-ROM -> Uuuuups, this will fail
 # if you have an IDE CDROM (mostly hdc) but you are using the ide-scsi driver,
-# this IDE CDROM will be sr0, nopt hdc. So the auto detect in the following lines will fail
+# this IDE CDROM will be scd0, nopt hdc. So the auto detect in the following lines will fail
+[ "$cdromdevice" ] || cdromdevice=`grep -q CD-ROM /proc/scsi/scsi && echo "scd0"`
 [ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -n 1 | awk -F/ '{print $4}'`
-[ "$cdromdevice" ] || cdromdevice=`grep -q CD-ROM /proc/scsi/scsi && echo "sr0"`
 if [ "$cdromdevice" ]; then
     echo "/dev/$cdromdevice  /cdrom   auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
     echo "/cdrom        *(ro)" >> $target/etc/exports
 fi
 # if a second cd-rom exists we assume that this is the cd-writer
 if [ `grep "Type:.*CD-ROM" /proc/scsi/scsi | wc -l` -gt 1 ]; then
-    echo "/dev/sr1  /cdrec  auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
+    echo "/dev/scd1  /cdrec  auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
     echo "/cdrec        *(ro)" >> $target/etc/exports
     mkdir $target/cdrec
 fi
@@ -102,9 +102,13 @@ fi
 
 # copy ldp.conf if printing is done via Network and NIS
 ifclass NISLPRCLIENT && {
-    $ROOTCMD update-rc.d -f lprng remove
+    if ifclass LPD; then
+	touch $target/etc/printcap
+    else
+	$ROOTCMD update-rc.d -f lprng remove
+	rm -f $target/etc/cron.daily/lprng
+    fi
     fcopy /usr/local/share/LPRng/pcfilter
-    rm -f $target/etc/cron.daily/lprng
 }
 
 # install local cron jobs
