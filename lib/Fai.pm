@@ -64,15 +64,20 @@ sub read_disk_info {
 
   # disk_info set variables containing the information
 
-  foreach ($ENV{device_size}=~ m#([a-z])\s+(\d+)#g) {
+  my ($size,$bytes_per_block);
+  $bytes_per_block= 1024; # should be constant for /proc/partitions; must be proofed !
+
+  foreach (scalar $ENV{device_size}=~ /(\S+)\s+(\d+)/g)  {
     my ($device,$blocks) = ($1,$2);
     $numdisks++;
     push @devicelist,$device;
     $blocks{$device} = $blocks;
+    $size = $blocks{$device} * $bytes_per_block / (1024*1024) ;
+    $sum_disk_size += $size;
+    $disksize{$device} = $size;
   }
 
-# I hope blocksize is constant !!!
-
+# old version
 #      my $device;
 #      open ( DISK,"sfdisk -l|");
 #      while (<DISK>) {
