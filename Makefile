@@ -25,7 +25,7 @@ install:
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
-	install -m644 lib/subroutines $(SHAREDIR)
+	install -m644 lib/subroutines* $(SHAREDIR)
 # potato
 	install -m644 lib/Fai.pm $(DESTDIR)/usr/lib/perl5/Debian
 	install -m644 lib/Fai.pm $(DESTDIR)/usr/share/perl5/Debian
