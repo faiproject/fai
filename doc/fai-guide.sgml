@@ -274,12 +274,11 @@ which is recognized by the install kernel.
 The script <prgn>mkdebmirror</prgn> <footnote> Available in
  <p><file>/usr/share/fai/utils/</file>.</p> </footnote> can be
  used for creating your own local Debian mirror. This script uses the
- script <prgn>debmirror</prgn><footnote> Available at
- <httpsite>http://cvs.kitenet.net/</httpsite><httppath>joey-cvs/bin/debmirror</httppath>
+ script <prgn>debmirror</prgn><footnote> Available as a Debian package
  or at the FAI homepage.</footnote> and <manref name="rsync"
  section="1">.
 
-A partitial Debian mirror only for i386 architecture for Debian 2.2r4
+A partitial Debian mirror only for i386 architecture for Debian 2.2r5
 (aka potato) without the source packages needs about 2.4 GB of disk
 space.
 
@@ -468,7 +467,7 @@ kueppers# /etc/init.d/nfs-server reload
 </example>
 
 <p>
-The setup also creates the account <tt>fai</tt> ($LOGUSER). The log
+The setup also creates the account <tt>fai</tt> (defined by $LOGUSER). The log
 files of all install clients are saved to the home directory of this
 account. If you boot from network card, you should change the primary
 group of this account, so this account has write permissions to
@@ -534,12 +533,14 @@ Boot Failure Prompt:        Wait for key
 
 Set the boot method to <tt>TCP/IP</tt> and the protocol to either
 <tt>BOOTP</tt> or <tt>DHCP</tt>. I prefer BOOTP because the daemon
-automaticly reloads its configuration when it's changed.
+automaticly reloads its configuration when it has changed.
 Make a symbolic link from the hostname of your client to the
 appropriate kernel image in <file>/boot/fai</file>. In the following
 example the host is called <tt>bigfoot</tt>. The file
 <file>installimage_3com</file> is created by <prgn>imggen</prgn> and
-suitable for booting 3Com network cards.
+suitable for booting 3Com network cards. You can also use the utility
+<prgn>tlink</prgn> (<file>/usr/share/fai/utils/tlink</file> to create
+this link).
 
 <example> 
 kueppers# cd /boot/fai
@@ -563,15 +564,18 @@ using this line in file <file>/etc/inetd.conf</file>:
 tftp dgram udp wait nobody /usr/local/sbin/tftpd -s -r blksize /boot/fai
 </example>
 
-See
-<file>/usr/share/doc/syslinux/pxelinux.doc.gz</file> for more
+See <file>/usr/share/doc/syslinux/pxelinux.doc.gz</file> for more
 information, how to boot such an environment. There are also some
-mails in the FAI mailing list archive concerning this topic.
+mails in the FAI mailing list archive concerning this topic.  The PXE
+environment uses the original kernel image (not using mknbi-linux)
+which is copied to <file>/boot/fai/installkernel</file>.  A default
+configuration for pxelinux is created in
+<file>/boot/fai/pxelinux.cfg/default</file>.
 
 <sect id="bootfloppy">Creating a boot floppy
 <p>
 If your network card can't boot itself, you have to boot via
-floppy. Use the command <prgn>make-fai-bootfloppy</prgn> to create the
+floppy disk. Use the command <prgn>make-fai-bootfloppy</prgn> to create the
 boot floppy. Since there's no client specific information on this
 floppy, it's suitable for all your install clients.
 You can also specify additional kernel parameters for this boot
@@ -663,7 +667,7 @@ ant01:ha=0x00105A000000:bf=ant01:tc=.failocal:T172="sshd":
 </example>
 
 Insert one line for each install client at the end of this file as
-done for <em>bigfoot</em> and <em>ant01</em>. Replace the string
+done for the hosts <em>bigfoot</em> and <em>ant01</em>. Replace the string
 <tt>FAISERVER</tt> with the name of your install server. If the
 install server has multiple network cards and host names, use the host
 name of the network card to which the install clients are
@@ -677,7 +681,7 @@ ds</tt>) to your local needs.
  <tag>ds</tag> <item>  <p>: List of DNS server </p> </item>
  <tag>T170</tag> <item>  <p>Location of the FAI configuration directory
 </p> </item>
- <tag>T171</tag> <item>  <p>FAI_ACTION</p> </item>
+	    <tag>T171</tag> <item>  <p><var>FAI_ACTION</var></p> </item>
 	    <tag>T172</tag> <item>  <p>List of <var>FAI_FLAGS</var>; e.g. verbose, debug, reboot, createvt, sshd</p> </item>
  <tag>T173</tag> <item>  <p>Reserved for future use</p> </item>
  <tag>T174</tag> <item>  <p>Reserved for backup devices and backup options; NOT YET USED
@@ -692,7 +696,7 @@ clients. <strong> It is important, that T171 (equivalent to variable
 installation script <file>rcS_fai</file>. The configuration files for
 DHCP and BOOTP daemons use other names. Example: <var>FAI_ACTION</var>
 is equal to <tt>T171</tt> in bootptab or <tt>option-171</tt> in
-dhcp.conf. </p> </footnote>. is set to <tt>sysinfo</tt> !</strong>
+dhcp.conf. </p> </footnote>.) is set to <tt>sysinfo</tt> !</strong>
 Later you can set it to <tt>install</tt>, in order to start the
 automatic installation. For more information on all tags see <manref
 name="bootptab" section="5">.
@@ -700,7 +704,7 @@ name="bootptab" section="5">.
 The list of <var>FAI_FLAGS</var> can be space or comma
 separated. <var>FAI_FLAGS</var> in <file>bootptab</file> must be
 separated by whitespace. If you define <var>FAI_FLAGS</var> as
-additional kernel parameter, the flags must be separated with a
+an additional kernel parameter, the flags must be separated with a
 comma.<p>
 
 When you have created your <file>bootptab</file> file, you have to
@@ -723,8 +727,7 @@ easier to use a daemon.
 
 
 FAI can perform several actions when the client is booting. This action
-is defined in the variable <var>FAI_ACTION</var>
-
+is defined in the variable <var>FAI_ACTION</var>.
 Be very carefully if you set <var>FAI_ACTION </var> to
 <em>install</em>. This can destroy all your data on the install
 client, indeed most time it should do this ;-). It's recommended to change this only
@@ -742,6 +745,7 @@ An example for <manref name="dhcp.conf" section="5"> is available in
 <file>/usr/share/doc/fai/examples/etc</file>. Start using this example
 and look at all options used therein. If you make any changes
 to this configuration, you must restart the daemon.
+<example># /etc/init.d/dhcp restart</example>
 
 
 <sect id="bootmesg">Boot messages <p>
@@ -825,10 +829,9 @@ Root-NFS: No NFS server available, giving up.
 VFS: Unable to mount root fs via NFS, trying floppy.
 VFS: Insert root floppy and press ENTER
 </example>
-Then you have to compile a new kernel has a driver compiled in, which
-supports your network card. This driver must no be a kernel module. To
-compile the new kernel, start using the default kernel configuration
-of FAI.
+Then you have to compile the driver for your network card into a new
+kernel. This driver must no be a kernel module. To compile the new
+kernel, start using the default kernel configuration of FAI.
 <example>
 kueppers# cd /usr/src/kernel-source-&kver;
 kueppers# cp /usr/lib/fai/nfsroot/boot/config-&kver; .config
@@ -848,7 +851,7 @@ the variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot.
 <example>
 kueppers# make-fai-nfsroot
 </example> 
-After that, you have to create a new boot floppy. Now your network
+After that, you have to create a new boot floppy if you need it. Now your network
 card should be recognized and the install kernel should mount
 the nfsroot successfully. More information how to compile an
 install kernel can be found in the <file>README</file> of the package <tt>fai-kernels</tt>.
@@ -863,10 +866,11 @@ to <var>FAI_FLAGS</var>.
 
 Remote login is available via the secure shell, if <tt>sshd</tt> if
 added to <var>FAI_FLAGS</var>. The encrypted password is set with
-variable <var>FAI_ROOTPW</var> in &fc; and is default to "fai". You
-can also log in without a password when using <var>
-SSH_IDENTITY</var>. To log in from your server to the install client
-(for eg. named ant01) use:
+variable <var>FAI_ROOTPW</var> in &fc; and is default to "fai". This
+is only the root password during the installation process not for the
+new installed system. You can also log in without a password when
+using <var> SSH_IDENTITY</var>. To log in from your server to the
+install client (for eg. named ant01) use:
 
 <example>> ssh -l root ant01
 Warning: Permanently added 'ant01,134.95.9.200' to the list of known hosts.
@@ -884,14 +888,14 @@ process.
 
 All log files from <file>/tmp </file> are also written to the install server
 into the directory <tt>~fai/ant01/sysinfo/</tt><footnote>More
-general: <tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION/</tt>. Examples of log
+general: <tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION/</tt>. Examples of the log
 files can be found on the FAI homepage.
 </footnote>
 
 <p>
 A very nice feature is, that FAI mounts all filesystems it finds on
 the local disks read only. It also tells you on which partition a file
-<file>/etc/fstab</file> exists. When only one file is found, the
+<file>/etc/fstab</file> exists. When only one file system table is found, the
 partitions are mounted according to this information. Here's an
 example:
 <example>
@@ -935,7 +939,7 @@ files are also copied to the install server.
 
 <chapt id=instprocess>Overview of the installation sequence<p>
 
-Following steps are performed during an installation after the linux kernel
+Following tasks are performed during an installation after the linux kernel
 has booted on the install clients.
 
 <enumlist>
@@ -989,13 +993,12 @@ the secure shell daemon for remote access is started on demand.
 <sect id=iclass>Defining classes, variables and loading kernel modules<p>
 
 Now scripts in <file>/fai/class/</file> are executed to define classes
-and variables that are later used in the site specific configuration
-scripts.  All scripts matching <tt>S[0-9]*.{sh,pl,source}</tt> are
-executed in alphabetical order. Scripts ending in <tt>.source</tt> are
-sourced, so they can define new classes by adding these classes to
+and variables. All scripts matching <tt>S[0-9]*.{sh,pl,source}</tt>
+are executed in alphabetical order. Scripts ending in <tt>.source</tt>
+are sourced, so they can define new classes by adding these classes to
 variable <var>newclasses</var> (see <file>S30menu.source</file> for an
 example). Every word that these scripts print to the standard output
-are interpreted as class names. These classes are defined for this
+are interpreted as class names. These classes are defined for the
 install client. You can also say this client belongs to these
 classes. A class is defined or undefined and has no value. Only
 defined classes are of interest for an install client.  A description
@@ -1045,7 +1048,7 @@ software packages are installed on the new filesystems. First the
 base archive is unpacked, then the command
 <prgn>install_packages</prgn> installs all packages using <manref
 name="apt-get" section="8"> without any manually interaction needed. If
-a packages requires an other packages it resolves
+a packages requires an other package, <manref name="apt-get" section="8"> resolves
 this dependency by installing the required package.
 <p>
 
@@ -1060,9 +1063,7 @@ After all requested software packages are installed, the system is
 nearly ready to go. But not all default configurations of the software
 packages will meet your site specific needs. So you can call arbitrary
 scripts, which adjust the system configuration. Therefore scripts,
-that match a class name in <file>/fai/scripts</file><footnote>
-<p><file>/usr/local/share/fai/scripts</file> on the install
-server.</p> </footnote> will be executed. If
+that match a class name in <file>/fai/scripts</file> will be executed. If
 <file>/fai/scripts/<tt>classname</tt></file> is a directory, all
 scripts that match <tt>S[0-9]*</tt> in this directory are executed. So
 it is possible to have several scripts of different types (perl,
@@ -1089,7 +1090,7 @@ At least the system is automatically rebooted if the flag
 if booting from network card or if you can change the boot device
 using the command <prgn>bootsector</prgn>. Otherwise, you have to
 remove the floppy disk and type return or call <prgn>faireboot</prgn>
-from a remote login. You must change the boot device, to boot the new
+from a remote login. You must change the boot device to boot the new
 installed system otherwise the installation would be performed
 again. Read <ref id="changeboot"> how to change the boot device.
 
@@ -1119,6 +1120,7 @@ questions:
   should the configuration for these looks like ?</p> </item>
   <tag></tag> <item> <p>Which remote filesystems should be mounted ?</p> </item>
   <tag></tag> <item> <p>Does the hardware needs a special kernel ?</p> </item>
+  <tag></tag> <item> <p>How should the backup be performed ?</p> </item>
   <tag></tag> <item> <p></p> </item>
 </taglist>
 
@@ -1144,7 +1146,7 @@ A good paper with more aspects of building an infrastructure is
 
 The configuration is the collection of information how exactly to
 install a computer. The central configuration space for all install
-clients is located on the server in <file>/usr/local/share/fai</file>
+clients is located on the install server in <file>/usr/local/share/fai</file>
 and its subdirectories. This will be mounted by the install clients to
 <file>/fai</file>. Following subdirectories are present and include
 several files:
@@ -1157,7 +1159,8 @@ several files:
 	  <tag><tt>package_config/</tt></tag> <item> <p>File with
 	   lists of software
 	  packages to be installed or removed.</p> </item>
-	  <tag><tt>scripts/</tt></tag> <item> <p>Script for customization.</p> </item>
+	  <tag><tt>scripts/</tt></tag> <item> <p>Script for local site
+	   customization.</p> </item>
 	  <tag><tt>files/</tt></tag> <item> <p>Files used by
 	  customization scripts, eg. user created kernel
 	   packages. Most files are located in a subtree structure,
@@ -1189,7 +1192,7 @@ cluster with a master node called <em>nucleus</em> and computing nodes
 
 <taglist>  
    <tag>bigfoot</tag>  <item> <p>This is a server with much software. It
-   provides the home directory <file>/usr</file> for its NFS clients. Also some
+   provides the home directory and <file>/usr</file> for its NFS clients. Also some
    daemons are installed and activated by default.</p> </item>
    <tag>ant01,...</tag>  <item> <p>These dataless clients mount
    <file>/usr</file> and <file>/home</file> from <em>bigfoot</em>. Most of
@@ -1197,12 +1200,13 @@ cluster with a master node called <em>nucleus</em> and computing nodes
    to a netgroup of hosts.</p> </item>
 
    <tag>nucleus</tag>  <item> <p>This Beowulf master node is a server with much software. It
-   provides the home directory <file>/usr/local</file> for its computing nodes. Also some
+   provides the home directory and <file>/usr/local</file> for its computing nodes. Also some
    daemons are installed and activated by default.</p> </item>
    <tag>atom01,...</tag>  <item> <p>These Beowulf clients mount
    <file>/usr/local</file> and <file>/home</file> from <em>nucleus</em>. Most of
    the disk space is spend for a scratch partition, which is exported
-   to a netgroup of hosts.</p> </item>
+   to a netgroup of hosts. All scratch partitions are mounted on all
+   Beowulf clients via the automounter.</p> </item>
 </taglist>
 Start looking at these examples and study them. Then change or add
 things to these examples. But don't forget to plan your own
@@ -1214,18 +1218,18 @@ After the kernel has booted, it mounts the root file system via NFS
 from the install server and init starts the script
 <file>/sbin/rcS_fai</file>. This is the script which controls the
 sequence of the installation. No other scripts in
-<file>/etc/init.d</file> are used.
+<file>/etc/init.d/</file> are used.
 <p>
 
 The installation script uses many subroutines, which are defined in
 <file>/usr/share/fai/subroutines</file>. All important tasks of the
-installation are called via the subroutine <tt>task <em>name</em></tt>
+installation are called via the subroutine <tt>task</tt>
 appended by the name of the task as an option (eg. <tt>task
 instsoft</tt>). The subroutine <tt>task</tt> calls hooks with prefix
 <em>name</em> if available and then calls the default task (defined as
 <tt>task_<em>name</em></tt> in <file>subroutines</file>). The default
 task can be skipped on demand if the file
-<file>/tmp/skip.<em>name</em></file> exists.<p>
+<file>/tmp/skip.</file><em>name</em> exists.<p>
 
 This is the description of all default tasks.
 <taglist>
@@ -1259,7 +1263,7 @@ subroutines or override the definition of FAI's subroutines.
 
       <tag>action</tag> <item><p>Depending on the value of
       <var>$FAI_ACTION</var> this subroutine decides which action FAI
-      should perform. The default actions are: <tt>sysinfo, install,
+      should perform. The default available actions are: <tt>sysinfo, install,
       backup</tt>. If <var>$FAI_ACTION</var> has another value, a user
       defined action is called, if a file
       <file>/fai/hooks/</file><var>$FAI_ACTION</var> exists. So you can
@@ -1289,7 +1293,7 @@ subroutines or override the definition of FAI's subroutines.
       to partition the hard disks. The task writes variable
       definitions for the root and boot device (<var>$ROOT_PARTITION,
       $BOOT_PARTITION</var>) to
-      <file>/tmp/disk_var.sh</file>.</p></item>
+      <file>/tmp/disk_var.sh</file> and create a fstab file.</p></item>
 
       <tag>mountdisks</tag> <item><p>Mounts the created partitions
       according to the created <file>/tmp/fstab</file> file relative to
@@ -1300,7 +1304,7 @@ subroutines or override the definition of FAI's subroutines.
       <prgn>make-fai-nfsroot</prgn>.</p> </item>
 
       <tag>mirror</tag> <item><p>If a local mirror is accessed via NFS
-      when <var>$FAI_DEBMIRROR</var> is defined, this directory will
+      ( when <var>$FAI_DEBMIRROR</var> is defined), this directory will
       be mounted to <var>$MNTPOINT</var>, which is defined in &fc;.</p> </item>
 
       <tag>updatebase</tag> <item><p>Prepares the extracted base
@@ -1316,7 +1320,7 @@ subroutines or override the definition of FAI's subroutines.
 	<tag>configure</tag> <item><p>Calls scripts in
       <file>/fai/scripts/</file> for every defined class.</p> </item>
 
-      <tag>finish</tag> <item><p>Unmounts the proc filesystem in the
+      <tag>finish</tag> <item><p>Unmounts all filesystems in the
       new installed system and removes diversions of files
       (<prgn>rmdivert</prgn>).</p></item>
 
@@ -1420,7 +1424,8 @@ a class name for a configuration is adopted from the installation
 scripts by Casper Dik for Solaris. This technique proved to be very
 useful for the SUN workstations, so I also use it for the fully
 automatic installation of Linux. One simple and very efficient feature
-of Casper's scripts is to call a command with all files, whose file
+of Casper's scripts is to call a command with all files (or ony the
+firsrt one), whose file
 names are also a class. The following loop may implement this function
 in a shell script:
 
@@ -1432,8 +1437,7 @@ in a shell script:
    fi
    done
 </example>
-A variation would be to call the command only for the first file that
-matches a class name. Therefore it is possible to add a new file to
+Therefore it is possible to add a new file to
 the configuration without changing the script. This is because the
 loop automaticly detects new configurations files that should be
 used. Unfortunately cfengine does not support this nice feature, so
@@ -1454,7 +1458,7 @@ There are different possibilities to define classes:
 <enumlist>
      <item><p>Some default classes are defined for every host:
      DEFAULT, LAST and its hostname.</p> </item>
-     <item><p>Classes may listed within a file.</p> </item>
+     <item><p>Classes may be listed within a file.</p> </item>
      <item><p>Classes may be defined by scripts.</p> </item>
  </enumlist>
 
