@@ -56,16 +56,6 @@ add_export_line() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_fai_account() {
 
-    # get the home dir of a user in a variable; do not exit when set -e is used
-    # loguserhome is unset if $LOGUSER does not exists
-    # this is not a evil hack, it's a very clever piece of code
-    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
-    if [ -z "$loguserhome" ]; then
-	echo "Can't determine home directory for user $LOGUSER."
-	echo "LOGUSER= $LOGUSER    loguserhome= $loguserhome"
-	exit 8
-    fi
-
     if id $LOGUSER 2>/dev/null 1>&2 ; then
 	echo Account \$LOGUSER=$LOGUSER  already exists.
 	echo Make sure, that all install clients can
@@ -76,6 +66,19 @@ add_fai_account() {
     adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
     # there's a bug when the encrypted password is !, so change it to *
     perl -pi.bak -e "s#^$LOGUSER:.:(.+):/bin/false#$LOGUSER:*:\1:/bin/bash#" /etc/passwd
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+setup_fai_account() {
+
+    # get the home dir of a user in a variable; do not exit when set -e is used
+    # loguserhome is unset if $LOGUSER does not exists
+    # this is not a evil hack, it's a very clever piece of code
+    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+    if [ -z "$loguserhome" ]; then
+	echo "Can't determine home directory for user $LOGUSER."
+	echo "LOGUSER= $LOGUSER    loguserhome= $loguserhome"
+	exit 8
+    fi
 
     if [ $FAI_REMOTESH = "ssh" -o $FAI_REMOTECP = "scp" ]; then
 	# we must set up ssh on the server
@@ -101,6 +104,7 @@ add_fai_account() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 add_fai_account
+setup_fai_account
 
 echo Creating FAI nfsroot can take a long time and will
 echo need more than 100MB disk space in $NFSROOT.
