@@ -11,6 +11,9 @@ SCRIPTS = fcopy ftar fai-class fai-do-scripts
 SHARES = subroutines subroutines-sunos
 FAI=$(DESTDIR)/fai
 
+tar: install
+	tar -C $(DESTDIR) -cvf - . | gzip > /tmp/fai-solaris.tar.gz 
+
 install: 
 	rm -rf $(DESTDIR)
 	mkdir -p $(FAI) $(DESTDIR)/lib
@@ -28,7 +31,4 @@ install:
 clean:
 	rm -rf $(DESTDIR)
 
-tar:
-	tar -C $(DESTDIR) -cvf - . | gzip > jumpstart.tgz 
-
-.PHONY: clean veryclean
+.PHONY: clean veryclean install
