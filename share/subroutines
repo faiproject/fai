@@ -281,16 +281,9 @@ task_action() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defclass() {
 
-    local class
-
     # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
     fai-class $FAI/class $LOGDIR/FAI_CLASSES
     classes=$(< $LOGDIR/FAI_CLASSES)
-
-    # also define all classes in reverse order ($revclasses)
-#    for class in $classes ; do
-#	revclasses="$class $revclasses"
-#    done
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
@@ -354,6 +347,7 @@ task_faiend() {
     # reboot without prompting if FAI_FLAG reboot is set
     [ -z $reboot ] && read
     echo "Rebooting $HOSTNAME now"
+    sndmon REBOOT
     cd /
     sync
 
