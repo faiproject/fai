@@ -44,8 +44,6 @@ $test = 0;
 $verbose=$ENV{verbose};
 $FAI_ROOT = $ENV{FAI_ROOT};
 $classpath = "/fai/package_config";
-$aptgetlog = ">> /tmp/apt-get.log 2>&1";
-$aptgetlog = '' if $verbose;
 
 @classes = grep { !/^#|^\s*$/} split(/[\s\n]+/,$ENV{classes});
 
@@ -71,14 +69,14 @@ foreach $type (@aptcommands) {
   my $packlist = join(' ',@{$list{$type}});
 
   if ($packlist) {
-    execute("chroot $FAI_ROOT apt-get $options{$type} $type $packlist $aptgetlog");
+    execute("chroot $FAI_ROOT apt-get $options{$type} $type $packlist");
   }
 }
 
 # check if all went right
-execute("chroot $FAI_ROOT dpkg -C $aptgetlog");
+execute("chroot $FAI_ROOT dpkg -C");
 # clean apt-get cache
-execute("chroot $FAI_ROOT apt-get clean $aptgetlog");
+execute("chroot $FAI_ROOT apt-get clean");
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
 
