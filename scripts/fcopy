@@ -46,6 +46,7 @@ my $error;
 my $verbose;
 my $target;
 my $source;
+my $logfile;
 my @classes;
 
 my @opt_modes;
@@ -65,6 +66,9 @@ sub copy_one {
   # copy file $prefix/$source/$class to $target/$source
   my ($prefix,$source,$target) = @_;
   my ($class,$sourcefile,$destfile);
+  # 'normalize' source filenames: very important for updating !
+  $source=~ s/^(\.\/|\/)*//;
+  
   my $ps = "$prefix/$source";
   $ps =~ s#//#/#;
   my $tpath = "$target/" . dirname $source;
@@ -100,19 +104,19 @@ sub copy_one {
       # $source has already been copied last time
 
       if ($lastclass{$source} ne $class) {
-        $logcomment = "\t# changed class" if $opt_L;
+        $logcomment = "\t# changed class" if $logfile;
       } else {
         if ($changed{"$source/$class"} or 
             $changed{"$source/postinst"} or 
             $changed{"$source/file-modes"}) {
-          $logcomment = "\t# changed file" if $opt_L;
+          $logcomment = "\t# changed file" if $logfile;
         } else {
-          $logcomment = "\t# preserved (logical)" if $opt_L;
+          $logcomment = "\t# preserved (logical)" if $logfile;
           $preserve = 1;
         }
       }
     } else {
-      $logcomment = "\t# new (logical)" if $opt_L;
+      $logcomment = "\t# new (logical)" if $logfile;
     }
   } else {
     # compare literally
@@ -120,7 +124,7 @@ sub copy_one {
     if ( compare($sourcefile,$destfile)) {
       $logcomment="\t# new (literal)";
     } else {
-      $logcomment="\t# preserved (literal)" if $opt_L;
+      $logcomment="\t# preserved (literal)" if $logfile;
       $preserve = 1;
     }
   }
@@ -131,7 +135,7 @@ sub copy_one {
     $preserve=0;
   }
 
-  print LOGFILE "$source\t$class$logcomment\n" if $opt_L;
+  print LOGFILE "$source\t$class$logcomment\n" if $logfile;
   if ($preserve) { 
     ewarn("preserving $source \n");
     return;
@@ -350,9 +354,11 @@ $opt_m && check_mopt();
 $nobackup = $opt_B || $ENV{FCOPY_NOBACKUP} || 0;
 $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
-$source  = $opt_s || "$ENV{FAI}/files" || `pwd`;
+$source  = $opt_s || $ENV{FAI} && "$ENV{FAI}/files" || `pwd`;
 $target  = $opt_t || $ENV{FAI_ROOT} || $ENV{target};
-$opt_L and (open(LOGFILE,">> $opt_L") || die("can't open logfile: $!"));
+$target eq "/" or $ENV{'ROOTCMD'}="chroot $target";
+$logfile = $opt_L || $ENV{LOGDIR} && "$ENV{LOGDIR}/fcopy.log" || 0;
+$logfile and (open(LOGFILE,">> $logfile") || die("can't open logfile: $!"));
 $opt_P and read_status();
 
 #for postinst scripts
