@@ -159,7 +159,7 @@ save_log_local() {
     # save log files on local disk
     local logbase=$FAI_ROOT/var/log/fai
     local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$RUNDATE
-    find $LOGDIR -size 0 | xargs -r rm
+    find $LOGDIR -size 0 -type f | xargs -r rm
     mkdir -p $thislog
     cp -p $LOGDIR/* $thislog
     ln -sf $HOSTNAME $logbase/localhost
@@ -176,7 +176,7 @@ save_log_remote() {
 
     echo "Saving log files remote to $LOGUSER@$SERVER $HOSTNAME/$FAI_ACTION-$RUNDATE"
     local thislog=$HOSTNAME/$FAI_ACTION-$RUNDATE
-    find $LOGDIR -size 0 | xargs -r rm
+    find $LOGDIR -size 0 -type f | xargs -r rm
     $FAI_REMOTESH -l $LOGUSER $SERVER "mkdir -p $thislog; cd $HOSTNAME; \
         rm -f last-$FAI_ACTION; ln -sf $FAI_ACTION-$RUNDATE last-$FAI_ACTION"
     $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$SERVER:$thislog
@@ -283,7 +283,7 @@ get_fai_cvs() {
 	fi
 	cd /tmp
 	cvs -q -d"$FAI_CVSROOT" co -P -d $(basename "$FAI") \
-	  $TAG $FAI_CVSMODULE > ${THISLOG}/cvs.log
+	  $TAG $FAI_CVSMODULE > $LOGDIR/cvs.log
     else
 	echo "Warning $0: Neither \$FAI_LOCATION nor \$FAI_CVSROOT are defined."
     fi
