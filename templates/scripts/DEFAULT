@@ -17,7 +17,7 @@ echo -e "$IPADDR\t$HOSTNAME" >>$target/etc/hosts
 chmod 1777 $target/tmp
 chown root:root $target/tmp
 
-# dump keytable
+# create keyboard layput table
 dumpkeys | gzip -9f >$target/etc/console-tools/default.kmap.gz
 
 # create NIS/NONIS config
@@ -45,13 +45,14 @@ fi
 # copy default dotfiles for root account
 fcopy /root/.bash_profile /root/.bashrc /root/.cshrc /root/.login /root/.alias /root/.emacs
 
+# suppress emacs errors
 touch $target/etc/mailname
 
 ifclass USR_LOCAL_COPY && cp -a /usr/local $target/usr
 
-# make floppy read and writeable for all
+# make floppy read and writeable for all users
 chmod a+rw $target/dev/fd*
-# cdrom's are readably for all
+# cdrom's are read only for all
 chmod a+r /dev/sr* 
 
 # if $kernelimage if not a debfile, then it's the kernel version

@@ -8,7 +8,7 @@ for path in $dirs; do
     find $target/$path -maxdepth 25 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
 done
 
-# if not TMP_PARTITION
+# if no separate /tmp partition exists, make link /tmp -> /var/tmp
 ifclass TMP_PARTITION || {
     rm -rf $target/tmp
     ln -s  /var/tmp $target/tmp
@@ -17,7 +17,7 @@ ifclass TMP_PARTITION || {
 [ "$FAI_DEBMIRROR" ] && 
 echo "#$FAI_DEBMIRROR $MNTPOINT nfs ro,rsize=8192,wsize=8192 0 0" >> $target/etc/fstab
 
-
+# set bios clock
 case "$UTC" in
    no|"") hwopt="--localtime" ;;
    yes)   hwopt="--utc"       ;;
