@@ -103,7 +103,7 @@ task() {
     else
 	echo "Calling task_$taskname"
 	sndmon "TASKBEGIN $taskname"
-	terror=   # unset task error; task can set this variable to indicate an error
+	terror=0   # task can set this variable to indicate an error
 	task_$taskname
 	sndmon "TASKEND $taskname $terror"
     fi
@@ -234,6 +234,7 @@ task_action() {
 
     if [ -z "$FAI_ACTION" ]; then
 	echo "No action in \$FAI_ACTION defined."
+	sndmon "TASKERROR action 1"
 	task_faiend
 	exit 
     fi
@@ -261,6 +262,7 @@ task_action() {
 		$FAI/hooks/$FAI_ACTION
 	    else
 		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found."
+		sndmon "TASKERROR action 2"
 		task_faiend
 	    fi
 	    ;;
@@ -275,7 +277,7 @@ task_defclass() {
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
-    cfclasses=`echo $classes`
+    cfclasses=$(echo $classes)
     cfclasses=${cfclasses// /.}
     [ "$debug" ] && echo "cfclasses: $cfclasses"
 }
@@ -320,10 +322,10 @@ task_configure() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_savelog() {
 
-    fai-savelog -l
-    fai-savelog -r
     [ -d $target/etc/fai ] || mkdir -p $target/etc/fai
     cd $LOGDIR && cp -p FAI_CLASSES variables.sh $diskvar $target/etc/fai
+    fai-savelog -l
+    fai-savelog -r
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
@@ -337,7 +339,7 @@ task_faiend() {
     cd /
     sync
 
-    case `uname -s` in
+    case $(uname -s) in
 	Linux)
 	    umount -ar
 	    exec reboot -dfi
@@ -365,7 +367,7 @@ task_install() {
     task configure
     task finish
     date
-    echo "The installation took `cut -d . -f 1 /proc/uptime` seconds."
+    echo "The installation took $(cut -d . -f 1 /proc/uptime) seconds."
     task chboot
 
     rm -f $stamp
@@ -376,6 +378,7 @@ task_install() {
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
 	echo "$stamp was not removed."
+	sndmon "TASKERROR install 1"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
 }
