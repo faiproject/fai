@@ -111,6 +111,16 @@ task_mirror() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_debconf () {
+
+    if [ ! -d $FAI/debconf ]; then
+	echo "Can't find debconf directory $FAI/debconf. Skipping preseeding."
+	terror=2
+	return
+    fi
+    fai-debconf $FAI/debconf
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
 
     # maybe the base system is not up to date
@@ -150,6 +160,8 @@ task_finish() {
     done
     # undo fake of all programs made by fai
     fai-divert -R
+    date
+    echo "The installation took $(cut -d . -f 1 /proc/uptime) seconds."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
@@ -157,7 +169,7 @@ task_chboot() {
     local frsh
     local doexit=0
     local hostname
-    hostname=`hostname`
+    hostname=$(hostname)
     frsh="$FAI_REMOTESH -l $LOGUSER ${SERVER}"
 
     if [ -z "$LOGUSER" ] ; then
