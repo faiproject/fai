@@ -1,7 +1,7 @@
 # $Id$
 #*********************************************************************
 #
-# subroutines -- usefull subroutines for FAI
+# subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 2000-2002 by Thomas Lange, lange@informatik.uni-koeln.de
@@ -59,7 +59,7 @@ islinux() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ifclass() {
 
-    # test, if a class is defined
+    # test if a class is defined
     local cl
     for cl in $classes; do
 	[ x$cl = x$1 ] && return 0
@@ -189,7 +189,7 @@ save_dmesg() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
-    # wait for running (background) jobs to finish (eg. update-auctex-elisp)
+    # wait for running (background) jobs to finish (e.g. update-auctex-elisp)
     local i=0
     while (jobsrunning); do
 	[ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
@@ -200,14 +200,20 @@ wait_for_jobs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task() {
 
+    # hooks are called before a task is called
+    # if a task is skipped, also its hooks are skipped
+    # a hook can set the flag, so the accociated task is skipped
+
     local taskname=$1
+
+    [ -f $LOGDIR/skip.$taskname ] || call_hook $taskname
+
     if [ -f $LOGDIR/skip.$taskname ]; then
-        # skip whole task and hook
+        # skip task
 	rm $LOGDIR/skip.$taskname
 	[ "$verbose" ] && echo "Skiping task_$taskname"
     else
 	echo "Calling task_$taskname"
-	call_hook $taskname
 	task_$taskname
     fi
 }
@@ -224,8 +230,8 @@ call_hook() {
 	    echo "Call hook: $hook.$cl"
 	    # execute the hook
 	    $hfile $dflag
-	    # is that really good ? Makes sense, if hostname would
-	    # be the first hook
+	    # is that really good? Makes sense if hostname would
+	    # be the first hook.
 	    # execute only one hook if return value is 42
 	    # [ $? -eq 42 ] && return
 	fi
@@ -345,7 +351,7 @@ task_action() {
     case $FAI_ACTION in
 
 	install)
-	    echo Performing FAI installation. All data may be overwritten !
+	    echo Performing FAI installation. All data may be overwritten!
 	    task install
 	    ;;
 	sysinfo)
@@ -388,14 +394,14 @@ task_defclass() {
 	case $f in
 	    *.pl) newclasses=`perl $f </dev/null | grep -v '^#'` ;;
 	    *.sh) newclasses=`sh $f </dev/null | grep -v '^#'` ;;
-	    *.source) . $f ;; # this script can define $newclasses !
+	    *.source) . $f ;; # this script can define $newclasses!
 	esac
 	[ "$debug" ] && echo "newclasses= $newclasses"
 	classes="$classes $newclasses"
 	fi
     done
 
-    # scripts can also write additional classes to a file, if they
+    # scripts can also write additional classes to a file if they
     # can't print them to stdout. Now read this file and define the classes
     [ -f $LOGDIR/additional-classes ] && addclasses=`grep -v '^#' $LOGDIR/additional-classes`
     [ "$debug" ] && echo "additonal classes: $addclasses"
@@ -453,15 +459,17 @@ task_mountdisks() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_configure() {
 
-    # execute all scripts that match the name of a class,
-    # if class is a directory, execute all $class/S[0-9]* scripts in it
+    # execute all scripts that match the name of a class.
+    # If class is a directory, execute all $class/S[0-9]* scripts in
+    # it, but do not execute files ending in ~
+    
     local class f
 
     cd $FAI/scripts
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
-	   for f in `ls $class/S[0-9]*` ; do
+	   for f in `ls $class/S[0-9]*[^~]` ; do
 	       [ -x $f -a -f $f ] && do_script $f
 	   done
 	fi
