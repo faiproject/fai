@@ -1092,7 +1092,8 @@ The configuration is the collection of information how exactly to
 install a computer. The central configuration space for all install
 clients is located on the server in <file>/usr/local/share/fai</file>
 and its subdirectories. This will be mounted by the install clients to
-<file>/fai</file>. Following subdirectories are available:
+<file>/fai</file>. Following subdirectories are present and include
+several files:
 
 <taglist>
 	  <tag><tt>class/</tt></tag> <item> <p>Scripts and files to
@@ -1104,15 +1105,22 @@ and its subdirectories. This will be mounted by the install clients to
 	  packages to be installed or removed.</p> </item>
 	  <tag><tt>scripts/</tt></tag> <item> <p>Script for customization.</p> </item>
 	  <tag><tt>files/</tt></tag> <item> <p>Files used by
-	  customization scripts, eg. user created kernel packages.</p> </item>
+	  customization scripts, eg. user created kernel
+	   packages. Most files are located in a subtree structure,
+	   which reflects the ordinary directory tree. For eg. the
+	   templates for <file>nsswitch.conf</file> are located in
+	   <file>/fai/files/etc/nsswich.conf</file>.</p> </item>
+
 	  <tag><tt>hooks/</tt></tag> <item> <p>Hooks are user defined
 	  programs or scripts, which are called during the installation process.
 </taglist>
 
-The main installation script <prgn>rcS_fai</prgn> uses these
-subdirectories in the order listed. Copy the configuration templates
-to the configuration space and start an installation. These files
-need not belong to the root account. You can change their ownership and
+The main installation script <prgn>rcS_fai</prgn> uses all these
+subdirectories in the order listed. The FAI package contains templates
+for all these configuration scripts and files in
+<file>/usr/share/fai/templaes</file>. Copy the configuration templates
+to the configuration space and start an installation. These files need
+not belong to the root account. You can change their ownership and
 then edit the configuration with a normal user account.
 
 <example>
@@ -1137,7 +1145,7 @@ cluster with a master node called <em>nucleus</em> and computing nodes
    <tag>nucleus</tag>  <item> <p>This Beowulf master node is a server with much software. It
    provides the home directory <file>/usr/local</file> for its computing nodes. Also some
    daemons are installed and activated by default.</p> </item>
-   <tag>atom01,...</tag>  <item> <p>These clients mount
+   <tag>atom01,...</tag>  <item> <p>These Beowulf clients mount
    <file>/usr/local</file> and <file>/home</file> from <em>nucleus</em>. Most of
    the disk space is spend for a scratch partition, which is exported
    to a netgroup of hosts.</p> </item>
@@ -1151,18 +1159,21 @@ installation !
 After the kernel has booted, it mounts the root file system via NFS
 from the install server and init starts the script
 <file>/sbin/rcS_fai</file>. This is the script which controls the
-whole sequence of the installation. No other scripts in
+sequence of the installation. No other scripts in
 <file>/etc/init.d</file> are used.
 <p>
 
-The installation script <file>rcS_fai</file> uses many subroutines,
-which are defined in <file>/usr/share/fai/subroutines</file>. All
-important tasks of the installation are called via the call <tt>task
-<em>name</em></tt>. The subroutine <tt>task</tt> calls hooks with
-prefix <em>name</em> if available and then calls the default task
-(defined as <tt>task_<em>name</em></tt> in
-<file>subroutines</file>). The default task can be skiped on
-demand. This is the description of all default tasks.
+The installation script uses many subroutines, which are defined in
+<file>/usr/share/fai/subroutines</file>. All important tasks of the
+installation are called via the subroutine <tt>task <em>name</em></tt>
+appended by the name of the task as an option (eg. <tt>task
+instsoft</tt>). The subroutine <tt>task</tt> calls hooks with prefix
+<em>name</em> if available and then calls the default task (defined as
+<tt>task_<em>name</em></tt> in <file>subroutines</file>). The default
+task can be skiped on demand if the file
+<file>/tmp/skip.<em>name</em></file> exists.<p>
+
+This is the description of all default tasks.
 <taglist>
 
       <tag>confdir</tag> <item><p>The kernel append parameters define
@@ -1176,17 +1187,30 @@ sourced, if it exists. Using this file, you can define your own
 subroutines or override the definition of FAI's subroutines.
 
     <tag>setup</tag> <item><p>This task sets the system time, all
-      <tt>FAI_FLAGS</tt> are defined and two additional virtual
+      <var>FAI_FLAGS</var> are defined and two additional virtual
       terminals are opened on demand. A secure shell daemon is started
       on demand for remote logins. A list of all local hard disks is
       stored to <var>$disklist</var> and <var>$device_size</var>
-      contains a list of devices and their size.
+      contains a list of disk devices and their size.
+
+     <tag>defclass</tag> <item><p>Defines classes using scripts and
+      files in <file>/fai/class</file> and classes from
+      <file>/tmp/additional-classes</file>.</p> </item>
+
+     <tag>defvar</tag> <item><p>Sources all files
+      <file>/fai/class/*.var</file> for every defined class. If a hook
+      has written some variable definitions to the file
+      <file>/tmp/additional.var</file>, this file is also
+      sourced.</p></item>
 
       <tag>action</tag> <item><p>Depending on the value of
       <var>$FAI_ACTION</var> this subroutine decides which action FAI
       should perform. The default actions are: <tt>sysinfo, install,
-      backup</tt>. A user defined action is called, if a file
-      <file>/fai/hooks/</file><tt>$FAI_ACTION</tt> exists.
+      backup</tt>. If <var>$FAI_ACTION</var> has another value, a user
+      defined action is called, if a file
+      <file>/fai/hooks/</file><var>$FAI_ACTION</var> exists. So you can
+      easily define your own actions.<p>
+
 
       <tag>sysinfo</tag> <item><p>Called when no installation is
       performed but the action is <tt>sysinfo</tt>. It shows information
@@ -1195,7 +1219,8 @@ subroutines or override the definition of FAI's subroutines.
       <file>fstab</file> file. Log files are stored to the install server.</p> </item>
 
      <tag>backup</tag> <item><p>Called when action is
-     <tt>backup</tt>. Currently no default backup subroutine is defined.</p>
+     <tt>backup</tt>. Currently the default backup subroutine performs
+     no action.</p>
      </item>
 
      <tag>install</tag> <item><p>This task controls the installation
@@ -1205,18 +1230,10 @@ subroutines or override the definition of FAI's subroutines.
      of the log files for some hosts in the download directory of the
      FAI homepage.</p> </item>
 
-     <tag>defclass</tag> <item><p>Defines classes using scripts and
-      files in <file>/fai/class</file>.</p> </item>
-
-     <tag>defvar</tag> <item><p>Sources all files
-      <file>/fai/class/*.var</file> for every defined class. If a hook
-      has written some variable definitions to the file
-      <file>/tmp/additional.var</file>, this file is also
-      sourced.</p></item>
-
      <tag>partition</tag> <item><p>Calls <prgn>setup_harddisk</prgn>
-      to partition the hard disks. Defines variables for the root and
-      boot device (<var>$ROOT_PARTITION, $BOOT_PARTITION</var>) using
+      to partition the hard disks. The task writes variable
+      definitions for the root and boot device (<var>$ROOT_PARTITION,
+      $BOOT_PARTITION</var>) to
       <file>/tmp/disk_var.sh</file>.</p></item>
 
       <tag>mountdisks</tag> <item><p>Mounts the created partitions
@@ -1224,11 +1241,12 @@ subroutines or override the definition of FAI's subroutines.
       <var>$FAI_ROOT</var>.</p> </item>
 
       <tag>extrbase</tag> <item><p>Extracts the base tar file
-      <file>base.tgz</file>.</p> </item>
+      <file>base.tgz</file>, whoich is created by
+      <prgn>make-fai-nfsroot</prgn>.</p> </item>
 
       <tag>mirror</tag> <item><p>If a local mirror is accessed via NFS
-      (if <var>$FAI_DEBMIRROR</var> is defined), this directory will
-      be mounted.</p> </item>
+      when <var>$FAI_DEBMIRROR</var> is defined, this directory will
+      be mounted to <var>$MNTPOINT</var>, which is defined in &fc;.</p> </item>
 
       <tag>updatebase</tag> <item><p>Prepares the extracted base
       system for futher installation and updates the list of available
@@ -1263,11 +1281,11 @@ subroutines or override the definition of FAI's subroutines.
 <sect id=s1>The setup routines of the install clients<p>
 
 After the subroutine <prgn>fai_init</prgn> has done some basic
-initialization, the setup continues by callinf the task
-<tt>confdir</tt> and <tt>setup</tt>. The command <manref name="bootpc"
+initialization, the setup continues by calling the task
+<tt>confdir</tt> and the task <tt>setup</tt>. The command <manref name="bootpc"
 section="8"> is called and its output is used to define the
 corresponding global variables which are save in
-<file>/tmp/bootp.log</file>.
+<file>/tmp/bootp.log</file>. This is an example for this log file.
 
 <example>
 /tmp/bootp.log:
@@ -1303,15 +1321,15 @@ T171='install'
 T172='createvt sshd'
 </example>
 
-It's not a bug, if a variable (T171 in the example above) is defined
-twice. The second definition supersedes the first.
-
+It's not a bug, if a variable (<tt>T171</tt> in the example above) is
+defined twice. The second definition is created by the host specific
+entry in <file>/etc/bootptab</file> and supersedes the first one.
 <p>
-<var>FAI_FLAGS</var> (T172) contains a space separated list of
-flags. Following flags are known:
+The tag <tt>T172</tt> is the definition for <var>$FAI_FLAGS</var>. It
+contains a space separated list of flags. Following flags are known:
 <taglist>
  <tag>verbose</tag> <item> <p>Create verbose output during
- installation. This should be alsway the first flag, so consecutive
+ installation. This should be always the first flag, so consecutive
  definitions of flags will be verbosely displayed.</p> </item>
 
  <tag>debug</tag> <item> <p>Create debug output. No interactive
@@ -1319,16 +1337,24 @@ flags. Following flags are known:
  answer all questions of the postinstall scripts from the
  console. </p> </item>
 
- <tag>sshd</tag> <item> <p>Start ssh daemon to enable remote logins.</p> </item>
+ <tag>sshd</tag> <item> <p>Start the ssh daemon to enable remote
+ logins.</p> </item>
 
-	    <tag>createvt</tag> <item> <p>Create two virtual terminals and execute a bash if <tt>ctrl-c</tt> it typed. The terminals can be accessed by typing <tt>Alt-F2</tt> or <tt>Alt-F3</tt>. Otherwiese no terminals are available and typing <tt>ctrl-c</tt> will reboot the install client. Useful for installation which should not be interruptible.</p> </item>
+  <tag>createvt</tag> <item> <p>Create two virtual terminals and
+  execute a bash if <tt>ctrl-c</tt> is typed in the console
+  terminal. The additional terminals can be accessed by typing
+  <tt>Alt-F2</tt> or <tt>Alt-F3</tt>. Otherwiese no terminals are
+  available and typing <tt>ctrl-c</tt> will reboot the install
+  client. Useful for installation which should not be
+  interruptible.</p> </item>
 
- <tag>reboot</tag> <item> <p>Reboot after installation is finished
- without typing RETURN on the console. Only useful if you can change
- the boot image or boot device automatically (Can your assembly robot remove the
- boot floppy via remote control ?). Currently useful if you boot from network card and use
- <var>$TFTPLINK</var>. or change the boot device with the command
- <prgn>bootsector</prgn>.</p> </item> 
+ <tag>reboot</tag> <item> <p>Reboot the install client after
+ installation is finished without typing RETURN on the console. Only
+ useful if you can change the boot image or boot device automatically
+ or your assembly robot can remove the boot floppy via remote
+ control. Currently this should only be used when booting from network
+ card and using <var>$TFTPLINK</var> or changing the boot device with
+ the command <prgn>bootsector</prgn>.</p> </item>
 </taglist>
 
 
@@ -1555,7 +1581,7 @@ contains definitions of boot and root partitions.
 
 <sect id=packageconfig>Software package configuration<p>
 The script <prgn>install_packages</prgn> installs the selected software
-packages. It uses all configuration files in <file>/fai/package_config/</file>,
+packages. It uses all configuration files in <file>/fai/package_config</file>,
 which file name is also defined as a class. The syntax is very
 simple.
 
@@ -1620,9 +1646,9 @@ removed. If the file shouldn't be removed, use the the command
 <tt>PRELOAD</tt> instead.
 
 <p>
-If you specify a package that does not exists (e.g. you made a typo),
+If you specify a package that does not exists (e.g. you make a typo),
 the the whole installation of software package will not be started.
-This could happen when the command <manref name="xviddetect"
+This could also happen when the command <manref name="xviddetect"
  section="1"> does not recognize the video card, because the
 configuration file <file>SERVER</file> contains following line:
 
@@ -1642,14 +1668,14 @@ is available in <file>/usr/share/doc/fai/utils/</file>.
 <sect id=cscripts>Scripts in <tt>/fai/scripts</tt><p>
 
 The default set of scripts in this directory is only an example. But
-they should do a reasonable jobs for your installation. You can edit them
+they should do a reasonable job for your installation. You can edit them
 or add new scripts to match your local needs.
 
 
 
 <sect1 id=shell>Shell scripts<p>
 
-Most script are Bourne shell script. Shell scripts are good, if the
+Most script are Bourne shell script. Shell scripts are useful, if the
 configuration task only needs to call some shell commands or create a
 file from scratch. In order not to write much short script, it's
 possible to distinguish classes within a script using the command
@@ -1674,9 +1700,9 @@ AppendIfNoSuchLine, HashCommentLinesContaining</tt>. But it can't
 handle variables, that are undefined. If a variables is undefined,
 the whole cfengine script will abort. 
 
-More information can be found at in the manual page <manref
+More information can be found in the manual page <manref
 name="cfengine" section="8"> or at the homepage for cfengine
-<httpsite>http://www.iu.hioslo.no</httpsite><httppath>/cfengine</httppath>.
+<httpsite>http://www.cfengine.org</httpsite>.
 
 
 <sect id=changeboot>Changing the boot device<p>
@@ -1731,13 +1757,13 @@ enable the boot sector before you want to partition the disk.
 <sect id=hooks>Hooks<p>
 
 Hooks let you specify functions or programs, that are run at certain
-steps of the installation process. FAI provides many locations where
-hooks can be called. As you might expect, classes are also used when
-calling hooks. Hooks are executed for every defined class. You only
-have to create the hook with the name for the desired class and it
-will be used. If <tt>debug</tt> is included in <var>$FAI_FLAG</var>
-the option <tt>-d</tt> is passed to all hooks, so you can debug your
-own hooks.
+steps of the installation process. Before a default task is called,
+FAI search for existing hooks for this task and executes them. As you
+might expect, classes are also used when calling hooks. Hooks are
+executed for every defined class. You only have to create the hook
+with the name for the desired class and it will be used. If
+<tt>debug</tt> is included in <var>$FAI_FLAG</var> the option
+<tt>-d</tt> is passed to all hooks, so you can debug your own hooks.
 <p>
 The directory <file>/fai/hooks/</file> contains all hooks. The file
 name of a hook consists of a hook name as a prefix and a class name,
@@ -1758,28 +1784,17 @@ has the suffix <tt>.sh</tt> (eg. <file>partition.DEFAULT.sh</file>) must
 be bourne shell scripts and are sourced. So it's possible to
 redefine variables for the installation scripts.
 <p>
-This is the complete list of hooks and when they will be called.
-XXXXXXXXXXXXX
+
+
  After some basic initialization,
-      all hooks with prefix <tt>confdir</tt> are called. Since the
-      configuration directory <file>/fai</file> is not yet mount on
-      the install client, these are the only hooks located in
-      <tt>$</tt><file>nfsroot/fai/hooks</file> on the install server.
-      All other hooks are found in
-      <file>/usr/local/share/fai/hooks</file>.
+      all hooks with prefix <tt>confdir</tt> are called. 
 
-FAI has default jobs for following values of <var>FAI_ACTION</var>.
 
-<list>
-	    <item>	      <p>sysinfo</p>	    </item>
-	    <item>	      <p>install</p>	    </item>
-	    <item>	      <p>backup</p>	    </item>
-</list>
-
-If another value is defined, FAI will look for a hook
-<file>/fai/hooks/$FAI_ACTION</file> and executes this hook. So you can
-easily define your own actions.<p>
-
+Since the configuration directory <file>/fai</file> is mounted in the
+default task <tt>confdir</tt>, the hooks for this task are the only
+hooks located in <tt>$</tt><file>nfsroot/fai/hooks</file> on the
+install server. All other hooks are found in
+<file>/usr/local/share/fai/hooks</file> on the install server.
 
 All hooks that are called before classes are defined can only use the
 following classes: <tt>DEFAULT $HOSTNAME LAST</tt>. If a hook for
@@ -1808,9 +1823,11 @@ scriptname=$(basename $0 .DEFAULT)
 you mounted the configuration from the correct server and not a
 possible spoofing host.</p></item>
 
-<item> <p>Pop up a little menu and ask the user, which kind of installation should be performed (eg. CAD
-workstation, scientific workstation, workgroup server, Gnome desktop...). Keep in
-mind that this won't lead to a fully automatic installation ;-)
+<item> <p>Pop up a little menu and ask the user, which kind of
+installation should be performed (eg. CAD workstation, scientific
+workstation, workgroup server, Gnome desktop...). See
+<file>hooks/install.MENU</file> for an example how to use this. Keep
+in mind that this won't lead to a fully automatic installation ;-)
 </p></item>
 
 <item> <p>Do not mount the configuration directory, instead get a
@@ -1822,7 +1839,8 @@ in <file>/fai/class</file>. </p></item>
 
 <item> <p>Send an email to the administrator, if the installation is finished.</p></item>
 
-<item> <p></p></item>
+<item> <p>Install a diskless client and skip local disk
+partitioning. See <file>hooks/partition.DISKLESS</file>.</p></item>
 </list>
 
 <sect id=errors>Looking for errors<p>
@@ -1835,7 +1853,8 @@ several log files made by <manref name="in.tftpd" section="8"> and
 <example>egrep "tftpd|bootpd" /var/log/*</example>
 
 
-If the installation process stops or even it finishes, parse all log files for errors using:
+If the installation process stops or even when it finishes, you can
+parse all log files for errors using:
 <example>
 # egrep "no such variable|bad variable|E:|ERROR" *.log
 </example>
@@ -1843,84 +1862,112 @@ If the installation process stops or even it finishes, parse all log files for e
 Sometimes the installation seems to stop, but there's only a
 postinstall script of a software package that requires manual input
 from the console. Change to another virtual terminal and look which
-process is running (<manref name="top" section="1">, <manref
-name="pstree" section="1">). You can add <tt>debug</tt> to <tt>FAI_FLAGS</tt>,
-so the installation process will show all output from the postinst
-scripts on the console. Don't hesitate to send an email to the
-mailing list or to <email>fai@informatik.uni-koeln.de</email> if you
-have any questions. Sample log files from successful
-installed computers are available on the FAI homepage.
+process is running  with tools like <manref name="top" section="1"> and <manref
+name="pstree" section="1">. You can add <tt>debug</tt> to
+<tt>FAI_FLAGS</tt>, so the installation process will show all output
+from the postinst scripts on the console and get its input also from
+console. Don't hesitate to send an email to the mailing list or to
+<email>fai@informatik.uni-koeln.de</email> if you have any
+questions. Sample log files from successful installed computers are
+available on the FAI homepage.
 
 <chapt id=beowulf>How to build a Beowulf cluster using FAI<p>
 
-This chapter describes the particularities about building a beowuld
-cluster. For maore information about the Beowulf concept, look at
-<httpsite>http://www.beowulf.org/</httpsite>. The master node (in my
-examples I call it <em>nucleus</em>) has two
-network cards. One for the connection to the external Internet, one for
-the connection to the internal cluster network. If connected from the
-external Internet, it's called <em>nucleus</em>, but the cluster nodes
-accesses the master node with name <em>atom00</em>, which is a name
-for the second network interface.
+This chapter describes the particularities about building a Beowulf
+cluster using &dgl; and FAI. For more information about the Beowulf concept,
+look at <httpsite>http://www.beowulf.org</httpsite>. Here, the master
+node is called <em>nucleus</em>. It has two network cards. One for the
+connection to the external Internet, one for the connection to the
+internal cluster network. If connected from the external Internet,
+it's called <em>nucleus</em>, but the cluster nodes accesses the
+master node with name <em>atom00</em>, which is a name for the second
+network interface. The master server is also the install server for
+the computing nodes.
 
 <p>
 All computing nodes (called <em>atom01</em> to <em>atom99</em>) are
 connected via a switch with the second interface card of the master
 node. They can only connect to the other nodes or the master, but
 can't communicate to any host outside their cluster network. So, all
-services (time server, DNS, ...) must be available on the master
+services (NTP, DNS, NIS, ...) must be available on the master
 server.
 <p>
 
-I choose the class C network address <em>192.168.49.</em> for building
-the local cluster network. You can replace the subnet 49 with any
+I choose the class C network address <em>192.168.42.0</em> for building
+the local cluster network. You can replace the subnet 42 with any
 other number you like. I you have more that 253 computing nodes,
 choose a class A network address (10.X.X.X).
+
+<p>
+In the phase of preparing the installation, you have to boot the first
+install client many time, until there's no fault in your configuration
+scripts. Therefore you should have physical access to the master
+server and one client node. If you have few space, connect both
+computers to a switch box, so one keyboard and monitor can be shared
+among both.<p>
+
+
+
 </p>
+
 <sect id=master> Set up the master server<p>
 
 The master server will be installed by hand, cause it could be your
 first computer installed with Debian. It you have already a Debian
 host running, you can also install it via FAI. After the normal Debian
-system is installed to the master server you have to add some software
-packages and
+system is installed to the master server, install the FAI package on
+the master server. Create a partition on <file>/files/scratch</file>
+for the local Debian mirror with more that  3GB space available.
 
-
-The master server is also the install server for the computing
-nodes. It has 
-
-Create a local Debian mirror on <file>/files/scratch/</file> using
-<prgn>mkdebmirror</prgn>. This will need about 2.6GB disk space for
-Debian 2.2 (aka potato).
-
-
+<sect1 id=beonetworkmaster> Set up the network<p>
 
 Add following lines for the second network card to <file>/etc/network/interfaces</file>:
 <example>
 # Beowulf cluster connection
 iface eth1 inet static
-address 192.168.49.200
+address 192.168.42.200
 netmask 255.255.255.0
-broadcast 192.168.49.255
+broadcast 192.168.42.255
 </example>
 
 <file>/etc/hosts</file>:
 <example>
 # Beowulf nodes
 # atom00 is the master server
-192.168.49.200 atom00
-192.168.49.1 atom01
-192.168.49.2 atom02
+192.168.42.250 atom00
+192.168.42.1 atom01
+192.168.42.2 atom02
 </example>
 
-Add following packages to the install server
-<example>nucleus:/# apt-get install task-dns-server ntp</example>
+<sect1 id=beonis> Set up NIS<p>
+
+Copy the file <file>netgroup</file> from the examples directory to
+<file>/etc</file>. Set the NIS domainname in <file>/etc/defaultdomain</file>.
+
+<example>
+# ypinit -m
+# /cd /var/yp
+# make
+</example>
+
+
+<sect1 id=beomirror> Create a local Debian mirror<p>
+
+Create a local Debian mirror on <file>/files/scratch/</file> using
+<prgn>mkdebmirror</prgn>. This will need about 2.6GB disk space for
+Debian 2.2 (aka potato).
+
+
+<sect id=x11> Install FAI package on the master server<p>
+
+Add following packages to the install server:
+<example>nucleus:/# apt-get install task-dns-server ntp tftp bootp fai fai-kernels</example>
 
 
 It's very important to use the network name of the cluster network for
 the master node in <file>/etc/bootptab</file> and <file>/etc/fai.conf</file>.
 
-Adjust this file in <file>/etc/fai.conf</file> so the Beowulf nodes
+Adjust this file in &fc; so the Beowulf nodes
 can use the name for connecting their master server.
 <example>
 NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
@@ -1928,6 +1975,9 @@ NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
 
 <file>/etc/bootptab:</file>
 <example>
+.
+.
+.
 .failocal:\
         :tc=.faiglobal:\
         :sa=atom00:\
@@ -1936,12 +1986,23 @@ NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
         :T171="sysinfo":\
         :T172="verbose createvt sshd":\
         :sm=255.255.255.0:\
-        :gw=192.168.49.200:\
-        :dn=pc.uni-koeln.de:\
-        :ds=192.168.49.200:\
+        :gw=192.168.42.250:\
+        :dn=beowulf.debian.org:\
+        :ds=192.168.42.250:\
         :ys=atom00:yd=nisnucleus:\
         :nt=atom00:
+.
+.
+.
 </example>
+
+Build the kernel for the cluster nodes using <manref name="make-kpkg" section="8">.
+
+<sect id=beotools> Tools for Beowulf cluster<p>
+
+Follwoing tools for Beowulf cluster are available in <file>/usr/share/doc/fai/utils</file>:
+
+<file>tlink, all_hosts, rshall</file>
 
 
 <chapt id=sparc>FAI on SUN SPARC<p>
@@ -1963,17 +2024,19 @@ This chapter has various hints which may not be explained in very
 detail.
 <p>
 
-Use <prgn>mkdivert</prgn> if a postinst script calls a configuration programm
-(eg. the postinst script for package apache calls apacheconfig) needs manual
-input. You can fake the configuration programm so the installation
-can be fully automatic. But don't forget to use<prgn>rmdivert</prgn>
-to remove the faking.
+Use <prgn>mkdivert</prgn> if a postinst script calls a configuration program
+eg. the postinst script for package apache calls apacheconfig needs manual
+input,
+
+You can fake the configuration programm so the installation
+can be fully automatic. But don't forget to use <prgn>rmdivert</prgn>
+to remove this faked script.
 
 <p>
-During the installation of when it's finished, you can execute commans
-inside the newly installed system by using <example>chroot
-/tmp/target</example> or just <example>$ROOTCMD</example> followed by
-the command you want to call.
+During the installation you can execute commands
+inside the newly installed system in a chroot environment by using <tt>chroot /tmp/target</tt>
+or just <tt>$ROOTCMD</tt> followed by the command you want to call for
+eg. <tt>$ROOTCMD dpkg -l</tt> show the pacakges installed to the new system.
 <p>
 
 The only task, which has to be done manually for new hardware, is to
@@ -1990,7 +2053,8 @@ from floppy. Define a partition <file>/fai-boot</file> in your
 <tt>FAI_BOOTPART</tt> will automaticly defined and will create a lilo entry for
 booting the FAI bootfloppy from this partition. So you can start the
 reinstallation without a boot floppy. This will also make the test
-phase shorter, since booting from harddisk is faster.
+phase shorter, since booting from harddisk is much  faster tah booting
+from floppy.
 
 </book>
 </debiandoc>
