@@ -3,7 +3,7 @@
 # $Id$
 #*********************************************************************
 #
-# install_packages -- parse package configuration and install packages via apt-get
+# install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 2000, Thomas Lange, Universitaet zu Koeln
@@ -28,6 +28,8 @@
 # copyright (c), 2000-2001, Thomas Lange, lange@informatik.uni-koeln.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 
+# TODO: PRELOADandREMOVE also removes files after installing all packages
+
 $| = 1;
 @aptcommands = qw/install remove dselect-upgrade/;
 %options = (
@@ -35,6 +37,9 @@ $| = 1;
 		       remove  => '-y --purge',
              "dselect-upgrade" => '-y',
 );
+
+# currently no test, always execute
+$test = 0;
 
 $verbose=$ENV{verbose};
 $FAI_ROOT = $ENV{FAI_ROOT};
@@ -70,7 +75,7 @@ foreach $type (@aptcommands) {
   }
 }
 
-# check is all went right
+# check if all went right
 execute("chroot $FAI_ROOT dpkg -C $aptgetlog");
 # clean apt-get cache
 execute("chroot $FAI_ROOT apt-get clean $aptgetlog");
@@ -90,7 +95,7 @@ sub readconfig {
     chomp;
     /^PRELOAD\s+([^\s]+)\s+([^\s]+)/ and push(@preloadlist, [$1, $2]),next;
     /^PACKAGES\s+([^\s]+)/ and $type = $1,next;
-    warn "PACKAGES .. line missing in $filename\n" unless $type;
+    warn "PACKAGES .. line missing in $filename\n",next unless $type;
     push @{$list{$type}}, split;
   }
 }
@@ -101,19 +106,17 @@ sub execute {
   my $command = shift;
   my $error;
 
-  # currently no test, always execute
-  my $test = 0;
-
   $verbose && print "$command\n";
   $test && return;
 
   $error = system "$command";
-  print "ERROR: $error $?\n" if $error;
+  warn "ERROR: $error $?\n" if $error;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub dselectupgrade {
 
   my ($package,$action,$list);
+  my $tempfile = "$FAI_ROOT/tmp/dselect.tmp";
 
   while (@{$list{$type}}) {
     $package = shift @{$list{$type}};
@@ -121,11 +124,11 @@ sub dselectupgrade {
     $list .= "$package $action\n";
   }
 
-  open TMP, "> $FAI_ROOT/tmp/dselect.tmp" || die " Can't write to $FAI_ROOT/tmp/dselect.tmp";
+  open TMP, "> $tempfile" || die " Can't write to $tempfile";
   print TMP $list;
   close TMP;
 
-  execute("chroot $FAI_ROOT dpkg --set-selections < $FAI_ROOT/tmp/dselect.tmp");
+  execute("chroot $FAI_ROOT dpkg --set-selections < $tempfile");
   execute("chroot $FAI_ROOT apt-get $options{$type} dselect-upgrade");
-  unlink "$FAI_ROOT/tmp/dselect.tmp";
+  unlink $tempfile;
 }
