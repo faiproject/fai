@@ -462,12 +462,13 @@ task_defclass() {
     classes="DEFAULT $newclasses"
 
     # alphabetical sort is important
-    for f in `ls S[0-9]*.{sh,pl}` ; do
+    for f in `ls S[0-9]*.{sh,pl,source}` ; do
 	if [ -x $f -a -f $f ]; then
 	[ "$verbose" ] && echo "Executing $f"
 	case $f in
 	    *.pl) newclasses=`perl $f </dev/null | grep -v '^#'` ;;
 	    *.sh) newclasses=`sh $f </dev/null | grep -v '^#'` ;;
+	    *.source) . $f ;; # this script can define $newclasses !
 	esac
 	[ "$debug" ] && echo "newclasses= $newclasses"
 	classes="$classes $newclasses"
