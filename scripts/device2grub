@@ -1,0 +1,33 @@
+#! /usr/bin/perl
+
+# copyright Thomas Lange 2001, lange@debian.org
+
+# map "normal" device notation to grub notation
+
+# TODO: read from stdin if no parameter given
+
+$device=shift;
+$devicemap="$ENV{target}/boot/grub/device.map";
+
+open (DEVICEMAP,"<$devicemap") || die "Can't open $devicemap\n";
+while (<DEVICEMAP>) {
+  ($grubdevice,$olddevice) = split;
+  $map{$olddevice} = $grubdevice;
+}
+
+$device=~ m#^(/dev/[sh]d\D)(\d*)$# || die "Can't match device: $device\n";
+($disk,$partition) = ($1,$2);
+
+if ($map{$disk}) {
+  $grubdevice=$map{$disk};
+} else {
+  die "No match in $devicemap for $disk\n"; 
+}
+
+if ($partition) {
+  $partition--;
+  $grubdevice=~s/\)/,$partition\)/;
+}
+
+print "$grubdevice\n";
+exit 0;
