@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# create NIS/NONIS config
+fcopy -M /etc/nsswitch.conf /etc/host.conf
+fcopy -i /etc/ypserv.securenets  # only for yp server
+ifclass NONIS && rm -f $target/etc/defaultdomain
+if ifclass NIS; then
+    echo $YPDOMAIN > $target/etc/defaultdomain
+    rm -f $target/etc/yp.conf
+    for s in $YPSRVR; do
+        echo "ypserver $s" >> $target/etc/yp.conf
+    done
+fi
+fcopy -iM /etc/auto.master /etc/auto.scratch
