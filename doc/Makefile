@@ -1,7 +1,6 @@
-FILES = fai-guide.sgml common.ent
 docname = fai-guide
 fdocname = $(docname).sgml
-MISC_DOC = FAQ QUESTIONNAIRE classes_description.txt links.html changelog.old README*
+MISC_DOC = FAQ QUESTIONNAIRE classes_description.txt links.html changelog.old README* common.ent
 
 %.html: %.sgml
 	debiandoc2html $<
@@ -37,7 +36,7 @@ print: dvi
 
 install:
 	rm $(docname).tpt $(docname).out || true
-	cp -dRp $(FILES) $(docname)* $(DOCDIR)
+	cp -dRp $(docname)* $(DOCDIR)
 	cp -p $(MISC_DOC) $(DOCDIR)
 
 all: test pdf text html postscript
