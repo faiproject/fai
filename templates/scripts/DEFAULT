@@ -1,5 +1,26 @@
 #! /bin/sh
 
+echo $hostname     > $target/etc/hostname
+
+echo $time_zone    > $target/etc/timezone
+ln -s $target/etc/localtime /usr/share/zoneinfo/${time_zone}
+
+ifclass USSR_LOCAL_COPY && cp -dpR /usr/local $target/usr
+
+# make floppy read and writeable for all
+chmod a+rw $target/dev/fd*
+
+chmod 1777 $target/tmp
+chown root:root $target/tmp
+
+touch $target/etc/mailname
+
+
+
+# create NIS/NONIS config
+# fcopy /etc/nsswitch.conf /etc/host.conf
+ifclass NONIS && rm -f $target/etc/defaultdomain
+
 # dump keytable
 echo dump keyboard table
 dumpkeys | gzip -9f >$target/etc/console-tools/default.kmap.gz
