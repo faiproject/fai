@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-chboot 8 "31 january 2004" "FAI 2.5.3"
+.TH fai-chboot 8 "30 june 2004" "FAI 2.5.5"
 .SH NAME
 fai-chboot \- manage the network boot configuration files
 .SH SYNOPSIS
@@ -66,6 +66,10 @@ List the configuration for all hosts. Also list the kernel append parameters.
 Do not create configuration but show what will be done. This also
 enables the verbose flag.
 .TP
+.BI \-o
+Do localboot via PXE. Do not boot via network card, but use next boot
+device which is specified in the BIOS. Normally this is the local disk.
+.TP
 .B \-p
 Preserve existing config files. The default is to overwrite an
 existing config file.
@@ -102,10 +106,14 @@ fai-chboot -v atom-localboot /dev/hda1 atom03
 Next time atom03 will boot the kernel atom-localboot which mounts the
 root filesystem from /deb/hda1.
 .TP
-fai-chboot memtest86.bin koeln atom02
+fai-chboot memtest86+.bin koeln atom02
 The host atom02 will boot the memory test. Install the package
-memtest86 and copy the executable memtest86.bin to /boot/fai. Since memtest does not need
-a root filesystem, you can use any string for it.
+memtest86+ and copy the executable memtest86+.bin to /boot/fai. Since
+memtest does not need a root filesystem, you can use any string for it.
+.TP
+fai-chboot -o default
+All hosts, that do not have a PXE configuration for their IP-address
+will do a localboot, means booting from local disk.
 
 .SH NOTES
 Currently only PXE boot is supported. BOOTP configuration can be
