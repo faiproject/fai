@@ -1,6 +1,9 @@
 #! /bin/sh
 
-# reboot fai correctly
+# $Id$
+# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000
+
+FAI_ROOT=/tmp/target
 
 cd /
 killall -STOP rcS
@@ -15,13 +18,10 @@ if [ -f $FAI_ROOT/sbin/start-stop-daemon.orig ]; then
 fi
 umount -ar
 
-echo sleeping 5 seconds before rebooting
-sleep 5
+echo "$HOSTNAME now rebooting"
 
 if [ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ]; then
     exec reboot -dfi
 else
-    shutdown -nr now &
-    killall -q sshd
+    init 6 &
 fi
-
