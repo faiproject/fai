@@ -46,17 +46,7 @@ save_log_local() {
     ln -snf $FAI_ACTION-$FAI_RUNDATE $logbase/$HOSTNAME/last
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-save_log_remote() {
-
-    # can be an extern script
-    # save log files to $LOGUSER/$HOSTNAME/.. on $LOGSERVER
-    # also create a link last-$FAI_ACTION the the directory of the
-    # last action. The name of the log directory contains date and
-    # time of the action performed
-
-    [ "$LOGUSER" ] || return
-    # LOGSERVER is overridable until now
-    [ -z "$LOGSERVER" ] && LOGSERVER=$SERVER
+save_log_remote_shell() {
 
     echo "Save log files via $FAI_REMOTESH to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE"
     local thislog=$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
@@ -71,12 +61,31 @@ save_log_remote() {
     $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$LOGSERVER:$thislog
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+save_log_remote() {
+
+    # save log files to $LOGUSER/$HOSTNAME/.. on $LOGSERVER
+    # also create a link last-$FAI_ACTION the the directory of the
+    # last action. The name of the log directory contains date and
+    # time of the action performed
+
+    [ "$LOGUSER" ] || return
+    # LOGSERVER is overridable until now
+    [ -z "$LOGSERVER" ] && LOGSERVER=$SERVER
+
+    case "$FAI_LOGPROTO" in
+	ftp)
+	    fai-savelog-ftp ;;
+        *)
+	    save_log_remote_shell ;;
+    esac
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
 
     cat <<EOF
 fai-savelog, save log files from fai to a local or remote location
 
-   Copyright (C) 2002 by Thomas Lange
+   Copyright (C) 2002-2003 by Thomas Lange
 
 Usage: fai-savelog [OPTION]
 
@@ -86,11 +95,7 @@ Usage: fai-savelog [OPTION]
 Report bugs to <lange@informatik.uni-koeln.de>.
 EOF
 exit 0
-
-
 }
-
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 [ "$1" ] || usage
