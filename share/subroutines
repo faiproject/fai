@@ -73,18 +73,6 @@ ifclass() {
     return $ret
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_resolv_conf() {
-
-    # can be an extern script
-    # create a resolv.conf using the DHCP or BOOTP information
-    if [ "$DNSSRVS" ]; then
-	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
-	for dnshost in $DNSSRVS ; do
-	    echo "nameserver $dnshost" >>/tmp/etc/resolv.conf
-	done
-    fi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rwmount() {
 
     # remount partition read/write
@@ -205,7 +193,7 @@ get_fai_cvs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_fai_flags() {
 
-    # FAI_FLAGS are now comma separated, define all flags
+    # FAI_FLAGS are comma separated, define all flags
     FAI_FLAGS=`echo $FAI_FLAGS | sed -e 's/,/ /g'` 
     for flag in $FAI_FLAGS; do
 	# define this flag as 1
@@ -289,7 +277,6 @@ task_defclass() {
 
     # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
     fai-class $FAI/class $LOGDIR/FAI_CLASSES
-
     classes=`cat $LOGDIR/FAI_CLASSES`
 
     # also define all classes in reverse order ($revclasses)
@@ -359,7 +346,7 @@ task_configure() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 do_script() {
 
-    # execute scripts and save their outpu in log files
+    # execute scripts and save their output in log files
     # cfengine, shell, perl and expect scripts are known types
     local shelldebug file filetype
 
@@ -381,28 +368,28 @@ do_script() {
 	    echo "Executing   $shelldebug shell: $file"
 	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
 	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
-	    check_status $file $?
+	    check_status $file $? | tee -a $LOGDIR/shell.log
 	;;
 
 	*"cfengine script"*)
 	    echo "Executing cfengine: $file"
 	    echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
 	    ./$file --no-lock -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
-	    check_status $file $?
+	    check_status $file $? | tee -a $LOGDIR/cfengine.log
 	;;
 
 	*"perl script"*)
 	    echo "Executing    perl: $file"
 	    echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
 	    ./$file >> $LOGDIR/perl.log 2>&1
-	    check_status $file $?
+	    check_status $file $? | tee -a $LOGDIR/perl.log
 	;;
 
 	*"expect script"*)
 	    echo "Executing  expect: $file"
 	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
 	    ./$file >> $LOGDIR/expect.log 2>&1
-	    check_status $file $?
+	    check_status $file $? | tee -a $LOGDIR/expect.log
 	;;
 
 	*) echo "File $file has unsupported type $filetype." ;;
