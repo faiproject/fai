@@ -24,7 +24,7 @@ $(KERNEL): /usr/src/kernel-source-$(KERNELVERSION).tar.bz2
 $(BOOTPKERNEL): $(kerneldir)/$(BOOTPKERNEL)
 	cp $(kerneldir)/$(BOOTPKERNEL) .
 
-$(kerneldir)/$(BOOTPKERNEL): $(KERNEL) .config-bootp
+$(kerneldir)/$(BOOTPKERNEL): .config-bootp
 	cp -p .config-bootp $(KERNEL)/.config
 	cd $(KERNEL) ; \
 	echo -e "\t\n\n" | make menuconfig ; \
@@ -38,23 +38,23 @@ $(kerneldir)/$(BOOTPKERNEL): $(KERNEL) .config-bootp
 $(DHCPKERNEL): $(kerneldir)/$(DHCPKERNEL)
 	cp $(kerneldir)/$(DHCPKERNEL) .
 
-$(kerneldir)/$(DHCPKERNEL): $(KERNEL) .config-dhcp
+$(kerneldir)/$(DHCPKERNEL): .config-dhcp
 	cp -p .config-dhcp $(KERNEL)/.config
 	cd $(KERNEL) ; \
 	echo -e "\t\n\n" | make menuconfig ; \
 	make-kpkg clean ; \
 	fakeroot make-kpkg --revision $(DHCP_REVISION) kernel-image 
 
-all: $(BOOTPKERNEL) $(DHCPKERNEL)
+all: $(KERNEL) $(BOOTPKERNEL) $(DHCPKERNEL)
 
 install:
-	install -m644 kernel-image*.deb $(KERNEL_FILES) $(LIBDIR)/kernel
+	install -m644 $(BOOTPKERNEL) $(DHCPKERNEL) $(KERNEL_FILES) $(LIBDIR)/kernel
 
 
 clean:
 	rm -f $(BOOTPKERNEL) $(DHCPKERNEL)
 
-veryclean:
+veryclean: clean
 	rm -rf $(KERNEL) .config-bootp .config-dhcp
 
 .PHONY: clean veryclean
