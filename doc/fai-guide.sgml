@@ -1933,9 +1933,8 @@ netmask 255.255.255.0
 broadcast 192.168.42.255
 </example>
 
-Now add the IP addresses for the client nodes. The FAI package has an
-example for this file.
-<file>/etc/hosts</file>:
+Add the IP addresses for the client nodes. The FAI package has an
+example for this <file>/etc/hosts</file>:
 <example>
 # Beowulf nodes
 # atom00 is the master server
@@ -1943,6 +1942,11 @@ example for this file.
 192.168.42.1 atom01
 192.168.42.2 atom02
 </example>
+
+You can give the internal Beowulf network a name when you add this
+line to <file>/etc/networks</file>:
+<example>beowcluster 192.168.42.0</example>
+
 
 Activate the second network interface with: <tt>/etc/init.d/networking start</tt>.
 
@@ -1954,13 +1958,13 @@ the configuration space and manages the local Debian mirror:
 # addgroup linuxadmin
 </example>
 
-This user should also be in the group <var>linuxadmin</var>.
-<example>/etc/group
+This user should also be in the group <var>linuxadmin</var>. So, add a
+line to <file>/etc/group</file>:
+<example>
 linuxadmin:x:101:tom
 </example>
 
-To initialize the master server as NIS server call <tt>ypinit -m</tt>
-<p>
+To initialize the master server as NIS server call <tt>ypinit -m</tt>.
 Then, copy the file <file>netgroup</file> from the examples directory
 to <file>/etc</file> and edit other files there. Adjust access to the
 NIS service.
@@ -1989,18 +1993,19 @@ Configure NTP so that the master server and all client nodes will have
 the same correct system time.
 
 <p>
-It's very important to use the network name of the cluster network for
-the master node in <file>/etc/bootptab</file> and
-<file>/etc/fai.conf</file>.  Adjust this file in &fc; so the Beowulf
-nodes can use the name for connecting their master server.
+It's very important to use the internal network name <var>atom00</var>
+ for the master sever (not the external name <var>nucleus</var>) in
+ <file>/etc/bootptab</file> and <file>/etc/fai.conf</file>. Replace
+ the strings FAISERVER with <tt>atom00</tt> in
+ <file>/etc/bootptab</file> and uncomment the following line in &fc;
+ so the Beowulf nodes can use the name for connecting their master
+ server.
 <example>
-/etc/fai.conf
 NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
 </example>
 
 <file>/etc/bootptab:</file>
 <example>
-.
 .
 .
 .failocal:\
@@ -2016,7 +2021,6 @@ NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
         :ds=192.168.42.250:\
         :ys=atom00:yd=nisnucleus:\
         :nt=atom00:
-.
 .
 .
 </example>
@@ -2047,7 +2051,21 @@ nodes. Don't forget to build the kernel for the cluster nodes using
 
 Following tools for a Beowulf cluster now are available in <file>/usr/local/bin</file>:
 
-<example>tlink, all_hosts, rshall</example>
+<taglist>
+	  <tag> tlink <item> <p>Change the symbolic link that point to
+	  the kernel image for booting from network card.</p></item>
+
+	  <tag> all_hosts <item> <p>Print a list of all hosts, print
+	  only the hosts which respond to a ping or the hosts which
+	  down not respond. The complete list is define inside the
+	  script.</p></item>
+
+	<tag>rshall<item><p>Execute a command on all hosts which are
+	up via rsh. Uses <prgn>all_hosts</prgn> to get the list of all
+	hosts up.
+</taglist>
+
+
 
 
 <chapt id=sparc>FAI on SUN SPARC<p>
