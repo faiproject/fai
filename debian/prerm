@@ -25,9 +25,6 @@ esac
 
 . /etc/fai/fai.conf
 
-# potato only 
-test -f /etc/init.d/nfs-server && nfsserver=nfs-server
-
 test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 test -f /etc/init.d/nfs-user-server && nfsserver=nfs-user-server
 
@@ -36,6 +33,7 @@ case "$1" in
 
     remove|deconfigure)
 
+	echo "WARNING: removing NFROOT $NFROOT"
 	rm -rf $NFSROOT || true
 
 	perl -ni.bak -e "print unless m#^$FAI_CONFIGDIR\s|^$NFSROOT\s#" /etc/exports
