@@ -1,22 +1,124 @@
-#! /bin/sh
+#! /bin/sh 
 
-# execute a command on all "pingable" hosts
-# list of pingable hosts is determined by all_hosts
-# /etc/hosts.equiv should enable remove logins without password
-#
-# (c) Thomas Lange; 2000-2001, Institut fuer Informatik, Uni Koeln
+# executes a command on all hosts which are return by all_hosts
+# T. Lange; jan 2000 Institut fuer Informatik, Uni Koeln
+# A. Menze und F. Möllers; März 2003 Institut für Informatik, Uni Köln
+# Add usage and exclude function
 
-if [ -z "$1" ]; then
-    echo "Missing command"
-    exit
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+cat <<EOF
+   Usage: rshall [option] arguments
+
+     rshall with given arguments executes those arguments on all alive
+ hosts of the network 
+
+ options:
+
+    -h                   print this message.
+    -e host[,host ...]   exclude this comma sperated list of machines
+
+
+ examples:
+
+    rshall date
+    rshall -e rubens,frueh,suenner,[...] date
+
+
+EOF
+exit 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+list() {
+
+    if [ -n "$nohosts" ] ; then
+	echo
+	echo The command will not be executed on the following hosts because 
+	echo they are down: $nohosts
+#	echo You have 5 seconds to stop by typing "control c"
+	sleep 5s
+    fi
+
+    for h in $hosts; do
+        echo ''
+        echo ''
+        echo '*****   '$h:
+        rsh $h "$@"
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+typos() {
+
+    all=`prtnetgr allhosts`
+
+    for e in $ehosts; do
+	exists=0
+	for a in $all; do
+	    if [ $e = $a ] ; then
+		exists=1
+	    fi
+	done
+
+	if [ $exists = 0 ] ; then
+	    error=1
+	    error_hosts="$error_hosts $e"
+	fi
+    done
+
+    if [ $error = 1 ] ; then
+        echo +++ !!! +++ ATTENTION PLEASE +++ !!! +++
+        echo
+        echo The following machine\(s\) does not exist: $error_hosts 
+        echo
+        exit 1
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+exclude() {
+
+    ehosts=`echo $* | sed "s/,/ /g"`
+    error=0
+
+    typos
+   
+    for h in $allhosts; do
+	einf=1
+	for e in $ehosts; do
+	    if [ $h = $e ] ; then
+		einf=0
+	    fi
+	done
+
+	if [ $einf = 1 ] ; then
+	    dhosts="$dhosts $h"
+       	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+eflag=0
+
+while getopts e:h a
+do
+        case "$a" in
+        h) usage;;
+        e) eflag=1;; 
+	*) usage;;
+	
+	esac
+done
+
+[ -z "$1" ] && usage;
+
+allhosts=`all_hosts`
+nohosts=`all_hosts -n`
+
+if [ $eflag = 0 ]; then
+    hosts=$allhosts
+else
+    exclude $OPTARG
+    shift `expr $OPTIND - 1`
+    hosts=$dhosts
 fi
 
-# use dsh in the future
-
-hosts=`all_hosts`
-for h in $hosts; do
-         echo ''
-         echo ''
-         echo '*****   '$h'   *****'
-	 rsh $h "$@"
-done
+list "$*"
