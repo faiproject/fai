@@ -74,6 +74,8 @@ call_verbose() {
 install_kernel_nfsroot() {
 
     rm -rf $NFSROOT/boot/*-$KERNELVERSION $NFSROOT/lib/modules/$KERNELVERSION
+    # since woody we can install the kernel using dpkg -i
+    echo "do_boot_enable=no" > $NFSROOT/etc/kernel-img.conf
     dpkg -x $KERNELPACKAGE $NFSROOT
     # if $NFROOT/proc/modules exists, then update-modules calls depmod -a without
     # these special flags; so umount first
@@ -103,7 +105,7 @@ copy_fai_files() {
 
     # copy to nfsroot
     perl -pi -e "s/^root::/root:${FAI_ROOTPW}:/" etc/passwd
-    mkdir -p $NFSROOT/fai/fai_config $NFSROOT/$SHAREFAI $NFSROOT/etc/fai
+    mkdir -p $NFSROOT/$FAI/fai_config $NFSROOT/$SHAREFAI $NFSROOT/etc/fai
     cd $NFSROOT
     cp -p $LIBFAI/sbin/dhclient-script $SHAREFAI/etc/dhclient.conf etc/
     cp -p /etc/fai/* etc/fai/
@@ -113,10 +115,10 @@ copy_fai_files() {
     cp -p $SHAREFAI/subroutines usr/share/fai
     cp -p $SHAREFAI/etc/apt.conf etc/apt
 # potato / woody code
-    if [ -d /usr/lib/perl5/Debian ]; then
+    if [ -d usr/lib/perl5/Debian ]; then
 	cp -p /usr/lib/perl5/Debian/Fai.pm usr/lib/perl5/Debian/
     else
-	cp -p /usr/lib/perl5/Debian/Fai.pm usr/share/perl5/Debian/
+	cp -p /usr/share/perl5/Debian/Fai.pm usr/share/perl5/Debian/
     fi
     echo $NFSROOT_ETC_HOSTS >> etc/hosts
 }
@@ -147,7 +149,7 @@ create_base() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
-    mkdir -p $NFSROOT/fai
+    mkdir -p $NFSROOT/$FAI
     cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
     create_base
     mknod dev/boot255 c 0 255
@@ -283,7 +285,7 @@ umount_dirs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
 
-if [ -d $NFSROOT/fai ]; then
+if [ -d $NFSROOT/$FAI ]; then
     echo $NFSROOT already exists. Removing $NFSROOT
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
     rm -rf $NFSROOT/.??* $NFSROOT/*
