@@ -667,12 +667,14 @@ task_sysinfo() {
     lsdev
     echo "Ethernet cards found: $netdevices"
 
+    echo -n "xserver for graphic card: "; 
+    [ -x /usr/bin/xviddetect ] && xviddetect -q
+    [ -x /sbin/discover ] && discover --xdriver video
     [ -x /sbin/discover ] && discover ethernet cdrom scsi sound video
     [ -x /sbin/discover ] && discover --module ethernet cdrom scsi sound video
     if [ -x /usr/sbin/detect ]; then
        cd /tmp
-       detect
-       cat /tmp/report.txt
+       detect && cat report.txt
     fi
 
     [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
@@ -684,7 +686,6 @@ task_sysinfo() {
 	LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
     done
     fdisk -lu
-    echo -n "xserver for graphic card: "; xviddetect -q
     #si -p -o shm
     mount_local_disks
     fstab_mount
