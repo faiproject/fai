@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.7.6, 22-nov-2002"
+version="version 1.8.0, 25-nov-2002"
 set -e
 MKIMAGE=0
 floppydev=/dev/fd0
@@ -65,10 +65,16 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
 
    Usage: make-fai-bootfloppy [parameter]
 
-   -h       print this message.
-   -s host  use a static ip for host (try to get from DNS)
-   -f file  make a 1440k floppy image
-   -m dir   use dir as mountpoint [/floppy]
+   -d label   use label when selection the default boot kernel (and parameters).
+	      d for dhcp
+	      b for bootp
+	      f for the fixed IP address for the server
+	      Without this option both (dhcp and booth) are used
+   -h         print this message.
+   -f file    make a 1440k floppy image
+   -m dir     use dir as mountpoint [/floppy]
+   -s host    use a static ip for host (try to get from DNS)
+   -v         print verbose output (print lilo.conf)
 
 DESCRIPTION
    Creates a boot floppy for booting a FAI install client.
@@ -77,13 +83,10 @@ DESCRIPTION
 
 EXAMPLE
     To make a boot floppy for my old SMC EtherCard Plus Elite 16T, I use
-
     # make-fai-bootfloppy "reserve=0x300,32 ether=10,0x300,eth0"
 
-
-    To make the boot floppy use the DHCP protocol
-
-    # make-fai-bootfloppy "ip=dhcp"
+    To make a boot floppy using the DHCP protocol
+    # make-fai-bootfloppy -d d
 
 EOF
     exit 0
@@ -91,19 +94,21 @@ EOF
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
-while getopts "f:s:m:h" opt ; do
+while getopts "vf:s:m:hd:" opt ; do
         case "$opt" in
         h) usage ;;
 	f) MKIMAGE=1; floppydev="$OPTARG" ;;
 	m) MOUNTPOINT="$OPTARG" ;;
 	s) TARGETHOST="$OPTARG" ;;
+	d) BTYPE="$OPTARG" ;;
+	v) verbose=1 ;;
         ?) echo "Error parsing arguments"; exit 1;;
 esac
 done
 shift `expr $OPTIND - 1`
 
 if [ `id -u` -ne 0 ]; then
- echo "You must be root!"
+ echo "You must be root! Or try $0 -h"
  exit 9
 fi
 
@@ -112,12 +117,14 @@ trap "umount_dirs" EXIT
 params="$@"
 
 . /etc/fai/fai.conf
-
 determine_kernel_version
-grep -q ic_bootp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=BOOTP
-grep -q ic_dhcp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
 
-[ "$TYPE" ] || die "Can't determine kernel boot protocol.\nMaybe there's no $NFSROOT/boot/System.map-$KERNELVERSION"
+case "$BTYPE" in
+    b) defaultboot=FAI-BOOTP ;;
+    d) defaultboot=FAI-DHCP  ;;
+    f) defaultboot=FAI-FIXED-IP  ;;
+    *) defaultboot=FAI-BOTH  ;;
+esac
 
 ndevices=0
 devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: '{print $1}'`
@@ -142,7 +149,7 @@ if [ -n "${TARGETHOST}" ] ; then
     NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
     GATEWAY=`LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }'`
     TARGETIP=`host -t a ${TARGETHOST} 2> /dev/null | awk '{print $3}'`
-    params="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off $params" 
+    fixedparams="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off" 
 fi
 
 if [ $MKIMAGE -eq 1 ]; then 
@@ -151,44 +158,64 @@ if [ $MKIMAGE -eq 1 ]; then
     mkfsopt=-F
 fi
 
-mke2fs $mkfsopt -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
+# pay attention: if -i option is too large, then too few inodes are created on the floppy
+# check with df -i
+mke2fs $mkfsopt -q -i 80000 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
 mount $mountopts $floppydev $MOUNTPOINT || die "Can't mount floppy $floppydev"
 mkdir $MOUNTPOINT/boot $MOUNTPOINT/etc
 rmdir $MOUNTPOINT/lost+found
 
-# do not copy System.map*
-cp -dp $NFSROOT/boot/map $NFSROOT/boot/chain* $NFSROOT/boot/boot* $NFSROOT/boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/boot 2>/dev/null || true
+cd $NFSROOT && cp -dp boot/boot-menu.b boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/boot
 ln -s boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/vmlinuz
-# since lilo 21.5, boot.b is a link
-[ -e $MOUNTPOINT/boot/boot.b ] || ln -fs $MOUNTPOINT/boot/boot-compat.b $MOUNTPOINT/boot/boot.b
+ln -fs $MOUNTPOINT/boot/boot-menu.b $MOUNTPOINT/boot/boot.b
 
 [ $MKIMAGE -eq 1 ] && cat > $MOUNTPOINT/etc/lilo.conf <<-EOF
-   disk=$(mount | grep $MOUNTPOINT | sed -e 's/.*loop=\([^)]*\))/\1/')
-   bios=0x00
-   cylinders=80
-   heads=2
-   sectors=18
+    disk=$(mount | grep $MOUNTPOINT | sed -e 's/.*loop=\([^)]*\))/\1/')
+    bios=0x00
+    cylinders=80
+    heads=2
+    sectors=18
 EOF
 
 cat >> $MOUNTPOINT/etc/lilo.conf <<-EOF
     boot=$floppydev
-    root=$NFSROOT/dev/boot255
-    install=$MOUNTPOINT/boot/boot.b
+    install=$MOUNTPOINT/boot/boot-menu.b
     map=$MOUNTPOINT/boot/map
-    append="nfsroot=$SERVERIP:$NFSROOT $params"
-    delay=10
+    delay=15
     compact
-    image=$MOUNTPOINT/vmlinuz
-    label=FAI-$TYPE
     read-only
+
+    default=$defaultboot
+
+    image=$MOUNTPOINT/vmlinuz
+    append="ip=both root=/dev/nfs $params"
+    label=FAI-BOTH
+
+    image=$MOUNTPOINT/vmlinuz
+    append="ip=bootp root=/dev/nfs $params"
+    label=FAI-BOOTP
+
+    image=$MOUNTPOINT/vmlinuz
+    append="ip=dhcp root=/dev/nfs $params"
+    label=FAI-DHCP
+
+    image=$MOUNTPOINT/vmlinuz
+    label=FAI-FIXED-IP
+    append="root=$SERVERIP:$NFSROOT ip=both $fixedparams $params"
+
 EOF
 
 $NFSROOT/sbin/lilo -C $MOUNTPOINT/etc/lilo.conf
 
-cat <<EOF
-Writing boot data to floppy.
-   boot protocol : $TYPE
-   nfsroot       : $SERVERIP:$NFSROOT
-   parameters    : $params
-The kernel configuration is $NFSROOT/boot/config-$KERNELVERSION-$TYPE.
+cat <<-EOF
+	Writing boot data to floppy. The default boot label is: $defaultboot
+	The kernel configuration is $NFSROOT/boot/config-$KERNELVERSION.
 EOF
+
+[ "$params" ] && echo "Additional kernel parameters: $params"
+
+[ "$verbose" ] && {
+    echo "The lilo.conf is:"
+    echo
+    cat $MOUNTPOINT/etc/lilo.conf
+}
