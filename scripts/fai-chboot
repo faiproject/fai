@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.1, 10-june-2003";
+$version="version 1.2, 22-july-2003";
 
 use Socket;
 use Net::hostent;
@@ -144,7 +144,7 @@ sub disable {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-getopts('d:hnvlLiIp:f:Frk:');
+getopts('Bd:hnvlLiIp:f:Frk:');
 $opt_h and usage;
 defined @ARGV or usage;
 
@@ -153,6 +153,7 @@ $opt_v and $verbose = 1;
 $pxedir = $opt_d || '/boot/fai/pxelinux.cfg';
 $opt_L and $opt_l = 1;
 $opt_l and lsdir;
+($opt_B and $opt_F) && die "ERROR: use only only option out of -B and -F\n";
 
 if ($opt_r) {
   foreach (@ARGV) {
@@ -177,6 +178,7 @@ if ($opt_i) {
   $rootfs = shift;
 }
 $opt_F and $opt_f="verbose,sshd,createvt,syslogd";
+$opt_B and $opt_f="verbose,sshd,syslogd,reboot";
 $opt_f and $flags="FAI_FLAGS=$opt_f";
 warn "append parameters: $bootprot $opt_k $flags\n" if $verbose;
 warn "kernel is $kernelname\nrootfs is $rootfs\n" if $verbose;
