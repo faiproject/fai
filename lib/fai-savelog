@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # $Id$
 #*********************************************************************
@@ -38,7 +38,7 @@ save_log_local() {
     [ -z "$LOGSERVER" ] && LOGSERVER=$LOGSERVER
     local logbase=$FAI_ROOT/var/log/fai
     local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
-    find $LOGDIR -size 0 -type f | xargs -r rm
+    find $LOGDIR -size 0 -type f -exec rm {} \;
     mkdir -p $thislog
     cp -p $LOGDIR/* $thislog
     ln -sf $HOSTNAME $logbase/localhost
@@ -60,7 +60,7 @@ save_log_remote() {
 
     echo "Save log files via $FAI_REMOTESH to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE"
     local thislog=$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
-    find $LOGDIR -size 0 -type f | xargs -r rm
+    find $LOGDIR -size 0 -type f -exec rm {} \;
     $FAI_REMOTESH -l $LOGUSER $LOGSERVER " \
        mkdir -p $thislog ;\
        cd $HOSTNAME ;\
