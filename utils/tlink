@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# (c) 2001, Thomas Lange
+# (c) 2001-2002, Thomas Lange
 #
 # set link for tftpboot in /boot/fai to an image for a host
 # or for all hosts with prefix and a number
@@ -14,7 +14,7 @@
 # tlink             shows all file in /boot/fai
 # tlink ant01       shows syslink for ant01
 
-version="Version 1.0 12-sep-2001"
+version="Version 1.1 10-jan-2002"
 
 # define the range for client numbers using prefix
 startnum=1
@@ -29,9 +29,9 @@ tftpdir=/boot/fai
 usage() {
 
 cat <<EOF
-tlink:  make symbolic link for booting network card via TFTP. $version
+tlink:  make symbolic link for booting network card via TFTP and BOOTP. $version
 
-  Copyright (C) 2001 by Thomas Lange
+  Copyright (C) 2001-2002 by Thomas Lange
 
 Usage: tlink [bootimage] [all] [hostname|prefix]
 
@@ -65,13 +65,8 @@ showlink() {
 
 [ X"$1" = X ] && usage
 
-# create list of hosts without prefix
-i=$startnum
-while [ $i -le $endnum ]; do
-    num=`printf "%.2d" $i`
-    hostnums="$hostnums $num"
-    i=$(($i+1))
-done
+# create list of host numbers
+hostnums=`seq -w $starnum 1 $endnum`
 
 # show one or all files
 [ X"$host" = X ] && showlink $1
