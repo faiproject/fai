@@ -1,3 +1,57 @@
+fai (2.5.3) unstable; urgency=low
+
+  * make-fai-bootfloppy: call grub in chroot environment, so correct libc
+    is used, add option c and F, DHCP is now default boot protocol, be
+    more verbose
+  * make-fai-nfsroot: add option c which sets $cfdir (closes: 219824)
+    add variable nfssize, remove package strace, check if $NFSROOT is set,
+    mkdir $RUNDIR is not need any more, use $cfdir instead of fixed
+    /etc/fai, do not copy fai-chboot to nfsroot, call certain commands in
+    a LC_ALL=C environment, add more verbose messages, new options for
+    mknbi-linux call (closes: #181393), test if FAI_SOURCES_LIST is
+    defined or a sources.list file exists, be verbose when copying
+    important files if option -v is set
+    depmod -a ... || true so it does not stop the whole system
+  * debian/control: replace netboot package with mknbi
+  * debian/dirs: add var/run/fai, remove unused directory utils
+  * debian/prerm: check if $NFSROOT is set, sleep 2 before removing nfsroot
+  * man/make-fai-bootfloppy.8: add new options F and c
+  * man/make-fai-nfsroot.8: add new option c
+  * lib/task_sysinfo: show ide disk geometry
+    remove detect call
+    most text reformated, because subroutine definition removed
+  * doc/Makefile: remove some new tempfiles, add "|| true" to rm so it
+    does not complain
+  * fai-chboot: add option -S, complain when host names are missing for
+    option -r
+  * fai.conf: add packages to the exclude list for debootstrap
+    new name for KERNELPACKAGE
+    add comment how to use NFSROOT_ETC_HOSTS (closes: #219433)
+    remove FAI_SOURCES_LIST examples, use sources.list instead
+    disable FAI_LOCAL_REPOSITORY by default
+    put important variables to the top
+  * examples/etc/sources.list: new file, that shows examples of different
+    access method to the Debian mirror
+  * fai-guide.sgml: describe new handling of sources.list, add manref to
+    make-fai-nfsroot, new line for tftpd in inetd.conf, add info on use
+    without DNS
+  * class/06hwdetect.source: modprobe ide-detect needed for 2.4.24 kernel,
+    remove ide-probe-mod, add isa-pnp
+  * lib/get-boot-info: new code to extract ip parameters, fix problems
+    when one parameter is missing
+  * share/subroutines: islinux() not needed any more, task_chboot: always
+    copy new kernel image to /boot/fai/$HOSTNAME-localboot
+  * apt.conf: replace values yes with true
+  * rcS_fai: new code for task action pipe at the end, new mount option
+    for remounting /dev/root, copyright has one line less
+  * examples/etc/dhcpd.conf: new example for a local 192.168.1 subnet, add
+    nfs mount options to root-path
+  * VERSION: default is kernel 2.4.24
+  * chkdebnames: most parts rewritten
+  * setup_harddisks: typos
+  
+ -- Thomas Lange <lange@debian.org>  Wed,  4 Feb 2004 14:42:40 +0100
+
 fai (2.5.2) unstable; urgency=low
 
   * rcS_fai: print copyright message in red, set scroll region, add
