@@ -194,10 +194,13 @@ create_nfsroot() {
 
     # woody uses debconf
 
+    # use FAI_SOURCES_LIST, if undefined copy from /etc/fai or last try from /etc/apt
     if [ "$FAI_SOURCES_LIST" ]; then
         echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     else
+        cp /etc/fai/sources.list etc/apt/sources.list || \
         cp /etc/apt/sources.list etc/apt/sources.list
+
     fi
     [ -f /etc/apt/preferences ] && cp /etc/apt/preferences etc/apt
     echo "Upgrading $NFSROOT"
@@ -240,8 +243,6 @@ create_nfsroot() {
 	set -a
 	. /etc/fai/fai.conf
 	. /tmp/rcsfai.var
-        ROOTCMD="chroot $NFSROOT"
-        export ROOTCMD
 EOF
 
     call_verbose call_with_stamp setup_ssh
