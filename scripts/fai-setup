@@ -77,9 +77,28 @@ setup_fai_account() {
     if [ $FAI_REMOTESH = "ssh" -o $FAI_REMOTECP = "scp" ]; then
 	# set up ssh on the server
 	mkdir -p -m 700 $loguserhome/.ssh
-	[ -f $sshdir/id_rsa ] || ssh-keygen -t rsa -N '' -f $sshdir/id_rsa -C "$LOGUSER@$HOST"
-	[ -f $sshdir/id_dsa ] || ssh-keygen -t dsa -N '' -f $sshdir/id_dsa -C "$LOGUSER@$HOST"
-    	cat $sshdir/*.pub >> $sshdir//authorized_keys
+	
+	#Generating keys for LOGUSER
+	[ -f $sshdir/id_rsa ] || {
+	    ssh-keygen -t rsa -N '' -f $sshdir/id_rsa -C "$LOGUSER@$HOSTNAME"
+	    cat $sshdir/id_rsa.pub >> $sshdir/authorized_keys
+	}
+
+	[ -f $sshdir/id_dsa ] || {
+	    ssh-keygen -t dsa -N '' -f $sshdir/id_dsa -C "$LOGUSER@$HOSTNAME"
+	    && cat $sshdir/id_dsa.pub >> $sshdir/authorized_keys
+	}
+	
+	#Adding servers keys to known_hosts list of LOGUSER. 
+	#So that installed clients can ssh $LOGUSER@$HOSTNAME without password
+	if [ ! -f $sshdir/known_hosts ]; then     
+		SERVERIP=`host $HOSTNAME | tr -d '[a-z]' | sed -e "s/^. * //"`
+		[ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=` cat /etc/ssh/ssh_host_dsa_key.pub | sed -e "s/= .*$/=/"`
+		[ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=` cat /etc/ssh/ssh_host_rsa_key.pub | sed -e "s/= .*$/=/"`
+		
+		[ -z "$DSASERVER" ] || echo "$HOSTNAME,$SERVERIP $DSASERVER" >> $sshdir/known_hosts
+		[ -z "$RSASERVER" ] || echo "$HOSTNAME,$SERVERIP $RSASERVER" >> $sshdir/known_hosts
+	fi
 	chmod 0700 $sshdir/authorized_keys
 	echo "$sshdir/authorized_keys created."
     fi

@@ -108,10 +108,10 @@ setup_ssh() {
     # nothing to do if no ssh is available in nfsroot
     [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return 0
     mkdir -p -m 700 $NFSROOT/root/.ssh
-    [ -f /etc/ssh/ssh_known_hosts ] && cp /etc/ssh/ssh_known_hosts $NFSROOT/root/.ssh/known_hosts
     if [ -n "$LOGUSER" ] ; then
         loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
     # is copying of *.pub important?
+        [ -f $loguserhome/.ssh/known_hosts ] && cp $loguserhome/.ssh/known_hosts $NFSROOT/root/.ssh/known_hosts
         [ -d $loguserhome/.ssh ] && {
 	    [ -f $loguserhome/.ssh/id_dsa ] &&
 	       cp -p $loguserhome/.ssh/id_dsa* $NFSROOT/root/.ssh/
