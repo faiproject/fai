@@ -536,8 +536,8 @@ image which is booted by a client. See also variable
 
 <p>
 After that, FAI is installed successfully on your server, but has no
-configuration for the install clients. Start with the templates from
-<tt> /usr/share/fai/templates</tt> using the copy command above
+configuration for the install clients. Start with the examples from
+<tt> /usr/share/doc/fai/examples/simple/</tt> using the copy command above
 and read <ref id="config">. Before you can set up a DHCP or BOOTP
 daemon, you should collect some network information of all your
 install clients. This is described in section <ref id="bootfloppy">.
@@ -739,12 +739,12 @@ An example configuration for the BOOTP daemon can be found in
  :nt=time.rrz.uni-koeln.de,time2.rrz.uni-koeln.de:
 
 # now one entry for each install client
-bigfoot:ha=0x00105A240012:bf=bigfoot:tc=.failocal:T172="verbose sshd createvt debug":
+demohost:ha=0x00105A240012:bf=demohost:tc=.failocal:T172="verbose sshd createvt debug":
 ant01:ha=0x00105A000000:bf=ant01:tc=.failocal:T172="sshd":
 </example>
 
 Insert one line for each install client at the end of this file as
-done for the hosts <em>bigfoot</em> and <em>ant01</em>. Replace the string
+done for the hosts <em>demohost</em> and <em>ant01</em>. Replace the string
 <tt>FAISERVER</tt> with the name of your install server. If the
 install server has multiple network cards and host names, use the host
 name of the network card to which the install clients are
@@ -840,29 +840,48 @@ Linux version &kver; (root@kueppers) (gcc version 2.95.4 20011002
 .
 </example>
 After this, the rest of the boot message will be equal to those when booting from
-network card. When booting from network card you will see:
+network card. When booting from network card with PXE you will see:
 <example>
-BOOTP.
-TFTP....
-Linux Net Boot Image Loader Version 0.8.1 (netboot)
+Managed PC Boot Agent (MBA) v4.00
 .
+.
+Pre-boot eXecution Environment (PXE) v2.00
+.
+.
+DHCP MAC ADDR: 00 04 75 74 A2 43
+DHCP.../
+CLIENT IP: 134.95.9.150 MASK: 255.255.255.0  DHCP IP: 134.95.9.149
+GATEWAY IP: 134.95.9.254
+
+PXELINUX 1.66 2002-01-01  Copyright (C) 1994-2002 H. Peter Anvin
+Found PXEENV+ structure
+PXE API version is 0201
+UNDI data segment at:   0009D740
+UNDI data segment size: 3284
+UNDI code segment at:   00090000
+UNDI code segment size: 24C0
+PXE entry point found (we hope) at 9D74:00F6
+My Ip address seems to be 865F0996 134.95.9.150
+ip=134.95.9.150:134.95.9.149:134.95.9.254:255.255.255.0
+TFTP prefix:
+Trying to load pxelinnux.cfg/865F0996
+Loading vmlinuz-install.....................
+ ready.
+
+Faile to free base memory, sorry...
 Uncompressing Linux... OK, booting the Kernel.
 Linux version &kver; (root@kueppers) (gcc version 2.95.4 20011002
 .
 .
 .
-
-Sending BOOTP requests . OK
+Sending DHCP requests ., OK
+IP-Config: Got DHCP answer from 134.95.9.149, my address is 134.95.9.150
 IP-Config: Complete:
-
-
-Sending BOOTP requests ..... OK
-IP-Config: Got BOOTP answer from 134.95.9.150, my address is 134.95.9.200
-IP-Config: Complete:
-   device=eth0, addr=134.95.9.200, mask=255.255.255.0, gw=134.95.9.254,
-   host=bigfoot, domain=informatik.uni-koeln.de, nis-domain=informatik4711.YP,
-   bootserver=134.95.9.150, rootserver=134.95.9.150, rootpath=/usr/lib/fai/nfsroot
-Partition check:
+   device=eth0, addr=134.95.9.150, mask=255.255.255.0, gw=134.95.9.254,
+   host=demohost, domain=informatik.uni-koeln.de, nis-domain=informatik4711.YP,
+   bootserver=134.95.9.149, rootserver=134.95.9.149, rootpath=/usr/lib/fai/nfsroot
+Looking up port of RPC 1000003/2 on 134.95.9.149
+Looking up port of RPC 1000005/1 on 134.95.9.149
 .
 .
    ------------------------------------------------------
@@ -874,13 +893,19 @@ Partition check:
    ------------------------------------------------------
 
 Calling task_confdir
-Kernel parameters:auto rw root=/dev/nfs ip=both
+Kernel parameters: ip=dhcp devfs=nomount FAI_ACTION=install root=/dev/nfs FAI_FLAGS=verbose,sshd,createvt,syslogd BOOT_IMAGE=vmlinuz-install 
+Defining variable: ip=dhcp
+Defining variable: devfs=nomount
+Defining variable: FAI_ACTION=install
 Defining variable: root=/dev/nfs
-Defining variable: ip=both
-Sending BOOTP request using device eth0
+Defining variable: FAI_FLAGS=verbose,sshd,createvt,syslogd
+Defining variable: BOOT_IMAGE=vmlinuz-install
+Reading /tmp/fai/boot.log
 FAI_FLAGS: verbose=1
+FAI_FLAGS: sshd=1
 FAI_FLAGS: createvt=1
-.
+FAI_FLAGS: syslogd=1
+Configuration space /fai mounted from kueppers:/usr/local/share/fai
 Calling task_setup
 .
 .
@@ -893,10 +918,23 @@ FAI_ACTION: install
 Performing FAI installation. All data may be overwritten!
 .
 .
+FAI finished.
+Calling task_chboot
+append parameters:   
+kernel is dom-localboot
+rootfs is /dev/hda6
+dom has 134.95.9.150 in hex 865F0996
+Writing file /boot/fai/pxelinux.cfg/865F0996 for dom
+Calling hook: savelog.LAST
+ERRORS found in log files. See /tmp/fai/error.log.
+savelog.LAST         OK.
+Calling task_savelog
+Save log files via rsh to fai@kueppers:dom/install-20030801_155242
+Calling task_faiend
 Press &lt;RETURN&gt; to reboot or ctrl-c to execute a shell
 </example>
 
-When the copyright message is shown, the install client has mounted
+When the copyright message of fai is shown, the install client has mounted
 the nfsroot<footnote> <p><file>/usr/lib/fai/nfsroot</file> from the
 install server</p> </footnote> to the clients' root directory
 <file>/</file>. This is the whole filesystem for the client at this
@@ -927,8 +965,15 @@ from the install server (named kueppers):
 <p>
 
 The following error message indicates that your install client doesn't
-get an answer from a BOOTP server. Check your cables or start the
-<manref name="bootpd" section="8"> daemon with the debug flag enabled.
+get an answer from a DHCP server. Check your cables or start the
+<manref name="dhcpd" section="8"> daemon with the debug flag enabled.
+<example>
+PXE-E51: No DHCP or BOOTP offers received
+Network boot aborted
+</example>
+
+These are the messages when you are using the BOOTP method and no
+BOOTP server replies.
 <example>
 Sending BOOTP requests ........ timed out!
 IP-Config: Retrying forever (NFS root)...
@@ -1201,7 +1246,7 @@ match a class name in <file>/fai/scripts</file> will be executed. If
 scripts that match <tt>S[0-9]*</tt> in this directory are executed. So
 it is possible to have several scripts of different types (shell,
 cfengine, ...) to be executed for one class. FAI comes with some
-templates for these scripts, but you can write your own Bourne, bash,
+examples for these scripts, but you can write your own Bourne, bash,
 perl, cfengine or expect scripts.
 <p>
 These important scripts are described in detail in <ref
@@ -1266,6 +1311,12 @@ a few minutes.
 <list>
    <item><p>install fai and all recommended packages (see
 <ref id="faisetup"> on your install server</p></item>
+
+<item><p>
+Install the simple examples into the configuration space:
+<tt>cp -a /usr/share/doc/fai/examples/simple/* /usr/local/share/fai/</tt>
+</p></item>
+
 <item><p>get MAC address of your test host</p></item>
  <item><p>add host information to <file>/etc/hosts</file> and <file>dhcpd.conf</file> using the hostname
  <tt>demohost</tt></p></item>
@@ -1307,6 +1358,9 @@ questions:
   should the configuration for these look like?</p> </item>
   <tag></tag> <item> <p>Which remote filesystems should be mounted?</p> </item>
   <tag></tag> <item> <p>How should backups be performed?</p> </item>
+  <tag></tag> <item> <p>Do you have sufficient power supply?</p> </item>
+  <tag></tag> <item> <p>How much heat do the nodes produce and how are
+  they cooled?</p> </item>
 </taglist>
 
 You also have to think about user accounts, printers, a mail system, cron jobs,
@@ -1372,25 +1426,32 @@ several files:
 </taglist>
 
 The main installation script <prgn>rcS_fai</prgn> uses all these
-subdirectories in the order listed except for hooks. The FAI package contains templates
+subdirectories in the order listed except for hooks. The FAI package contains examples
 for all these configuration scripts and files in
-<file>/usr/share/fai/templates</file>. Copy the configuration templates
+<file>/usr/share/doc/fai/examples</file>. Copy the configuration examples
 to the configuration space and start an installation. These files need
 not belong to the root account. You can change their ownership and
 then edit the configuration with a normal user account.
 
 <example>
-# cp -a /usr/share/fai/templates/* /usr/local/share/fai
+# cp -a /usr/share/doc/fai/examples/simple/* /usr/local/share/fai
 # chown -R fai /usr/local/share/fai
 </example>
 
 These files contain configuration for some example hosts. Examples
-are: a cluster of workstations (<em>bigfoot, ant01, ant02,...</em>)
-and a Beowulf cluster with a master node called <em>nucleus</em> and
+are: a demonstration host (called demohost) with the GNOME desktop, a
+cluster of workstations (<em>bigfoot, ant01, ant02,...</em>) and a
+Beowulf cluster with a master node called <em>nucleus</em> and
 computing nodes called <em>atom01, atom02,...</em> and our desktop
-machines <em>kueppers, dom</em> and our notebooks <em>pittermaennche, paeffgen</em>.
+machines <em>kueppers, dom</em> and our notebooks <em>pittermaennche,
+paeffgen</em>.
 
 <taglist>  
+   <tag>demohost</tag>  <item> <p>A machine with a small IDE hard disk
+   installed with GNOME and using DHCP for getting its network
+   configuration. This is the easiest example. You only have to add a
+   <file>XF63Config</file> file.
+
    <tag>bigfoot</tag>  <item> <p>This is a server with much software. It
    provides the home directory and <file>/usr</file> for its NFS clients. Also some
    daemons are installed and activated by default.</p> </item>
@@ -1567,49 +1628,40 @@ continues by calling the task <tt>confdir</tt> and the task
 get all information from the BOOTP or DHCP server. This command writes
 the file <file>/tmp/fai/boot.log</file>, which then is sourced to
 define the corresponding global variables. This is an example for this
-log file when using a BOOTP server.
+log file when using a DHCP server.
 <example>
 # cat /tmp/fai/boot.log
 
 netdevices_all=" eth0"
 netdevices_up=""
 netdevices="eth0"
-# --- network device eth0 ---
-SERVER='134.95.9.150'
-IPADDR='134.95.9.200'
-BOOTFILE='/boot/fai'
-NETMASK='255.255.255.0'
-NETWORK='134.95.9.0'
 BROADCAST='134.95.9.255'
-GATEWAYS_1='134.95.9.254'
-GATEWAYS='134.95.9.254'
-ROOT_PATH='/usr/lib/fai/nfsroot'
+DOMAIN='informatik.uni-koeln.de'
+DNSSRVS='134.95.9.136 134.95.129.23 134.95.100.208 134.95.140.208'
 DNSSRVS_1='134.95.9.136'
 DNSSRVS_2='134.95.129.23'
 DNSSRVS_3='134.95.100.208'
 DNSSRVS_4='134.95.140.208'
-DNSSRVS='134.95.9.136 134.95.129.23 134.95.100.208 134.95.140.208'
-DOMAIN='informatik.uni-koeln.de'
-SEARCH='informatik.uni-koeln.de uni-koeln.de'
-YPSRVR_1='134.95.9.10'
-YPSRVR='134.95.9.10'
-YPDOMAIN='informatik4711.YP'
-TIMESRVS_1='134.95.9.10'
-TIMESRVS='134.95.9.10'
-NTPSRVS_1='192.76.170.145'
-NTPSRVS_2='134.95.4.37'
-NTPSRVS='192.76.170.145 134.95.4.37'
-HOSTNAME='bigfoot'
-T172='verbose sshd createvt syslogd'
-# define variable if T17x is defined
-[ "$T170" ] && FAI_LOCATION=$T170
-[ "$T171" ] && FAI_ACTION=$T171
-[ "$T172" ] && FAI_FLAGS=$T172
+HOSTNAME='dom'
+IPADDR='134.95.9.150'
+NETWORK='134.95.9.0'
+NTPSRVS='134.95.127.100 134.95.57.1'
+NTPSRVS_1='134.95.127.100'
+NTPSRVS_2='134.95.57.1'
+GATEWAYS='134.95.9.254'
+GATEWAYS_1='134.95.9.254'
+SERVER='kueppers'
+NETMASK='255.255.255.0'
+TIMESRVS='134.95.9.149'
+TIMESRVS_1='134.95.9.149'
 </example>
 
-The last part is shell code which maps the T17X tags to shell variables.
-The tag <tt>T172</tt> is the definition for <var>$FAI_FLAGS</var>. It
-contains a space separated list of flags. The following flags are known:
+
+Additional information are passed via the kernel command line or read
+from &fc;. When booting in with PXE, command line parameters are created using <manref
+name="fai-chboot" section="8">. The variable <var>$FAI_FLAGS</var>
+contains a space separated list of flags. The following flags are
+known:
 <taglist>
  <tag>verbose</tag> <item> <p>Create verbose output during
  installation. This should always be the first flag, so consecutive
@@ -1864,16 +1916,13 @@ for your installation:
    install this kernel package. Otherwise install the package
    <var>$kernelimage</var> from the Debian mirror. For example, if
    <tt>kernelimage=kernel-image-&kver;-idepci</tt> this kernel will be
-   installed. To install a special kernel for host bigfoot, set the
-   variable
-   <example>kernelimage=kernel-image-&kver;_bigfoot1_i386.deb</example>
-   and this kernel will be installed from
-   <file>/fai/files/packages/</file>.
+   installed. 
+
   <p>The easiest way to install your local kernel package is to put
    this Debian package in
    <file>/usr/local/share/fai/files/packages/</file> on the install
-   server. Then define the kernel name with
-   <example>kernelimage=kernel-image-&kver;-wwwkiosk</example> without
+   server. Then add the kernel name to
+   <example>addpackages=kernel-image-&kver;-wwwkiosk</example> without
    specifining the revision of the Debian package. Now fai will
    install this kernel using <manref name="apt-get" section="8">.
    </p></item>
@@ -1900,7 +1949,8 @@ for your installation:
    </item>
 
    <tag>TFTPLINK</tag> <item> <p>Link to the TFTP kernel image which boots
-   using the root file system from the local disk. </p> </item>
+   using the root file system from the local disk. Only used when
+   using a BOOTP server. </p> </item>
 
    <tag>hserver, bserver</tag> <item> <p>The names of the NFS servers for
    <file>/home</file> and <file>/usr</file>.</p> </item> 
@@ -1926,7 +1976,6 @@ repository HOWTO
 <footnote>http://www.isotton.com/debian/docs/repository-howto/</footnote>.
 This can be used to install local site specific
 packages.
-
 </taglist>
 
 
@@ -2545,8 +2594,10 @@ partition on all install clients must be big enough to keep the
 downloaded Debian packages. Do not try with less than 250 Mbytes
 unless you know why.
 <p>
-
-
+You can shorten some script if you will just use one single fcopy
+command.
+<example>fcopy -r /</example>
+<p>
 You can merge two directories which contain configuration
 information, if one is a global one, and the other a local one. We use
 it to merge the temples from the fai package, and our local
