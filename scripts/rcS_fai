@@ -31,13 +31,15 @@
 # some variables
 timeout=30 # bootpc timeout
 FAI_VERSION=FAIVERSIONSTRING
-# the type of operating system (linux, sunos)
-oclass=`uname -s | tr '[a-z]' '[A-Z]'`
-classes="DEFAULT $oclass $HOSTNAME LAST"  # default before defining classes
-unset oclass
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 romountopt="-o ro,rsize=8192"
 fstab=fstab   # Solaris uses vfstab
+
+# default classes before calling task defvar. Will be overwritten by task defvar
+# the type of operating system (linux, sunos)
+oclass=`uname -s | tr '[a-z]' '[A-Z]'`
+classes="DEFAULT $oclass $HOSTNAME LAST"
+unset oclass
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
@@ -45,27 +47,37 @@ fai_init() {
     # everything that must be done, before the ramdisk is available
     local sub
     set -a # now export all variables
+
+    # read fai.conf
     # linux dir
     [ -f /etc/fai/fai.conf ] && . /etc/fai/fai.conf
     # solaris dir
     [ -f /tmp/install_config/fai/fai.conf ] && . /tmp/install_config/fai/fai.conf
-    sub=$FAI_SUBDIR/subroutines
+
+    # read subroutine definitions
+    sub=$FAI_SHAREDIR/subroutines
     [ -f $sub ] && . $sub
     [ -f $sub-$OSTYPE ] && . $sub-$OSTYPE
+
     DEBIAN_FRONTEND=noninteractive
-    # local disks are mounted on this directory
+    # local disks are mounted to $FAI_ROOT
     [ -z "$FAI_ROOT" ] && FAI_ROOT=/tmp/target
+    # executed command in the environment of the new system
     ROOTCMD="chroot $FAI_ROOT"
     # no chroot needed
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
-    [ -z "$LOGDIR" ] && LOGDIR=/tmp/fai   # directory where temporary log files are stored
+    # directory where temporary log files are stored
+    # set default value if nothing is set in fai.conf
+    [ -z "$LOGDIR" ] && LOGDIR=/tmp/fai
     mkdir -p $LOGDIR
+
+    # several log files
     diskvar=$LOGDIR/disk_var.sh
     moduleslog=$LOGDIR/modules.log
     rcslog=$LOGDIR/rcS.log
     divertlist=$LOGDIR/divert.lis
 
-    # for cfengine
+    # variables for cfengine
     chroot=/usr/sbin/chroot
     cf_prefix="cfengine:"
     files=$FAI/files
@@ -76,11 +88,15 @@ fai_init() {
     trap 'echo "Now rebooting";faireboot' INT QUIT
 
     if [ X$OSTYPE = Xlinux ]; then
+	osname='Debian GNU/Linux'
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -n -t devpts devpts /dev/pts
 	mount -n -o remount,rw,rsize=8192 /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
+    fi
+    if [ X$OSTYPE = Xsunos ]; then
+	osname='Sun Solaris'
     fi
 
     {
@@ -88,7 +104,7 @@ fai_init() {
 
     -----------------------------------------------------
       $FAI_VERSION
-      Fully Automatic Installation for Debian GNU/Linux
+      Fully Automatic Installation for $osname
 
       Copyright (c) 1999-2002, Thomas Lange
               lange@informatik.uni-koeln.de
@@ -102,7 +118,9 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_ramdisk() {
 
+    # create a writeable area on the install client
     mount -n -t proc proc /proc
+    # if we have shm use it as ramdisk
     mount -t shm shm /tmp || {
 	local ramdevice=/dev/ram0
 	mke2fs -q -m 0 $ramdevice && echo "ramdisk $ramdevice created"
@@ -116,6 +134,7 @@ create_ramdisk() {
 # Main routine
 # callarg=$1
 
+# Solaris has already a writable /tmp directory
 [ `uname -s` = Linux ] && create_ramdisk
 
 fai_init
