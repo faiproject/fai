@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.7.4, 14 May 2002"
+version="version 1.7.5, XX-nov-2002"
 set -e
 MKIMAGE=0
 floppydev=/dev/fd0
@@ -130,7 +130,7 @@ if [ $ndevices = 1 ]; then
 else
     while [ -z "$SERVERINTERFACE" ]; do
 	echo "Your machine has multiple network interfaces: $devices"
-	echo -n "Specify which one will be used for FAI (eg. eth1): "
+	echo -n "Specify which one will be used for FAI (e.g. eth1): "
 	read SERVERINTERFACE
     done
 fi
@@ -154,6 +154,7 @@ fi
 mke2fs $mkfsopt -q -i 8192 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
 mount $mountopts $floppydev $MOUNTPOINT || die "Can't mount floppy $floppydev"
 mkdir $MOUNTPOINT/boot $MOUNTPOINT/etc
+rmdir $MOUNTPOINT/lost+found
 
 # do not copy System.map*
 cp -dp $NFSROOT/boot/map $NFSROOT/boot/chain* $NFSROOT/boot/boot* $NFSROOT/boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/boot 2>/dev/null || true

@@ -2,7 +2,7 @@
 # bash is important because for echo -e
 
 # edit the magic number of boot sector (the last two bytes)
-# (c) 2001, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2001-2002, Thomas Lange, lange@informatik.uni-koeln.de
 
 seek=510
 
@@ -32,7 +32,7 @@ Examples:
 # bootsector -v /dev/hda
 Boot sector /dev/hda disabled.
 
-bootsector is written by Thomas Lange, lange@informatik.uni-koeln.de, 2001.
+bootsector is written by Thomas Lange, lange@informatik.uni-koeln.de, 2001-2002.
 
 EOF
 exit 0
@@ -48,11 +48,10 @@ writebb() { # write last two bytes of boot block
     dd bs=1c seek=$seek of=$1 2>/dev/null || echo "Can't write to boot block $1"
 }
 
-arch=`dpkg --print-installation-architecture`
-[ "$arch" = "i386" ] || {
-    Currently, only i386 architecure is supported.
-    exit 1
-}
+case $(uname -m) in
+    i?86) ;; # ok, we support this architecture. Go on.
+       *) echo "Currently, only ix86 architecture is supported"; exit ;;
+esac
 
 getopts e:d:l:v:h opt
 case $opt in

@@ -32,7 +32,7 @@
 timeout=30 # bootpc timeout
 FAI_VERSION=FAIVERSIONSTRING
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
-romountopt="-o ro,rsize=8192"
+romountopt="-o noatime,ro,rsize=8192"
 fstab=fstab   # Solaris uses vfstab
 
 # default classes before calling task defvar. Will be overwritten by task defvar
@@ -93,7 +93,7 @@ fai_init() {
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -n -t devpts devpts /dev/pts
-	mount -n -o remount,rw,rsize=8192 /dev/root /
+	mount -n -o remount,noatime,rw,rsize=8192 /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
     fi
     if [ X$OS_TYPE = Xsunos ]; then
@@ -128,8 +128,8 @@ create_ramdisk() {
 	mount -n $ramdevice /tmp
     }
     # now create the required subdirectories
-    mkdir /tmp/var /tmp/etc /tmp/target
-    cd    /tmp/var && mkdir tmp log lock run spool
+    mkdir -p /tmp/etc /tmp/target /tmp/var/run/sshd
+    cd    /tmp/var && mkdir tmp log lock spool
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
