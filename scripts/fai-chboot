@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.0.4, 6-june-2003";
+$version="version 1.1, 10-june-2003";
 
 use Socket;
 use Net::hostent;
@@ -144,7 +144,7 @@ sub disable {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-getopts('d:hnvlLip:f:Frk:');
+getopts('d:hnvlLiIp:f:Frk:');
 $opt_h and usage;
 defined @ARGV or usage;
 
@@ -162,11 +162,16 @@ if ($opt_r) {
   exit 0;
 }
 
+if ($opt_I) {
+  $opt_i = 1;
+  $action="FAI_ACTION=install";
+}
+
 if ($opt_i) {
   # create config so host will boot the install kernel
   $kernelname = 'vmlinuz-install';
   $rootfs     = '/dev/nfs';
-  $bootprot   = 'ip=dhcp devfs=nomount';
+  $bootprot   = "ip=dhcp devfs=nomount $action";
 } else {
   $kernelname = shift;
   $rootfs = shift;
