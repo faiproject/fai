@@ -28,9 +28,6 @@
 
 #set -xv # for full debugging
 
-# /etc/rcS_fai.conf is not /etc/fai.conf on the server
-. /etc/rcS_fai.conf
-
 # local variables
 FAI_VERSION=FAIVERSIONSTRING
 rcslog=/tmp/rcS.log
@@ -152,6 +149,8 @@ fai_init() {
 
     set -a # now export all variables
 
+    # /etc/rcS_fai.conf is not /etc/fai.conf on the server
+    . /etc/rcS_fai.conf
     . /usr/share/fai/subroutines
     # ulimit -c 90000
     FAI_ARCH=`dpkg --print-installation-architecture`
@@ -292,8 +291,7 @@ prepare_apt() {
 
     # ftp and http needs resolv.conf in chroot environment
     cp /tmp/etc/resolv.conf $FAI_ROOT/etc
-    echo "$FAI_SOURCES_LIST" > $FAI_ROOT/etc/apt/sources.list
-    cp -p /etc/apt/apt.conf $FAI_ROOT/etc/apt/
+    cp -p /etc/apt/* $FAI_ROOT/etc/apt/
     # some packages must access /proc even in chroot environment
     chroot $FAI_ROOT mount /proc /proc -t proc
 
