@@ -40,25 +40,29 @@ eval_cmdline() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_confdir() {
 
-    local bootlog
-    eval_cmdline
+    if [ "$DO_INIT_TASKS" ] ; then
+        local bootlog
+        eval_cmdline
 
-    bootlog=$LOGDIR/boot.log
-    get-boot-info
-    echo "Reading $bootlog"
-    . $bootlog
-    unset T170 T171 T172 ROOT_PATH BOOTFILE
+        bootlog=$LOGDIR/boot.log
+        get-boot-info
+        echo "Reading $bootlog"
+        . $bootlog
+        unset T170 T171 T172 ROOT_PATH BOOTFILE
 
-    # define flags to see if syslogd should be started
-    # this routine is called again, so you can use a hook to redefine flags
-    echo 6 > /proc/sys/kernel/printk
+        # define flags to see if syslogd should be started
+        # this routine is called again, so you can use a hook to redefine flags
+        echo 6 > /proc/sys/kernel/printk
+    fi
     define_fai_flags
-    [ "$syslogd" ] && {
-      klogd -c7 -f $LOGDIR/kernel.log
-      syslogd -m 0 -p /tmp/etc/syslogsocket
-    }
+    if [ "$DO_INIT_TASKS" ] ; then
+        [ "$syslogd" ] && {
+          klogd -c7 -f $LOGDIR/kernel.log
+          syslogd -m 0 -p /tmp/etc/syslogsocket
+        }
 
-    create_resolv_conf
+        create_resolv_conf
+    fi
     get_fai_dir
 
     # check if monitor server is available
@@ -121,6 +125,18 @@ task_debconf () {
     fai-debconf $FAI/debconf
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_prepareapt () {
+
+    # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
+    # think about using fcopy for these two files
+    [ -f /tmp/etc/resolv.conf ] && cp /tmp/etc/resolv.conf $FAI_ROOT/etc
+    [ -f /etc/hosts ] && cp /etc/hosts $FAI_ROOT/etc
+    # set hostname in $FAI_ROOT
+    echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
+    echo $HOSTNAME >$FAI_ROOT/etc/hostname
+    cp /etc/apt/* $FAI_ROOT/etc/apt/
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
 
     # maybe the base system is not up to date
@@ -129,9 +145,9 @@ task_updatebase() {
     # in /fai/files/packages 
     mount --bind $FAI $FAI_ROOT/fai
     if [ "$debug" ]; then
-	prepare_apt | tee -a $LOGDIR/updatebase.log 2>&1
+	updatebase | tee -a $LOGDIR/updatebase.log 2>&1
     else
-	prepare_apt  > $LOGDIR/updatebase.log 2>&1
+	updatebase  > $LOGDIR/updatebase.log 2>&1
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
