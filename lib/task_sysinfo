@@ -2,66 +2,53 @@
 
 # display some information about the system and save it to the logserver
 
-sysinfo_linux() {
-
-    [ -x "`which dmidecode`" ] && {
-	dmidecode
-    }
-
-    lspci
-    lsdev
-    echo "Ethernet cards found: $netdevices_all"
-    echo "Ethernet cards running: $netdevices_up"
-    ifconfig -a
-
-    [ -x "`which discover`" ] && {
-      discover --xdriver video
-      discover ethernet cdrom scsi sound video
-      discover --module ethernet cdrom scsi sound video
-    }
-    [ -x "`which kudzu`" ] && {
-	kudzu -q
-	mv /tmp/hwconf $LOGDIR
-    }
-    [ -x "`which detect`" ] && {
-       cd $LOGDIR
-       detect && cat report.txt
-    }
-
-    [ -x "`which si`" ] && {
-	si -p -o nkmhsf
-    }
-
-    [ -x "`which sysinfo`" ] && {
-	sysinfo -class device -level all
-    }
-
-    [ -x "`which sfdisk`" ] && {
-	sfdisk -d
-    }
-
-    # show ide disk geometry
-    grep . /proc/ide/ide?/hd?/geometry /dev/null | sed -e 's#/proc/ide/ide./##' 2>/dev/null
-
-    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
-    cat /proc/partitions
-    local disk
-    for disk in $disklist; do
-	hdparm -iv /dev/$disk
-	fdisk -lu /dev/$disk
-	LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
-    done
-    fdisk -lu
-    fai-mount-disk -f
-    lsmod
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 echo The defined classes are:
 echo $classes
 echo The classes are also saved in $LOGDIR/FAI_CLASSES
 
-islinux && sysinfo_linux
+# now show hardware info
 
+[ -x "`which dmidecode`" ] && dmidecode
+
+lspci
+lsdev
+echo "Ethernet cards found: $netdevices_all"
+echo "Ethernet cards running: $netdevices_up"
+ifconfig -a
+
+[ -x "`which discover`" ] && {
+    discover --xdriver video
+    discover ethernet cdrom scsi sound video
+    discover --module ethernet cdrom scsi sound video
+}
+
+[ -x "`which kudzu`" ] && {
+    kudzu -q
+    mv /tmp/hwconf $LOGDIR
+}
+
+[ -x "`which si`" ] && si -p -o nkmhsf
+
+[ -x "`which sysinfo`" ] && sysinfo -class device -level all
+
+[ -x "`which sfdisk`" ] && sfdisk -d
+
+# show ide disk geometry
+grep . /proc/ide/ide?/hd?/geometry /dev/null | sed -e 's#/proc/ide/ide./##' 2>/dev/null
+
+[ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
+cat /proc/partitions
+
+for disk in $disklist; do
+    hdparm -iv /dev/$disk
+    fdisk -lu /dev/$disk
+    LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
+done
+
+fdisk -lu
+fai-mount-disk -f
+lsmod
+# - - - - - - - - - - -
 save_dmesg
 fai-savelog -r
