@@ -804,3 +804,36 @@ task_backup() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_install() {
+
+    > $stamp
+
+    save_dmesg
+    load_keymap_consolechars
+
+    task partition
+    task mountdisks
+    task extrbase
+    task mirror
+    task updatebase
+    task instsoft
+    task configure
+    task finish
+    date
+    echo -e "FAI finished.\a"
+    task chboot
+
+    rm -f $stamp
+    # save again, because new messages could be created
+    save_dmesg
+    task savelog
+
+    if [ -f $stamp ]; then
+	echo "Error while executing commands in subshell."
+	echo "$stamp was not removed."
+	die "Please look at the log files in $FTMP for errors."
+    fi
+    wait_for_jobs
+    task faiend
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
