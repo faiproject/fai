@@ -964,9 +964,9 @@ At least the system is automatically rebooted if the flag
 <var>FAI_FLAGS</var> (= T172).</p> </footnote>.  This is only usefull
 if booting from network card. Otherwise, you have to remove the floppy disk
 and type return or call <prgn>faireboot</prgn> from a remote
-login. Currently it's not possible to edit the BIOS from Linux to
-change the boot device sequence, so next time the host will boot from another
-device (local disk).
+login. After the installation has finished, you must change the boot
+device, to boot the new installed system. Read <ref id="changeboot">
+how to change the boot device.
 
 
 
@@ -1322,7 +1322,7 @@ follwoing lines. The follwoing lines must be the output of the commands
 
 
 Multiple lines with lists of space separated names of packages follows
-the commads install and remove. All dependencies are resolved and <prgn>apt-get</prgn>
+the commands install and remove. All dependencies are resolved and <prgn>apt-get</prgn>
 is used to perform the installation or removal of packages. The order of the
 packages is of no matter. 
 <p>
@@ -1330,8 +1330,9 @@ A line, that contains the <tt>PRELOAD</tt> token, loads a file into a
 directory before installing the packages. For examples the package
 <prgn>realplayer</prgn> needs an archive to install the software, so
 this archive is downloaded to the directory
-<file>/root</file>. Currently, it will not be removed after installing
-the packages.
+<file>/root</file>. The file downloaded will not be removed after installing
+the packages. If the file should be removed after all packages were
+installed, use the command <tt>PRELOADRM</tt>.
 
 
 <sect id=cscripts>Scripts in <tt>/fai/scripts</tt><p>
@@ -1362,6 +1363,46 @@ if the configuration task only have to call some commands or create a
 file from scratch. Using the command <prgn>ifclass</prgn>, you can
 write script that are useful for multiple classes. But now have a look
 at the scripts and see what they are doing.
+
+<sect id=changeboot>Changing the boot device<p>
+
+Changing the boot sequence is normally done in your BIOS setup. But
+you can't change the BIOS from a running Linux system (I you know how
+to perform this, send me a mail). But there's another way of changing
+the boot device of a running Linux system.
+
+<p>
+Change the boot sequence in your BIOS, so the first boot device is the
+local disk, where the master boot is located.
+The second boot device
+should be set to LAN or floppy disk, depending from which media you
+boot when the installation process is performed. 
+
+After the installation is performed, <manref name="lilo" section="8">
+write a valid boot sector to the local disk. Since it's the first boot
+device, the computer will boot the new isntalled system. If you like
+to perform an installation again, you have to disable this boot
+sector. Use the command <prgn>bootsector</prgn><footnote>
+ <p>Copy <prgn>bootsector to <file>/usr/local/sbin</file></prgn></p> </footnote>
+
+
+If your BIOS can't set the network card as second boot device, this
+could also be done using LAN as the first boot device. This is how 
+
+<example>
+Boot From LAN First: Enabled
+Boot Sequence      : C,A
+</example>
+
+The MBA of a 3Com card should be set upas follows:
+<example>
+Default Boot           Local
+Local Boot             Enabled
+Message Timeout        3 Seconds
+Boot Failure Prompt    Wait for timeout
+Boot Failure           Next boot device
+</example>
+
 
 <sect id=errors>Looking for errors<p>
 If the installation process stops or even it finishes, parse all log files for errors using:
@@ -1398,7 +1439,7 @@ All defined classes are listed in <file>/tmp/FAI_CLASSES</file>.
 
 
 Creation is also done by <prgn>setup_harddisks</prgn>. Mounting the
-filesystems is done by the routine <tt>mount2target</tt>. It's
+filesystems is done by the routine <tt>mount2dir</tt>. It's
 possible to specify parameters for filesystems creation and also to
 give mount options.  
 
