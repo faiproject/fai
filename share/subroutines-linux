@@ -134,9 +134,29 @@ task_finish() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
 
-    # change boot device (local disk or network)
-    [ "$LOGUSER" -a "$TFTPLINK" ] &&
-	$FAI_REMOTESH -l $LOGUSER ${SERVER} \
-	    "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
+    local frsh
+    frsh="$FAI_REMOTESH -l $LOGUSER ${SERVER}"
+
+    if [ -z "$LOGUSER" ] ; then
+	echo "LOGUSER not defined. Can't change network boot configuration"
+	exit
+    fi
+
+    if dmesg | grep -q "Sending BOOTP requests"; then
+        # change boot device (local disk or network) when using bootp
+	[ "$LOGUSER" -a "$TFTPLINK" ] &&
+	    $frsh "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
+    else
+        # change boot device (local disk or network) when using DHCP
+        # first test if a given filename exists on the server
+	testcmd="test -s /boot/fai/$HOSTNAME-localboot ; echo \$?"
+	ret=`$FAI_REMOTESH -l $LOGUSER ${SERVER} "$testcmd"`
+	if [ "$ret" -ne 0 ]; then
+	    # copy the kernel to the server
+	    $FAI_REMOTECP $target/boot/vmlinuz-* $LOGUSER@${SERVER}:/boot/fai/$HOSTNAME-localboot
+	fi
+	. $diskvar # read ROOT_PARTITION
+	$frsh fai-chboot -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
