@@ -30,6 +30,7 @@
 # source this file, then you have these function available in the shell
 # TODO: umount not yet perfect, mount and modprobe print many errors
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mount_local_disks() {
     # try to mount all partitions
 
@@ -56,7 +57,7 @@ mount_local_disks() {
     done
     mount | grep $FAI_ROOT
 }
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_local_disks() {
 
     test -d $FAI_ROOT || return
@@ -66,11 +67,11 @@ umount_local_disks() {
     rmdir $FAI_ROOT/*
     umount $FAI_ROOT
 }
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mount_via_fstab() {
     _mount_via_fstab < $FAI_ROOT/etc/fstab
 }
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 _mount_via_fstab() {
     while read device mntpoint fstype options ; do
 	case $device in
@@ -84,7 +85,7 @@ _mount_via_fstab() {
         unset device mntpoint fstype options opt
     done
 }
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fstab_mount() {
 
     if [ $fstabcount -eq 1 ]; then
@@ -96,3 +97,24 @@ fstab_mount() {
     [ $fstabcount -eq 0 ] && echo "No /etc/fstab found"
     [ $fstabcount -ge 2 ] && echo "Found multiple /etc/fstab files in : $fstablist"
 }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+save_log_local() {
+
+    # save log files on local disk
+    find /tmp -maxdepth 1 -size 0 | xargs -r rm
+    mkdir -p $FAI_ROOT/$logdir/$HOSTNAME/$FAI_ACTION
+    cp -p /tmp/* $FAI_ROOT/$logdir/$HOSTNAME/$FAI_ACTION 2> $devnull
+    ln -s $HOSTNAME $FAI_ROOT/$logdir/localhost
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+save_log_remote() {
+
+    # save log files to $SERVER
+    [ "$LOGUSER" ] || return
+    find /tmp -maxdepth 1 -size 0 | xargs -r rm
+    logdir=$HOSTNAME/$FAI_ACTION
+    rsh -l $LOGUSER $SERVER "rm -f $logdir/* ; \ 
+	test -d $logdir || mkdir -p $logdir" 2> $devnull
+    rcp -p /tmp/* $LOGUSER@$SERVER:$logdir 2> $devnull
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
