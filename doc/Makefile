@@ -7,6 +7,9 @@ MISC_DOC = QUESTIONAIRE classes_description.txt links.html changelog.old README*
 dvi: test
 	debiandoc2latexdvi $(fdocname)
 
+postscript:
+	debiandoc2latexps $(fdocname)
+
 pdf:
 	debiandoc2latexpdf $(fdocname)
 
@@ -20,7 +23,7 @@ test:
 	nsgmls -wall -E20 -gues $(fdocname)
 
 clean:
-	rm -rf $(docname).txt $(docname).dvi $(docname).pdf $(docname).html $(docname).sasp *~ $(docname).texinfo
+	rm -rf $(docname).txt $(docname).dvi $(docname).pdf $(docname).html $(docname).sasp *~ $(docname).texinfo $(docname).ps
 
 print: dvi
 	dvips -f $(docname) | lpr
@@ -29,6 +32,6 @@ install:
 	cp -dRp $(FILES) $(docname)* $(DESTDIR)/$(DOCDIR)
 	cp -p $(MISC_DOC) $(DESTDIR)/$(DOCDIR)
 
-all: dvi pdf text html
+all: pdf text html postscript
 
-.PHONY: all dvi text html pdf test clean print
+.PHONY: all dvi text html pdf test clean print postscript
