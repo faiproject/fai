@@ -34,7 +34,7 @@ disk_info() {
     device_size=`egrep ' cciss/c.d.$| ida/c.d.$| rd/c.d.$| hd.$| sd.$|/disc$' /proc/partitions | diskandsize`
 
     # a list of all local disks, without size
-    disklist=`echo $device_size | list_disks`
+    disklist=`list_disks`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 diskandsize() {
@@ -51,10 +51,17 @@ diskandsize() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 list_disks() {
 
-    # list local disks device
-    local device blocks
-    while read device blocks; do
-	    echo $device
+    # print only every second entry
+    local i ent
+    i=0
+
+    for ent in $device_size; do
+	if [ $i -eq 0 ]; then
+	    echo $ent
+	    i=1
+	else
+	    i=0
+	fi
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
