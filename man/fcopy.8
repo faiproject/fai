@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fcopy 8 "Feb 21,2002" "FAI 2.3"
+.TH fcopy 8 "15 April 2002" "FAI 2.3"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -21,25 +21,26 @@ fcopy \- copy files using classes
 Copy a file from SOURCE to its target using classes.
 It also sets permission modes, owner and group.
 Each SOURCE argument is a directory, which contains one or more
-template files for the source file to copy. Depending on the list of
+template files for the source file to copy.  Depending on the list of
 defined classes, one file of the source directory is selected and
-copied to the target. The target filename is the name of the source
+copied to the target.  The target filename is the name of the source
 directory.
 
 The exit code returned by fcopy is 0 if all files are copied
-successfully and >0 if an error occurs. For every successfully copied
+successfully and >0 if an error occurs.  For every successfully copied
 file, a log message is printed to standard output.
 .SH OPTIONS
 .TP
 Options -c, -s, -t (or their analog variables) and a SOURCE are required.
 .TP
 .BI "\-c " class[,class]
-Define classes. Multiple classes must be comma separated. If not
+Define classes.  Multiple classes must be comma separated.  If not
 specified, use the shell environment variable $classes (space
-separated). The first class has lowest priority.
+separated).  The first class has lowest priority.
 .TP
 .BI "\-C " file
-Read classes from \fIfile\fR. Lines can contain multiple classes which are space separated. Lines starting with # are comments.
+Read classes from \fIfile\fR.  Lines can contain multiple classes which 
+are space separated.  Lines starting with # are comments.
 .TP
 .BI \-d
 Delete target file, if no class applies.
@@ -48,7 +49,7 @@ Delete target file, if no class applies.
 Create debugging output.
 .TP
 .BI "\-F " file
-Read list of sources from \fIfile\fR. One SOURCE per line.
+Read list of sources from \fIfile\fR.  One SOURCE per line.
 .TP
 .B \-h
 Show help, version and summary of options.
@@ -57,20 +58,21 @@ Show help, version and summary of options.
 Do not copy if destination is a symbolic link
 .TP
 .BI "\-L " file
-Log SOURCE and used class to \fIfile\fR. Output format is
+Log SOURCE and used class to \fIfile\fR.  Output format is
 .br
 SOURCE CLASS COMMENT
 .br
-where COMMENT gives some information about why the file has been preserved (especially useful in combination with -P).
+where COMMENT gives some information about why the file has been 
+preserved (especially useful in combination with -P).
 .TP
 .BI "\-m " user,group,mode
 Set user, group and mode for all copied files (mode as octal number, user and
-group numeric id or name). If not specified, use file file-mode or data of source file.
+group numeric id or name).  If not specified, use file file-mode or data of source file.
 .TP
 .BI "\-P " plog,changes
 Don't compare files literally, but use information from files \fIplog\fR and \fIchanges\fR:
-A file is overwritten, when either now another class applies (\fIplog\fR is a
-log generated with -L in the previous run, so it now contains the necessairy
+A file is overwritten when either another class applies (\fIplog\fR is a
+log generated with -L in the previous run, so it now contains the necessary
 information) or the version of SOURCE for the used class has changed
 (\fIchanges\fR is checked for the appearance of the version itself, the
 file-modes and the postinst of the particular SOURCE)
@@ -80,16 +82,16 @@ with 'files/'. This way, the logfile from cvs checkout could be used
 directly.
 .TP
 .B \-r
-Copy recursively (traverse down the tree). Copy all files below
-SOURCE. These are all subdirectories leaves in the SOURCE tree. Ignore
+Copy recursively (traverse down the tree).  Copy all files below
+SOURCE.  These are all subdirectory leaves in the SOURCE tree.  Ignore
 CVS directories.
 .TP
 .BI "\-s " source_dir
-Look for SOURCE files relative to \fIsource_dir\fR. Use $FAI/files if
+Look for SOURCE files relative to \fIsource_dir\fR.  Use $FAI/files if
 not specified.
 .TP
 .BI "\-t " target_dir
-Copy files relativ to \fItarget_dir\fR. Use $FAI_ROOT if not specified.
+Copy files relative to \fItarget_dir\fR.  Use $FAI_ROOT if not specified.
 .TP
 .B \-v
 Create verbose output.
@@ -109,14 +111,14 @@ CAD DEFAULT LAB MACH64 server1 faifoo file-modes postinst
 
 Each file is an instance of a XF86Config file for a different
 xserver configuration except file-modes,
-which holds the file creation data. The command
+which holds the file creation data.  The command
 
     # fcopy -s /files -t /tmp/target /etc/X11/XF86Config
 
 copies one of these files from the directory /files/etc/X11/XF86Config to
-the file /tmp/target/etc/XF86Config. For all defined classes, fcopy looks if a
-corresponding file exists. The class with the highest priority will be used
-for copying. Here are examples of defined classes and the file which will be copied
+the file /tmp/target/etc/XF86Config.  For all defined classes, fcopy looks if a
+corresponding file exists.  The class with the highest priority will be used
+for copying.  Here are examples of defined classes and the file which will be copied
 by fcopy.
 
 .sp
@@ -133,42 +135,42 @@ by fcopy.
 .PP
 
 In FAI (look at SEE ALSO) the list of defined classes starts with DEFAULT and the
-last class is the hostname. So DEFAULT is only used, when no file for
-another class exists. If a file is equal to the hostname, this
+last class is the hostname.  So DEFAULT is only used, when no file for
+another class exists.  If a file is equal to the hostname, this
 will be used, since hostname should always be the last class. 
 
 User, group and permissions for the files can be defined in several
-ways. Option -m has the highest priority and will be used for all
-files, if specified. The file file-modes in the source directory can
-contain one line for each class. The space separated parameter are:
+ways.  Option -m has the highest priority and will be used for all
+files, if specified.  The file file-modes in the source directory can
+contain one line for each class.  The space separated parameters are:
 
 owner group mode class
 
-where owner and group can be specified by numeric id or by name. The
-file permissions are defined by mode, which must be octal. If class is
+where owner and group can be specified by numeric id or by name.  The
+file permissions are defined by mode, which must be octal.  If class is
 missing, the data is used for all other classes, for which no data is
-defined. If neither -m or file-modes data is available, the user,
+defined.  If neither -m or file-modes data is available, the user,
 group and mode of the source file will be used for the target file.
 
 Missing subdirectories for the target file are created with mode
-0755. If the destination file already exists and is different from the
+0755.  If the destination file already exists and is different from the
 source file, the suffix .pre_fcopy is appended to the old version of
-the target file. If source and target files are equal, no copy is performed.
+the target file.  If source and target files are equal, no copy is performed. 
 A copied file gets the same access and modification time as the source file, not
-the time of the copy. If also the file postinst exists, it will be
+the time of the copy.  If also the file postinst exists, it will be
 executed after the file was copied.
 
 .SH NOTES
 Do not create a file DEFAULT, if no reasonable default configuration file can be
-used. It's better to exit with an error, than to copy a wrong
+used.  It's better to exit with an error, than to copy a wrong
 configuration file.
 
 This command can also be used to maintain your configuration files on
 a huge number of hosts.
 .SH SEE ALSO
 .br
-The programs is part of FAI (fully automatic installation). See the FAI manual
-for more information how to use fcopy. The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+This program is part of FAI (Fully Automatic Installation).  See the FAI manual
+for more information on how to use fcopy.  The FAI homepage is http://www.informatik.uni-koeln.de/fai.
 
 .SH AUTHOR
 Thomas Lange <lange@informatik.uni-koeln.de>
