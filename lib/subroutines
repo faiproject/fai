@@ -187,17 +187,6 @@ call_hook() {
      done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-fai_boot() {
-
-    echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
-    [ -z $reboot ] && read
-    echo "Rebooting $HOSTNAME now"
-    cd /
-    sync
-    umount -ar
-    exec reboot -dfi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
     # wait for running jobs to finish (eg. update-auctex-elisp)
@@ -308,7 +297,89 @@ eval_cmdline() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-mount_debian_mirror() {
+task() {
+
+    local taskname=$1
+    call_hook $taskname
+    if [ -f /tmp/skip.$taskname ]; then
+	rm /tmp/skip.$taskname
+	[ "$verbose" ] && echo "Skiping task_$taskname"
+    else
+	echo "Calling task_$taskname"
+	task_$taskname
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_defvar() {
+
+    local class
+    cd /fai/class
+    for class in $classes ; do
+	if [ -f $class.var ]; then
+	    [ "$verbose" ] && echo "Executing $class.var"
+	    [ "$debug" ] && set -vx
+	    . $class.var </dev/null
+	    [ "$debug" ] && set +vx
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_defclass() {
+
+    local newclasses class f
+
+    cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the install server."
+    echo "Defining classes"
+
+    [ -f $HOSTNAME ] && newclasses=`cat $HOSTNAME`
+    classes="DEFAULT $newclasses"
+
+    # alphabetical sort is important
+    for f in `ls S[0-9]*.{sh,pl}` ; do
+	if [ -x $f -a -f $f ]; then
+	[ "$verbose" ] && echo "Executing $f"
+	case $f in
+	    *.pl) newclasses=`perl $f </dev/null` ;;
+	    *.sh) newclasses=`sh $f </dev/null | grep -v '^#'` ;;
+	esac
+	[ "$debug" ] && echo "newclasses= $newclasses"
+	classes="$classes $newclasses"
+	fi
+    done
+    classes="$classes $HOSTNAME LAST"
+
+    for class in $classes ; do
+	echo $class >> /tmp/FAI_CLASSES
+	revclasses="$class $revclasses"
+    done
+
+    # define classes as: a.b.c.d for cfengine -D
+    # this doesn't work without echo
+    cfclasses=`echo $classes`
+    cfclasses=${cfclasses// /.}
+    [ "$debug" ] && echo "cfclasses: $cfclasses"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_partition() {
+
+    if [ ! -s /tmp/fstab ];then
+	echo "Partitioning local harddisks"
+	setup_harddisks -X > /tmp/format.log 2>&1
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_mountdisks() {
+
+    mount2dir $FAI_ROOT /tmp/fstab
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_extrbase() {
+
+    echo "Unpacking Debian base archive"
+    zcat /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_mirror() {
 
     # mount debian directory
     if [ "$FAI_DEBMIRROR" ]; then
@@ -318,10 +389,207 @@ mount_debian_mirror() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-change_boot() {
+task_instsoft() {
+
+    if [ "$debug" ]; then
+	install_packages | tee -a /tmp/software.log
+    elif [ "$verbose" ]; then
+	yes '' | install_packages | tee -a /tmp/software.log
+    else
+	yes '' | install_packages >> /tmp/software.log 2>&1
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+prepare_apt() {
+
+    # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
+    cp /tmp/etc/resolv.conf /etc/hosts $FAI_ROOT/etc
+    # set hostname in $FAI_ROOT
+    echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
+    cp /etc/apt/* $FAI_ROOT/etc/apt/
+    # some packages must access /proc even in chroot environment
+    mount -t proc proc $FAI_ROOT/proc
+
+    $ROOTCMD apt-get update
+    $ROOTCMD apt-get check
+    [ $? -ne 0 ] && $ROOTCMD apt-get -f -y install </dev/null 
+    $ROOTCMD dpkg -C
+    [ $? -ne 0 ] && yes '' | $ROOTCMD dpkg --configure -a 
+    $ROOTCMD apt-get -f -y remove pcmcia-cs
+    $ROOTCMD apt-get -f -y upgrade </dev/null
+    # update dpkg info which packages are available
+    $ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
+    $ROOTCMD dpkg --update-avail /tmp/dumpavail
+    rm -f $FAI_ROOT/tmp/dumpavail
+
+    # fake some programs
+    mkdivert /usr/sbin/xserver-configure
+    mkdivert /usr/bin/ypwhich
+    mkdivert /sbin/start-stop-daemon
+    cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_updatebase() {
+
+    if [ "$debug" ]; then
+	prepare_apt | tee -a /tmp/prepare-apt.log 2>&1
+    else
+	prepare_apt  > /tmp/prepare-apt.log 2>&1
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_savelog() {
+
+    save_log_local
+    save_log_remote
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_chboot() {
 
     # change boot device (local disk or network)
     [ "$LOGUSER" -a "$TFTPLINK" ] &&
 	$FAI_REMOTESH -l $LOGUSER ${SERVER} \
 	    "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
 }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_sysinfo() {
+
+    # show some system information and save it on the server
+    ( 
+    lspci
+    hdparm -iv /dev/hd[a-h]
+    fdisk -s /dev/hd? /dev/sd?
+    fdisk -lu
+    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
+    cat /proc/partitions
+    LC_ALL=C file -s /dev/hd* /dev/sd* | egrep -v " can't read | empty$"
+    echo -n "xserver for graphic card: "; xviddetect -q
+    #si -p -o shm
+    mount_local_disks
+    fstab_mount
+    ) > >( tee -a $rcslog ) 2>&1
+
+    classes=
+    task defclass
+
+    # after all classes are defined, define variables
+    # source files *.var , which can set variables
+    task defvar
+
+    echo The defined classes are:
+    echo $classes
+    echo The classes are also saved in /tmp/FAI_CLASSES
+
+    load_keymap_consolechars
+    save_dmesg
+    save_log_remote
+    task_faiend
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_backup() {
+
+# FAI_B ACKUP_LIST contains backup options
+# proposed format: "hda1 hda3 hda12 sda2 '0 0 1 1'"
+#                  list of devices  list of backup levels
+# this subroutine is not yet tested, not yet used
+# It's only an idea how a backup could be made
+    die "make_backup routine not yet used. But you can use the hook backup."
+    mount_local_disks
+    for partition in $SAVE_DEVICES ; do
+	# tar cf - $FAI_ROOT/$partition | $FAI_REMOTESH -l $LOGUSER $SERVER dd if= of=$partition.tar
+	dump 0f $LOGUSER@$SERVER:backup/$HOSTNAME/$partition.dmp $FAI_ROOT/$partition
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_configure() {
+
+# execute scripts; cfengine, shell, perl and expect scripts are known types
+cd /fai/scripts
+
+local class filetype shelldebug
+
+for class in $classes ; do
+if [ -x $class -a -f $class ]; then
+    filetype=`file $class`
+
+    shelldebug=
+    case $filetype in
+	*"Bourne shell script"*)
+	    [ "$debug" ] && shelldebug="sh -x" ;;
+	*"Bourne-Again shell script"*)
+	    [ "$debug" ] && shelldebug="bash -x" ;;
+    esac
+
+    case $filetype in
+
+	*"Bourne shell script"*|*"Bourne-Again shell script"*)
+	    echo "Executing $shelldebug shell: $class"
+	    echo "=====   shell: $class   =====" >> /tmp/shell.log 2>&1
+	    $shelldebug ./$class >> /tmp/shell.log 2>&1
+	;;
+
+	*"cfengine script"*)
+	    echo "Executing cfengine: $class"
+	    echo "=====   cfengine: $class   =====" >> /tmp/cfengine.log 2>&1
+	    ./$class --no-lock -v -f $class -D${cfclasses} >> /tmp/cfengine.log 2>&1
+	;;
+
+	*"perl script"*)
+	    echo "Executing perl: $class"
+	    echo "=====   perl: $class   =====" >> /tmp/perl.log 2>&1
+	    ./$class >> /tmp/perl.log 2>&1
+	;;
+
+	*"expect script"*)
+	    echo "Executing expect: $class"
+	    echo "=====   expect: $class   =====" >> /tmp/expect.log 2>&1
+	    ./$class >> /tmp/expect.log 2>&1
+	;;
+
+	*) echo "File $class has unsupported type $filetype." ;;
+    esac
+fi
+done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_faiend() {
+
+    echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
+    [ -z $reboot ] && read
+    echo "Rebooting $HOSTNAME now"
+    cd /
+    sync
+    umount -ar
+    exec reboot -dfi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_action() {
+
+    echo "FAI_ACTION: $FAI_ACTION"
+    case $FAI_ACTION in
+
+	install)
+	    echo Performing FAI installation. All data may be overwritten !
+	    fai_install
+	    ;;
+	sysinfo)
+	    echo Showing system information.
+	    task sysinfo
+	    die Now you have a shell.
+	    ;;
+	backup)
+	    echo Doing backup of multiple partitions.
+	    task backup
+	    ;;
+	*)
+	    if [ -f /fai/hooks/$FAI_ACTION ]; then
+		echo "Calling user defined action: $FAI_ACTION"
+		/fai/hooks/$FAI_ACTION
+	    else
+		echo "ERROR: User defined action /fai/hooks/$FAI_ACTION not found."
+		task_faiend
+	    fi
+	    ;;
+	esac
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
