@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.4.6, 22-november-2004";
+my $version = "Version 2.5, 4-november-2004";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -37,6 +37,7 @@ use AptPkg::System '$_system';
 use AptPkg::Cache;
 # global variables
 our ($opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
+my $listonly; # flag, that indicates that only a list of packages will be printed
 my @commands;
 my %command;
 my $test;
@@ -58,7 +59,7 @@ my @known;   # list of all known packages
 
 $| = 1;
 # order of commands to execute
-@commands = qw/hold taskrm taskinst clean install remove dselect-upgrade/;
+@commands = qw/hold taskrm taskinst clean aptitude install remove dselect-upgrade/;
 %command = (
 	    install => 'apt-get -y --force-yes --fix-missing install',
 	   ninstall => 'apt-get -y --force-yes --fix-missing -s install',
@@ -68,11 +69,13 @@ $| = 1;
            "taskrm" => 'tasksel -n remove',
              "hold" => 'dpkg --set-selections',
             "clean" => 'apt-get clean',
+         "aptitude" => 'aptitude -y install',
 );
 
 $test = 0;
 getopts('thvlLm:');
 
+$listonly = $opt_l || $opt_L;
 $opt_h && usage();
 $opt_t and $test = 1;
 $verbose=$ENV{verbose} || $opt_v;
@@ -104,16 +107,16 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
   my ($url, $directory) = @$entry;
   if ($url =~ m!^file:/(.+)!) {
     my $file = $1;
-    execute("cp $FAI_ROOT/$file $FAI_ROOT/$directory");
+    execute("cp $FAI_ROOT/$file $FAI_ROOT/$directory") unless $listonly;
   } else {
-    execute("wget -nv -P$FAI_ROOT/$directory $url");
+    execute("wget -nv -P$FAI_ROOT/$directory $url") unless $listonly;
   }
 }
 
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach my $type (@commands) {
   if ($type eq "clean") {
-    execute("$rootcmd apt-get clean");
+    execute("$rootcmd apt-get clean") unless $listonly;
     next;
   }
 
@@ -134,7 +137,7 @@ foreach my $type (@commands) {
     next;
   }
 
-  if ($type eq "install" || $opt_l || $opt_L) {
+  if ($type eq "install" || $type eq "aptitude" || $opt_l || $opt_L) {
 
     mkpackagelist(); # create lists of known and unknown packages
     if ($opt_l) {
@@ -151,7 +154,7 @@ foreach my $type (@commands) {
     while (@known) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
       # print "SL $shortlist\n";
-      execute("$rootcmd $command{install} $shortlist") if $shortlist;
+      execute("$rootcmd $command{$type} $shortlist") if $shortlist;
       execute("$rootcmd apt-get clean");
     }
     next;
@@ -266,7 +269,7 @@ sub mkpackagelist {
   # create two list of packages
   # @unknown contains the unkown packages
   # @known contains the kown packages
-  foreach my $pack (@{$list{install}}) {
+  foreach my $pack (@{$list{aptitude}},@{$list{install}}) {
 
     if ($pack =~ /[$\`]/) {
       # add to known if backtick or $ is found
