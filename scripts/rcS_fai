@@ -255,18 +255,26 @@ fai_configure() {
 # execute scripts; cfengine, shell, perl and expect scripts are known types
 cd /fai/scripts
 
-local class filetype
+local class filetype shelldebug
+
 for class in $classes ; do
 if [ -x $class -a -f $class ]; then
     filetype=`file $class`
+
+    shelldebug=
+    case $filetype in
+	*"Bourne shell script"*)
+	    [ "$debug" ] && shelldebug="sh -x" ;;
+	*"Bourne-Again shell script"*)
+	    [ "$debug" ] && shelldebug="bash -x" ;;
+    esac
+
     case $filetype in
 
 	*"Bourne shell script"*|*"Bourne-Again shell script"*)
-	    echo "Executing shell: $class"
+	    echo "Executing $shelldebug shell: $class"
 	    echo "=====   shell: $class   =====" >> /tmp/shell.log 2>&1
-	    [ "$debug" ] && set -xv
-	    ./$class >> /tmp/shell.log 2>&1
-	    [ "$debug" ] && set +xv
+	    $shelldebug ./$class >> /tmp/shell.log 2>&1
 	;;
 
 	*"cfengine script"*)
