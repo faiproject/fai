@@ -127,7 +127,7 @@ create_nfsroot() {
     mv $NFSROOT/etc/init.d/rcS $NFSROOT/etc/init.d/rcS.orig
     ln -s /proc/mounts $NFSROOT/etc/mtab
     ln -s /tmp/var/run $NFSROOT/var/run 
-    ln -s /tmp/etc/resolv.conf $NFSROOT/etc/resolv.conf
+    ln -sf /tmp/etc/resolv.conf $NFSROOT/etc/resolv.conf
     ln -s /sbin/rcS_fai $NFSROOT/etc/init.d/rcS
 
     # turn off logging of loading kernel modules
@@ -161,6 +161,7 @@ upgrade_nfsroot() {
 
     echo "Upgrading $NFSROOT"
     {
+    cp /etc/resolv.conf $NFSROOT/etc
     chroot $NFSROOT apt-get update
     chroot $NFSROOT apt-get check
     chroot $NFSROOT mount -n -t proc proc /proc
