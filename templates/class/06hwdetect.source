@@ -5,15 +5,8 @@ modprobe -a ide-probe-mod ide-disk ide-cd
 
 # probe for scsi devices and set classes
 
-setscsi=0
 for d in `discover --module scsi`; do
         modprobe $d  >> $moduleslog 2>&1
-        if [ $setscsi -eq 0 ]; then
-	    newclasses=SCSI
-	    modprobe -a sd_mod sr_mod
-	    setscsi=1
-        fi
-
         case "$d" in
 	    aic7xxx)
               # define a class for adaptec special work to do
@@ -21,12 +14,16 @@ for d in `discover --module scsi`; do
         esac
 done
 
-            # we want also get the filename in front of each line. So do not use cat, use grep
-if  [ $setscsi -eq 1 ]; then
+modprobe -a sd_mod sr_mod
+# are any SCSI devices attached?
+if grep "^Attached devices: none" /proc/scsi/scsi; then
+    :
+else
+    newclasses="SCSI $newclasses"
+    # we want also get the filename in front of each line. So do not use cat, use grep
     [ "$verbose" ] && cat /proc/scsi/scsi
     [ "$debug" ] && grep -H . /proc/scsi/*/*
 fi
-unset setscsi
 
 disk_info  # recalculate number of available disks
 save_dmesg # save new boot messages (from loading modules)
