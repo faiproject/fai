@@ -6,7 +6,7 @@
 # fai-setup -- set up FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2004 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2005 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -31,6 +31,7 @@ PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 set -e
 . /etc/fai/fai.conf
+. /etc/fai/make-fai-nfsroot.conf
 
 options=$@ # all options are also passed to make-fai-nfsroot
 
@@ -148,12 +149,12 @@ fi
 mkdir -p $FAI_CONFIGDIR || true
 
 # in expert mode, do not export nfs directories
-if [ -z "$export" ]; then
+if [ -z "$expert" ]; then
     test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
     test -f /etc/init.d/nfs-user-server && nfsserver=nfs-user-server
 
-    add_export_line $FAI_CONFIGDIR  "@faiclients(async,ro)"
-    add_export_line $NFSROOT  "@faiclients(async,ro,no_root_squash)"
+    add_export_line $FAI_CONFIGDIR  "$FAICLIENTS(async,ro)"
+    add_export_line $NFSROOT  "$FAICLIENTS(async,ro,no_root_squash)"
     if [ -z "$nfsserver" ]; then
 	echo "Could not find the type of your nfs server. Maybe"
 	echo "no nfs server is installed. I can't restart it."
