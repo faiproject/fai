@@ -75,10 +75,12 @@ chmod a+r $target/dev/sr*
 # create dummy link, so package kernel-image-* makes new correct link
 ln -s /boot/vmlinuz-nolink $target/vmlinuz
 
+# needed for new kernels
 if [ -f $files/packages/$kernelimage ]; then
    yes 'n' | dpkg --root=$target -i $files/packages/$kernelimage
 else
    # default kernel package
+   echo "do_symlinks = Yes" > $target/etc/kernel-img.conf
    yes 'n' | $ROOTCMD apt-get install $kernelimage
 fi
 
