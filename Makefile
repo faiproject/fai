@@ -28,7 +28,7 @@ install:
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(BIN_SCRIPTS) $(DESTDIR)/usr/bin
 	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
-	install -m644 share/subroutines* $(SHAREDIR)
+	install -m755 share/subroutines* $(SHAREDIR)
 	install -m644 share/Fai.pm $(DESTDIR)/usr/share/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(SHAREDIR)/etc/
 	install -m644 conf/fai.conf $(DESTDIR)/etc/fai/
