@@ -73,7 +73,7 @@ fcopy -M /etc/X11/XF86Config   && rm -f /etc/X11/XF86Config-4
 # if you have both a SCSI and an IDE CD-ROM -> Uuuuups, this will fail
 # if you have an IDE CDROM (mostly hdc) but you are using the ide-scsi driver,
 # this IDE CDROM will be sr0, nopt hdc. So the auto detect in the following lines will fail
-[ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -1 | awk -F/ '{print $4}'`
+[ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -n 1 | awk -F/ '{print $4}'`
 [ "$cdromdevice" ] || cdromdevice=`grep -q CD-ROM /proc/scsi/scsi && echo "sr0"`
 if [ "$cdromdevice" ]; then
     echo "/dev/$cdromdevice  /cdrom   auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
