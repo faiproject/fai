@@ -14,6 +14,12 @@ else
     [ "$addpackages" ] && cd $FAI/files/packages && dpkg -i --root=$target $addpackages
 fi
 
+# xmcd loops when doing an automatic installation
+ifclass AUDIO && {
+    yes 'n' | $ROOTCMD apt-get install xmcd
+    fcopy -r /etc/xmcd/
+}
+
 # Do not use $kernelimage when you specified it by $addpackages
 if [ -f $files/packages/$kernelimage ]; then
    yes 'n' | dpkg --root=$target -i $files/packages/$kernelimage
