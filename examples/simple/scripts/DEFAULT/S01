@@ -52,6 +52,17 @@ if ifclass NIS; then
     done
 fi
 
+if [ -n "$hdparm" ]; then
+    cat > $target/etc/init.d/hdparm <<-EOF
+	#! /bin/sh
+	# added by FAI
+	# tune my harddisks
+	$hdparm
+EOF
+    chmod a+rx $target/etc/init.d/hdparm
+    ln -s ../init.d/hdparm $target/etc/rcS.d/S61hdparm
+fi
+
 ifclass USR_LOCAL_COPY && {
     # you have to mount /usr/local
     # mount -o ro $bserver:/usr/local /usr/local
@@ -65,8 +76,8 @@ ifclass USR_LOCAL_RSYNC && {
     rsync $vopt --delete -a $LOGUSER@$bserver:/usr/local/ $target/usr/local/
 }
 
-fcopy -M /etc/X11/XF86Config-4 && rm -f /etc/X11/XF86Config
-fcopy -M /etc/X11/XF86Config   && rm -f /etc/X11/XF86Config-4
+fcopy -M /etc/X11/XF86Config   && rm -f $target/etc/X11/XF86Config-4
+fcopy -M /etc/X11/XF86Config-4 && rm -f $target/etc/X11/XF86Config
 
 # put CD-ROM into fstab and exports
 # if cdromdevice is defined in *.var, use that value
