@@ -22,7 +22,6 @@ veryclean: clean
 	dh_clean
 
 install: 
-#	$(MAKE) -C kernel install LIBDIR=$(LIBDIR)
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
@@ -30,7 +29,7 @@ install:
 	install -m644 lib/Fai.pm $(DESTDIR)/usr/lib/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(LIBDIR)/etc/
 	install -m644 conf/fai.conf $(DESTDIR)/etc
-	cp -dRp examples templates $(DESTDIR)/$(DOCDIR)
+	cp -a utils examples templates $(DESTDIR)/$(DOCDIR)
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(LIBDIR)/sbin/rcS_fai
 	ln -fs installimage_3com $(DESTDIR)/boot/fai/bigfoot
