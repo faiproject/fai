@@ -24,6 +24,8 @@ read_disk_info();
     testsize($sum_disk_size,3500,4400) and
     class("4GB");
 
+# diskless
+($numdisks == 0) and class("DISKLESS");
 #-------------------------------------------------------
 # do not edit beyond this line
 
