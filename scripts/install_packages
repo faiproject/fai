@@ -57,7 +57,11 @@ foreach (@classes) {
 # get file, which must exist before installing packages
 foreach $entry (@preloadlist,@preloadrmlist) {
   my ($url, $directory) = @$entry;
-  execute("wget -nv -P$FAI_ROOT/$directory $url");
+  if ($url =~ m!^file:/(.+)!) {
+    my $file = $1;
+    execute("cp $FAI_ROOT/$file $FAI_ROOT/$directory");
+  } else {
+    execute("wget -nv -P$FAI_ROOT/$directory $url");
 }
 
 # call apt-get or tasksel for each type of command whith the list of packages
