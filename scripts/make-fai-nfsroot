@@ -33,7 +33,7 @@ packages="portmap dhcp-client file rdate cfengine bootpc wget rsh-client less du
 ext2resize strace hdparm parted dnsutils grub ntpdate psmisc 
 dosfstools sysutils dialog libdetect0 discover mdetect read-edid kudzu hwtools"
 
-PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 if [ `id -u` -ne 0 ]; then
     echo "Run this program as root."
@@ -135,13 +135,14 @@ copy_fai_files() {
 
     # copy to nfsroot
     perl -pi -e "s#^root::#root:${FAI_ROOTPW}:#" etc/passwd
-    mkdir -p $NFSROOT/$FAI/fai_config $NFSROOT/$SHAREFAI $NFSROOT/etc/fai
+    mkdir -p $NFSROOT/$FAI/fai_config $NFSROOT/$SHAREFAI $NFSROOT/$LIBFAI $NFSROOT/etc/fai
     cd $NFSROOT
     cp -p $SHAREFAI/etc/dhclient.conf etc/
     ln -fs ../sbin/dhclient-script etc/dhclient-script
     cp -Rp /etc/fai etc/
     [ -f /etc/fai/.cvspass ] && cp -p /etc/fai/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
+    cp -p $LIBFAI/* usr/lib/fai || true  # cp will complain about directories
     cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
 
     cp -p $SHAREFAI/subroutines* usr/share/fai
