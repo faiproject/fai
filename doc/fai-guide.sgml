@@ -6,8 +6,8 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity version "1.0">
-<!entity date    "15 may 2001">
+<!entity version "1.1">
+<!entity date    "XX july 2001">
 
 ]>
 
@@ -16,7 +16,7 @@
       <title>FAI Guide (Fully Automatic Installation)
 
       <author>Thomas Lange <email>lange@informatik.uni-koeln.de</email>
-      <version>Version &version  for FAI version 2.0, &date
+      <version>Version &version  for FAI version 2.1, &date
 
 <abstract>
 This manual describes the fully automatic installation package for
@@ -52,7 +52,7 @@ The homepage of FAI is
 There you will find any information about FAI, for e.g. the mailing
 list archive. The FAI package is available as a Debian package from
 &faidownload;. It's an official Debian package and is available from
-all Debian mirrors<footnote>From june 2001.</footnote>. Send any bug or comment to
+all Debian mirrors. Send any bug or comment to
 <email>fai@informatik.uni-koeln.de</email>. You can also use the
 Debian bug tracking system (BTS)
 <httpsite>http://www.debian.org</httpsite><httppath>/Bugs</httppath>
@@ -217,6 +217,8 @@ inspect the hardware or do any other task.
 	    <item> <p>Keyboard layout selectable</p> </item>
 	    <item> <p>Can be used as a rescue system</p> </item>
 	    <item> <p>Tested on SUN SPARC hardware</p> </item>
+	    <item> <p>Diskless clients support</p> </item>
+	    <item> <p>Easyly add your own functions via hooks</p> </item>
 
 </list>
 
@@ -308,6 +310,17 @@ yet, edit this file before calling <prgn>fai-setup</prgn>.
 These are important variables in &fc;:
 
 <taglist>
+	    <tag><var>FAI_DEBOOTSTRAP</var></tag>
+	    <item>
+	  <p>For building the nfsroot there's a new tool called
+	  <manref name="debootstrap" section="8">, which replaces the
+	  use of the <var>FAI_BASETGZ</var> variable. The tool needs
+	  the location of a Debian mirror and the distribution
+	  (potato,woody,stable,unstable) for which the basic Debian
+	  system should be build.
+	    </p> </item>
+
+
 	    <tag><var>FAI_BASETGZ</var></tag>
 	    <item>
 	      <p>The location, where the the base file is fetched
@@ -351,7 +364,7 @@ These are important variables in &fc;:
 	<tag> <var>NFSROOT_PACKAGES</var></tag>
 	    <item>
 	  <p> Contains a list of additional software package, that
-	  will be installed to nfsroot.</p></item>
+	  will be added to nfsroot.</p></item>
 	  </taglist>
 <p>
 
@@ -873,7 +886,11 @@ has booted on the install clients.
 	    <item> <p>Reboot the new installed system</p> </item>
 	  </enumlist>
 
+You can also define additional tasks to perform before a certain step
+is executed. The additional task are called hooks and are explained in
+detail in <ref id="hooks">.
 
+<p>
 The installation time is mainly determined by the amount of software
 that will be installed. A dual Pentium II, 400 MHZ with 128 MB RAM and
 a 10 Mbit network card needs about 11 min when installing 520 MB of
@@ -896,17 +913,7 @@ sequence of tasks for FAI. No other scripts in
 A ramdisk is created and mounted to <file>/tmp</file>, which is the
 only writable directory, until local filesystems are
 mounted. Additional parameters are received from the BOOTP or DHCP
-daemon <footnote><p>Hint for experts: If these information daemons
-can't be used, FAI also reads definitions from
-<file>/fai/fai_config/global.conf</file> and
-<tt>/fai/fai_config/$HOSTNAME</tt>. This is done before and after
-<file>/fai</file> is mounted from the install server. So the first
-time the data will be read from
-<file>/usr/lib/fai/nfsroot/fai/fai_config</file> and after mounting
-<file>/fai</file> they are read from
-<file>/usr/local/share/fai/fai_config</file>.  This is not the
-recommended way to specify the information. If possible, use one the
-daemons instead !  </p></footnote> and the configuration space if
+daemon and the configuration space if
 mounted via NFS from the install server to <file>/fai</file>.  The
 setup is finished after additional virtual terminals are created and
 the secure shell daemon for remote access is started on demand.
@@ -1064,10 +1071,6 @@ and its subdirectories. This will be mounted by the install clients to
 <file>/fai</file>. Following subdirectories are available:
 
 <taglist>
-<!-- 
-	  <tag><tt>fai_config/</tt></tag> <item> <p>global parameters</p> </item>
-!-->
-
 	  <tag><tt>class/</tt></tag> <item> <p>Scripts and files to
 	  load kernel modules and define classes and variables</p> </item>
 	  <tag><tt>disk_config/</tt></tag> <item> <p>Configuration
@@ -1488,7 +1491,7 @@ Currently no Perl scripts are used for modifying the system
 configuration.
 
 <sect1 id=expect>Expect scripts<p>
-Currently no Expect scripts are used for modifying the system
+Currently no expect scripts are used for modifying the system
 configuration.
 
 <sect1 id=cfengine>Cfengine scripts<p>
@@ -1551,6 +1554,22 @@ This will enable the first IDE hard disk as first boot device. It the
 boot sector of the hard disk is invalid, the computer will use the
 network interface as second boot device.
 
+<sect1 id=hooks>Hooks<p>
+
+The directory <file>/usr/local/share/fai/hooks/</file> can contain
+file, which are called hooks. The file name of the hooks are
+
+<tt>hookprefix.classname</tt>
+
+The prefix describes the time, when the hook is called. For example
+the hook <tt>defclasses</tt> is called before the main FAI script
+defines the classes. Before the classes are defined, the routine
+<tt>call_hook</tt> is called which looks for every class
+
+ 
+During the installation process FAI calls a hook
+
+They are executed for every defined class.
 
 <sect id=errors>Looking for errors<p>
 If the installation process stops or even it finishes, parse all log files for errors using:
