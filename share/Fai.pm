@@ -64,10 +64,12 @@ sub read_disk_info {
 
   # disk_info set variables containing the information
 
-  my ($size,$bytes_per_block);
+  my ($size,$bytes_per_block,$diskandsize);
   $bytes_per_block= 1024; # should be constant for /proc/partitions; must be proofed!
 
-  while ($ENV{device_size}=~ /(\S+)\s+(\d+)/g)  {
+  #
+  $diskandsize = `disk-info`;
+  while ($diskandsize=~ /(\S+)\s+(\d+)/g)  {
     my ($device,$blocks) = ($1,$2);
     $numdisks++;
     push @devicelist,$device;
