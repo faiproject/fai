@@ -228,6 +228,21 @@ task_instsoft() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_finish() {
+
+    umount -n $FAI_ROOT/proc
+    # undo fake of all programs in file $divertlist
+    rmalldivert
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_chboot() {
+
+    # change boot device (local disk or network)
+    [ "$LOGUSER" -a "$TFTPLINK" ] &&
+	$FAI_REMOTESH -l $LOGUSER ${SERVER} \
+	    "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_sysinfo() {
 
     echo The defined classes are:
