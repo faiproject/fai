@@ -58,6 +58,7 @@ add_fai_account() {
     adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
     # there's a bug when the encrypted password is !, so change it to *
     perl -pi.bak -e "s#^$LOGUSER:.:(.+):/bin/false#$LOGUSER:*:\1:/bin/bash#" /etc/passwd
+    touch $loguserhome/.account_created_by_fai_package
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_fai_account() {
@@ -89,8 +90,7 @@ setup_fai_account() {
     fi
 
     logusergid=`id -ng $LOGUSER`
-    touch $loguserhome/.account_created_by_fai_package
-    echo "User account $LOGUSER created."
+    echo "User account $LOGUSER set up."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
