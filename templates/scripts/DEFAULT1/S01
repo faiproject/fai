@@ -1,6 +1,15 @@
 #! /bin/sh
 
-# (c) Thomas Lange, 2001, lange@debian.org
+# (c) Thomas Lange, 2001-2002, lange@debian.org
+
+# install addition packags that are located in /fai/files/packages/
+for pack in "$addpackages"; do
+    if [ -f $FAI/files/packages/$pack ]; then
+	dpkg -i --root=$target $FAI/files/packages/$pack
+    else
+	echo "Package $pack not found in $FAI/files/packages/"
+    fi
+done
 
 echo $HOSTNAME     > $target/etc/hostname
 echo $time_zone    > $target/etc/timezone
@@ -19,7 +28,7 @@ chmod 1777 $target/tmp
 chown root:root $target/tmp
 
 # create keyboard layput table
-dumpkeys | gzip -9f >$target/etc/console-tools/default.kmap.gz
+dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
 
 # create NIS/NONIS config
 fcopy /etc/nsswitch.conf /etc/host.conf
