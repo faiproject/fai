@@ -41,6 +41,8 @@ $test = 0;
 
 $verbose=$ENV{verbose};
 $FAI_ROOT = $ENV{FAI_ROOT};
+$rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
+
 $classpath = "/fai/package_config";
 
 @classes = grep { !/^#|^\s*$/} split(/[\s\n]+/,$ENV{classes});
@@ -67,7 +69,7 @@ foreach $type (@aptcommands) {
   my $packlist = join(' ',@{$list{$type}});
 
   if ($packlist) {
-    execute("chroot $FAI_ROOT apt-get $options{$type} $type $packlist");
+    execute("$rootcmd apt-get $options{$type} $type $packlist");
   }
 }
 
@@ -81,9 +83,9 @@ foreach $entry (@preloadrmlist) {
 }
 
 # check if all went right
-execute("chroot $FAI_ROOT dpkg -C");
+execute("$rootcmd dpkg -C");
 # clean apt-get cache
-execute("chroot $FAI_ROOT apt-get clean");
+execute("$rootcmd apt-get clean");
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
 
@@ -134,7 +136,7 @@ sub dselectupgrade {
   print TMP $list;
   close TMP;
 
-  execute("chroot $FAI_ROOT dpkg --set-selections < $tempfile");
-  execute("chroot $FAI_ROOT apt-get $options{$type} dselect-upgrade");
+  execute("$rootcmd dpkg --set-selections < $tempfile");
+  execute("$rootcmd apt-get $options{$type} dselect-upgrade");
   unlink $tempfile;
 }
