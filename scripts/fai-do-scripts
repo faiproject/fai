@@ -26,7 +26,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.1, 2-apr-2003"
+version="version 1.2, 22-may-2003"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -58,7 +58,7 @@ call_conf() {
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
-	   for f in `ls $class/S[0-9]*[^~]` ; do
+	   for f in `ls $class/S[0-9]* | grep -v ~$` ; do
 	       [ -x $f -a -f $f ] && do_script $f
 	   done
 	fi
@@ -69,7 +69,7 @@ do_script() {
 
     # execute scripts and save their output in log files
     # cfengine, shell, perl and expect scripts are known types
-    local shelldebug file filetype
+#    local shelldebug file filetype
 
     file=$1
 
@@ -95,6 +95,13 @@ do_script() {
 	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
 	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
 	    fc_check_status $file $? | tee -a $LOGDIR/shell.log
+	;;
+
+	*"cfagent"*)
+	    echo "Executing cfagent: $file"
+	    echo "=====   cfagent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
+	    ./$file --no-lock -v -f $file -D${cfclasses} >> $LOGDIR/cfagent.log 2>&1
+	    fc_check_status $file $? | tee -a $LOGDIR/cfagent.log
 	;;
 
 	*"cfengine script"*)
