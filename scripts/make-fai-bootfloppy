@@ -30,7 +30,7 @@
 
 set -e
 
-version="version 1.1, january 2001"
+version="version 1.2, january 2001"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -47,13 +47,19 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
 
    Copyright (C) 2000, 2001 by Thomas Lange
 
-   Usage: make-fai-bootfloppy
+   Usage: make-fai-bootfloppy [parameter]
 
    -h     print this message.
 
 DESCRIPTION
    Creates a boot floppy for booting a FAI install client.
    No arguments are needed but you must be root.
+   All parameters are passed to the kernel via append in lilo.conf.
+
+EXAMPLE
+    To make a boot floppy for my old SMC EtherCard Plus Elite 16T I use
+
+    # make-fai-bootfloppy "reserve=0x300,32,0x200,32 ether=10,0x300,eth0"
 
 EOF
 exit 0
@@ -72,6 +78,9 @@ if [ "$UID" -ne 0 ]; then
  exit 9
 fi
 
+# additional kernel parameter
+params=$*
+
 . /etc/fai.conf
 
 SERVERIP=`ifconfig eth0 | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
@@ -81,7 +90,7 @@ grep -q ic_dhcp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
 
 [ "$TYPE" ] || die "Can't determine kernel boot protocol.\nMaybe there's no $NFSROOT/boot/System.map-$KERNELVERSION"
 
-mke2fs -i 8192 -m 0 /dev/fd0 >/dev/null || exit
+mke2fs -q -i 8192 -m 0 /dev/fd0 || exit
 mount /floppy || mount /dev/fd0 /floppy || exit
 cp -dpR $NFSROOT/boot /floppy
 mkdir -p /floppy/etc
@@ -92,7 +101,7 @@ cat > /floppy/etc/lilo.conf <<-EOF
     root=$NFSROOT/dev/boot255
     install=/floppy/boot/boot.b
     map=/floppy/boot/map
-    append = "NFSROOT=$SERVERIP:$NFSROOT"
+    append = "NFSROOT=$SERVERIP:$NFSROOT $*"
     delay=10
     compact
     image=/floppy/vmlinuz
@@ -110,5 +119,6 @@ FAI boot floppy created.
    boot protocol : $TYPE
    server        : $SERVERIP
    nfsroot       : $SERVERIP:$NFSROOT
+   parameters    : $params
 The kernel configuration is $NFSROOT/boot/config-$KERNELVERISON-$TYPE.
 EOF
