@@ -1,10 +1,10 @@
 #! /bin/sh
 
-# all faiclient's are using classes in faiclient
+# all hosts named ant?? are using the classes in file ants
 case $HOSTNAME in
 
-    faiclient??)
-	cat faiclient ;;
+    ant??)
+	cat anthill ;;
 esac
 
 
