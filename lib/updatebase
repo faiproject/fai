@@ -17,9 +17,11 @@ fi
 export aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"'
 $ROOTCMD apt-get $aptopt update
 $ROOTCMD apt-get $aptopt check
-[ $? -ne 0 ] && $ROOTCMD apt-get $aptopt -f -y install </dev/null 
+[ $? -ne 0 ] && $ROOTCMD apt-get $aptopt -f install </dev/null 
 $ROOTCMD dpkg -C
 [ $? -ne 0 ] && yes '' | $ROOTCMD dpkg --configure -a 
+# using the above value, causes an error: "dpkg need action"
+export aptopt=
 $ROOTCMD apt-get $aptopt -f -y dist-upgrade </dev/null
 # update dpkg info which packages are available
 $ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
