@@ -37,13 +37,13 @@ save_log_local() {
     # LOGSERVER is overridable until now
     [ -z "$LOGSERVER" ] && LOGSERVER=$LOGSERVER
     local logbase=$FAI_ROOT/var/log/fai
-    local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$RUNDATE
+    local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
     find $LOGDIR -size 0 -type f | xargs -r rm
     mkdir -p $thislog
     cp -p $LOGDIR/* $thislog
     ln -sf $HOSTNAME $logbase/localhost
-    ln -snf $FAI_ACTION-$RUNDATE $logbase/$HOSTNAME/last-$FAI_ACTION
-    ln -snf $FAI_ACTION-$RUNDATE $logbase/$HOSTNAME/last
+    ln -snf $FAI_ACTION-$FAI_RUNDATE $logbase/$HOSTNAME/last-$FAI_ACTION
+    ln -snf $FAI_ACTION-$FAI_RUNDATE $logbase/$HOSTNAME/last
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote() {
@@ -58,15 +58,15 @@ save_log_remote() {
     # LOGSERVER is overridable until now
     [ -z "$LOGSERVER" ] && LOGSERVER=$SERVER
 
-    echo "Save log files via $FAI_REMOTESH to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$RUNDATE"
-    local thislog=$HOSTNAME/$FAI_ACTION-$RUNDATE
+    echo "Save log files via $FAI_REMOTESH to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE"
+    local thislog=$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
     find $LOGDIR -size 0 -type f | xargs -r rm
     $FAI_REMOTESH -l $LOGUSER $LOGSERVER " \
        mkdir -p $thislog ;\
        cd $HOSTNAME ;\
        rm -f last-$FAI_ACTION ;\
-       ln -snf $FAI_ACTION-$RUNDATE last-$FAI_ACTION ;\
-       ln -snf $FAI_ACTION-$RUNDATE last"
+       ln -snf $FAI_ACTION-$FAI_RUNDATE last-$FAI_ACTION ;\
+       ln -snf $FAI_ACTION-$FAI_RUNDATE last"
 
     $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$LOGSERVER:$thislog
 }
