@@ -44,8 +44,5 @@ install:
 	cd $(DOCDIR)/examples/advanced/scripts ; mv NETWORK1 NETWORK; mv DEFAULT1 DEFAULT
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(SCRIPTSDIR)/rcS_fai
-	ln -fs installimage_3com $(DESTDIR)/boot/fai/bigfoot
-	ln -fs installimage_3com $(DESTDIR)/boot/fai/atom_install
-	ln -fs atom_install $(DESTDIR)/boot/fai/atom01
 
 .PHONY: clean veryclean
