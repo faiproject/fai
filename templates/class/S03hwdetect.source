@@ -1,0 +1,21 @@
+#! /bin/sh
+
+# probe for scsi devices and set classes
+
+setscsi=0
+for d in `discover --module scsi`; do
+        modprobe $d  >> $moduleslog 2>&1
+        if [ $setscsi -eq 0 ]; then
+                newclasses=SCSI
+                setscsi=1
+        fi
+
+        case "$d" in
+                aic7xxx)
+                newclasses="$newclasses ADAPTEC" ;;
+        esac
+done
+unset setscsi
+
+disk_info  # recalculate number of available disks
+save_dmesg # save new boot messages (from loading modules)
