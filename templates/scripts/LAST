@@ -1,11 +1,11 @@
 #! /bin/sh
 
-# copyright Thomas Lange 2001, lange@debian.org
+# copyright Thomas Lange 2001-2002, lange@debian.org
 
 # remove backup files from cfeninge
 dirs="root etc var"
 for path in $dirs; do
-    find $target/$path -maxdepth 25 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
+    find $target/$path -maxdepth 20 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
 done
 
 # if no separate /tmp partition exists, make link /tmp -> /var/tmp
@@ -22,6 +22,12 @@ case "$UTC" in
    no|"") hwopt="--localtime" ;;
    yes)   hwopt="--utc"       ;;
 esac
+
+# Make sure everything is configured properly
+echo "Running \"apt-get -f install\" for the last time."
+$ROOTCMD $target apt-get -f install
+
+
 $ROOTCMD hwclock $hwopt --systohc
 
 # the system is now configured
