@@ -29,9 +29,9 @@
 
 # Packages that are install to nfsroot by default Additional packages are
 # defined with $NFSROOT_PACKAGES in fai.conf
-packages="dhcp-client file rdate cfengine bootpc wget rsh-client less dump
+packages="portmap dhcp-client file rdate cfengine bootpc wget rsh-client less dump
 ext2resize strace hdparm parted dnsutils grub ntpdate psmisc 
-dosfstools sysutils dialog"
+dosfstools sysutils dialog libdetect0 discover mdetect read-edid kudzu"
 # removed from distribution: hwtools
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
@@ -110,7 +110,9 @@ setup_ssh() {
     [ -f /etc/ssh/ssh_known_hosts ] && cp /etc/ssh/ssh_known_hosts $NFSROOT/root/.ssh/known_hosts
     if [ -n "$LOGUSER" ] ; then
         loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
-        [ -d $loguserhome/.ssh ] && cp -p $loguserhome/.ssh/identity* $NFSROOT/root/.ssh/
+    # is copying of *.pub important ?
+        [ -d $loguserhome/.ssh ] &&
+	  cp -p $loguserhome/.ssh/identity* $loguserhome/.ssh/*.pub $NFSROOT/root/.ssh/
     fi
 
     # enable root login
@@ -234,8 +236,13 @@ create_nfsroot() {
     echo "iface lo inet loopback" > etc/network/interfaces
 
     echo "*.* /tmp/syslog.log" > etc/syslog.conf
-    echo ". $SHAREFAI/subroutines" >> root/.profile
-    echo ". $SHAREFAI/subroutines-$OSTYPE" >> root/.profile
+    cat >> root/.profile <<-EOF
+	. $SHAREFAI/subroutines
+	. $SHAREFAI/subroutines-$OS_TYPE
+	set -a
+	. /etc/fai/fai.conf
+	. /tmp/rcsfai.var
+EOF
 
     call_verbose call_with_stamp setup_ssh
 
