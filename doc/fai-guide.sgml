@@ -15,10 +15,8 @@
 <book>
       <title>FAI (Fully Automatic Installation) Guide 
 
-NOT YET FINISHED !
-
       <author>Thomas Lange <email>lange@informatik.uni-koeln.de</email>
-      <version>ver. &version;, &date;
+      <version>ver. &version;, &date for FAI version 2.0;
 
 <abstract>
 This manual describes the fully automatic installation package for
@@ -48,7 +46,16 @@ writing to the &fsf-addr;.
 
 <toc detail="sect2">
 
-<chapt id="motivation">Motivation<p>
+<chapt id="intro">Introduction<p>
+The homepage of FAI is:
+
+<httpsite>www.informatik.uni-koeln.de</httpsite><httppath>/fai</httppath>.
+
+There you will find any information about FAI, for eg. the archive of
+the mailling list.
+
+
+<sect id="motivation">Motivation<p>
 Have you ever performed identical installations of an operating system
 several times?  Would you like to be able to install a Linux cluster
 with dozens of nodes single handedly?
@@ -114,7 +121,7 @@ First, some terms used in this manual, are described.
 <sect id="work">How does FAI work ?<p> 
 
 The computer, which will be installed using FAI (called client), is
-booted from floppy disk or via network card. It gets an IP-address and
+booted from floppy disk or via network card. It gets an IP address and
 boots a linux kernel which mounts all filesystems via NFS from the install
 server. After the operating system is running, the FAI startup script
 performs the automatic installation which doesn't need any
@@ -171,8 +178,7 @@ inspect the hardware or do any other task.
 Following items are required for an installation via FAI.
 
 <taglist>
-	  <tag>A computer: </tag><item> with a network interface card
-	  XXX BOOTPROM</item>
+	  <tag>A computer: </tag><item> with a network interface card. </item>
 	  <tag>BOOTP or DHCP server: </tag><item> <p> 
 The clients need one of these daemons to obtain information.<footnote>
 		  <p>It's also possible without a server, if all
@@ -202,11 +208,14 @@ until it will be an official Debian package soon.
 
 
 <sect id="debian-mirror">How to create a local Debian mirror<p> 
-There are two scripts available for creating a local partitial
-mirror in <file>/usr/share/doc/fai/examples/utils/</file>,
-<prgn>mkdebmirror</prgn> uses debmirror
-<httpsite>http://cvs.kitenet.net/</httpsite><httppath>joey-cvs/bin/debmirror</httppath>.
-Use these script for building a mirror only for i386 architecture.
+There's a script available for creating a local partitial
+mirror in <file>/usr/share/doc/fai/utils/</file>,
+<prgn>mkdebmirror</prgn> uses <prgn>debmirror</prgn>
+<footnote>
+	    <p><httpsite>http://cvs.kitenet.net/</httpsite><httppath>joey-cvs/bin/debmirror</httppath>. 
+</p>
+	  </footnote>
+Use this script for building a mirror only for i386 architecture.
 
 <sect id=aptsetup> Setting up FAI
 <p>
@@ -215,11 +224,11 @@ First, get the newest version of FAI and install it using the
 <prgn>dpkg</prgn> command:
 
 <example>
-kueppers[~]# dpkg -i fai_1.5.0_all.deb
+kueppers[~]# dpkg -i fai_2.0_all.deb
 Selecting previously deselected package fai.
 (Reading database ... 39564 files and directories currently installed.)
-Unpacking fai (from fai_1.5.0_all.deb) ...
-Setting up fai (1.5.0) ...
+Unpacking fai (from fai_2.0_all.deb) ...
+Setting up fai (2.0) ...
 To set up FAI edit /etc/fai.conf and call fai-setup
 </example>
 <p>
@@ -240,7 +249,8 @@ These are important variables in &fc;:
 	      file &basetgz is already available in
 	      <file>/tmp</file>. Fetching via ftp or http could take
 	      much time, if you do not have a fast connection to
-	      your Debian mirror. You can find the current version in the directory
+	      your Debian mirror. You can find the current version of
+	      this archive in the directory
 	      <tt>debian/dists/stable/main/disks-i386/current/</tt> of
 	      your Debian mirror.</p>
 	    </item>
@@ -281,7 +291,7 @@ space. You should also install the package <package>fai-kernels</package>,
 which will be automaticlly installed when you use <prgn>apt-get</prgn> for
 installing FAI.
 <example>
-kueppers[~]# dpkg -i ~lange/fai-kernels_1.1_i386.deb 
+kueppers[~]# dpkg -i fai-kernels_1.1_i386.deb 
 Selecting previously deselected package fai-kernels.
 (Reading database ... 40562 files and directories currently installed.)
 Unpacking fai-kernels (from .../lange/fai-kernels_1.1_i386.deb) ...
@@ -445,10 +455,10 @@ If your network card can't boot itself, you have to boot via
 floppy. Use the command <prgn>make-fai-bootfloppy</prgn> to create the
 boot floppy. Since there's no client specific information on this
 floppy, it's suitable for all your install clients.
-<p>
 You can also specify additional kernel parameters for this boot
-floppy, it desired. See <example>make-fai-bootfloppy -h XX</example>
-for more information.
+floppy, if desired. There's help for <prgn>make-fai-bootfloppy</prgn>
+available.
+ <example>make-fai-bootfloppy -h</example>
 
 <p>
 If you have no BOOTP or DHCP server, supply the network
@@ -459,7 +469,6 @@ sources.
 </p> </footnote>
 <example>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
 </example>
-<example>"nfsroot=&lt;ip of install server&gt;:/usr/lib/fai/nfsroot"</example>
 
 <sect id="mac">Collecting Ethernet addresses<p>
 
@@ -618,22 +627,31 @@ IP-Config: Complete:
 .
 .
 .
-    ------------------------------------------------------
-    FAI 1.5.0, XXXX XX, 2001
-    Fully Automatic Installation for Debian GNU/Linux
+   ------------------------------------------------------
+     FAI 2.0, XXXX XX, 2001
+     Fully Automatic Installation for Debian GNU/Linux
 
-    Copyright (c) 1999-2001, Thomas Lange
-            lange@informatik.uni-koeln.de
-    ------------------------------------------------------
-    Press ctrl-c to interrupt FAI and to get a shell
+     Copyright (c) 1999-2001, Thomas Lange
+             lange@informatik.uni-koeln.de
+   ------------------------------------------------------
+   Press ctrl-c to interrupt FAI and to get a shell
 .
+.
+/fai mounted from kueppers:/usr/local/share/fai
+FAI_ACTION: sysinfo
 .
 .
 Press &lt;RETURN&gt; to reboot or ctrl-c to execute a shell
 </example>
 
-There will be some error message from modprobe and insmod, but that
-doesn't matter. If you get the following error message, the kernel has
+When the copyright message is shown, the install client has mounted
+the nfsroot<footnote> <p><file>/usr/lib/fai/nfsroot</file> from the
+install server</p> </footnote> to the directory <file>/</file>. This
+is the whole filesystem for the client at this moment.  When
+<file>/fai</file> is mounted, the configuration from the install
+server is available to the client.
+<p>
+If you get the following error message, the kernel has
 no driver compiled in for your network card. Compile a new kernel
 which supports your network card.
 <example>
@@ -661,9 +679,7 @@ kueppers# make-kpkg --revision BOOTP2 kernel-image
 
 The created file is
 <file>/usr/src/kernel-image-2.2.19_BOOTP2_i386.deb</file>. Adjust 
-the variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot
-by calling.
-
+the variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot.
 <example>
 kueppers# fai-setup
 </example> 
@@ -688,14 +704,14 @@ root@ant01's password:
 </example>
 
 You have now a running Linux system without using the local hard
-disk. Use this as a rescue system, if your local disk are damaged or
+disk. Use this as a rescue system, if your local disk is damaged or
 the computer can't boot properly from hard disk. You will get a shell
 and can execute various commands (dmesg, lsmod, df, lspci, ...). Look
 at the log file in <file>/tmp</file>. There you can find much
 information about the boot process.
 
-All log files from <file>/tmp </file> are also written to the server
-in the directory <tt>~fai/ant01/sysinfo/</tt><footnote>More
+All log files from <file>/tmp </file> are also written to the install server
+into the directory <tt>~fai/ant01/sysinfo/</tt><footnote>More
 general: <tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION/</tt>.
 </footnote>
 
@@ -712,7 +728,7 @@ Filesystem   1k-blocks    Used Available Use% Mounted on
 /dev/ram0         3963      36      3927   1% /tmp
 kueppers:/usr/local/share/fai
                1249132  855648    330032  72% /fai
-/dev/hda1        54447    9859     41777  19% /tmp//target
+/dev/hda1        54447    9859     41777  19% /tmp/target
 /dev/hda10     1153576      20   1141992   0% /tmp/target/files/install
 /dev/hda9       711540      20    711520   0% /tmp/target/home
 /dev/hda8       303336      13    300191   0% /tmp/target/tmp
@@ -722,11 +738,15 @@ kueppers:/usr/local/share/fai
 
 <strong>This method can be used as an rescue environment !</strong> In
 future it will be possible to make backups or restore data to existing
-filesystems. If you need a filesystem with read-write access use:
+filesystems. If you need a filesystem with read-write access use the
+<prgn>rwmount</prgn> command:
 
 <example>ant01:~# rwmount /tmp/target/home</example> 
 
-You can reboot the computer using the command <prgn>faireboot</prgn>.
+
+<sect id=reboot>Reboot the computer<p>
+At any time you can reboot the computer using the command
+<prgn>faireboot</prgn>, also if logged in from remote.
 
 <chapt id=instprocess>The installation process<p>
 
@@ -770,7 +790,7 @@ sequence of tasks for FAI.
 A ramdisk is created and mounted to <file>/tmp</file>, which is the
 only writeable directory, until local filesystems are
 mounted. Additional parameters are received from the BOOTP or DHCP
-daemon <footnote><p>If these information daemons can't be used, FAI
+daemon <footnote><p>Hint for experts: If these information daemons can't be used, FAI
 also reads definitions from <file>/fai/fai_config/global.conf</file>
 and <tt>/fai/fai_config/$HOSTNAME</tt>. This is done before and after
 <file>/fai</file> is mounted from the install server. So the first
@@ -785,12 +805,12 @@ and all needed remote filesystems are mounted. The set up is
 finished after additional virtual terminals are created and the secure
 shell daemon is started on demand.
 
-<sect1 id=iclass>Define classes<p>
+<sect1 id=iclass>Defining classes<p>
 
 One of the most important feature of FAI are the classes. Using
 classes you can share configuration data among multiple
 clients. Details are described in <ref id="classes">.XXXX
-All define classes are listed in <file>FAI_CLASSES</file>.
+All defined classes are listed in <file>/tmp/FAI_CLASSES</file>.
 
 The main scripts executes all scripts in <file>/fai/class</file>,
 which name conforms matches <tt>S[0-9]*.{sh,pl}</tt>. Every word that these scripts
@@ -831,7 +851,7 @@ things are becoming much easier.
 When local filesystems are created, they are all empty (except for
 preserved partitions). Now the Debian base system and all requested
 software packages must be installed on the new filesystems. First the
-base tar file is unpacked, then the command
+base archive is unpacked, then the command
 <prgn>install_packages</prgn> installes all packages witout any
 manually interaction needed. If a packages requires an other packages,
 <prgn>apt-get</prgn> resolves this dependency by installing the
@@ -879,7 +899,10 @@ your scripts.
 
 <sect1 id=isavelog>Save log files<p>
 When all installation tasks are finished, the log files are written to
-<tt>/var/log/fai/$HOSTNAME/install/</tt> on the new system and to the
+<tt>/var/log/fai/$HOSTNAME/install/</tt> <footnote>
+			    <p><file>/var/log/localhost/install/</file> is a link to this directory.</p>
+			  </footnote>
+on the new system and to the
 install server, if <var>LOGUSER</var> is defined.
 
 <sect1 id=ireboot>Reboot new installed system<p>
@@ -929,7 +952,59 @@ the variable <var>$classes</var>.
 Please read <file>/usr/share/doc/fai/README.disk_config.gz</file>.
 
 <sect id=packageconfig>Software package configuration<p>
-Please read <file>/usr/share/doc/fai/README.package_config.gz</file>.
+The script <prgn>install_packages</prgn> installs the selected software
+packages. It uses all configuration files in <file>/fai/package_config/</file>,
+which file name is also defined as a class. The syntax is very
+simple. An example:
+
+<example>
+# an example package class
+
+PRELOAD http://www.location.org/preload/rp7_linux20_libc6_i386_b2_rpm /root
+
+PACKAGES install
+adduser netstd ae
+less passwd
+
+PACKAGES remove
+gpm
+
+PACKAGES dselect-upgrade
+ddd                     install
+a2ps                    install
+</example>
+
+Comments are starting with a hash (#) and are ending at the end of
+the line. Every command begins with the word <tt>PACKAGES</tt>
+followed by a command name. The command name is similar to those of
+<prgn>apt-get</prgn>. Here the list of supported command names:
+
+
+<taglist>
+<tag>install</tag> <item> <p>Install all packages that are specified
+in the following lines. If a hyphen is appended to the package name
+   (with no intervening space), the package will be removed, not
+   installed.</p> </item>
+
+<tag>remove</tag> <item> <p>Remove the named packages. Has the same format as for
+  <tt>install</tt>. Append a + to the package name, for packages that
+  should be installed. </p> </item>
+
+<tag>dselect-upgrade</tag> <item> <p> Set package selections using the
+follwoing lines. The follwoing lines must be the output of the command
+<prgn>dpkg --get-selections</prgn>.
+</taglist>
+
+
+Multiple lines with lists of space separated names of packages follows
+the commads install and remove. All dependencies are resolved and <prgn>apt-get</prgn>
+is used to perform the installation or remove of packages. The order of the
+packages is of no matter. 
+<p>
+A line, that contains the <tt>PRELOAD</tt> token, loads a file into a
+directory before installing the packages. For examples the package
+<prgn>realplayer</prgn> needs an archive to install the software, so
+this archive is downloaded and save to the directory <file>/root</file>.
 
 
 <sect id=cscripts>Scripts in <tt>/fai/class</tt><p>
@@ -985,7 +1060,7 @@ create boot floppy (dhcp, bootp), boot from network card, get MAC address
 set up bootp/dhcp action=sysinfo
 
 The only task, which has to be done manually for new hardware, is to
-assign the MAC address to a hostname and to an IP-address and to
+assign the MAC address to a hostname and to an IP address and to
 define classes for this host, or all host which match a certain name
 (look at <file>class/S01alias.sh</file>).
 
