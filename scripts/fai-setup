@@ -60,15 +60,38 @@ add_fai_account() {
 	echo Account \$LOGUSER=$LOGUSER  already exists.
 	echo Make sure, that all install clients can
 	echo log into this account without a password
+	return
+    fi
+
+    adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
+    gid=`id -ng $LOGUSER`
+    perl -pi.bak -e "s#^$LOGUSER:(.+):/bin/false#$LOGUSER:\1:/bin/bash#" /etc/passwd
+
+    # get the home dir of a user in a variable; do not exit when set -e is used
+    # loguserhome is unset if $LOGUSER does not exists
+    # this is not a evil hack, it's a very clever piece of code
+    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+    if [ -z "$loguserhome" ]; then
+	echo "Can't determine home directory for user $LOGUSER."
+	echo "LOGUSER= $LOGUSER    loguserhome= $loguserhome"
+	exit 8
+    fi
+    touch $loguserhome/.account_created_by_fai_package
+    echo "User account $LOGUSER created."
+
+    if [ $FAI_REMOTESH = "ssh" -o $FAI_REMOTECP = "scp" ]; then
+	# we must set up ssh on the server
+	mkdir -p -m 700 $loguserhome/.ssh
+	ssh-keygen -N '' -f $loguserhome/.ssh/identity -C "$LOGUSER@$HOST"
+    	cat $loguserhome/.ssh/identity.pub >> $loguserhome/.ssh/authorized_keys
+	chmod 0700 $loguserhome/.ssh/authorized_keys
+	echo "$loguserhome/.ssh/authorized_keys created."
     else
-	adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
-	gid=`id -ng $LOGUSER`
-	perl -pi.bak -e "s#^$LOGUSER:(.+):/bin/false#$LOGUSER:\1:/bin/bash#" /etc/passwd
-	echo "+@faiclients root" > /home/$LOGUSER/.rhosts
-	chown $LOGUSER:$gid /home/$LOGUSER/.rhosts
-	chmod go-rwx /home/$LOGUSER/.rhosts
-	touch /home/$LOGUSER/.account_created_by_fai_package
-	echo "User account fai and ~fai/.rhosts created."
+	# use .rhosts authentication
+	echo "+@faiclients root" > $loguserhome/.rhosts
+	chown $LOGUSER:$gid $loguserhome/.rhosts
+	chmod go-rwx $loguserhome/.rhosts
+	echo "$loguserhome/.rhosts created."
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
