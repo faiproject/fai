@@ -370,16 +370,6 @@ for the install clients) are defined in &fc;. Since FAI doesn't use
 	    <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>Now
 	    deprecated. Use the file
 	    <file>/etc/fai/sources.list</file> instead.<p>
-	    This multi line string is the content of
-	    <file>sources.list</file> (used by <manref name="apt-get"
-	    section="8">); it defines the location and access
-	    method for the Debian mirror. If this variable is undefined,
-	    the file <file>/etc/fai/sources.list</file> or
-	    <file>/etc/apt/sources.list</file> will 
-	    be used. An example can be found in
-	    <file>/usr/share/doc/fai/examples/etc</file>. For more
-	    information on the file format see <manref
-	    name="sources.list" section="5">.
 	    </p> </item>
 
 	    <tag><var>FAI_DEBMIRROR</var></tag>
@@ -812,9 +802,7 @@ comma.
 If you do not have full control over the BOOTP or DHCP daemon (because
 this service is managed by a central service group) you can also
 define the variable <var>FAI_ACTION</var> in
-a <file>/fai/class/*.var</file> scripts. Look at
-<file>LAST.var</file> for an example. The variable <var>T170</var>
-can also be defined by a daemon. It's better to use a script for that.
+a <file>/fai/class/*.var</file> scripts.
 
 When you have created your <file>bootptab</file> file, you have to
 enable the BOOTP daemon once. It's installed but Debian does not enable it
@@ -1213,7 +1201,7 @@ of all classes can be found in
 <file>/usr/share/doc/fai/classes_description.txt</file>. It is
 advisable to document the job a new class performs. Then, this
 documentation is the base for composing the whole configuration from classes.
-The scripts <prgn>11modules.source</prgn> loads kernel modules on
+The scripts <prgn>06hwdetectsource</prgn> loads kernel modules on
 demand.
 The complete description of all these scripts can be found in <ref id="cscripts">.
 
@@ -1227,8 +1215,8 @@ installation ;-)
 After defining the classes, every file matching <tt>*.var</tt> with a
 prefix which matches a defined class is executed to define variables.
 There, you should define the variable <var>FAI_ACTION</var> and
-others. Currently, <var>FAI_ACTION</var> is defined in
-<file>LAST.var</file> for all install clients.
+others. By default, <var>FAI_ACTION</var> is defined via the command
+<manref name="fai-chboot" section="8">.
 
 
 <sect id=ipartition>Partitioning local disks, creating filesystems<p>
@@ -1868,21 +1856,6 @@ this directory via NFS and to install the NFS server packages.
 The script <tt>06hwdetect.source</tt> uses the default Debian commands
 to detect SCSI hardware and to load the required kernel drivers. If
 some specific hardware is found, it can also define a new class for it.
-The script <prgn>11modules.source</prgn> does not define any class, but
-is responsible for loading additional kernel modules. This
-script should contain a list of required kernel modules:
-
-<example>
-11modules.source:
-
-kernelmodules="rtc floppy parport_pc usbkbd usb-uhci keybdev"
-
-for mod in $kernelmodules; do
-    [ "$verbose" ] && echo loading kernel module $mod
-    modprobe -a $mod
-done
-</example>
-
 You can find messages from modprobe in <file>/tmp/fai/kernel.log</file> and
 the on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
 
