@@ -19,10 +19,10 @@ fcopy \- copy files using classes
 .RI [ options ] " SOURCE" ...
 .SH DESCRIPTION
 Copy a file from SOURCE to its target using classes.
-It also sets permissions modes and owner and group.
+It also sets permission modes, owner and group.
 Each SOURCE argument is a directory, which contains one or more
 template files for the source file to copy. Depending on the list of
-defined classes one file of the source directory is selected and
+defined classes, one file of the source directory is selected and
 copied to the target. The target filename is the name of the source
 directory.
 
@@ -30,6 +30,8 @@ The exit code returned by fcopy is 0 if all files are copied
 successfully and >0 if an error occurs. For every successfully copied
 file, a log message is printed to standard output.
 .SH OPTIONS
+.TP
+Options -c, -s, -t (or their and a SOURCE are required.
 .TP
 .BI "\-c " class[,class]
 Define classes. Multiple classes must be comma separated. If not
@@ -39,36 +41,38 @@ specified, use the shell environment variable $classes (space separated).
 Read classes from \fIfile\fR. Lines can contain multiple classes which are space separated. Lines starting with # are comments.
 .TP
 .B \-d
-Create debug output.
+Create debugging output.
 .TP
 .BI "\-F " file
 Read list of sources from \fIfile\fR. One SOURCE per line.
 .TP
 .B \-h
-Show summary of options.
+Show help, version and summary of options.
 .TP
 .BI "\-m " user,group,mode
-Set user, group and mode for copied files (mode as octal number, user and
-group numeric or name). If not specified, use data of source file.
+Set user, group and mode for all copied files (mode as octal number, user and
+group numeric id or name). If not specified, use file file-mode or data of source file.
 .TP
 .B \-r
-Copy recursivly (traverse down the tree). Copy all files below
-SOURCE. These are all directories leaves in your SOURCE tree.
+Copy recursively (traverse down the tree). Copy all files below
+SOURCE. These are all subdirectories leaves in the SOURCE tree.
 .TP
 .BI "\-s " source_dir
-Look for source files relative to \fIsource_dir\fR (default $FAI_FILES).
+Look for SOURCE files relative to \fIsource_dir\fR. Use $FAI_FILES if
+not specified.
 .TP
 .BI "\-t " target_dir
-Copy files relativ to  \fItarget_dir\fR (default $FAI_ROOT).
+Copy files relativ to \fItarget_dir\fR. Use $FAI_ROOT if not specified.
 .TP
 .B \-v
 Create verbose output.
+
 
 .SH EXAMPLES
 .br
 Suppose the source directory /files/etc/X11/XF86Config consists of following files:
 
-DEFAULT LAB CAD MACH64 server1 faifoo file-modes
+CAD DEFAULT LAB MACH64 server1 faifoo file-modes
 
 Each file is an instance of a XF86Config file for a different
 xserver configuration except file-modes,
@@ -76,22 +80,21 @@ which holds the file creation data. The command
 
     # fcopy -s /files -t /tmp/target /etc/X11/XF86Config
 
-copies one of these files from /files/etc/X11/XF86Config to
-/tmp/target/etc/XF86Config. For all defined classes, fcopy looks if a
-corresponding file exists. The last matching classname will be used
-for copying.
-
-Here are examples of defined classes and the file which will be copied
+copies one of these files from the directory /files/etc/X11/XF86Config to
+the file /tmp/target/etc/XF86Config. For all defined classes, fcopy looks if a
+corresponding file exists. The last matching class will be used
+for copying. Here are examples of defined classes and the file which will be copied
 by fcopy.
+
 .sp
 .nf
-.ta 30n
-Classes	Used File
+.ta 40n
+      Defined classes	File used for copy
 
-DEFAULT,LAB,server3	LAB
-DEFAULT,CAD,server1	server1
-DEFAULT,MACH64,faiclient01	MACH64
-DEFAULT,TFT,faiclient13	DEFAULT
+      DEFAULT,LAB,server3	LAB
+      DEFAULT,CAD,server1	server1
+      DEFAULT,MACH64,faiclient01	MACH64
+      DEFAULT,TFT,faiclient13	DEFAULT
 .sp
 .fi
 .PP
@@ -108,20 +111,26 @@ contain one line for each class. The space separated parameter are:
 
 owner group mode class
 
-If class is missing, the data is used for all classes. If neither -m
-or file-modes data is available, the user, group and mode of the
-source file will be used for the target file. Missing subdirectories
-are created with mode 0777. If the destination file already exists and
-is different from the source file, the suffix .fcopy is appended. If
-the files are equal, no copy is performed.
+where owner and group can be specified by numeric id or by name. If
+class is missing, the data is used for all other classes, for which no
+data is defined. If neither -m or file-modes data is available, the
+user, group and mode of the source file will be used for the target
+file.
+
+Missing subdirectories for the target file are created with mode
+0755. If the destination file already exists and is different from the
+source file, the suffix .pre_fcopy is appended to the old version of
+the target file. If source and target files are equal, no copy is performed.
+A copied file gets the same access and modification time as the source file, not
+the time of the copy.
 
 .SH NOTES
-Do not create a file DEFAULT, if no evident default configuration file can be
+Do not create a file DEFAULT, if no reasonable default configuration file can be
 used. It's better to exit with an error, than to copy a wrong
 configuration file.
 
 This command can also be used to maintain your configuration files on
-a hughe number of hosts.
+a huge number of hosts.
 .SH SEE ALSO
 .br
 The programs is part of FAI (fully automatic installation). See the FAI manual
