@@ -11,8 +11,6 @@ for d in `discover --module scsi`; do
         if [ $setscsi -eq 0 ]; then
 	    newclasses=SCSI
 	    modprobe -a sd_mod sr_mod
-            # we want also get the filename in front of each line. So do not use cat, use grep
-	    grep -H . /proc/scsi/*/*
 	    setscsi=1
         fi
 
@@ -22,6 +20,9 @@ for d in `discover --module scsi`; do
 	      newclasses="$newclasses ADAPTEC" ;;
         esac
 done
+
+            # we want also get the filename in front of each line. So do not use cat, use grep
+[ "$verbose" ] && [ $setscsi -eq 1 ] && grep -H . /proc/scsi/*/*
 unset setscsi
 
 disk_info  # recalculate number of available disks
