@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.0 20-Mar-2001"
+version="Version 1.1 30-Mar-2001"
 
 die() {
     echo "ftar died: $1"
@@ -39,9 +39,9 @@ extract() {
     file=$1
     option=$2
 
-    echo "ftar: extracting $file to $target/$die"
+    echo "ftar: extracting $file to $target/$dir"
     tar -C $target/$dir $vflag $option -xf $file
-    # if option is set, only one class will be used
+    # if option -1 is set, only one class will be used
     $single && exit
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -62,7 +62,7 @@ Usage: ftar [OPTION] ... SOURCE ...
    -r                   Recursively remove files in target before extracting.
    -s source_dir        Look for source files relative to source_dir.
    -t target_dir        Extract files relativ to target_dir.
-   -v                   Be verbose.
+   -v                   Be verbose. Not yet used.
 
 Report bugs to <lange@informatik.uni-koeln.de>.
 EOF
@@ -78,7 +78,7 @@ while getopts 1hDdrvs:t:c: opt ; do
         d) deletefiles=1 ;;
         D) debug=1 ;;
         r) removedir=1 ;;
-        v) vflag="-v" ;;
+#        v) verbose=1 ;;
         1) single=1 ;;
         s) source=$OPTARG ;;
         t) target=$OPTARG ;;
@@ -89,17 +89,18 @@ done
 shift $(($OPTIND - 1))
 
 [ "$1" ] || usage
+# last class in FAI_CLASSES has highest priority
 [ -f /tmp/FAI_CLASSES ] && classes=`tac /tmp/FAI_CLASSES`
-[ "$verbose" -ne 0 ] && vflag="-v"
-[ "$debug" -ne 0 ]   && echo "ftar: classes : $classes"
+[ "$debug" -ne 0 ] && vflag="-v"
+[ "$debug" -ne 0 ] && echo "ftar: classes : $classes"
 [ -z "$source" ] && die "Source directory undefined."
 [ -z "$target" ] && die "Target directory undefined."
 
 dir=$1
 fpath=$source/$dir
 
-[ "$deletefiles" ] && cd $target/$dir ; rm -f .* * 2>/dev/null
-[ "$removedir" ] && cd $target/$dir ; rm -rf .* * 2>/dev/null
+[ "$deletefiles" ] && cd $target/$dir ; rm -f  .* * 2>/dev/null
+[ "$removedir" ]   && cd $target/$dir ; rm -rf .* * 2>/dev/null
 
 for c in $classes ; do
     # what if a directory exists, which is equal to the hostname or a classname ?
