@@ -119,7 +119,12 @@ test -f /etc/init.d/nfs-user-server && nfsserver=nfs-user-server
 
 add_export_line $FAI_CONFIGDIR  "@faiclients(ro)"
 add_export_line $NFSROOT  "@faiclients(ro,no_root_squash)"
-/etc/init.d/$nfsserver restart
+if [ -z "$nfsserver" ]; then
+    echo "Could not find the type of your nfs server. Maybe"
+    echo "no nfs server is installed. I can't restart it."
+else
+    /etc/init.d/$nfsserver restart
+fi
 
 if [ ! -d $FAI_CONFIGDIR/class ];then
 	echo "You have no FAI configuration. Copy FAI template files with:"
