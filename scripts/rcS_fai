@@ -39,7 +39,7 @@ romountopt="-o ro,rsize=8192"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
-    # source subroutines must be done before set -a, because of > >( tee )
+    # everything that must be done, before the ramdisk is available
     set -a # now export all variables
     . /usr/share/fai/subroutines
     . /etc/fai.conf
@@ -68,11 +68,8 @@ fai_init() {
     cat /proc/kmsg >/dev/tty4 &
     create_ramdisk
     trap 'echo "Now rebooting";faireboot' INT QUIT
-    save_dmesg
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-fai_setup() {
 
+    {
     cat <<-EOF
 
     -----------------------------------------------------
@@ -85,7 +82,16 @@ fai_setup() {
 
 EOF
 
-    call_hook first
+    save_dmesg
+    } > >( tee -a $rcslog )  2>&1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_first() {
+
+    local dnshost
+    echo -n "Kernel parameters:"; cat /proc/cmdline
+    eval_cmdline
+
     # TODO: only start on demand; use FAI_FLAGS for that
     syslogd -m 0 -p /tmp/etc/syslogsocket
     klogd -c1 -f /tmp/kernel.log
@@ -101,24 +107,25 @@ EOF
 	done
     fi
 
-    [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
-    [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
-
-    echo -n "Kernel parameters:"; cat /proc/cmdline
-    eval_cmdline
-
     [ "$FAI_LOCATION" ] || die "\$FAI_LOCATION not defined."
     mount $romountopt $FAI_LOCATION /fai &&
 	    echo "/fai mounted from $FAI_LOCATION"
+    # source user specific subroutines
+    [ -f /fai/hooks/subroutines ] && . /fai/hooks/subroutines
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_setup() {
 
-    call_hook setup
+    local flag
+    [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
+    [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
+
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
 
     for flag in $FAI_FLAGS; do
 	eval "$flag=1"
 	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
     done
-    unset flag
 
     devnull=/dev/null
     [ "$debug" ] && devnull=/dev/console
@@ -160,20 +167,16 @@ fai_install() {
     fi
     . $diskvar
     [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
-    task mountdisks
 
+    task mountdisks
     task extrbase
 
     # now we can copy fstab
     [ -f $FAI_ROOT/etc/fstab ] && mv $FAI_ROOT/etc/fstab $FAI_ROOT/etc/fstab.old
     cp -p /tmp/fstab $FAI_ROOT/etc/fstab
     task mirror
-
-    echo "Installing software may take a while"
     task updatebase
-
     task instsoft
-
     task configure
 
     umount -n $FAI_ROOT/proc
@@ -208,7 +211,8 @@ fai_install() {
 
 # callarg=$1
 fai_init
-fai_setup  > >( tee -a $rcslog ) 2>&1
+task first  > >( tee -a $rcslog ) 2>&1
+task setup  > >( tee -a $rcslog ) 2>&1
 
 # if you want to recall rcS_fai
 # [ -n $callarg ] && FAI_ACTION=$callarg
