@@ -77,6 +77,7 @@ task_partition() {
     # setup_harddisks must create $diskvar file
     if [ ! -s $diskvar ]; then
 	cat $LOGDIR/format.log
+	sndmon "TASKERROR partition 3"
 	die "setup_harddisks did not create $diskvar file."
     fi
     # now define variable for root and boot partition and boot device
@@ -99,8 +100,12 @@ task_mirror() {
     # mount debian mirror directory
     [ "$FAI_DEBMIRROR" ] || return   # nothing to do
     mkdir -p $FAI_ROOT/$MNTPOINT
-    mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT ||
+    if mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT; then
+      [ "$debug" ] && echo "Mirror mounted from $FAI_DEBMIRROR to $FAI_ROOT/$MNTPOINT"
+    else
+      sndmon "TASKERROR mirror $?"
       die "Can't mount $FAI_DEBMIRROR"
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
@@ -127,6 +132,8 @@ task_instsoft() {
     else
 	yes '' | install_packages >> $LOGDIR/software.log 2>&1
     fi
+    # This almost indicates an error
+    egrep "^E:" $LOGDIR/software.log && terror=1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
@@ -152,10 +159,12 @@ task_chboot() {
     if [ -z "$LOGUSER" ] ; then
 	echo "LOGUSER not defined. Can't change network boot configuration"
 	doexit=1
+	terror=1
     fi
 
     if [ -z "$SERVER" ] ; then
 	echo "SERVER not defined. Can't change network boot configuration"
+	terror=2
 	doexit=1
     fi
     [ $doexit -eq 1 ] && return
@@ -165,31 +174,16 @@ task_chboot() {
 	[ "$LOGUSER" -a "$TFTPLINK" ] &&
 	    $frsh "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
     else
-        # change boot device (local disk or network) when using DHCP
+        # change boot device (local disk or network) when using PXE
         # first test if rsh to server works
 	$frsh true >/dev/null 2>&1
 	if [ $? -ne 0 ]; then
+	    terror=3
 	    echo "Error: $frsh failed."
-	    ret=0
 	else
-	    # copy the kernel to the server
-	    $FAI_REMOTECP $target/boot/vmlinuz-* $LOGUSER@${SERVER}:/boot/fai/$HOSTNAME-localboot
-           
-	    # copy initrd to the server
-            if grep -iq do_initrd.*yes $target/etc/kernel-img.conf; then
-              $FAI_REMOTECP $target/boot/initrd.img-* \
-                            $LOGUSER@${SERVER}:/boot/fai/$HOSTNAME-initrd.img
-            fi
-	    . $diskvar # read ROOT_PARTITION
-
-            # Change the pxe configuration, test for initrd
-	    if grep -iq do_initrd.*yes $target/etc/kernel-img.conf; then
-		$frsh /usr/sbin/fai-chboot -k initrd=$HOSTNAME-initrd.img -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
-	    else
-		$frsh /usr/sbin/fai-chboot -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
-	    fi
+	    # remove pxe config, so host will use default and boot from local disk
+	    $frsh /usr/sbin/fai-chboot -r $HOSTNAME
 	fi
-
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
