@@ -1,9 +1,14 @@
 fai (2.4beta) unstable; urgency=low
 
-  * use command fai-class to define classes
-  * bootsector: do not use dpkg to get hardware architecture
+  * use command fai-class to define classes, fai-class writes status of
+    every script to status.log
+  * create config files for XFree86 4.1
+  * many changes in the package_config files
+  * bootsector: do not use dpkg to get hardware architecture, add man page
   * a lot of spelling mistakes corrected. Thanks Era! (closes: # 155735)
   * control: correct name for Debian distribution (closes: #150887)
+  * new templates: hooks/partition.kueppers.source, hooks/faiend.LAST
+    package_config/WWWKIOSK, class/WWWKIOSK.var, package_config/paeffgen
   * make-fai-nfsroot: add -l to tar when creating base.tgz (closes: #151173),
     add noatime to mount, new mknbi-linux options, check for existence of
     mknbi-linux (closes: #167900), replace $UID with `id -u`, do not call
@@ -11,22 +16,32 @@ fai (2.4beta) unstable; urgency=low
     option for mknbi-linux, always do setup for dhcp and bootp, write PATH
     to /root/.profile, correct location for syslog.conf, copy sources.list
     from /etc/fai if available, add diversion for discover
+  * scripts/*: convert some shell code to cfengine code, do not use fcopy
+    if only a few lines has to be changed
   * scripts/BOOT: echo each kernel module to a seperate line in, add
     supoprt for kernel using initrd, use fcopy for lilo.conf and menu.lst,
     /etc/modules, lilo.conf can also boot the old kernel, add initrd
     option when using grub
-  * scripts/LAST: add call: apt-get -f install
-  * scripts/USB: fix option for echo 
+  * scripts/DEFAULT1/S20: use declaration directories, add WWWKIOS entries
+  * scripts/LAST: add call: apt-get -f install, copy sources.list
+  * scripts/USB removed, now made in S20
   * scripts/FAI_BOOTPART: missing $target added, remove rdev call
   * lib/subroutines*: better regex for matching disks in /proc/partitions,
     task_sysinfo, prepare_apt, add link last to last action performed, new
     variable $LOGSERVER, list_disks move to a external script, disable
     debugging output in ifclass(), write exit status of scripts and hook
-    to status.log and stdout
+    to status.log and stdout, create_resolv_conf now an external script,
+    write exit status of hooks to status.log
+  * task_instsoft(): mount --bind /fai /tmp/target/fai so packages in
+    /fai/files/packages can be installed using apt-get
+
+  * new script get-boot-info contains subroutines for getting info via
+    BOOTP or DHCP, also detects network devices
   * DEFAULT/S01: install $addpackages with one dpkg call, installation of
     default kernel creates symlinks in /, make /root accessable only by
-    root, use fcopy -r to copy all dot files for the root account
-  * ftar: conditional rm -rf
+    root, use fcopy -r to copy all dot files for the root account, do not
+    copy sources.list
+  * ftar: conditional rm -rf, echange in error message
   * test if mknbi-linux is available (closes: #167900)
   * make-fai-bootfloppy: add grub support, code reorganized and split into
     more subroutines, rmdir lost+found and copy fewer files to get more
@@ -42,28 +57,33 @@ fai (2.4beta) unstable; urgency=low
     executables are available is using which
     * adddivert, mkdivert, rmalldivert, rmdivert moved to the new script
     fai-divert
+  * fai-divert: be quiet unless debug is set
   * mount_local_disks, umount_local_disks, fstab_mount move to new script
     fai-mount-disk 
   * Fai.pm and subroutines* are moved from lib/ moved to share/
   * fai-setup: ssh-keygen needs option -t (closes: #156947)
-  * fai.conf: correct line containing proposed-updates
+  * fai.conf: correct line containing proposed-updates, new variable
+    FAI_LOCAL_REPOSITORY, new directory for debian mirror
   * setup_harddisks: allow more that 3 primary partitions, new regex for
-    matching disks and partitions
+    matching disks and partitions, write less info to stdout, do not write
+    info to stdout which is written to a separate file
   * fai_modules_off: add block-major-{104,105}
   * remove debian/undocumented
   * install_packages: add option -l, only print the list of packages,
     add option -h, -t does not executes the commands, support for classes
-    listed after command
+    listed after command, change in echo strings, add option to manual
   * disk_config/: make /fai-boot partition larger, CS_KOELN use more
     flexible values for partitions sizes
   * add suffix -386 to name of kernel-image package
   * save_log_*(): do not create loops in symlinks, moved to external
     script fai-savelog
   * apt.conf: add option force-confdef to dpkg call
-  * 03hwdetect script loads scsi and ide modules and prints /proc/scsi
-    info
-  * move mount2dir to lib directory
-  * fcopy bug fix: option -r does not work correctly
+  * 06hwdetect script loads scsi and ide modules and prints /proc/scsi
+    info, less messages in verbose mode
+  * move mount2dir to lib directory, echo different messages for verbose
+    and debug flags
+  * fcopy bug fix: option -r does not work correctly, when no matching
+    file for a class is found, do not exit with error
   * templates/package_config: use nfs-kernel-server
   * debian/rules: use dh_installman to install manual pages
   * ATA33.var no longer needed, no tuning via hdparm in *.var
