@@ -225,8 +225,8 @@ fai_setup() {
     echo -e "\n------------------------------------------------------------"
     echo "$0: $FAI_VERSION"
     echo -e "------------------------------------------------------------\n"
+    echo -e "Press ctrl-c to interrupt FAI and to get a shell\n"
     echo -n "Kernel parameters:"; cat /proc/cmdline
-    echo -e "\nPress ctrl-c to interrupt FAI and to get a shell\n"
 
     if [ "$FAI_LOCATION" ]; then
 	mount -o ro $FAI_LOCATION /fai &&
@@ -353,7 +353,7 @@ fai_install() {
     if [ "$debug" ]; then
 	install_packages
     elif [ "$verbose" ]; then
-	nice yes 'n' | install_packages
+	nice yes 'n' | install_packages | tee -a /tmp/software.log
     else
 	nice yes 'n' | install_packages >> /tmp/software.log 2>&1
     fi
