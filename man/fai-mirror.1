@@ -1,7 +1,7 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .if \n(zZ=1 .ig zZ
 .if \n(zY=1 .ig zY
-.TH fai-mirror 1 "12 jan 2005" "FAI 2.6.6"
+.TH fai-mirror 1 "16 jan 2005" "FAI 2.6.6"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -46,11 +46,14 @@ DIRECTORY
 .SH DESCRIPTION
 This command creates a partitial mirror of Debian packages. It can
 be used to create the fai CD or as a local mirror when you can't
-download the whole Debian mirror. The mirror will contain all packages
-of all classes used in the files in
-/usr/local/share/fai/package_config.
+download the whole Debian mirror. By default, the mirror will contain
+all packages of all classes used in the configuration space (/usr/local/share/fai/package_config).
 
 .SH OPTIONS
+.TP
+.BI "\-c " CLASS[,CLASS]
+Use only this list of classes for building the mirror. Can't be used
+in conjunction with -x.
 .TP
 .B \-h
 Show simle help and version.
@@ -66,10 +69,16 @@ Preserve existing sources.list. NOT YET IMPLEMENTED.
 Create verbose output.
 
 .SH EXAMPLES
-.TP
+.br
    # fai-mirror /files/scratch/mirror
 
-Creates a partitial mirror.
+Creates a partitial mirror in the directory /files/scratch/mirror.
+
+   # fai-mirror -v -cDEFAULT,DEMO /debmirror
+
+Creates a partitial mirror containing all packages used in the classes
+DEFAULT and DEMO.
+
 
 .SH NOTES
 You only need root permissions if you access the official Debian
@@ -100,7 +109,8 @@ overriding the variables %command and @commands.
 .TP
 
 .FN /usr/local/share/fai/package_config/
-The FAI package configuration directory.
+The FAI package configuration directory. This directory is defined by
+the variable FAI_CONFIGDIR.
 
 .SH AUTHOR
 Thomas Lange <lange@informatik.uni-koeln.de>
