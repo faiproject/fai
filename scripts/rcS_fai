@@ -76,26 +76,33 @@ read_config() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+define_variables() {
+
+    # after all classes are defined, define variables
+    # source files, which can set variables
+    cd /fai/class
+    for class in $classes ; do
+	if [ -f $class.source ]; then
+	[ "$verbose" ] && echo "Executing $class.source"
+	[ "$debug" ] && set -v
+	. $class.source </dev/null
+	[ "$debug" ] && set +v
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_classes() {
 
     cd /fai/class
     echo "Now defining classes"
 
     # alphabetical sort is important
-    for f in `ls S[0-9]*.{sh,pl,source}` ; do
+    for f in `ls S[0-9]*.{sh,pl}` ; do
 	if [ -x $f -a -f $f ]; then
 	[ "$verbose" ] && echo "Executing $f"
 
 	case $f in
 	    *.pl) newclasses=`perl $f </dev/null` ;;
 	    *.sh) newclasses=`sh $f </dev/null | grep -v '^#'` ;;
-	    # source files, which can set variables
-	    *.source)
-	    [ "$debug" ] && set -v
-	    . $f </dev/null
-	    [ "$debug" ] && set +v
-	    newclasses=
-	    ;;
 	esac
 	[ "$debug" ] && echo "newclasses= $newclasses"
 	classes="$classes $newclasses"
@@ -111,7 +118,6 @@ define_classes() {
     cfclass=`echo $classes`
     cfclass=${cfclass// /.}
     [ "$debug" ] && echo "cfclass: $cfclass"
-    cd /
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
@@ -240,6 +246,7 @@ fai_sysinfo() {
 	fstab_mount
     ) > >( tee -a $rcslog )  2>&1
     define_classes
+    define_variables
     save_dmesg
     save_log_remote
     fai_boot
@@ -330,6 +337,7 @@ fai_install() {
     > $stamp
 
     define_classes > >( tee -a $rcslog )  2>&1
+    define_variables > >( tee -a $rcslog )  2>&1
     save_dmesg
     ( # execute in a subshell to get all output
 
@@ -423,6 +431,7 @@ case $FAI_ACTION in
 	;;
     showclasses)
 	define_classes
+	define_variables
 	echo The defined classes are:
 	echo $classes
 	echo The classes are also saved in /tmp/FAI_CLASSES
