@@ -26,14 +26,12 @@
 #*********************************************************************
 
 # source this file, then you have these function available in the shell
-# TODO: umount not yet perfect
-
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
 
     # look for ide and scsi disks; what about raid?
-    local dev=`cat /proc/partitions | egrep 'hd.$|sd.$|/disc$'`
+    local dev=`egrep 'hd.$|sd.$|/disc$' /proc/partitions`
     # the variable holds a space separated list of devices and block sizes
     device_size=`echo $dev | get_disk_size`
     # a list of all local disks
@@ -66,7 +64,7 @@ mount_local_disks() {
     [ "$1" = "rw" ] && mountoption=$1
 
     for disk in $disklist; do
-	partitions=`fdisk -l /dev/$disk | \
+	partitions=`LC_ALL=C fdisk -l /dev/$disk | \
 	    egrep -v " Empty| Extended" | \
 	    perl -ne 'print "$1\n" if m#^/dev/(\S+)\s#'`
 	for partition in $partitions; do
@@ -88,8 +86,8 @@ umount_local_disks() {
 
     local part
     test -d $FAI_ROOT || return
-    for part in `ls $FAI_ROOT`; do
-	umount $FAI_ROOT/$part
+    for part in `grep $FAI_ROOT /proc/mounts | cut -d ' ' -f 2| sort -r`; do
+	umount $part
     done
     rmdir $FAI_ROOT/*
     umount $FAI_ROOT
@@ -152,6 +150,22 @@ ifclass() {
 	[ x$cl = x$1 ] && return 0
     done
     return 1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+call_hook() {
+
+    local hook=$1
+    local cl
+    [ "$debug" ] && local dflag="-d"
+
+    for cl in $classes; do
+	local hfile=/fai/hooks/${hook}-$cl
+	if [ -x $hfile ]; then
+	   	echo "Calling hook: $hook-$cl"
+		# execute the hook
+		$hfile $dflag
+	fi
+done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_boot() {
