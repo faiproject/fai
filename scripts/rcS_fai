@@ -29,33 +29,15 @@
 #set -xv # for full debugging
 
 # some global variables
-DEBIAN_FRONTEND=Noninteractive
 FAI_VERSION=FAIVERSIONSTRING
 rcslog=/tmp/rcS.log
 bootlog=/tmp/bootpc.log
 dhcplog=/tmp/dhcp.log
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
-globalconf=/fai/fai_config/global.conf
 logdir=/var/log/fai
 romountopt="-o ro,rsize=8192"
 classes="DEFAULT $HOSTNAME LAST"  # default before defining classes
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-read_config() {
-
-    # read global config for FAI
-    if [ -r $globalconf ]; then
-	[ "$verbose" ] && echo "Reading $globalconf"
-	. $globalconf
-    fi
-
-    hostconf=/fai/fai_config/$HOSTNAME
-    if [ -r $hostconf ]; then
-	[ "$verbose" ] && echo "Reading $hostconf"
-	. $hostconf
-    fi
-    unset hostconf
-}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_variables() {
 
@@ -116,6 +98,7 @@ fai_init() {
 
     . /etc/fai.conf
     . /usr/share/fai/subroutines
+    DEBIAN_FRONTEND=Noninteractive
     # location of master files for cfengine
     FAI_FILES=/fai/files
     # local disks are mounted on this directory
@@ -141,25 +124,6 @@ fai_init() {
     create_ramdisk
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
     save_dmesg
-
-    # TODO: only start on demand; use FAI_FLAGS for that
-    syslogd -m 0 -p /tmp/etc/syslogsocket
-    klogd -c1 -f /tmp/kernel.log
-
-    dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
-    dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
-
-    # Since /fai is not yet mounted, this reads nfsroot/fai/fai_config/
-    # only usefull, if you don't use bootpc or dhcp
-    read_config
-
-    # create a resolv.conf
-    if [ "$DNSSRVS" ]; then
-	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
-	for dnshost in $DNSSRVS ; do
-	    echo "nameserver $dnshost" >>/tmp/etc/resolv.conf
-	done
-    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_setup() {
@@ -177,6 +141,22 @@ fai_setup() {
 Press ctrl-c to interrupt FAI and to get a shell
 EOF
 
+    call_hook first
+    # TODO: only start on demand; use FAI_FLAGS for that
+    syslogd -m 0 -p /tmp/etc/syslogsocket
+    klogd -c1 -f /tmp/kernel.log
+
+    dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
+    dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
+
+    # create a resolv.conf
+    if [ "$DNSSRVS" ]; then
+	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
+	for dnshost in $DNSSRVS ; do
+	    echo "nameserver $dnshost" >>/tmp/etc/resolv.conf
+	done
+    fi
+
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     [ "$NTPSRVS_1" ] && ntpdate -b -v $NTPSRVS
 
@@ -187,8 +167,7 @@ EOF
     mount $romountopt $FAI_LOCATION /fai &&
 	    echo "/fai mounted from $FAI_LOCATION"
 
-    read_config # read config from mounted $FAI_LOCATION
-
+    call_hook setup
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
 
     for flag in $FAI_FLAGS; do
@@ -206,8 +185,7 @@ EOF
 #    fi
 
     # create two virtual terminals
-    openvt -c2
-    openvt -c3
+    openvt -c2; openvt -c3
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
     disk_info
 }
@@ -306,6 +284,8 @@ prepare_apt() {
 
     # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
     cp /tmp/etc/resolv.conf /etc/hosts $FAI_ROOT/etc
+    # set hostname in $FAI_ROOT
+    echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
     cp /etc/apt/* $FAI_ROOT/etc/apt/
     # some packages must access /proc even in chroot environment
     mount -t proc proc $FAI_ROOT/proc
@@ -324,8 +304,6 @@ prepare_apt() {
 
     # fake some programs
     mkdivert /usr/sbin/xserver-configure
-# or mkdivert  ypbind; rm ypbind
-#    mkdivert /usr/sbin/ypbind
     mkdivert /usr/bin/ypwhich
     mkdivert /sbin/start-stop-daemon
     cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
@@ -335,10 +313,12 @@ fai_install() {
 
     > $stamp
 
+    {
     call_hook defclass
-    define_classes > >( tee -a $rcslog )  2>&1
+    define_classes
     call_hook defvar
-    define_variables > >( tee -a $rcslog )  2>&1
+    define_variables 
+    } > >( tee -a $rcslog )  2>&1
     save_dmesg
     ( # execute in a subshell to get all output
 
@@ -391,7 +371,6 @@ fai_install() {
     # undo fake of programs
     rmdivert /sbin/start-stop-daemon
     rmdivert /usr/sbin/xserver-configure
-#    rmdivert /usr/sbin/ypbind
     rmdivert /usr/bin/ypwhich
 
     date
@@ -424,7 +403,6 @@ fai_install() {
 
 # callarg=$1
 fai_init
-call_hook setup
 fai_setup  > >( tee -a $rcslog ) 2>&1
 
 # if you want to recall rcS_fai
