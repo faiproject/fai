@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # $Id$
 #*********************************************************************
@@ -27,16 +27,17 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.8.0, 25-nov-2002"
+version="version 2.0, 13-dec-2002"
 set -e
-MKIMAGE=0
+timeout=15
+mkimage=0
 floppydev=/dev/fd0
-MOUNTPOINT=/floppy
+mountpoint=/floppy
 mountopts=""
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
     cd /
-    umount "$MOUNTPOINT" || true
+    umount "$mountpoint" 2>/dev/null || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -48,9 +49,9 @@ die() {
 determine_kernel_version() {
 
     local num all
-    all=$(ls $NFSROOT/boot/System.map-*)
-    if [ `echo $all | wc -l ` = 1 ]; then
-	KERNELVERSION=$(echo "kernel version $all" | sed -e 's#.*/System.map-##')
+    all=$(ls $NFSROOT/boot/vmlinuz-*)
+    if [ `echo $all | wc -l` = 1 ]; then
+	KERNELVERSION=$(echo "kernel version $all" | sed -e 's#.*/vmlinuz-##')
     else
 	die "Can't determine kernel version for $all"
     fi
@@ -93,24 +94,151 @@ EOF
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+determine_network_parameters() {
+
+    ndevices=0
+    devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: '{print $1}'`
+    for dev in $devices; do
+	ndevices=$(($ndevices+1))
+    done
+    [ $ndevices = 0 ] && die "No network interface found. Can't determine IP address."
+    if [ $ndevices = 1 ]; then
+	SERVERINTERFACE=$dev
+    else
+	while [ -z "$SERVERINTERFACE" ]; do
+	    echo "Your machine has multiple network interfaces: $devices"
+	    echo -n "Specify which one will be used for FAI (e.g. eth1): "
+	    read SERVERINTERFACE
+	done
+    fi
+    SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
+    echo "Using interface $SERVERINTERFACE with IP address: $SERVERIP"
+
+    if [ -n "${TARGETHOST}" ] ; then
+	BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
+	NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
+	GATEWAY=`LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }'`
+	TARGETIP=`host -t a ${TARGETHOST} 2> /dev/null | awk '{print $3}'`
+	fixedparams="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off" 
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+lilo_floppy() {
+
+# make a boot floppy using lilo
+
+    echo "Using lilo for the boot floppy."
+    mkdir $mountpoint/boot $mountpoint/etc
+    rmdir $mountpoint/lost+found
+
+    cd $NFSROOT && cp -dp boot/boot-menu.b boot/vmlinuz-$KERNELVERSION $mountpoint/boot
+    ln -s boot/vmlinuz-$KERNELVERSION $mountpoint/vmlinuz
+    ln -fs $mountpoint/boot/boot-menu.b $mountpoint/boot/boot.b
+
+    [ $mkimage -eq 1 ] && cat > $mountpoint/etc/lilo.conf <<-EOF
+    disk=$(mount | grep $mountpoint | sed -e 's/.*loop=\([^)]*\))/\1/')
+    bios=0x00
+    cylinders=80
+    heads=2
+    sectors=18
+EOF
+
+    cat >> $mountpoint/etc/lilo.conf <<-EOF
+
+    boot=$floppydev
+    install=$mountpoint/boot/boot-menu.b
+    map=$mountpoint/boot/map
+    delay=$timeout
+    compact
+    read-only
+
+    default=$lilodef
+
+    image=$mountpoint/vmlinuz
+    append="ip=both root=/dev/nfs $params"
+    label=FAI-BOTH
+
+    image=$mountpoint/vmlinuz
+    append="ip=bootp root=/dev/nfs $params"
+    label=FAI-BOOTP
+
+    image=$mountpoint/vmlinuz
+    append="ip=dhcp root=/dev/nfs $params"
+    label=FAI-DHCP
+
+    image=$mountpoint/vmlinuz
+    label=FAI-FIXED-IP
+    append="root=$SERVERIP:$NFSROOT ip=both $fixedparams $params"
+EOF
+    $NFSROOT/sbin/lilo -C $mountpoint/etc/lilo.conf
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+grub_floppy() {
+
+    echo "Using grub for the boot floppy."
+    # make a boot floppy using grub
+    kernel=vmlinuz-$KERNELVERSION
+    mkdir -p $mountpoint/boot/grub
+    cp -p /usr/lib/grub/i386-pc/stage? $mountpoint/boot/grub
+    cp $NFSROOT/boot/$kernel $mountpoint
+
+    grubconf="
+default $grubdef
+#default saved
+timeout $timeout
+
+title FAI-BOTH
+kernel (fd0)/$kernel root=/dev/nfs ip=both $params
+savedefault
+
+title FAI-BOOTP
+kernel (fd0)/$kernel root=/dev/nfs ip=bootp $params
+savedefault
+
+title FAI-DHCP
+kernel (fd0)/$kernel root=/dev/nfs ip=dhcp $params
+savedefault
+
+title FAI-FIXED-IP
+kernel (fd0)/$kernel root=$SERVERIP:$NFSROOT ip=both $fixedparams $params
+savedefault
+"
+    echo "$grubconf" > $mountpoint/boot/grub/menu.lst
+    umount $mountpoint
+    grub --batch --device-map=/dev/null >/dev/null <<EOF
+device (fd0) $floppydev
+root (fd0)
+setup (fd0)
+quit
+EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
-while getopts "vf:s:m:hd:" opt ; do
-        case "$opt" in
+
+while getopts "lgvf:s:m:hd:" opt ; do
+    case "$opt" in
+	l) lilo=1 ;;
+	g) grub=1 ;;
         h) usage ;;
-	f) MKIMAGE=1; floppydev="$OPTARG" ;;
-	m) MOUNTPOINT="$OPTARG" ;;
+	f) mkimage=1; floppydev="$OPTARG" ;;
+	m) mountpoint="$OPTARG" ;;
 	s) TARGETHOST="$OPTARG" ;;
 	d) BTYPE="$OPTARG" ;;
 	v) verbose=1 ;;
         ?) echo "Error parsing arguments"; exit 1;;
-esac
+    esac
 done
 shift `expr $OPTIND - 1`
+case "$BTYPE" in
+    b) lilodef=FAI-BOOTP ; grubdef=1 ;;
+    d) lilodef=FAI-DHCP  ; grubdef=2 ;;
+    f) lilodef=FAI-FIXED-IP ; grubdef=3 ;;
+    *) lilodef=FAI-BOTH  ; grubdef=0 ;;
+esac
 
-if [ `id -u` -ne 0 ]; then
- echo "You must be root! Or try $0 -h"
- exit 9
-fi
+[ $lilo ] && [ $grub ] && die "Specify only one of -l or -g"
+[ $lilo ] || [ $grub ] || grub=1
+[ `id -u` -eq 0 ] || die "You must be root! Or try $0 -h"
 
 trap "umount_dirs" EXIT
 # additional kernel parameter
@@ -118,104 +246,37 @@ params="$@"
 
 . /etc/fai/fai.conf
 determine_kernel_version
+determine_network_parameters
 
-case "$BTYPE" in
-    b) defaultboot=FAI-BOOTP ;;
-    d) defaultboot=FAI-DHCP  ;;
-    f) defaultboot=FAI-FIXED-IP  ;;
-    *) defaultboot=FAI-BOTH  ;;
-esac
-
-ndevices=0
-devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: '{print $1}'`
-for dev in $devices; do
-    ndevices=$(($ndevices+1))
-done
-[ $ndevices = 0 ] && die "No network interface found. Can't determine IP address."
-if [ $ndevices = 1 ]; then
-    SERVERINTERFACE=$dev
-else
-    while [ -z "$SERVERINTERFACE" ]; do
-	echo "Your machine has multiple network interfaces: $devices"
-	echo -n "Specify which one will be used for FAI (e.g. eth1): "
-	read SERVERINTERFACE
-    done
-fi
-SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
-echo "Using interface $SERVERINTERFACE with IP address: $SERVERIP"
-
-if [ -n "${TARGETHOST}" ] ; then
-    BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
-    NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
-    GATEWAY=`LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }'`
-    TARGETIP=`host -t a ${TARGETHOST} 2> /dev/null | awk '{print $3}'`
-    fixedparams="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off" 
-fi
-
-if [ $MKIMAGE -eq 1 ]; then 
+if [ $mkimage -eq 1 ]; then 
+    [ -e $floppydev ] && die "$floppydev already exists. Please remove it and restart again."
     dd if=/dev/zero of=$floppydev bs=1024 count=1440
     mountopts="$mountopts -o loop"
     mkfsopt=-F
 fi
 
-# pay attention: if -i option is too large, then too few inodes are created on the floppy
-# check with df -i
-mke2fs $mkfsopt -q -i 50000 -m 0 $floppydev || die "Can't create ext2 file system on $floppydev"
-mount $mountopts $floppydev $MOUNTPOINT || die "Can't mount floppy $floppydev"
-mkdir $MOUNTPOINT/boot $MOUNTPOINT/etc
-rmdir $MOUNTPOINT/lost+found
+# pay attention: if -i option is too large, then too few inodes
+# are created on the floppy. Check it with df -i
+mke2fs $mkfsopt -q -i 40000 -m 0 $floppydev || \
+  die "Can't create ext2 file system on $floppydev"
+mount $mountopts $floppydev $mountpoint || die "Can't mount floppy $floppydev"
 
-cd $NFSROOT && cp -dp boot/boot-menu.b boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/boot
-ln -s boot/vmlinuz-$KERNELVERSION $MOUNTPOINT/vmlinuz
-ln -fs $MOUNTPOINT/boot/boot-menu.b $MOUNTPOINT/boot/boot.b
-
-[ $MKIMAGE -eq 1 ] && cat > $MOUNTPOINT/etc/lilo.conf <<-EOF
-    disk=$(mount | grep $MOUNTPOINT | sed -e 's/.*loop=\([^)]*\))/\1/')
-    bios=0x00
-    cylinders=80
-    heads=2
-    sectors=18
-EOF
-
-cat >> $MOUNTPOINT/etc/lilo.conf <<-EOF
-    boot=$floppydev
-    install=$MOUNTPOINT/boot/boot-menu.b
-    map=$MOUNTPOINT/boot/map
-    delay=15
-    compact
-    read-only
-
-    default=$defaultboot
-
-    image=$MOUNTPOINT/vmlinuz
-    append="ip=both root=/dev/nfs $params"
-    label=FAI-BOTH
-
-    image=$MOUNTPOINT/vmlinuz
-    append="ip=bootp root=/dev/nfs $params"
-    label=FAI-BOOTP
-
-    image=$MOUNTPOINT/vmlinuz
-    append="ip=dhcp root=/dev/nfs $params"
-    label=FAI-DHCP
-
-    image=$MOUNTPOINT/vmlinuz
-    label=FAI-FIXED-IP
-    append="root=$SERVERIP:$NFSROOT ip=both $fixedparams $params"
-
-EOF
-
-$NFSROOT/sbin/lilo -C $MOUNTPOINT/etc/lilo.conf
-
+[ $lilo ] && lilo_floppy
+[ $grub ] && grub_floppy
 cat <<-EOF
-	Writing boot data to floppy. The default boot label is: $defaultboot
+	Writing boot data to floppy. The default boot label is: $liloboot
 	The kernel configuration is $NFSROOT/boot/config-$KERNELVERSION.
 EOF
 
 [ "$params" ] && echo "Additional kernel parameters: $params"
 
-[ "$verbose" ] && {
+[ "$verbose" ] && [ $lilo ] && {
     echo "The lilo.conf is:"
     echo
-    cat $MOUNTPOINT/etc/lilo.conf
+    cat $mountpoint/etc/lilo.conf
+}
+[ "$verbose" ] && [ $grub ] && {
+    echo "The grub menu is:"
+    echo
+    echo "$grubconf"
 }
