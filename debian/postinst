@@ -10,7 +10,7 @@
 #
 # see: dh_installdeb(1)
 
-set -e
+set -eu
 
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
@@ -55,7 +55,7 @@ add_fai_account() {
 	echo Make sure, that all install clients can
 	echo log into this account without a password
     else
-	adduser --system --disabled-password --gecos "fai account for log files" $LOGUSER || true
+	adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
 	gid=`id -ng $LOGUSER`
 	perl -pi.bak -e "s#^$LOGUSER:(.+):/bin/false#$LOGUSER:\1:/bin/bash#" /etc/passwd
 	echo "+@faiclients root" > /home/$LOGUSER/.rhosts
@@ -82,7 +82,7 @@ case "$1" in
     add_export_line /usr  "@faiclients(ro,no_root_squash)"
 
     if [ ! -d /usr/local/share/fai/fai_config ];then
-	echo "You have no fai configuration. Copy FAI template files with:"
+	echo "You have no FAI configuration. Copy FAI template files with:"
 	echo "cp -pR /usr/share/doc/fai/templates/* /usr/local/share/fai"
 	echo "Then change the configuration files to meet your local needs."
     fi
