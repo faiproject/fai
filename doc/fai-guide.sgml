@@ -6,7 +6,7 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.1.2">
+<!entity faikernelver "1.1.3">
 <!entity faiver "2.2.3">
 <!entity faiverdate "15 november, 2001">
 
@@ -219,6 +219,8 @@ inspect the hardware or do any other task.
 	    <item> <p>Keyboard layout selectable</p> </item>
 	    <item> <p>Can be used as a rescue system</p> </item>
 	    <item> <p>Tested on SUN SPARC hardware</p> </item>
+	    <item> <p>Flexible system through easy class concept </p> </item>
+	    <item> <p>Predefined Beowulf classes included </p> </item>
 	    <item> <p>Diskless client support</p> </item>
 	    <item> <p>Easily add your own functions via hooks</p> </item>
 	    <item> <p>Easily change the default behavior via hooks</p> </item>
@@ -770,10 +772,18 @@ IP-Config: Complete:
      Copyright (c) 1999-2001, Thomas Lange
              lange@informatik.uni-koeln.de
    ------------------------------------------------------
-.
-.
+
+Calling task_confdir
+Kernel parameters:auto rw root=/dev/nfs
+Defining variable: root=/dev/nfs
+Sending BOOTP request using device eth0
 /fai mounted from kueppers:/usr/local/share/fai
-FAI_ACTION: sysinfo
+Calling task_setup
+.
+.
+Calling task_action
+FAI_ACTION: install
+Performing FAI installation. All data may be overwritten !
 .
 .
 Press &lt;RETURN&gt; to reboot or ctrl-c to execute a shell
@@ -1075,6 +1085,8 @@ questions:
   <tag></tag> <item> <p>Will I create a Beowulf cluster, or do I
   have multiple workstations, each only used by a single user ?</p> </item>
   <tag></tag> <item> <p>How does my LAN topology looks like ?</p> </item>
+  <tag></tag> <item> <p>Which applications will be run ?</p> </item>
+  <tag></tag> <item> <p>Do the users need a queueing system ?</p> </item>
   <tag></tag> <item> <p>Do I have uniform hardware ?</p> </item>
   <tag></tag> <item> <p>Will the hardware stay uniform in the future ?</p> </item>
   <tag></tag> <item> <p>How should the hosts be named ?</p> </item>
@@ -1668,13 +1680,15 @@ the commands install and remove. All dependencies are resolved and <prgn>apt-get
 is used to perform the installation or removal of packages. The order of the
 packages is of no matter. 
 <p>
-A line, that contains the <tt>PRELOADRM</tt> commands, loads a file
-into a directory before installing the packages. For examples the
-package <prgn>realplayer</prgn> needs an archive to install the
-software, so this archive is downloaded to the directory
-<file>/root</file>.  After installing the packages this file will be
-removed. If the file shouldn't be removed, use the the command
-<tt>PRELOAD</tt> instead.
+A line, that contains the <tt>PRELOADRM</tt> commands, downloads a
+file using <manref name="wget" section="1"> into a directory before
+installing the packages. Using the <tt>file:</tt> URL, this file is copied
+from <var>$FAI_ROOT</var> to the download directory.
+For examples the package
+<prgn>realplayer</prgn> needs an archive to install the software, so
+this archive is downloaded to the directory <file>/root</file>.  After
+installing the packages this file will be removed. If the file
+shouldn't be removed, use the the command <tt>PRELOAD</tt> instead.
 
 <p>
 If you specify a package that does not exists (e.g. you make a typo),
