@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # $Id$
 #*********************************************************************
@@ -6,7 +6,7 @@
 # fai-class - determine all classes a host belongs to
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2002-2003 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2002-2005 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.4, 24-july-2003"
+version="version 1.5, 8-jan-2005"
 
 # import variables: $LOGDIR $verbose $debug
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -77,7 +77,7 @@ usage() {
 
     ex=$1
     cat <<-EOF
-	fai-class $version. Copyright (C) 2002 Thomas Lange
+	fai-class $version. Copyright (C) 2002-2005 Thomas Lange
 	Report bugs to <fai@informatik.uni-koeln.de>.
 
 	Usage: fai-class [OPTION] DIRECTORY CLASSFILE
@@ -93,7 +93,7 @@ EOF
 testclass() {
 
     # test if some classes are define multiple times
-    duplicate=`sort $classfile | uniq -dc`
+    duplicate=$(sort $classfile | uniq -dc)
     if [ -n "$duplicate" ]; then
 	echo "$0 Following classes are defined multiple times: $duplicate"
 	exit 2
@@ -114,7 +114,7 @@ setup() {
         *) usage 1 ;;
 	esac
     done
-    shift `expr $OPTIND - 1`
+    shift $(($OPTIND - 1))
     [ -z "$2" ] || [ -n "$3" ] && usage 1
 
     classdir=$1
@@ -131,7 +131,7 @@ setup() {
 	verbosemsg "Setting LOGDIR to default value /tmp/fai"
 	LOGDIR=/tmp/fai; export LOGDIR
     fi
-    HOSTNAME=`uname -n | cut -d. -f1`; export HOSTNAME
+    HOSTNAME=$(uname -n | cut -d. -f1); export HOSTNAME
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
@@ -147,9 +147,9 @@ echo DEFAULT | addclass
 # define classes by executing scripts
 # alphabetical sort is important
 if [ "$debug" ]; then
-    scripts=`ls [0-9][0-9]*`
+    scripts=$(echo [0-9][0-9]*)
 else
-    scripts=`ls [0-9][0-9]* 2>/dev/null`
+    scripts=$(echo [0-9][0-9]* 2>/dev/null)
 fi
 debugmsg "Scripts found: $scripts"
 
@@ -160,7 +160,7 @@ for f in $scripts ; do
 	echo "File $f is not executable, so it's not used for defining classes."
 	continue
     fi
-    classes=`cat $filename`
+    classes=$(cat $filename)
     export classes
     case $f in
 	*~|*.bak) echo "Skipping backup file $f" ;;
@@ -173,7 +173,7 @@ for f in $scripts ; do
 	    echo $newclasses | addclass ;; 
 	*)
 	    verbosemsg "Executing $classdir/$f."
-	    classes=`$f </dev/null`
+	    classes=$($f </dev/null)
 	    fc_check_status $f $?
 	    echo $classes | addclass
 	    ;;
@@ -201,6 +201,6 @@ fi
 echo $HOSTNAME LAST | addclass
 
 # show all classes if verbose
-verbosemsg List of all classes: `cat $filename`
+verbosemsg List of all classes: $(cat $filename)
 [ "$ctest" ] && testclass
 exit 0
