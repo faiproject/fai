@@ -79,6 +79,18 @@ EOF
 	chainloader  +1
 EOF
     fi
+
+    # add entry for memtest
+    if dpkg -l memtest86 > /dev/null 2>&1 ; then
+    cat >> $target/boot/grub/menu.lst <<-EOF
+
+        title  memtest
+        root   $broot
+        kernel /boot/memtest86.bin
+
+EOF
+    fi
+
     }
     rdev $target/$kernelname $ROOT_PARTITION
     echo "Grub installed for $kernelname on $broot"
