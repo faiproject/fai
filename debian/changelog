@@ -23,7 +23,15 @@ fai (2.3pre) unstable; urgency=low
     Checked for existance of $NFSROOT/proc/modules file before calling
     umount $NFSROOT/proc
     Recursively copies contents of /etc/fai/ directory (good if using CVS)
+    Install $NFSROOT_PACKAGES in a second pass, to sidestep conflicts
+    (e.g. so that ssh may replace rsh-client)
+    Don't set up $LOGUSER's home directory if that variable is undefined
   * conf/fai_modules_off: more modules turned off
+  * call openvt with full shell path (closes: #134641)
+  * hooks are also skipped if task is skipped
+  * hooks that end in .source are sourced
+  * class/*.mod file can now define variables
+  * apt/conf: set Assume-Yes "true" so apt-get (and tasksel) is noninteractive
   * lib/subroutines: /dev/ida/ and /dev/rd/ support in
     subroutine:umount_local_disks, added $netdevices_up, use $tfsab
     instead of fstab (for solaris support), /fai is now $FAI, use shm
@@ -32,12 +40,18 @@ fai (2.3pre) unstable; urgency=low
     do_scriptss calls every script class/<classname>/S[0-9]* when class is
     not a file, execute all S[0-9]* scripts in a directory
     /fai/scripts/$class/, skip all comment lines when definig classes
+    task_partition() call setup_harddisk only if no disk_var.sh exists
+    defclass also sources all scripts class/S*.source
+    add subroutines adddivert(), rmalldivert(); task_finish calls
+    rmalldivert
   * setup_harddisk: raid support for /devc/rd and /dev/ida, called with -d
   * doc/Makefile: detect if anything is really to do
   * use gzip -dc instead of zcat
+  * make-fai-bootfloppy: do not copy /boot/System.map to floppy
   * added prtnetgr; change netgroup example and script all_hosts to use it
   * fcopy: added debug message if executing postinst, ignore CVS
-    directories, use File::Find
+    directories, use File::Find, now sets envionment variables $target and
+    $FAI_ROOT, bug fix in -d option, new options -L and -P,
   * KERNELVERSION not needed in fai.conf, now automaticly determined in
     make-fai-* scripts
   * Files added: THANKS, preinst, prtnetgr, pxelinux.cfg
