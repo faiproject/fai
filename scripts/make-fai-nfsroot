@@ -73,6 +73,12 @@ if [ -z "$NFSROOT" ]; then
     exit 4
 fi
 
+if [ -z "$FAI_SOURCES_LIST" -a ! -s "$cfdir/sources.list" -a ! -f /etc/apt/sources.list ]; then
+    echo "FAI_SOURCES_LIST undefined and neither $cfdir/sources.list nor /etc/apt/sources.list exists."
+    echo "I think something is wrong. Can't continue."
+    exit 7
+fi
+
 case `uname -m` in
     i386|i486|i586|i686) 
 	arch_packages="grub read-edid kudzu hwtools" ;;
@@ -176,7 +182,7 @@ copy_fai_files() {
     cd $NFSROOT
     cp -p $SHAREFAI/etc/dhclient.conf etc/dhcp3
     ln -fs ../../sbin/dhclient-script etc/dhcp3/dhclient-script
-    cp -Rp $cfdir etc/fai
+    cp -Rp $cfdir/* etc/fai
     [ -f $cfdir/.cvspass ] && cp -p $cfdir/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
     cp -p /usr/sbin/{ftar,fcopy,install_packages,bootsector} usr/sbin/
@@ -216,9 +222,10 @@ create_nfsroot() {
     call_with_stamp create_base
 
     if [ "$FAI_DEBMIRROR" ]; then
+	[ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
         mount -o ro,noatime,rsize=8192 $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || \
-                die "Can't mount $FAI_DEBMIRROR"
+                die "Can't mount $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         fi
 
     # hoaks some packages
@@ -234,11 +241,15 @@ create_nfsroot() {
 
     # use FAI_SOURCES_LIST, if undefined copy from /etc/fai or last try from /etc/apt
     if [ "$FAI_SOURCES_LIST" ]; then
+	[ "$verbose" ] && echo "Using FAI_SOURCES_LIST."
         echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     else
+	[ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
         cp $cfdir/sources.list etc/apt/sources.list || \
-        cp /etc/apt/sources.list etc/apt/sources.list
-
+        cp /etc/apt/sources.list etc/apt/sources.list || \
+	{ echo "FAI_SOURCES_LIST undefined and no sources.list file found."
+	  echo "I think something is wrong. But I'll try to continue."
+	}
     fi
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
     [ -f /etc/apt/preferences ] && cp /etc/apt/preferences etc/apt
