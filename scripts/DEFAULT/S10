@@ -7,7 +7,6 @@ gmenu=$target/boot/grub/menu.lst
 grubvars() {
     # define variables for grub
     fp=$1
-    #fullpath=$(ls $target/boot/vmlinuz-*)
 
     dfline=$(df $fp | grep '^/dev/')
     dev=$(echo $dfline | cut -d ' ' -f1)
@@ -117,8 +116,9 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ifclass FAI_BOOTPART && {
 
-    mkdir -p $target/fai-boot/boot
-    cp -a /boot/vmlinuz* $target/fai-boot/boot
+    rev=`uname -r`
+    mkdir -p $target/fai-boot
+    cp -a /boot/vmlinuz-$rev $target/fai-boot
 
     ifclass LILO && {
     # write lilo.conf and install lilo to disk
@@ -137,8 +137,8 @@ EOF
     ifclass GRUB && {
 
 	echo "Add /fai-boot partition to menu.lst for grub"
-	cd $target && kernelname=/$(ls fai-boot/boot/vmlinuz-*)
-	fullpath=$(ls $target/fai-boot/boot/vmlinuz-*)
+	cd $target && kernelname="/fai-boot/vmlinuz-$rev"
+	fullpath="$target/fai-boot/vmlinuz-$rev"
 	grubvars $fullpath
 	cat >> $gmenu <<-EOF
 
