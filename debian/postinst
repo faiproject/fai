@@ -1,4 +1,6 @@
 #! /bin/sh
+
+# $Id $
 #*********************************************************************
 # postinst -- setup fai
 #
@@ -58,9 +60,11 @@ add_export_line /usr  "@faiclients(ro,no_root_squash)"
 
 # TODO: if $faiuser; then ..... fi
 adduser --system --disabled-password --gecos "fai account for log files" $faiuser || true
+gid=`id -g $faiuser`
+
+# TODO: test if adduser failed
 perl -pi.bak -e "s#^$faiuser:(.+):/bin/false#$faiuser:\1:/bin/bash#" /etc/passwd
 echo "+@faiclients root" > /home/$faiuser/.rhosts
-gid=`id -g $faiuser`
 chown $faiuser:$gid /home/$faiuser/.rhosts
 chmod go-rwx /home/$faiuser/.rhosts
 

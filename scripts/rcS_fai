@@ -1,9 +1,8 @@
 #!/bin/bash
-
 # $Id$
 #*********************************************************************
 #
-# rcS -- main FAI installation script executed after booting
+# rcS_fai -- main fai installation script executed after booting
 #
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 1999, 2000 by Thomas Lange, lange@informatik.uni-koeln.de
@@ -27,14 +26,12 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-#set -e
-# if you need full debugging set -xv
-#set -xv
+FAI_VERSION=FAIVERSIONSTRING
 
-FAI_VERSION="FAI Version  1.1beta2, june 20, 2000"
-
+#set -xv # for full debugging
 rcslog=/tmp/rcS.log
 bootlog=/tmp/bootpc.log
+dhcplog=/tmp/dhcp.log
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 globalconf=/fai/fai_config/global.conf
 logdir=/var/log/fai
@@ -47,6 +44,7 @@ die() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_boot() {
+
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
     [ -z $reboot ] && read
     echo "rebooting now"
@@ -81,7 +79,7 @@ save_log_remote() {
     logdir=$HOSTNAME/$FAI_ACTION
     rsh -l $FAI_LOGUSER $SERVER "rm -f $logdir/* ; \ 
 	test -d $logdir || mkdir -p $logdir" 2> $devnull
-    rcp -p /tmp/* $FAI_LOGUSER@$SERVER:$logdir 2> $devnull || true
+    rcp -p /tmp/* $FAI_LOGUSER@$SERVER:$logdir 2> $devnull
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract_base() {
@@ -170,20 +168,16 @@ define_classes() {
     cd /
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-fai_init() {
-    set -a
-    PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
-    umask 022
-    mount -n -t proc proc /proc
-    cat /proc/kmsg >/dev/tty4 &
-    [ -x /sbin/update ] && update
-    create_ramdisk
-    trap 'echo "You can reboot with faireboot";bash' INT QUIT
-    dmesg > /tmp/dmesg.log
+get_dhcp_info() {
+    dhclient -lf /tmp/dhcp-lease >$dhcplog 2>/tmp/dhclient.log
+    rm -f /tmp/dhcp-lease
+    [ -n "$verbose" -a -f $dhcplog ] && echo reading $dhcplog
+    eval `cat $dhcplog`
+    killall dhclient-2.2.x
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_bootp_info() {
 
-    echo -e "\n------------------------------------------------------------"
-    echo "$0: $FAI_VERSION"
-    echo -e "------------------------------------------------------------\n\n"
     # define all bootpc information as variables
     bootpc --returniffail > $bootlog
     [ -n "$verbose" -a -f $bootlog ] && echo reading $bootlog
@@ -192,13 +186,34 @@ fai_init() {
     FAI_ACTION=$T171
     FAI_FLAGS=$T172
     FAI_NFSSERVER_USR=$T173
+    #FAI_EXTRA_MOUNT=$T174 # additional mount (eg. /usr/local)
     #FAI_BACKUP_LIST=$T174
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fai_init() {
 
-    read_config   # this reads nfsroot/fai/fai_config/; only usefull, if you don't use bootpc
+    set -a
+    umask 022
+    PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
+    DEBIAN_FRONTEND=Noninteractive
+    mount -n -t proc proc /proc
+    mount -n -t devpts devpts /dev/pts
+    mount -n -o remount,rw /dev/root /
+    cat /proc/kmsg >/dev/tty4 &
+    [ -x /sbin/update ] && update
+    create_ramdisk
+    trap 'echo "You can reboot with faireboot";bash' INT QUIT
+    dmesg > /tmp/dmesg.log
+
+    # or read the parmeter from cmdline ?
+    [ -f /fai/BOOTP ] && get_bootp_info
+    [ -f /fai/DHCP ] && get_dhcp_info
+
+    read_config   # this reads nfsroot/fai/fai_config/; only usefull, if you don't use bootpc or dhcp
 
     # create a resolv.conf
     if [ "$DNSSRVS" ]; then
-	[ "$SEARCH" ] && echo "search $SEARCH" >/tmp/etc/resolv.conf
+	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/tmp/etc/resolv.conf
 	for dnshost in $DNSSRVS ; do
 	    echo "nameserver $dnshost" >>/tmp/etc/resolv.conf
 	done
@@ -207,8 +222,11 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_setup() {
 
+    echo -e "\n------------------------------------------------------------"
+    echo "$0: $FAI_VERSION"
+    echo -e "------------------------------------------------------------\n"
+    echo -e "Press ctrl-c to interrupt FAI and to get a shell\n"
     echo -n "Kernel parameters:"; cat /proc/cmdline
-    echo -e "\nPress ctrl-c to interrupt FAI and to get a shell\n"
 
     if [ "$FAI_LOCATION" ]; then
 	mount -o ro $FAI_LOCATION /fai &&
@@ -217,40 +235,41 @@ fai_setup() {
 
     read_config # read config from mounted /fai
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
+    ststd=$FAI_ROOT/sbin/start-stop-daemon
 
     for flag in $FAI_FLAGS; do
 	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
 	eval "$flag=1"
     done
 
+    devnull=/dev/null
+    [ "$debug" ] && devnull=/dev/console;
 
-    if [ "$debug" ]; then
-	devnull=/dev/console
-    else
-	devnull=/dev/null
-    fi
-
-    # after mounting /usr, we have everything needed
+    # after mounting /usr, we have everything needed # not required any more
     if [ "$FAI_NFSSERVER_USR" ]; then
 	mount -o ro -n ${FAI_NFSSERVER_USR} /usr &&
 	    echo "/usr mounted from ${FAI_NFSSERVER_USR}"
     fi
-    [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
+    if [ "$FAI_EXTRA_MONT" ]; then
+	mount -o ro -n $FAI_EXTRA_MOUNT && echo "$FAI_EXTRA_MOUNT mounted"
+    fi
 
+    [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     # support for other keyboards
     [ "$FAI_KEYMAP" ] && loadkeys /usr/share/keymaps/$FAI_KEYMAP
     [ "$FAI_CONSOLEFONT" ] && consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT
+    openvt bash; openvt bash
+    [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_configure() {
 
 # execute scripts; cfengine, shell and perl scripts are known types
 cd /fai/scripts
+
 for class in $classes ; do
 if [ -x $class -a -f $class ]; then
-
     filetype=`file $class`
-
     case $filetype in
 
 	*"shell script"*)
@@ -281,38 +300,31 @@ done
 prepare_apt() {
 
     # ftp and http needs resolv.conf in chroot environment
-    cp /tmp/etc/resolv.conf $FAI_ROOT/etc || true
-
+    cp /tmp/etc/resolv.conf $FAI_ROOT/etc
     echo "$FAI_SOURCES_LIST" > $FAI_ROOT/etc/apt/sources.list
-    cp /usr/lib/fai/etc/apt.conf $FAI_ROOT/etc/apt/
-
+    cp -p /etc/apt/apt.conf $FAI_ROOT/etc/apt/
     # some packages must access /proc even in chroot environment
     chroot $FAI_ROOT mount /proc /proc -t proc
 
     chroot $FAI_ROOT apt-get update
     chroot $FAI_ROOT apt-get check
-    chroot $FAI_ROOT apt-get upgrade
     [ $? -ne 0 ] && chroot $FAI_ROOT apt-get -f -y install </dev/null 
     chroot $FAI_ROOT dpkg -C
     [ $? -ne 0 ] && nice yes 'n'|  chroot $FAI_ROOT dpkg --configure -a 
+    chroot $FAI_ROOT apt-get -f -y remove pcmcia-cs
+    chroot $FAI_ROOT apt-get -f -y upgrade </dev/null
 
     # fake start-stop-daemon
-    mv $FAI_ROOT/sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon.orig
-    ln -s /bin/true $FAI_ROOT/sbin/start-stop-daemon
+    mv $ststd ${ststd}.orig
+    cp -p /sbin/start-stop-daemon $ststd
 
-    DEBIAN_FRONTEND=Noninteractive
     chroot $FAI_ROOT apt-get -f -y --fix-missing install debconf
-
     # WORKAROUND for several packages that loop when getting n<Return>
     chroot $FAI_ROOT apt-get -f -y --fix-missing install libpaperg </dev/null
 
     # attention: telnetd must be configured before nis
-    
     # ntp does not like n<Return> as input without ntp.conf
     touch $FAI_ROOT/etc/ntp.conf
-
-
-
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_install() {
@@ -329,30 +341,28 @@ fai_install() {
     if [ -s $diskvar ]; then
 	. $diskvar
     else
-	die "Error: $diskvar not found"
+	die "Error: $diskvar not found. Look at /tmp/format.log for errors"
     fi
 
     install_base
 
     echo "installing software may take a while"
-    prepare_apt >> /tmp/prepare-apt.log 2>&1
+    prepare_apt | tee -a /tmp/prepare-apt.log 2>&1
 
     # I'm no pessimist, but some packages needs "no" as input
     if [ "$debug" ]; then
 	install_packages
     elif [ "$verbose" ]; then
-	nice yes 'n' | install_packages
+	nice yes 'n' | install_packages | tee -a /tmp/software.log
     else
 	nice yes 'n' | install_packages >> /tmp/software.log 2>&1
     fi
 
     fai_configure
 
-    umount $FAI_ROOT/proc
+    umount -n $FAI_ROOT/proc
     # undo fake of start-stop-daemon
-    rm -f $FAI_ROOT/sbin/start-stop-daemon
-    mv $FAI_ROOT/sbin/start-stop-daemon.orig $FAI_ROOT/sbin/start-stop-daemon
-
+    rm -f $ststd ; mv ${ststd}.orig $ststd
     chroot $FAI_ROOT hwclock --utc --systohc
     date
     echo -e "FAI finished.\a"
@@ -363,7 +373,6 @@ fai_install() {
 	    "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
 
     rm -f $stamp
-
     ) > >( tee -a $rcslog )  2>&1
 
     save_log_local

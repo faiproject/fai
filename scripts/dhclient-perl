@@ -1,0 +1,65 @@
+#! /usr/bin/perl
+
+# $Id$
+#*********************************************************************
+#
+# dhclient-perl -- perl script that prints out DHCP data
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (c) 2000 by Thomas Lange, Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING. If not, write to the
+# Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+# MA 02111-1307, USA.
+#*********************************************************************
+
+# TODO: extract search info from DOMAIN
+
+# map dhcp names to bootp names
+%names = qw/ip_address IPADDR hostname HOSTNAME network_number NETWORK 
+       subnet_mask NETMASK broadcast_address BROADCAST routers GATEWAYS 
+       domain_name DOMAIN domain_name_servers DNSSRVS server_name SERVER
+       time_servers TIMESRVS ntp_servers NTPSRVS 
+       option_170 FAI_LOCATION option_171 FAI_ACTION option_172 FAI_FLAGS 
+       option_173 FAI_NFSSERVER_USR option_174 reseved174 option_175 reseved175
+       nis_domain YPDOMAIN nis_servers YPSRVR/;
+
+# these lists should be listed also as single items
+@list = qw/domain_name_servers routers time_servers ntp_servers nis_servers/;
+foreach (@list) { $listitem{$_} = 1; }
+
+# exit if no data is available
+exit 0 unless $ENV{new_option_170};
+
+foreach $name ( sort keys %names) {
+  $dhcpname="new_$name";
+  if ($ENV{$dhcpname}) {
+    print "$names{$name}='$ENV{$dhcpname}'\n";
+    items($name) if $listitem{$name};
+  }
+}
+
+exit 0;
+
+
+# - - - - - - - - - - - - - - - - - - - - -
+sub items {
+  my $key = shift;
+  my $i = 1;
+    foreach (split /\s+/,$ENV{"new_$key"}){
+      print "$names{$key}_$i='$_'\n";
+      $i++;
+    }
+}
