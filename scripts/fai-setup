@@ -84,14 +84,20 @@ add_export_line $FAI_CONFIGDIR  "@faiclients(ro)"
 add_export_line $NFSROOT  "@faiclients(ro,no_root_squash)"
 add_export_line /usr  "@faiclients(ro,no_root_squash)"
 
-# create tftp boot images
-install_kernel_nfsroot
-mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
-# imggen is a free software from 3com
-imggen=`which imggen || true`
-if [ -x $imggen ]; then
-    imggen -a /boot/fai/installimage /boot/fai/installimage_3com
+if [ -f $KERNELPACKAGE ]; then
+    # create tftp boot images
+    install_kernel_nfsroot
+    mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+    # imggen is a free software from 3com
+    imggen=`which imggen || true`
+    if [ -x $imggen ]; then
+	imggen -a /boot/fai/installimage /boot/fai/installimage_3com
+    fi
+else
+    echo "No kernel package $KERNELPACKAGE found."
+    echo "No install kernel installed in /boot/fai, no kernel modules available."
 fi
+
 
 if [ ! -d $FAI_CONFIGDIR/fai_config ];then
 	echo "You have no FAI configuration. Copy FAI template files with:"
