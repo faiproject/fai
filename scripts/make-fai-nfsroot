@@ -6,7 +6,7 @@
 # make-fai-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2002 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2003 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -29,9 +29,10 @@
 
 # Packages that are install to nfsroot by default Additional packages are
 # defined with $NFSROOT_PACKAGES in fai.conf
-packages="ssh portmap file rdate cfengine cvs bootpc rsync wget rsh-client less dump
-reiserfsprogs dpkg-dev ext2resize strace hdparm parted dnsutils grub ntpdate 
-dosfstools sysutils dialog libdetect0 discover mdetect read-edid kudzu hwtools"
+packages="dhcp3-client ssh portmap file rdate cfengine cvs bootpc rsync wget
+rsh-client less dump reiserfsprogs dpkg-dev ext2resize strace hdparm parted
+dnsutils grub ntpdate dosfstools sysutils dialog libdetect0 discover mdetect
+read-edid kudzu hwtools"
 
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
@@ -124,7 +125,8 @@ setup_ssh() {
     # enable root login
     perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
     if [ -f "$SSH_IDENTITY" ]; then
-        cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
+        cp $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
+	chmod 0644 $NFSROOT/root/.ssh/authorized_keys
         echo You can log into install clients without password using $SSH_IDENTITY
     fi
 }
@@ -135,11 +137,12 @@ copy_fai_files() {
     perl -pi -e "s#^root::#root:${FAI_ROOTPW}:#" etc/passwd
     mkdir -p $NFSROOT/$FAI/fai_config $NFSROOT/$SHAREFAI $NFSROOT/$LIBFAI $NFSROOT/etc/fai
     cd $NFSROOT
-    cp -p $SHAREFAI/etc/dhclient.conf etc/
-    ln -fs ../sbin/dhclient-script etc/dhclient-script
+    cp -p $SHAREFAI/etc/dhclient.conf etc/dhcp3
+    ln -fs ../../sbin/dhclient-script etc/dhcp3/dhclient-script
     cp -Rp /etc/fai etc/
     [ -f /etc/fai/.cvspass ] && cp -p /etc/fai/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
+    cp -p /usr/sbin/{ftar,fcopy,install_packages,bootsector} usr/sbin/
     cp -p /usr/bin/fai-class usr/bin/
     cp -p $LIBFAI/* usr/lib/fai 2>/dev/null || true  # cp will complain about directories
     cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
