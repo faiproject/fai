@@ -10,8 +10,8 @@
 <!entity faiver "2.4.1">
 <!entity faiverdate "2 apr 2003">
 
-<!entity version "2.1.1">
-<!entity date    "15 may 2003">
+<!entity version "2.2">
+<!entity date    "4 june 2003">
 ]>
 
 <debiandoc>
@@ -165,7 +165,7 @@ First, some terms used in this manual are described.
 		XFree86 configuration, remote filesystems, user accounts,
 		printers ...</p>	</item>
 </list>
-	  <tag> nfsroot : <item> A filesystem located on the install
+	  <tag> nfsroot : <item> A (chroot) filesystem located on the install
 	  server. It's the complete filesystem for the install
 	  clients during the installation process. All clients share the
 	  same nfsroot, which they mount read only.</item>
@@ -256,8 +256,9 @@ The clients need one of these daemons to obtain boot information. But
 	  be created during the setup of the FAI package and is also
 	  called <strong>nfsroot</strong>.</item>
 	  <tag>Debian mirror:<item> Access to a Debian
-	  mirror is needed. A local mirror of all Debian
-	  packages is recommended if you install several computers.</item>
+	  mirror is needed. A local mirror of all Debian packages or
+	  an <manref name="apt-proxy" section="8"> is recommended if
+	  you install several computers.</item>
 	  <tag>Install kernel: <item> A kernel image that supports the
 	  network card and mounts its root filesystem via NFS. The
 	  Debian package <package>fai-kernels</package> provides a
@@ -472,6 +473,17 @@ FAI setup finished.
 
 <p>
 The warning messages from dpkg about dependencies problems can be ignored.
+If you have problems running fai-setup, they stem usually from 
+make-fai-nfsroot. You may restart it by calling 'make-fai-nfsroot -r' 
+(recover). Adding '-v' gives you a more verbose output which may help you 
+pinpoint the error. If you want to create a log file you may use
+<example>
+sudo /usr/sbin/make-fai-nfsroot -r -v | tee make-fai-nfsroot.log
+</example>
+It may helpful to enter manually the chroot environment 
+<example>
+sudo chroot /usr/lib/fai/nfsroot
+</example>
 The setup routine adds some lines to <file>/etc/exports</file> to export
 the nfsroot and the configuration space to all hosts that belong to
 the netgroup <em>faiclients</em>. If you already export a parent directory
@@ -548,8 +560,8 @@ All rights reserved.
 ===============================================================================
                             Configuration
 
-Boot Method:                TCP/IP
-Protocol:                   BOOTP
+Boot Method:                PXE
+
 Default Boot:               Network
 Local Boot:                 Enabled
 Config Message:             Enabled
@@ -560,9 +572,12 @@ Boot Failure Prompt:        Wait for key
   ESC to quit, F9 restore previous settings, F10 to save
 </example>
 
-Set the boot method to <tt>TCP/IP</tt> and the protocol to either
-<tt>BOOTP</tt> or <tt>DHCP</tt>. I prefer the BOOTP protocol because the daemon
-automatically reloads its configuration when it has changed. Make a
+Set the boot method to <tt>PXE</tt> or set it to <tt>TCP/IP</tt> and
+the protocol to <tt>BOOTP</tt>. The advantage of the BOOTP protocol
+it, that the BOOTP daemon automatically reloads its configuration when
+it has changed, but using the PXE environment is more comfortable.
+
+When using BOOTP, you have to make a
 symbolic link from the hostname of your client to the appropriate
 kernel image in <file>/boot/fai</file>. In the following example the
 host is called <tt>bigfoot</tt>. The file
@@ -574,9 +589,8 @@ the imggen-1.00 program to convert the netboot image to a
 installimage_3com image. I had this problem using netboot 0.8.1-4 and
 Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001 but only on an
 Athlon computer.
-</p>
-	  </footnote>
-. You can also use the utility
+</p></footnote>
+You can also use the utility
 <prgn>tlink</prgn> (<file>/usr/share/fai/utils/tlink</file>) to create
 this link.
 
@@ -585,18 +599,24 @@ kueppers# cd /boot/fai
 kueppers# ln -s installimage_3com bigfoot
 </example>
 
-
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM<p>
 Some network cards (e.g. Intel EtherExpress PRO 100) have a fixed
 boot configuration, so they can only use the PXE boot protocol. This requires a PXE
 Linux boot loader and a special version of the <tt>TFTP</tt> daemon,
 which is available in the Debian package <package>tftpd-hpa</package>.
-First set up the DHCP daemon. A sample configuration files can be
+
+First install following additional needed packages:
+
+<example>
+# apt-get install dhcp3-server syslinux tftp-hpa
+</example>
+
+Then set up the DHCP daemon. A sample configuration files can be
 found in <file>/usr/share/doc/fai/examples/etc/dhcpd.conf</file>.
 Then enable the special tftp daemon
 using this line in file <file>/etc/inetd.conf</file>: 
 <example>
-tftp dgram udp wait root /usr/sbin/in.tftpd -s -r blksize /boot/fai
+tftp dgram udp wait root /usr/sbin/in.tftpd in.tftpd -r blksize -s /boot/fai
 </example>
 
 See <file>/usr/share/doc/syslinux/pxelinux.doc.gz</file> for more
@@ -610,8 +630,17 @@ configuration for pxelinux is written to
 
 <sect id="bootfloppy">Creating a boot floppy
 <p>
-If your network card can't boot itself, you have to boot via floppy
-disk. To create the boot floppy use the command <manref
+
+If your network card can't boot itself, you have two options. The
+first is to create a small boot floppy that uses etherboot, so you can
+use DHCP and TFTP to get the install kernel that was created with
+<manref name="mknbi-linux" section="8">.  A lot of ethernet cards
+support booting via ethernet if a special boot eprom is inserted or
+booted from floppy <httpsite>http://rom-o-matic.net/</httpsite>. In
+depth documentation about booting via ethernet may be found at
+<httpsite>http://etherboot.sourceforge.net</httpsite>.
+
+The seconde is to via floppy disk that is created with the command <manref
 name="make-fai-bootfloppy" section="8">. Since there's no client specific
 information on this floppy, it's suitable for all your install
 clients. You can also specify additional kernel parameters for this
