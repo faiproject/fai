@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.5, 05-Mar-2001";
+my $version = "Version 1.5.1, 09-Apr-2001";
 
 use File::Copy;
 use File::Compare;
@@ -50,7 +50,7 @@ sub copy_one {
   unless (-d $ps) { ewarn("$ps is not a directory. Not copied.");return }
 
   # use the last class for which a file exists
-  foreach (reverse @classes) {
+  foreach (@classes) {
     $class = $_,last if -f "$ps/$_";
   }
 
@@ -226,7 +226,8 @@ $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
 $source  = $opt_s || $ENV{FAI_FILES};
 $target  = $opt_t || $ENV{FAI_ROOT};
-@classes = split /\s+/,$ENV{classes};
+# last class has highest priority
+@classes = reverse split /\s+/,$ENV{classes};
 $opt_c and @classes = split /,/,$opt_c;
 $opt_C and @classes = read_classes($opt_C);
 warn join ' ','Classes:',@classes,"\n" if $debug;
