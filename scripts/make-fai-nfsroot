@@ -49,7 +49,6 @@ done
 
 set -e
 . /etc/fai/fai.conf
-packages="$packages $NFSROOT_PACKAGES"
 
 ROOTCMD="chroot $NFSROOT"
 
@@ -108,8 +107,10 @@ setup_ssh() {
     [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return 0
     mkdir -p -m 700 $NFSROOT/root/.ssh
     [ -f /etc/ssh/ssh_known_hosts ] && cp /etc/ssh/ssh_known_hosts $NFSROOT/root/.ssh/known_hosts
-    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
-    [ -d $loguserhome/.ssh ] && cp -p $loguserhome/.ssh/identity* $NFSROOT/root/.ssh/
+    if [ -n "$LOGUSER" ] ; then
+        loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+        [ -d $loguserhome/.ssh ] && cp -p $loguserhome/.ssh/identity* $NFSROOT/root/.ssh/
+    fi
 
     # enable root login
     perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
@@ -265,6 +266,9 @@ upgrade_nfsroot() {
 add_packages_nfsroot() {
 
     $ROOTCMD apt-get -y --fix-missing install $packages </dev/null
+    if [ -n "$NFSROOT_PACKAGES" ] ; then
+        $ROOTCMD apt-get -y --fix-missing install $NFSROOT_PACKAGES </dev/null
+    fi
     $ROOTCMD apt-get clean
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
