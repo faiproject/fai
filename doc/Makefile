@@ -36,6 +36,7 @@ print: dvi
 	dvips -f $(docname) | lpr
 
 install:
+	rm $(docname).tpt $(docname).out
 	cp -dRp $(FILES) $(docname)* $(DOCDIR)
 	cp -p $(MISC_DOC) $(DOCDIR)
 
