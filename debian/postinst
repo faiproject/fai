@@ -1,4 +1,6 @@
 #! /bin/sh
+
+# $Id $
 #*********************************************************************
 # postinst -- setup fai
 #
@@ -27,52 +29,63 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
-faiuser=fai
-# the user space nfs server
-nfsserver=/etc/init.d/nfs-server
+. /etc/fai.conf
+
+test -f /etc/init.d/nfs-server && nfsserver=nfs-server
+test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 
 add_export_line() {
 
-# add line to /etc/exports
+    # add a line to /etc/exports
 
     pattern=$1
     shift
     options=$*
 
-    grep -q "^$pattern[[:space:]]" /etc/exports && return
+    [ -f /etc/exports ] && grep -q "^$pattern[[:space:]]" /etc/exports && return
     echo "$pattern $options" >> /etc/exports
-    if [ -x $nfsserver ];then
-	$nfsserver reload
+    /etc/init.d/$nfsserver start >/dev/null
+    /etc/init.d/$nfsserver reload >/dev/null
+}
+
+add_fai_account() {
+
+    if id $LOGUSER 2>/dev/null 1>&2 ; then
+	echo Account \$LOGUSER=$LOGUSER  already exists.
+	echo Make sure, that all install clients can
+	echo log into this account without a password
     else
-	echo "You do not use the user space nfs-server"
-	echo "Please make your nfs server reload it's configuration"
+	adduser --system --disabled-password --gecos "fai account for log files" $LOGUSER || true
+	gid=`id -ng $LOGUSER`
+	perl -pi.bak -e "s#^$LOGUSER:(.+):/bin/false#$LOGUSER:\1:/bin/bash#" /etc/passwd
+	echo "+@faiclients root" > /home/$LOGUSER/.rhosts
+	chown $LOGUSER:$gid /home/$LOGUSER/.rhosts
+	chmod go-rwx /home/$LOGUSER/.rhosts
+	touch /home/$LOGUSER/.account_created_by_fai_package
     fi
 }
 
 case "$1" in
     configure)
 
-add_export_line /usr/local/share/fai  "@faiclients(ro)"
-add_export_line /usr/lib/fai/nfsroot  "@faiclients(ro,no_root_squash)"
-add_export_line /usr  "@faiclients(ro,no_root_squash)"
+    add_fai_account >/dev/null
 
-# TODO: if $faiuser; then ..... fi
-adduser --system --disabled-password --gecos "fai account for log files" $faiuser || true
-perl -pi.bak -e "s#^$faiuser:(.+):/bin/false#$faiuser:\1:/bin/bash#" /etc/passwd
-echo "+@faiclients root" > /home/$faiuser/.rhosts
-gid=`id -g $faiuser`
-chown $faiuser:$gid /home/$faiuser/.rhosts
-chmod go-rwx /home/$faiuser/.rhosts
+    MYTMPFILE=`mktemp /tmp/make-fai-nfsroot.XXXXXX`
 
-[ ! -d /usr/lib/fai/nfsroot/fai ] && make-fai-nfsroot
+    echo Creating FAI nfsroot can take a long time
+    make-fai-nfsroot > $MYTMPFILE 2>&1
 
+    mkdir -p /usr/local/share/fai || true
 
-if [ ! -d /usr/local/share/fai/fai_config ];then
-    echo "I think you have no fai configuration."
-    echo "You can copy fai template files with:"
-    echo "cp -pR /usr/share/doc/fai/templates/* /usr/local/share/fai"
-    echo "Then change the configuration files to meet your local needs."
-fi
+    add_export_line /usr/local/share/fai  "@faiclients(ro)"
+    add_export_line $NFSROOT  "@faiclients(ro,no_root_squash)"
+    add_export_line /usr  "@faiclients(ro,no_root_squash)"
+
+    if [ ! -d /usr/local/share/fai/fai_config ];then
+	echo "You have no fai configuration. Copy FAI template files with:"
+	echo "cp -pR /usr/share/doc/fai/templates/* /usr/local/share/fai"
+	echo "Then change the configuration files to meet your local needs."
+    fi
 
     ;;
 
@@ -92,5 +105,3 @@ esac
 #DEBHELPER#
 
 exit 0
-
-

@@ -27,89 +27,171 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-# Thomas Lange, Universitaet Koeln, 6/2000
+# Thomas Lange, Universitaet Koeln, 2000
 
 # configuration of some packages will need some interactive input
 # lilo, netbase,... will not be set up correctly, but that doesn't matter
-
 # apt-get must been working on your server (sources.list must be OK)
 
-dversion=2_2
-packages="file rdate cfengine bootpc wget rsh-client less dump"
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-basetgz=base${dversion}.tgz
-fai=/usr/lib/fai
-root=$fai/nfsroot
-aptconf=$fai/etc/apt.conf.nfsroot
-DEBIAN_FRONTEND=Noninteractive
+while getopts v opt ; do
+        case "$opt" in
+        v) verbose=1 ;;
+        esac
+done
 
+. /etc/fai.conf
+
+conffile=$NFSROOT/etc/rcS_fai.conf
+aptconf=$LIBFAI/etc/apt.conf.nfsroot
+
+# Additional packages that are install to nfsroot
+packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm strace expect5.31"
+
+export DEBIAN_FRONTEND=Noninteractive
+
+if [ "$verbose" ]; then
+	devnull=/dev/tty
+else
+	devnull=/dev/null
+fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-recreate_nfsroot() {
+setup_ssh() {
 
-    echo removing old nfsroot $root
-    rm -rf $root/*
-    cd $root
-    echo unpacking $basetgz
-    tar zxpf /tmp/$basetgz
-    mkdir -p $root/fai/fai_config
-    cp -p /usr/lib/fai/sbin/* /usr/lib/fai/nfsroot/sbin
-    cp -p /usr/lib/perl5/Debian/Fai.pm $root/usr/lib/perl5/Debian/
+    # enable root login
+    perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
+    if [ -f "$SSH_IDENTITY" ]; then
+	mkdir -p -m 700 $NFSROOT/root/.ssh
+	cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
+	echo You can log in install clients without password using $SSH_IDENTITY
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+copy_fai_files() {
 
+    perl -pi -e "s/^root::/root:${ROOTPW}:/" etc/passwd
+    mkdir -p $NFSROOT/fai/fai_config $NFSROOT/usr/share/fai
+    cp -p $LIBFAI/sbin/dhclient-script $LIBFAI/etc/dhclient.conf $NFSROOT/etc
+    cp -p $LIBFAI/sbin/* $NFSROOT/sbin
+    cp -p /usr/share/fai/* $NFSROOT/usr/share/fai
+    cp -p $LIBFAI/etc/apt.conf $NFSROOT/etc/apt
+    cp -p /usr/lib/perl5/Debian/Fai.pm $NFSROOT/usr/lib/perl5/Debian/
+    cp -p /etc/fai.conf $NFSROOT/etc
+    echo "# rcS_fai.conf -- created by make-fai-nfsroot" >> $conffile
+    [ "LOGUSER" ] && echo "export LOGUSER=$LOGUSER" >> $conffile
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_nfsroot() {
+
+    mkdir -p $NFSROOT
+    cd $NFSROOT
+    get_basetgz
+    echo -n "Unpacking " ; ls /tmp/base?_?.tgz
+    tar zxpf /tmp/base?_?.tgz
+    mknod dev/boot255 c 0 255
+
+    # hoaks some packages
+    touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
+    mkdir -p lib/modules/`uname -r`             # dirty trick to hoax lvm
+    touch lib/modules/`uname -r`/modules.dep    # dirty trick to hoax lvm
+    mkdir -p $NFSROOT/etc/ssh ; touch $NFSROOT/etc/ssh/NOSERVER
+
+    upgrade_nfsroot
+    copy_fai_files
+
+    # set timezone
+    rm -f $NFSROOT/etc/localtime
+    cp -dp /etc/localtime $NFSROOT/etc
+    cp -dp /etc/timezone $NFSROOT/etc
+
+    # make little changes to nfsroot, because most file systems are read only
     rm -rf etc/mtab etc/apt/sources.list var/run
-    mv $root/etc/init.d/rcS $root/etc/init.d/rcS.orig
-    ln -s /proc/mounts $root/etc/mtab
-    ln -s /tmp/var/run $root/var/run 
-    ln -s /tmp/etc/resolv.conf $root/etc/resolv.conf
-    ln -s /sbin/rcS_fai $root/etc/init.d/rcS
-    touch etc/fstab  # dump needs this file
+    mv $NFSROOT/etc/init.d/rcS $NFSROOT/etc/init.d/rcS.orig
+    ln -s /proc/mounts $NFSROOT/etc/mtab
+    ln -s /tmp/var/run $NFSROOT/var/run 
+    ln -s /tmp/etc/resolv.conf $NFSROOT/etc/resolv.conf
+    ln -s /sbin/rcS_fai $NFSROOT/etc/init.d/rcS
 
-    cat >$root/etc/rc2.d/S01fai_abort.sh <<EOF
+    # kernel with modules do not log loading of modules
+    rmdir $NFSROOT/var/log/ksymoops/
+    ln -s /dev/null $NFSROOT/var/log/ksymoops
+
+
+    # set up loopback device
+    echo >$NFSROOT/etc/network/interfaces <<EOF
+iface lo inet static
+address 127.0.0.1
+netmask 255.0.0.0
+EOF
+    setup_ssh
+    umount $NFSROOT/dev/pts 2>/dev/null
+
+    cat >$NFSROOT/etc/rcS.d/S01fai_abort <<EOF
     #!/bin/sh
     echo FAI: installation aborted.
-    echo reboot with: reboot -dfi
+    echo reboot with: faireboot
     echo or after a logout
     sh
     cd /
     umount -ar
     reboot -dfi
 EOF
+    chmod a+rx $NFSROOT/etc/rcS.d/S01fai_abort
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-update_nfsroot() {
+upgrade_nfsroot() {
 
-    echo upgrading $root
+    echo "Upgrading $NFSROOT"
+    {
     apt-get -c $aptconf update
     apt-get -c $aptconf check
-    chroot $root mount -n -t proc proc /proc
+    chroot $NFSROOT mount -n -t proc proc /proc
+    rm -rf $NFSROOT/etc/pcmcia $NFSROOT/etc/apm
+    apt-get -c $aptconf -y remove pcmcia-cs </dev/null
+
+    # because start-stop-dameon must be faked do it here
+    apt-get -c $aptconf -y install dpkg </dev/null
+    cp -p $LIBFAI/sbin/start-stop-daemon $NFSROOT/sbin
+
     apt-get -c $aptconf -y upgrade </dev/null
+    } > $devnull
+    echo "Adding additional packages to $NFSROOT:"
+    echo "$packages"
+    {
     apt-get -c $aptconf -y --fix-missing install $packages </dev/null
-    chroot $root umount /proc
+    chroot $NFSROOT umount -n /proc
+    } > $devnull
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_basetgz() {
+
+    [ -f /tmp/base?_?.tgz ] && return
+    case $BASETGZ in
+	ftp:*|http:*)
+	    echo "Getting $BASETGZ via wget. This may take some time."
+	    wget -q -P/tmp $BASETGZ
+	    ;;
+	*) cd /tmp ; ln -s $BASETGZ
+	    ;;
+    esac
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+install_kernel_nfsroot() {
+    rm -rf $NFSROOT/boot/*-$KERNELVERSION $NFSROOT/lib/modules/$KERNELVERSION
+    dpkg -x $KERNELPACKAGE $NFSROOT
+    chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# create installation filesystem that will be
-# mounted readonly by all clients during installation process
-# get base2_2.tgz via wget from ftp.debian.org (default no)
-
-if [ ! -f /tmp/$basetgz ]; then
-    echo "Please put the Debian $basetgz file into /tmp before creating nfsroot for fai."
-    exit 1
+if [ -d $NFSROOT/fai ]; then
+    echo $NFSROOT already exists. Removing $NFSROOT
+    umount $NFSROOT/dev/pts 2>/dev/null
+    rm -rf $NFSROOT
 fi
-
-if [ -d $root/fai ]; then
-    echo $root/fai already exists
-    echo "Do you want to delete and recreate it ?:"
-    read answer
-    case "$answer" in
-	[yY])
-	    recreate_nfsroot
-	    ;;
-    esac
-else
-    recreate_nfsroot
-fi
-
-update_nfsroot
+    create_nfsroot
+    install_kernel_nfsroot
+    mk3comimage $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage $NFSROOT/dev/nfs
 
 exit 0

@@ -18,16 +18,35 @@
 # This scripts builds a bootable tftp boot image for 3Com network cards
 # tested with the MBA v3.10 (or later) eproms 
 
+. /etc/fai.conf
+
 mnt=/tmp/mountpoint.$$
 dosdisk=/tmp/dosdisk.$$
 
-if [ ! "$UID" ]; then
+if [ "$UID" -ne 0 ]; then
  echo "You must be root!"
  exit 9
 fi
 
+usage() {
+    cat <<EOF
+    mk3comimage [options] bzImage tftpimage rootdevice [parameter] ...
+
+Parameter
+
+    bzImage        input file, a kernel
+    tftpimage      tftpimage that will be created
+    rootdevice     normally /dev/nfs
+Options
+
+    -r base         looking for some files in in $base/kernel
+
+EOF
+}
+
 # where to find emptydosdisk and imagegen_firstblock
-    base=/usr/lib/fai/kernel/ # default
+base=$LIBFAI/kernel/
+
 while getopts r: opt ; do
         case "$opt" in
         r) base="$OPTARG" ; shift;shift ;;
@@ -44,8 +63,8 @@ shift
 parameter=$*
 
 if [ -f $tftpimage ]; then
-    echo $tftpimage already exists.
-    exit 2
+    mv $tftpimage $tftpimage.old
+    echo moved $tftpimage to $tftpimage.old
 fi
 
 trap 'cd /;umount $mnt ; rm -rf $dosdisk $bootdev $mnt' EXIT HUP INT QUIT
