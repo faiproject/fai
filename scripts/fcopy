@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.11, 17-jan-2003";
+my $version = "Version 1.12, 27-jan-2003";
 
 use strict;
 use File::Copy;
@@ -264,12 +264,14 @@ sub read_status {
     $lastclass{$source} = $class;
   }
   close(LASTLOG);
-
+  
+  $_=$source; /([^\/]+)$/;
+  my $source_base = $1;
   open(CHANGES,$status_files[1]);
   while (<CHANGES>) {
     s/\#.*//g;
     chomp;
-    m#files/(\S+)$# and $changed{$1} = 1;
+    m#$source_base/(\S+)$# and $changed{$1} = 1;
   }
   close(CHANGES);
 }
