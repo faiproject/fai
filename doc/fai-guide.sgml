@@ -155,7 +155,8 @@ First, some terms used in this manual are described.
 	  of the clients should be performed. This includes information about:
 <list>
 		<item> <p>Hard disk layout</p> </item>
-		<item> <p>Local filesystems</p> </item>
+		<item> <p>Local filesystems, their mount points and
+		mount options</p> </item>
 		<item> <p>Software packages</p>	</item>
 		<item> <p>Keyboard layout, time zone, NIS,
 		X11 configuration, remote filesystems, user accounts,
@@ -201,7 +202,8 @@ inspect the hardware or do any other task.
 	    <item> <p>A fully automated installation can be perfomed</p> </item>
 	    <item> <p>Very quick unattended installation</p> </item>
 	    <item> <p>Hosts can boot from floppy or from network card </p> </item>
-	    <item> <p>BOOTP and DHCP protocol are supported</p> </item>
+	    <item> <p>Easy creation of the common boot floppy</p> </item>
+	    <item> <p>BOOTP and DHCP protocol and PXE boot method are supported</p> </item>
 	    <item> <p>No initial ramdisk is needed, 8MB RAM suffice</p> </item>
 	    <item> <p>Runs even on a 386 CPU </p> </item>
 	    <item> <p>The installation kernel can use modules</p> </item>
@@ -215,7 +217,6 @@ inspect the hardware or do any other task.
 	    <item> <p>Shell, perl, expect and cfengine scripts are
 	    supported for the configuration setup</p> </item>
 	    <item> <p>Access to a Debian mirror via NFS, FTP or HTTP</p> </item>
-	    <item> <p>Easy creation of the common boot floppy</p> </item>
 	    <item> <p>Keyboard layout selectable</p> </item>
 	    <item> <p>Can be used as a rescue system</p> </item>
 	    <item> <p>Tested on SUN SPARC hardware</p> </item>
@@ -225,7 +226,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Easily add your own functions via hooks</p> </item>
 	    <item> <p>Easily change the default behavior via hooks</p> </item>
 	    <item> <p>Lilo and grub support</p> </item>
-	    <item> <p>ReiserFS support</p> </item>
+	    <item> <p>ReiserFS and ext3 support</p> </item>
 </list>
 
 <chapt id="inst">Installing FAI
@@ -506,7 +507,7 @@ to boot via network card using a boot PROM, which is much smarter.
 <sect id="nicboot">Booting from 3Com network card with boot PROM
 <p>
 If you have a 3Com network card that is equipped with a boot ROM by
-Lanworks Technologie or already includes the DynamicAccess Managed PC
+Lanworks Technologies or already includes the DynamicAccess Managed PC
 Boot Agent (MBA) software<footnote> <p><httpsite>http://support.3com.com/</httpsite>
 <httppath>infodeli/tools/nic/mba.htm</httppath></p></footnote>, you
 can enter the MBA setup by typing <tt>Ctrl+Alt+B</tt> during boot. The
@@ -553,10 +554,10 @@ configuration for booting using the PXE protocol. This requires a PXE
 Linux boot loader an a special version of the <tt>TFTP</tt> daemon.
 First set up the DHCP daemon. A sample configuration files can be
 found in <file>/usr/share/doc/fai/examples/etc/dhcpd.conf</file>.
-If you sepecify a kernel package in &fc; using the variable
-<tt>KERNELPACKAGE</tt> which cintains a kernel that uses the DHCP
+If you specify a kernel package in &fc; using the variable
+<tt>KERNELPACKAGE</tt> which contains a kernel that uses the DHCP
 protocol for obtaining boot information, the pxelinux environment will
-be set up automaticly. You only have to enable the special tftp daemon
+be set up automatically. You only have to enable the special tftp daemon
 using this line in file <file>/etc/inetd.conf</file>: 
 <example>
 tftp dgram udp wait nobody /usr/local/sbin/tftpd -s -r blksize /boot/fai
@@ -991,7 +992,7 @@ Now scripts in <file>/fai/class/</file> are executed to define classes
 and variables that are later used in the site specific configuration
 scripts.  All scripts matching <tt>S[0-9]*.{sh,pl,source}</tt> are
 executed in alphabetical order. Scripts ending in <tt>.source</tt> are
-sourced, so they can define new classes by adding these calsses to
+sourced, so they can define new classes by adding these classes to
 variable <var>newclasses</var> (see <file>S30menu.source</file> for an
 example). Every word that these scripts print to the standard output
 are interpreted as class names. These classes are defined for this
@@ -1171,7 +1172,7 @@ several files:
 The main installation script <prgn>rcS_fai</prgn> uses all these
 subdirectories in the order listed. The FAI package contains templates
 for all these configuration scripts and files in
-<file>/usr/share/fai/templaes</file>. Copy the configuration templates
+<file>/usr/share/fai/templates</file>. Copy the configuration templates
 to the configuration space and start an installation. These files need
 not belong to the root account. You can change their ownership and
 then edit the configuration with a normal user account.
@@ -1402,13 +1403,13 @@ contains a space separated list of flags. Following flags are known:
   client. Useful for installation which should not be
   interruptible.</p> </item>
 
- <tag>reboot</tag> <item> <p>Reboot the install client after
- installation is finished without typing RETURN on the console. Only
- useful if you can change the boot image or boot device automatically
- or your assembly robot can remove the boot floppy via remote
- control. Currently this should only be used when booting from network
- card and using <var>$TFTPLINK</var> or changing the boot device with
- the command <prgn>bootsector</prgn>.</p> </item>
+ <tag>reboot</tag> <item> <p>Reboot the install client after installation
+ is finished without typing RETURN on the console. Only useful if you can
+ change the boot image or boot device automatically or your assembly robot
+ can remove the boot floppy via remote control :-) if you cannot use a
+ boot device selection trick. Currently this should only be used when
+ booting from network card and using <var>$TFTPLINK</var> or changing the
+ boot device with the command <prgn>bootsector</prgn>.</p> </item>
 </taglist>
 
 
@@ -1467,13 +1468,13 @@ found in <file>/usr/share/doc/fai/classes_description.txt</file>.
 <p>
 
 Hostnames should rarely be used for the configuration files in the
-configuration space. Instead, a class should defined and this class is
-then added to the host.
+configuration space. Instead, a class should be defined and
+then added for a given host.
 
 <sect id=s2> Defining classes<p>
 
-The default task <em>defclass</em> defines the classes <tt>DEFAULT,
-LAST</tt>, <var>$HOSTNAME</var> and all classes in the file
+The default task <em>defclass</em> defines the classes <tt>DEFAULT</tt>,
+<tt>LAST</tt>, <var>$HOSTNAME</var> and all classes in the file
 <file>/fai/class/</file><var>$HOSTNAME</var> for every hosts.
 Additionally, all files that are executable and match the shell
 regular expression <tt>S[0-9]*.{sh,pl,source}</tt> are called in alphabetical
@@ -1524,16 +1525,28 @@ subroutines, e.g. <tt>class</tt>, <tt>classes</tt>,
 <tt>read_memory_info</tt>, <tt>read_ethernet_info</tt>.</p>
 </footnote>. But you can also use a range of partition size in the
 disk configuration file (in <file>disk_config</file>), so you may not
-need a class for every different disk size. The script
+need a class for every different disk size.
+
+<p>
+
+The script
 <file>S24nis.sh</file> automatically defines classes corresponding to
 NIS. The name of the NIS domain (defined via BOOTP or DHCP) will also
 become a class (only uppercase letters and minus is replaced by
-underscore). Depending on several partition names,
-<file>S90partitions.pl</file> defines classes. For eg., if a partition
+underscore). If no NIS domain is defined, then only the NONIS class is
+defined.
+
+<p>
+
+Depending on partition names defined in the first matching
+<file>disk_config</file> found,
+<file>S90partitions.pl</file> defines additional classes. For e.g., if a
+partition
 <file>/files/scratch</file> exists, the install client will export
 this directory via NFS therefore installs a NFS server packages.
 
 <p>
+
 The script <prgn>S05modules.source</prgn> does not define any class, but
 is responsible for loading kernel modules. Kernel modules are
 important for detecting hardware. This script calls the script
@@ -1650,7 +1663,7 @@ simple.
 PRELOADRM http://www.location.org/rp8_linux20_libc6_i386_cs1_rpm /root
 
 PACKAGES taskinst
-german science german
+german science
 
 PACKAGES install
 adduser netstd ae
@@ -1679,7 +1692,7 @@ not be handled by dpkg, e.g not upgraded.</p> </item>
 in the following lines. If a hyphen is appended to the package name
    (with no intervening space), the package will be removed, not
    installed. All package names are checked for misspelling. If a
-package doesn't exist, its automaticly removed from the list of
+package doesn't exist, it is automatically removed from the list of
 packages to install.</p> </item>
 
 <tag>remove:</tag> <item> <p>Remove all packages that are specified in
@@ -1752,7 +1765,7 @@ using classes, use <manref name="ftar" section="8">.
 But now have a look at the scripts and see what they are doing.
 
 <sect1 id=perl>Perl scripts<p>
-Currently no Perl scripts are used for modifying the system
+Currently no Perl script is used for modifying the system
 configuration.
 
 <sect1 id=expect>Expect scripts<p>
@@ -1764,7 +1777,7 @@ configuration.
 Cfengine has a rich set of functions to edit existing configuration
 files, e.g <tt>LocateLineMatching, ReplaceAll, InsertLine,
 AppendIfNoSuchLine, HashCommentLinesContaining</tt>. But it can't
-handle variables, that are undefined. If a variables is undefined,
+handle variables, that are undefined. If a variable is undefined,
 the whole cfengine script will abort. 
 
 More information can be found in the manual page <manref
@@ -1821,6 +1834,18 @@ network interface as second boot device and boots from it. Maybe the
 disk partitioning tool can't work on such a disk. So you have to
 enable the boot sector before you want to partition the disk.
 
+If booting from a FAI floppy disk, another solution can be used to skip a
+re-installation if the BIOS is configured to boot from the floppy disk
+first and you are not here to remove the floppy disk : use a
+<example>
+# lilo -R ...
+</example>
+to instruct the FAI floppy disk <tt>lilo</tt> to boot from the hard disk
+only once (see
+<manref name="lilo" section="8">). Thus after this first reboot, the FAI
+floppy disk can be used for another FAI installation.
+
+
 <sect id=hooks>Hooks<p>
 
 Hooks let you specify functions or programs, that are run at certain
@@ -1831,7 +1856,7 @@ executed for every defined class. You only have to create the hook
 with the name for the desired class and it will be used. If
 <tt>debug</tt> is included in <var>$FAI_FLAG</var> the option
 <tt>-d</tt> is passed to all hooks, so you can debug your own hooks.
-If the default task should be skipped, use the subroutine
+If some default tasks should be skipped, use the subroutine
 <tt>skiptask</tt> and a list of default tasks as parameters. The
 example <file>partition.DISKLESS</file> skips some default tasks.
 <p>
@@ -1980,7 +2005,7 @@ to any host outside their cluster network. So, all services (NTP, DNS,
 NIS, ...) must be available on the master server. I choose the class C
 network address <em>192.168.42.0</em> for building the local Beowulf
 cluster network. You can replace the subnet 42 with any other number
-you like. I you have more that 253 computing nodes, choose a class A
+you like. If you have more that 253 computing nodes, choose a class A
 network address (10.X.X.X).
 
 <p>
@@ -1993,7 +2018,7 @@ among both.
 
 <sect id=master> Set up the master server<p>
 
-The master server will be installed by hand, cause it could be your
+The master server will be installed by hand, if it is your
 first computer installed with Debian. It you have already a Debian
 host running, you can also install it via FAI. Create a partition on
 <file>/files/scratch</file> for the local Debian mirror with more that
@@ -2193,18 +2218,19 @@ A success report is available at
 <httpsite>http://www.opossum.ch/</httpsite><httppath>fai/</httppath>.
 
 
-<chapt id=hints>Various Hints<p>
+<chapt id=hints>Various hints<p>
 
 This chapter has various hints which may not be explained in great
 detail.
-<p>
+
+<sect id=tricks>Advanced tricks<p>
 
 Use <prgn>mkdivert</prgn><footnote> <p><tt>mkdivert</tt> and
 <tt>rmdivert</tt> are subroutines defined in
 <file>subroutines</file>.</p></footnote> if a postinst script calls a
-configuration program eg. the postinst script for package apache calls
-apacheconfig needs manual input. You can fake the configuration
-programm so the installation can be fully automatic. But don't forget
+configuration program, e.g. the postinst script for package apache calls
+apacheconfig, needs manual input. You can fake the configuration
+program so the installation can be fully automatic. But don't forget
 to use <prgn>rmdivert</prgn> to remove this faked script.
 
 <p>
@@ -2216,12 +2242,13 @@ eg. <tt>$ROOTCMD dpkg -l</tt> show the packages installed to the new system.
 
 The only task, which has to be done manually for new hardware, is to
 assign the MAC address to a hostname and to an IP address and define
-classes for this host.
+classes for this host, if the existing configuration files are not generic
+enough to deal with this new host.
 <p>
 There's a tradeoff between writing a few large configuration scripts,
 or many short scripts, one for each class. Large scripts can
-distinguish classes by using case statements or the <tt>ifclass</tt>
-test.
+distinguish classes by using case statements, the <tt>ifclass</tt>
+test or with class mechanisms for <tt>cfengine</tt> scripts.
 <p>
 If your computer can't boot from network card you need not always boot
 from floppy. Define a partition <file>/fai-boot</file> in your
@@ -2253,7 +2280,7 @@ and replace the file with a dummy script. This is useful when a
 postinst script need manual input. At the end of the installation all
 diversions are removed.</p> </item>
 
-<tag>skipttask</tag> <item> <p>This given list of tasks are
+<tag>skiptask</tag> <item> <p>This given list of tasks are
 skipped. For e.g use in <file>partition.DISKLESS</file>.</p> </item> </taglist>
 
 </book>
