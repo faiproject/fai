@@ -2,7 +2,7 @@
 
 # echo architecture in upper case
 dpkg --print-installation-architecture | tr /a-z/ /A-Z/
-uname -s | tr 'a-z' 'A-Z'
+uname -s | tr '[a-z]' '[A-Z]'
 
 # all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
