@@ -6,12 +6,12 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.7">
-<!entity faiver "2.6">
-<!entity faiverdate "26 july 2004">
+<!entity faikernelver "1.8.3">
+<!entity faiver "2.8">
+<!entity faiverdate "05 apr 2005">
 
-<!entity version "2.4.9">
-<!entity date    "24 mar 2005">
+<!entity version "2.5">
+<!entity date    "05 apr 2005">
 
 <!entity packageinstall     system "entities/packageinstall.sgml">
 <!entity faisetup           system "entities/faisetup.sgml">
@@ -2359,15 +2359,22 @@ To wake up a computer use the command <manref name="ether-wake" section="8">.
 Additional information is available from
 <httpsite>www.scyld.com/</httpsite><httppath>expert/wake-on-lan.html</httppath>.
 
-<chapt id=arch>FAI on other architectures<p>
-Theses are things that may have to be changed on other architectures:
+<chapt id=arch>FAI on other architectures and distributions<p>
+If you want to use FAI on other architectures than i386 you might need to take care for 
+some things yourself.
+
+These are things that may have to be changed on other architectures:
 
 <taglist>
+   <tag> fai-nfsroot.conf </tag> <p>FAI_DEBOOTSTRAP_OPTS must be adopted to the
+   architecture you're using.</p>
+   </tag>
    <tag> task partition: <item> <p>Currently setup_harddisks
    needs the command <manref name="sfdisk" section="8">. If
    this is not available then write a short shell script which
    uses <manref name="parted" section="8">, to partition the disks and
-   for creating the file <file>fstab</file>.
+   for creating the file <file>fstab</file>. Alternatively you use a 
+   hook (see <ref id="hooks">) to format and mount your partitions.
 
    <tag> Boot loader: <item> <p>Currently the script
    <file>DEFAULT/S10</file> has support for <manref name="lilo"
@@ -2375,6 +2382,11 @@ Theses are things that may have to be changed on other architectures:
    add support for your specific boot loader.
 </taglist>
 
+If you want to serve multiple architectures on one FAI server, you need to create
+arch specific config directories in <file>/etc</file> for fai, like 
+<file>/etc/fai-i386</fil> and <file>/etc/fai-powerpc</file>.
+Then you need to set the <var>NFSROOT</var> variables to different directories and run
+'make-fai-nfsroot -c /etc/fai-powerpc'. You have to create the nfsroot on the target arch!
 
 
 <sect id=amd64>FAI on AMD64<p>
@@ -2383,7 +2395,13 @@ No problems. Have a look at
 <httpsite>www.informatik.uni-koeln.de</httpsite><httppath>/fai/download/amd64/</httppath>
 
 <sect id=powerpc>FAI on PowerPC<p>
-There's some stuff on <httpsite>www.layer-acht.org</httpsite><httppath>/fai</httppath>.
+There's some stuff on <httpsite>www.layer-acht.org</httpsite><httppath>/fai</httppath>. 
+Most notably there are hooks for partitioning and config-files to 
+setup bootloaders for oldworld and newworld. 
+
+You can build the fai-kernels package on powerpc if you copy the file
+<file>debian/control.powerpc</file> to <file>debian/control</file> and 
+rebuild the package on powerpc. Please give feedback if you do!
 
 <sect id=ia64>FAI on IA64<p>
 There's one big IA64 Beowulf cluster running which was installed with
@@ -2475,7 +2493,7 @@ environment</footnote>. </p>
     <item>
       contains the <em>tag</em> of the cvs branch to
       be checked out by the client<footnote>This is optional: if not set,
-      <em>HEAD</em> will be used, which corresponds to the most actual
+      <em>HEAD</em> will be used, which corresponds to the most recent
       revision the configuration</footnote>.
 	<example>
 	FAI_CVSTAG="STABLE"
@@ -2504,7 +2522,7 @@ the generated line from your <file>~/.cvspass</file> into
 
 <sect id=softupdate>Using FAI for on-line updates
 <p>FAI is even usable for system updates, using the same configuration as 
-when initially installing. An updated client will almost look like a
+if initially installing. An updated client will almost look like a
 newly installed machine, though all local data is preserved (except of course
 newer configuration files introduced in the FAI config).</p>
 
@@ -2564,7 +2582,7 @@ seen immediately in the terminals started for each host.</p>
 <sect1 id=confsoftupdate>How to write a configuration suitable for softupdates
 <p>When you want to do softupdates, you have to be even more careful when
 writing your configuration: it has to be <strong>idempotent</strong>, i.e. 
-running all the scripts twice should result into the same system configuration
+running all the scripts twice should result in the same system configuration
 as running them once. Some things to keep an eye on:
 <list>
 	<item><em>Never</em> blindly append to files:
@@ -2598,7 +2616,7 @@ as running them once. Some things to keep an eye on:
 		</taglist>
 
 	<item>Restart daemons if needed: most daemons only read their
-		configuration once when starting; if you modify it, you need to
+		configuration when starting; if you modify it, you need to
 		make them reload it using
 		<example>
 			$ROOTCMD invoke-rc.d $somedaemon reload
@@ -2624,8 +2642,10 @@ as running them once. Some things to keep an eye on:
 <p><strong>Long: </strong> <em>if</em> you are using FAI <tt>softupdate</tt> to
 update client's configuration, you shouldn't do any local changes on
 the install clients, because they may be lost while updating. Backup
-copies are done by fcopy only on the local disk; if you want to save
-them together with the logfiles, 
+copies are done by fcopy only on the local disk (by default, they are
+written to the same directory as the original file, with
+<tt>.pre_fcopy</tt> appended); if you want to save them together with
+the logfiles,
 	<example>
 		FAI_BACKUPDIR=$LOGDIR/backup
 	</example>
