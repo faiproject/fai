@@ -1,16 +1,136 @@
-#! /bin/sh
-# subroutine definitions for Solaris operating system
+#! /bin/bash
 
-verbose=1
+# $Id$
+#*********************************************************************
+#
+# subroutines-sunos 
+#
+# useful subroutines for SunOS installation with FAI on Sun systems
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2000-2003 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
 
-defnop load_keymap_consolechars dpkg mount2dir task_confdir task_chboot
+# source this file, then you have these function available in the shell
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_partition() {
 
+if [ -s $SI_PROFILE ]; then
+
+    echo "SI_PROFILE already exists."
+    return
+fi
+    # we have to create the SI_PROFILE which contains information about the
+    # partitioning and the list of software that will be installed 
+
+    # first read one disk_config file
+    for class in $classes; do
+	revclasses="$class $revclasses"
+    done
+    for c in $revclasses ; do
+	if [ -f $FAI/disk_config/$c ]; then
+	    echo "Using disk_config/$c"
+	    cat $FAI/disk_config/$c >> $SI_PROFILE
+	    break
+	fi
+    done
+
+    # now read all package_config matching a class name
+    for c in $classes; do
+       if [ -f $FAI/package_config/$c ]; then
+	   echo "Using package_config/$c"
+	   cat $FAI/package_config/$c >> $SI_PROFILE
+       fi
+    done
+
+    cp $SI_PROFILE $LOGDIR
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_confdir() {
+
+    if [ ! -d /fai/class ]; then
+	mount -F lofs $SI_CONFIG_DIR/fai /fai
+    fi
+
+    mount -F lofs $SI_CONFIG_DIR/scripts/usr-local /usr/local
+#    define_fai_flags
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 jobsrunning() {
 
-    # test is jobs are running
+    # test if jobs are running
     ps -el | egrep ' O | R ' | egrep -v 'TIME CMD|grep|ps'
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fai_init() {
 
+    # default classes before calling task defvar. Will be overwritten by task defvar
+    # the type of operating system (linux, sunos)
+    oclass=$(uname -s | tr /a-z/ /A-Z/)
+    classes="DEFAULT $oclass $HOSTNAME LAST"
+
+    umask 022
+    target=/a
+    FAI_ROOT=$target
+    stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
+    FAI_VERSION=FAIVERSIONSTRING
+    osname="Sun Solaris"
+    ROOTCMD="chroot $target"
+    FAI=/fai
+    debug=
+    verbose=1
+#    createvt=1
+    rcsfaivar=/tmp/rcsfai.var
+    [ -z "$LOGDIR" ] && LOGDIR=/tmp/fai
+    mkdir -p $LOGDIR
+    rcslog=$LOGDIR/rcS.log
+
+    PATH=$SI_CONFIG_DIR/bin:/usr/local/bin:$PATH
+    LD_LIBRARY_PATH=$SI_CONFIG_DIR/lib:$LD_LIBRARY_PATH
+
+    if [ -z "$IPADDR" ]; then
+	IPADDR=`ifconfig $_INIT_NET_IF | grep inet | awk '{ print $2 }'`
+    fi
+
+    # commands that are not used on solaris
+    defnop openvt wait_for_jobs save_dmesg task_mountdisks task_extrbase
+    defnop task_mirror task_updatebase task_instsoft task_finish task_chboot
+    cat <<-EOF
+
+             -----------------------------------------------------
+               Fully Automatic Installation for $osname
+               $FAI_VERSION
+
+               Copyright (c) 1999-2003 Thomas Lange
+               <lange@informatik.uni-koeln.de>
+             -----------------------------------------------------
+
+EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_sysinfo() {
+
+    constype >> $LOGDIR/prtconf.log
+    fai-savelog -r
+    task_faiend
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
