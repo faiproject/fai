@@ -162,7 +162,7 @@ task_partition() {
     # setup_harddisks must create $diskvar file
     if [ ! -s $diskvar ]; then
 	cat $LOGDIR/format.log
-	die "Error: $diskvar not found."
+	die "setup_harddisks did not create $diskvar file."
     fi
     # now define variable for root and boot partition and boot device
     . $diskvar
@@ -196,39 +196,6 @@ task_updatebase() {
     else
 	prepare_apt  > $LOGDIR/updatebase.log 2>&1
     fi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-prepare_apt() {
-
-    # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
-    # think about using fcopy for these two files
-    [ -f /tmp/etc/resolv.conf ] && cp /tmp/etc/resolv.conf $FAI_ROOT/etc
-    [ -f /etc/hosts ] && cp /etc/hosts $FAI_ROOT/etc
-    # set hostname in $FAI_ROOT
-    echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
-    echo $HOSTNAME >$FAI_ROOT/etc/hostname
-    cp /etc/apt/* $FAI_ROOT/etc/apt/
-    # some packages must access /proc even in chroot environment
-    mount -t proc proc $FAI_ROOT/proc
-
-    # if libc is upgraded init u is called in chroot environment and
-    # then init will eat up much cpu time
-    adddivert /sbin/init /usr/sbin/liloconfig
-
-    $ROOTCMD apt-get update
-    $ROOTCMD apt-get check
-    [ $? -ne 0 ] && $ROOTCMD apt-get -f -y install </dev/null 
-    $ROOTCMD dpkg -C
-    [ $? -ne 0 ] && yes '' | $ROOTCMD dpkg --configure -a 
-    $ROOTCMD apt-get -f -y upgrade </dev/null
-    # update dpkg info which packages are available
-    $ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
-    $ROOTCMD dpkg --update-avail /tmp/dumpavail
-    rm -f $FAI_ROOT/tmp/dumpavail
-
-    # fake some more programs
-    adddivert /etc/init.d/nis /sbin/start-stop-daemon
-    cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_instsoft() {
