@@ -2,16 +2,18 @@
 
 # determine the list of all hosts that respond to a ping
 #
-# (c) Thomas Lange, Institut fuer Informatik, Uni Koeln, 1998-2001
+# (c) Thomas Lange, Institut fuer Informatik, Uni Koeln, 1998,2001
 
-# example for a Beowulf cluster
-server=atom00
-nodeprefix=atom
-endnum=25
+# define a netgroup called allhosts which is the list of all hostnames
 
+fpingopt="-i40"
 
 make_hostlist() {
 
+    # example for a Beowulf cluster
+    server=atom00
+    nodeprefix=atom
+    endnum=25
     # create the list of all hosts
     i=1
     while [ $i -le $endnum ]; do
@@ -36,25 +38,19 @@ EOF
 exit 0
 }
 
-gethosts() {
-    for h in $allhosts
-    do
-	if ping -c 1 $h >/dev/null;
-	then hosts=$hosts"$h ";
-	else nohosts=$nohosts"$h ";
-	fi
-    done
-}
+# - - - - - - - - - - - - - - - - - - - -
+# if using NIS this is very nice
+allhosts=`ypmatch allhosts netgroup`
+#make_hostlist
 
-make_hostlist
 while getopts anhp opt
 do
         case "$opt" in
-	n) gethosts && echo $nohosts && exit ;;
+	n) fping $fpingopt -u $allhosts 2>/dev/null ;;
         h) usage ;;
         p) echo $allhosts ;;
 	*) usage
 	    exit 2;;
 	esac
 done
-[ -n "$1" ] || gethosts && echo $hosts
+[ -n "$1" ] || fping $fpingopt -a $allhosts 2>/dev/null
