@@ -34,5 +34,6 @@ install:
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(LIBDIR)/sbin/rcS_fai
 	ln -fs installimage_3com $(DESTDIR)/boot/fai/bigfoot
 	ln -fs installimage_3com $(DESTDIR)/boot/fai/ant01
+	ln -fs installimage_3com $(DESTDIR)/boot/fai/atom_install
 
 .PHONY: clean veryclean
