@@ -216,7 +216,7 @@ get_dhcp_info() {
     local dhcplog=/tmp/dhcp.log
     dhclient -lf /dev/null $netdevices >$dhcplog 2>/tmp/dhclient.log
     [ -n "$verbose" -a -f $dhcplog ] && echo "Reading $dhcplog"
-    eval `cat $dhcplog`
+    eval `grep -v "^#" $bootlog`
     killall dhclient-2.2.x
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -231,7 +231,7 @@ get_bootp_info() {
     done
 
     [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
-    eval `cat $bootlog`
+    eval `grep -v "^#" $bootlog`
     FAI_LOCATION=$T170
     FAI_ACTION=$T171
     FAI_FLAGS=$T172
