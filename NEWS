@@ -2,27 +2,34 @@ New in FAI 2.4
 
     - Era Erikson did some great work on sproofreading all manuals and
       script comments. Great work Era!
-    - use the new script fai-class for defining classes (scripts in
+    - use the new script fai-class for defining classes; scripts in
       class/ must not have prefix S; following command renames your
-      existing scripts: rename 's/^S(\d\d)/$1/' S* ), the order of
-      scripts executed has slightly changed: all classes from the file
-      $HOSTNAME are defined after the scripts in class/ are executed;
-      the suffix .sh or .pl is not needed any more
+      existing scripts: rename 's/S(\d\d.+)(\.sh|\.pl)/$1/' S*
+      the order of scripts executed has slightly changed; all classes
+      from the file $HOSTNAME are defined after the scripts in class/
+      are executed; the suffix .sh or .pl is not needed any more,
+      scripts in class/ ending in ~ or .bak are not executed 
     - hooks can make their task to be skipped (as in fai 2.2)
-    - scripts in class/ ending in ~ are not executed
     - kernel 2.4.18 is the default kernel
-    - some functions are now separate scripts in /usr/lib/fai
-      (create_ramdisk,XXX), they are not standalone script, most of
-      the only work in the fai environment, this should solve the
-      problems with a too big environment (when using xargs)
-    - PATH always starts with /usr/local/{sbin,bin}
+    - USB keyboard support during installation
+    - some functions that were defined as shell subroutines are now
+      separate scripts in /usr/lib/fai (create_ramdisk, prepare_apt,
+      fai-divert, fai-savelog, task_sysinfo, ...), they are not
+      standalone script, most of them only work in the fai environment,
+      this should solve the problems with a too big environment (when
+      using xargs)
     - make-fai-bootfloppy creates a more generic boot floppy which
-      support more boot protocols, more floppy disk space for kernel
-      available
-    - make-fai-nfsroot always does setup for dhcp and bootp
+      uses grub or lilo as boot loader, it supports more than one boot
+      protocol, more disk space is available on the floppy
+    - PATH always starts with /usr/local/{sbin,bin}
     - new FAI_FLAG syslogd starts log daemons (syslogd and klogd) only
       on demand
-    - save log files to host $LOGSERVER if defined, otherwise use $SERVER
+    - save log files to host $LOGSERVER if defined, otherwise use
+      $SERVER
+    - make-fai-nfsroot always does setup for dhcp and bootp, uses
+      following sources to create the file sources.list for the
+      nfsroot: the variable $FAI_SOURCES_LIST or the files
+      /etc/fai/sources.list or /etc/apt/sources.list
     - a lot of bug fixes
 
 New in FAI 2.3.4
@@ -150,7 +157,7 @@ New in FAI 2.2
     - major reorganization of the rcS_fai code; most parts are moved
       to the subroutines file
     - source /fai/hooks/subroutines if file exists; here you can define
-      your own subroutines or redefine FAI's subroutines
+      your own subroutines or redefine FAIs subroutines
     - most tasks are now executed via task() and the name of the task
       as option. This subroutine looks for a hook with the given name
       and executes it. Hooks can skip the default task of FAI (called
