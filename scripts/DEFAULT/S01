@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# (c) Thomas Lange, 2001-2004, lange@debian.org
+# (c) Thomas Lange, 2001-2005, lange@debian.org
 
 # disable fsck on ext3 filesystems
 partitions=`mount|grep $target |grep "type ext3"|perl -ane 'print "$F[0] "'`
@@ -9,6 +9,8 @@ for part in $partitions; do
     tune2fs -c 0 -i 0 $part
 done
 
+# assuming that make-fai-nfsroot.conf sets
+# FAI_LOCAL_REPOSITORY="deb file:/fai/files packages/"
 # install additional packags that are located in /fai/files/packages/
 if [ -d /fai/files/packages ] && [ ! -f /fai/files/packages/Packages.gz ]; then
     # Mm. It seems not to be a simple repository. I assume it's configured in sources.list
