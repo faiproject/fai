@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.12, 27-jan-2003";
+my $version = "Version 1.13, 2-feb-2003";
 
 use strict;
 use File::Copy;
@@ -55,7 +55,7 @@ my %lastclass;
 my $modeset;
 
 # getopts:
-our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_v, $opt_d, $opt_D);
+our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_v, $opt_d, $opt_D, $opt_i);
 our ($opt_c, $opt_C, $opt_h, $opt_F, $opt_l, $opt_L, $opt_P);
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -78,7 +78,11 @@ sub copy_one {
   $destfile = "$target/$source";
 
   unless (defined $class) {
+    if ($opt_i) {
       warn "fcopy: no matching file for any class for $source defined.\n";
+    } else {
+      ewarn("fcopy: no matching file for any class for $source defined.");
+    }
     # do not copy
     $opt_d and -f $destfile and move($destfile,"$destfile.pre_fcopy");
     return;
@@ -335,7 +339,7 @@ sub rfilter {
 
 $|=1;
 $error = 0;
-getopts('s:t:rm:vdDc:C:hF:lL:P:');
+getopts('s:t:rm:vidDc:C:hF:lL:P:');
 $opt_h && usage;
 $opt_m && check_mopt();
 $verbose = $opt_v || $ENV{verbose} || 0;
