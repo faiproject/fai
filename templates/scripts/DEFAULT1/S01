@@ -2,6 +2,13 @@
 
 # (c) Thomas Lange, 2001-2003, lange@debian.org
 
+# do not force fsck on ext3 filesystems
+partitions=`mount|grep $target |grep "type ext3"|perl -ane 'print "$F[0] "'`
+for part in $partitions; do
+    tune2fs -c 0 $part
+    tune2fs -i 0 $part
+done
+
 # if $kernelimage is not a debfile, then it's the kernel version
 # create dummy link, so package kernel-image-* makes new correct link
 ln -s /boot/vmlinuz-nolink $target/vmlinuz
@@ -78,6 +85,8 @@ fcopy /etc/X11/XF86Config-4
 # put CD-ROM into fstab and exports
 # if cdromdevice is defined in *.var, use that value
 # if you have both a SCSI and an IDE CD-ROM -> Uuuuups, this will fail
+# if you have an IDE CDROM (mostly hdc) but you are using the ide-scsi driver,
+# this IDE CDROM will be sr0, nopt hdc. So the auto detect in the following lines will fail
 [ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -1 | awk -F/ '{print $4}'`
 [ "$cdromdevice" ] || cdromdevice=`grep -q CD-ROM /proc/scsi/scsi && echo "sr0"`
 if [ "$cdromdevice" ]; then
