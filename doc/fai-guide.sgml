@@ -6,12 +6,12 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.1.3">
-<!entity faiver "2.2.3">
-<!entity faiverdate "15 november, 2001">
+<!entity faikernelver "1.1.4">
+<!entity faiver "2.3">
+<!entity faiverdate "15 XXX, 2002">
 
 <!entity version "1.3.1">
-<!entity date    "15 november 2001">
+<!entity date    "15 XXX 2002">
 ]>
 
 <debiandoc>
@@ -28,7 +28,7 @@ creating of the configuration and how to deal with errors.
  
 <copyright>
 <copyrightsummary>
-Copyright &copy; 2000-2001 Thomas Lange
+Copyright &copy; 2000-2002 Thomas Lange
 </copyrightsummary>
 	<p>
 This manual is free software; you may redistribute it and/or modify it
@@ -291,7 +291,7 @@ which contains the install kernels for FAI. <footnote> <p><tt># apt-get
 install fai</tt> should also work.</p></footnote>
 
 <example>
-kueppers[~]# dpkg -i fai-kernels_&faikernelver;_i386.deb 
+kueppers# dpkg -i fai-kernels_&faikernelver;_i386.deb 
 Selecting previously deselected package fai-kernels.
 (Reading database ... 40562 files and directories currently installed.)
 Unpacking fai-kernels (from .../lange/fai-kernels_&faikernelver;_i386.deb) ...
@@ -302,7 +302,7 @@ Get the newest version of FAI and install it using the
 <prgn>dpkg</prgn> command:
 
 <example>
-kueppers[~]# dpkg -i fai_&faiver;_all.deb
+kueppers# dpkg -i fai_&faiver;_all.deb
 Selecting previously deselected package fai.
 (Reading database ... 39564 files and directories currently installed.)
 Unpacking fai (from fai_&faiver;_all.deb) ...
@@ -398,7 +398,7 @@ cards from 3Com. Put that executable in your path
 <prgn>fai-setup</prgn>.
 
 <example>
-kueppers[~]# fai-setup 
+kueppers# fai-setup 
 Adding system user fai...
 Stopping Name Service Cache Daemon: nscd.
 Adding new user fai (100) with group nogroup.
@@ -462,8 +462,8 @@ server has to reload its configuration.  Use one of the following
 commands, depending on which NFS server you are using:
 
 <example>
-kueppers[~]# /etc/init.d/nfs-kernel-server reload
-kueppers[~]# /etc/init.d/nfs-server reload
+kueppers# /etc/init.d/nfs-kernel-server reload
+kueppers# /etc/init.d/nfs-server reload
 </example>
 
 <p>
@@ -541,8 +541,8 @@ example the host is called <tt>bigfoot</tt>. The file
 suitable for booting 3Com network cards.
 
 <example> 
-kueppers[~]# cd /boot/fai
-kueppers[~]# ln -s installimage_3com bigfoot
+kueppers# cd /boot/fai
+kueppers# ln -s installimage_3com bigfoot
 </example>
 
 
@@ -550,15 +550,22 @@ kueppers[~]# ln -s installimage_3com bigfoot
 <p>
 Some network cards (e.g. Intel EtherExpress PRO 100) have a fixed
 configuration for booting using the PXE protocol. This requires a PXE
-Linux boot loader an a special version of the <tt>TFTP</tt> daemon. See
+Linux boot loader an a special version of the <tt>TFTP</tt> daemon.
+First set up the DHCP daemon. A sample configuration files can be
+found in <file>/usr/share/doc/fai/examples/etc/dhcpd.conf</file>.
+If you sepecify a kernel package in &fc; using the variable
+<tt>KERNELPACKAGE</tt> which cintains a kernel that uses the DHCP
+protocol for obtaining boot information, the pxelinux environment will
+be set up automaticly. You only have to enable the special tftp daemon
+using this line in file <file>/etc/inetd.conf</file>: 
+<example>
+tftp dgram udp wait nobody /usr/local/sbin/tftpd -s -r blksize /boot/fai
+</example>
+
+See
 <file>/usr/share/doc/syslinux/pxelinux.doc.gz</file> for more
 information, how to boot such an environment. There are also some
-mails in the FAI mailing list archive concerning this topic. Sometimes
-you do not need a netboot image for booting instead you can use the
-raw kernel image. So, copy the kernel image from the nfsroot to the
-TFTP directory:
-
-<example># cp /usr/lib/fai/nfsroot/vmlinuz-2.2.19 /boot/fai/installimage</example>
+mails in the FAI mailing list archive concerning this topic.
 
 <sect id="bootfloppy">Creating a boot floppy
 <p>
@@ -2219,6 +2226,20 @@ booting the FAI bootfloppy from this partition. So you can start the
 reinstallation without a boot floppy. This will also make the test
 phase shorter, since booting from hard disk is much  faster than booting
 from floppy.
+<p>
+To use the <file>/file/scratch</file> partitions on all Beowulf nodes
+use the kernel automounter and following configuration.
+
+<example>
+nucleus[~]> cat /etc/auto.master
+/scratch /etc/nodes.scratch
+</example>
+
+<example>
+nucleus[~]> cat /etc/nodes.scratch 
+*               -rw,soft,intr           &:/files/scratch
+</example>
+
 </book>
 </debiandoc>
 
