@@ -80,13 +80,14 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
 
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach my $type (@commands) {
+  # skip if empty list
+  next unless defined $list{$type};
+
   if ($type eq "dselect-upgrade") {
     dselectupgrade($type);
     next;
   }
 
-  # skip if empty list
-  next unless @{$list{$type}};
   my $packlist = join(' ',@{$list{$type}});
 
   if ($type eq "hold") {
