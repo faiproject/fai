@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 2.2, 7-oct-2003"
+version="version 2.3, 9-oct-2003"
 set -e
 timeout=15
 mkimage=0
@@ -207,7 +207,7 @@ grub_floppy() {
     # make a boot floppy using grub
     kernel=vmlinuz-$KERNELVERSION
     mkdir -p $mountpoint/boot/grub
-    cp -p /usr/lib/grub/i386-pc/stage? $mountpoint/boot/grub
+    cp -p $NFSROOT/usr/lib/grub/i386-pc/stage? $mountpoint/boot/grub
     cp $NFSROOT/boot/$kernel $mountpoint
 
     grubconf="
@@ -241,7 +241,7 @@ savedefault
 "
     echo "$grubconf" > $mountpoint/boot/grub/menu.lst
     umount $mountpoint
-    grub --batch --device-map=/dev/null >/dev/null <<EOF
+    $NFSROOT/sbin/grub --batch --device-map=/dev/null >/dev/null <<EOF
 device (fd0) $floppydev
 root (fd0)
 setup (fd0)
