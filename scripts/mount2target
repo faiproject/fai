@@ -27,18 +27,26 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
+target=$1
+fscklog=/tmp/fsck.log
 fstab=/tmp/fstab
-target=/tmp/target
-verbose=1
+fscheck=1
+mountoption=
 
-mountoption="-n"
+# exit if no parameter given
+[ "$target" ] || {
+    echo No parameter. Specify target directory.
+    exit 1
+}
 
 _mount2target() {
 
 while read mountpoint device type ; do
-      [ $verbose ] && echo "mount $mountoption $device $target/$mountpoint"
-      #mkdir -p $target/$mountpoint
-      #mount $mountoption $device $target/$mountpoint
+      [ $verbose ] && echo "mounting $device to $target$mountpoint type: $type opt: $mountoption"
+      mkdir -p $target/$mountpoint
+      # should we fsck the partition first ?
+      [ "fscheck" ] && fsck -nt $type $device >> $fscklog 2>&1
+      mount $mountoption $device $target$mountpoint
 done
 }
 

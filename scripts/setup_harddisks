@@ -40,6 +40,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes: 09.03.2001 by Thomas Lange
 # Last changes: 05.12.2000 by Thomas Lange
 # Last changes: 03.05.2000 by Thomas Lange
 # Last changes: 03.04.2000 by Mattias Gaertner
@@ -127,7 +128,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-$Version = "0.3.4";
+$Version = "0.4fai";
 
 $test = 1;                  # 1 = testing, no real changes
 
@@ -234,7 +235,7 @@ $DOS_Alignment  = "yes" if $opt_d; # track alignment
 &FormatDisks;
 
 # Mount all disks in a subdirectory
-&MountDisks;
+#&MountDisks;
 
 &WriteFSTab;
 
@@ -874,36 +875,6 @@ sub FormatDisks{
 }
 
 #****************************************************
-# Mount all linux file-systems
-#****************************************************
-sub MountDisks{
-    my ($mountpoint, $mountdir, $result, $add_mount_options);
-    print "\nMount all filesystems:\n";
-    foreach $mountpoint (sort values %PartMountpoint){
-	next if ($mountpoint !~ /^\//);
-	$device = $MountpointPart{$mountpoint};
-	$type = "ext2";
-	$mountdir = "/$InstallMountPoint/$mountpoint";
-	$mountdir =~ s#//#/#g;
-	# make directory
-	$command = "mkdir $mkdir_options $mountdir";
-	if ($test != 1){
-	    $result = `$command`;
-	    (($? >> 8) == 0) || die "\nMKDIR ERROR:\n $result\n";
-	}
-	# mount filesystem
-        $add_mount_options = "";
-	($MPPreserve{$mountpoint} eq "yes") && ($MPOptions{$mountpoint} != /\bwritable\b/i) && ($add_mount_options .= " -r");
-	$command = "e2fsck -y /dev/$device ;mount $mount_options -t $type $add_mount_options /dev/$device $mountdir";
-	print "  $command\n";
-	if ($test != 1){
-	    $result = `$command`;
-	    (($? >> 8) == 0) || die "\nMOUNT ERROR:\n $result\n";
-	}
-    }
-}
-
-#****************************************************
 # Build fstab and write it to <root>/etc/fstab
 #****************************************************
 sub WriteFSTab{
@@ -934,15 +905,7 @@ sub WriteFSTab{
 	$FileSystemTab .= BuildfstabLine("/dev/$device","$mountpoint","$type",$MPfstaboptions{$mountpoint},0,2);
     }
     # write it
-    $filename = "/$InstallMountPoint/etc";
-    $filename =~ s#//#/#g;
-    $command = "mkdir $mkdir_options $filename";
-    print "  $command\n";
-    if($test != 1){
-	$result = `$command`;
-	(($? >> 8) == 0) || die "\nMKDIR ERROR:\n $result\n";
-    }
-    $filename .= "/fstab";
+    $filename = "/tmp/fstab";
     print "$FileSystemTab\n";
     if($test != 1){
 	open(FILE, ">$filename") || die "unable to write fstab $filename\n";
