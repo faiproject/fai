@@ -2,11 +2,24 @@
 
 control:
    OutputPrefix = ("${cf_prefix}")
-   actionsequence = ( directories editfiles )
+   actionsequence = ( files directories links editfiles )
    EditFileSize = ( 30000 )
 
-directories:
+files:
+   any::
+   # suppress emacs errors
+        ${target}/etc/mailname mode=644 owner=0 group=0 action=touch
 
+
+# everbody should be able to use pppd
+#chmod a+rx $target/usr/sbin/pppd
+#chmod a+r  $target/etc/ppp/peers/* $target/etc/chatscripts/*
+   NOTEBOOK::
+        ${target}/etc/ppp/peers/* mode=644
+        ${target}/etc/chatscripts/* mode=644
+	${target}/usr/sbin/pppd
+
+directories:
    any::
 	${target}/tmp mode=1777 owner=0 group=0
 
@@ -18,6 +31,10 @@ directories:
 
    SCRATCH::
         ${target}/scratch mode=1777 owner=0 group=0
+
+links:
+   LINUX.CS_KOELN::
+	${target}/vol -> /usr/local/vol nofile=force
 
 editfiles:
    any::
@@ -128,6 +145,13 @@ editfiles:
 	  HashCommentLinesContaining "respawn:/sbin/getty "
 	}
 
+# add an account so everybody can shutdown the notebook
+# this account has no password!
+   NOTEBOOK::
+	{ ${target}/etc/passwd
+	  AppendIfNoSuchLine "poweroff::0:0:poweroff account:/tmp:/sbin/poweroff"
+	}
+
 # Install users for netscape kiosk-mode
    WWWKIOSK::
 	{ ${target}/etc/passwd
@@ -161,7 +185,6 @@ editfiles:
 # add scratch.map 
    BSDAMD::
         { ${target}/etc/am-utils/amd.conf
-	  AppendIfNoSuchLine "### scratch"      
 	  AppendIfNoSuchLine "[ /scratch ]"
 	  AppendIfNoSuchLine "map_name = amd.scratch"
 	}
