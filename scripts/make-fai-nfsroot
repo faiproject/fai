@@ -53,18 +53,21 @@ LIBFAI=/usr/lib/fai
 conffile=$NFSROOT/etc/rcS_fai.conf
 export DEBIAN_FRONTEND=Noninteractive
 
-if [ "$verbose" ]; then
-	devnull=/dev/tty
-else
-	devnull=/dev/null
-fi
-
 trap "umount_dirs" EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
     echo $*
     exit 99
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+call_verbose() {
+
+    if [ "$verbose" ]; then
+	$*
+    else
+	$* > /dev/null
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 install_kernel_nfsroot() {
@@ -115,13 +118,13 @@ call_debootstrap() {
 
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "calling debootstrap $1 $NFSROOT $2"
-    LC_ALL=C yes '' | debootstrap $1 $NFSROOT $2 > $devnull 2>&1
+    LC_ALL=C yes '' | debootstrap $1 $NFSROOT $2
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
     if [ "$FAI_DEBOOTSTRAP" ]; then
-	call_debootstrap $FAI_DEBOOTSTRAP
+	call_verbose call_debootstrap $FAI_DEBOOTSTRAP
 	$ROOTCMD apt-get clean
 	echo "Creating base.tgz"
 	tar -C $NFSROOT -cf - . | gzip > $NFSROOT/../base.tgz
@@ -160,7 +163,11 @@ create_nfsroot() {
     else
 	cp /etc/apt/sources.list etc/apt/sources.list
     fi
-    upgrade_nfsroot  
+    echo "Upgrading $NFSROOT"
+    call_verbose upgrade_nfsroot  
+    echo "Adding additional packages to $NFSROOT:"
+    echo "$packages"
+    call_verbose add_packages_nfsroot
     copy_fai_files
 
     # set timezone
@@ -205,8 +212,6 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
 
-    echo "Upgrading $NFSROOT"
-    {
     cp /etc/resolv.conf $NFSROOT/etc
     $ROOTCMD apt-get update
     $ROOTCMD apt-get check
@@ -218,13 +223,12 @@ upgrade_nfsroot() {
     $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
     cp $LIBFAI/sbin/start-stop-daemon $NFSROOT/sbin
     $ROOTCMD apt-get -y upgrade
-    } > $devnull
-    echo "Adding additional packages to $NFSROOT:"
-    echo "$packages"
-    {
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_packages_nfsroot() {
+
     $ROOTCMD apt-get -y --fix-missing install $packages </dev/null
     $ROOTCMD apt-get clean
-    } > $devnull
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_basetgz() {
