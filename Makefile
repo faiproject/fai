@@ -29,7 +29,7 @@ veryclean: clean
 
 install: 
 	$(MAKE) -C doc install
-	-install -m755 lib/* $(LIBDIR)
+	-install -m755 lib/[a-z]* $(LIBDIR)   # do not copy CVS dir
 	cd scripts ; install $(SBIN) $(DESTDIR)/sbin
 	cd scripts ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
