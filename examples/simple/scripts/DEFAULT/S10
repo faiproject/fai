@@ -3,18 +3,6 @@
 # copyright Thomas Lange 2001-2005, lange@debian.org
 # LILO support may be dropped in a future release
 
-gmenu=$target/boot/grub/menu.lst
-grubvars() {
-    # define variables for grub
-    fp=$1
-
-    dfline=$(df $fp | grep '^/dev/')
-    dev=$(echo $dfline | cut -d ' ' -f1)
-    mntp=$(echo $dfline | awk '{print $6}')
-    broot=$(device2grub $dev)
-    gpath=${fp#$mntp}
-}
-
 # a list of modules which are loaded at boot time
 fcopy /etc/modules
 for module in $moduleslist; do
@@ -59,58 +47,6 @@ EOF
   }
 fi
 
-if ifclass GRUB; then
-    grub-install --no-floppy --root-directory=$target $BOOT_DEVICE
-
-    fcopy /boot/grub/menu.lst || {
-    fullpath=$(ls $target/boot/vmlinuz-*)
-    grubvars $fullpath
-    if [ -L $target/initrd.img ]; then
-	iname=$(cd $target/boot; ls initrd.img*)
-	t="$target/boot"
-	ipath=${t#$mntp}
-	initrdopt="initrd $ipath/$iname"
-    fi
-    cat > $gmenu <<-EOF
-
-	# created by FAI
-	
-	timeout 10
-	default 0
-	color cyan/blue white/blue
-
-	title Debian GNU/Linux, $kernelversion
-	root $broot
-	kernel $gpath root=$ROOT_PARTITION $kappend
-	$initrdopt
-EOF
-    if ifclass BOOTWINDOWS; then
-    cat >> $gmenu <<-EOF
-
-	# created by FAI
-
-	# For booting Windows NT or Windows95
-	title Windows
-	rootnoverify (hd0,0)
-	makeactive
-	chainloader  +1
-EOF
-    fi
-
-    # add entry for memtest
-    if [ -f $target/boot/memtest86+.bin ] ; then
-    t="$target/boot"
-    gpath=${t#$mntp}
-    cat >> $gmenu <<-EOF
-
-	title  memtest
-	root   $broot
-	kernel $gpath/memtest86+.bin
-EOF
-    fi
-    }
-    echo "Grub installed on $BOOT_DEVICE with $kernelversion on $broot"
-fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ifclass FAI_BOOTPART && {
 
@@ -132,26 +68,6 @@ EOF
 	cp $target/etc/lilo.conf $target/fai-boot/etc
     }
 
-    ifclass GRUB && {
-
-	echo "Add /fai-boot partition to menu.lst for grub"
-	cd $target && kernelname="/fai-boot/vmlinuz-$rev"
-	fullpath="$target/fai-boot/vmlinuz-$rev"
-	grubvars $fullpath
-	cat >> $gmenu <<-EOF
-
-	title start FAI with FAI_ACTION=sysinfo
-	password fai
-	root $broot
-	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FFLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=sysinfo
-
-	title FAI re-Installation
-	password fai
-	root $broot
-	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FFLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=install
-EOF
-	echo "Grub for $kernelversion installed on $broot"
-    }
 }
 
 # now call lilo
