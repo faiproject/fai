@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.4.4, 24-july-2004";
+$version="version 1.5, 24-july-2004";
 
 use Socket;
 use Net::hostent;
@@ -156,8 +156,18 @@ sub disable {
   rename "$pxedir/$hex","$pxedir/$hex.disable" or $error .= "\nRename for $hex failed.$! $@";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub enable {
 
-getopts('Bd:hnvlLiIp:f:Frk:So');
+  # rename network config file
+  my ($host) = shift;
+  my ($ipadr,$hex) = host2hex($host);
+  print "reenable pxe config for $host in hex $hex\n" if $verbose;
+  return if $opt_n;
+  rename "$pxedir/$hex.disable","$pxedir/$hex" or $error .= "\nRename for $hex failed.$! $@";
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+getopts('Bd:ehnvlLiIp:f:Frk:So');
 $opt_h and usage;
 defined @ARGV or usage;
 
@@ -170,12 +180,18 @@ $opt_l and lsdir;
 ($opt_S and $opt_I) && die "ERROR: use only one option out of -I and -S\n";
 
 if ($opt_r) {
-  unless (@ARGV) {
-    die "Missing host name(s). Can't disable network booting.\n";
-  }
-
+  die "Missing host name(s). Can't disable network booting.\n" unless @ARGV;
   foreach (@ARGV) {
     disable("$_");
+  }
+  $error and die "$0: $error\n";
+  exit 0;
+}
+
+if ($opt_e) {
+  die "Missing host name(s). Can't reenable network booting.\n" unless @ARGV;
+  foreach (@ARGV) {
+    enable("$_");
   }
   $error and die "$0: $error\n";
   exit 0;
