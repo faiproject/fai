@@ -4,7 +4,7 @@ DESTDIR=$(shell pwd)/debian/tmp
 DEB_HOST_ARCH=$(MACHTYPE)
 DOCDIR=/usr/share/doc/fai
 LIBDIR = $(DESTDIR)/usr/lib/fai
-SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon dhclient-perl dhclient-script
+SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon dhclient-perl dhclient-script fcopy mount2target
 SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy
 CONFFILES= apt.conf dhclient.conf
 
@@ -21,7 +21,7 @@ install:
 #	$(MAKE) -C kernel install LIBDIR=$(LIBDIR)
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
-	cd scripts ; install $(SCRIPTS) fcopy $(LIBDIR)/sbin
+	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
 	install -m644 lib/subroutines $(DESTDIR)/usr/share/fai
 	install -m644 lib/Fai.pm $(DESTDIR)/usr/lib/perl5/Debian
 	cd conf ; install -m644 $(CONFFILES) $(LIBDIR)/etc/
