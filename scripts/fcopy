@@ -6,7 +6,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2001 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2002 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.7.1, 15-oct-2001";
+my $version = "Version 1.8, 10-jan-2002";
 
 use File::Copy;
 use File::Compare;
@@ -35,6 +35,10 @@ use File::Find;
 use File::Path;
 use File::Basename;
 use Getopt::Std;
+
+use vars qw/*name/;
+*ffname   = *File::Find::name;
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub copy_one {
 
@@ -79,10 +83,18 @@ sub copy_one {
   move($destfile,"$destfile.pre_fcopy") if -f $destfile;
   if (copy($sourcefile,$destfile)) {
     print "fcopy: copied $sourcefile to $destfile\n" ;
+    postinst($ps,$destfile,$class);
     set_mode($ps,$destfile,$class);
   } else {
     ewarn("copy $sourcefile to $destfile failed. $!") ;
   } 
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub postinst {
+	my ($sourcefile,$destfile,$class) = @_;
+	if (-x "$sourcefile/postinst") {
+		system "$sourcefile/postinst $class $destfile";
+	};
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub name2num {
@@ -196,7 +208,7 @@ sub usage {
   print << "EOF";
 fcopy, copy files using classes. $version
 
-   Copyright (C) 2001 by Thomas Lange
+   Copyright (C) 2001-2002 by Thomas Lange
 
 Usage: fcopy [OPTION] ... SOURCE ...
 
@@ -208,7 +220,7 @@ Usage: fcopy [OPTION] ... SOURCE ...
    -h                   Show summary of options.
    -l                   Do not copy if destination is a symbolic link.
    -m user,group,mode   Set user, group and mode for copied files.
-   -r                   Copy recursivly.
+   -r                   Copy recursivly but skip CVS directories.
    -s source_dir        Look for source files relative to source_dir.
    -t target_dir        Copy files relativ to target_dir.
    -v                   Create verbose output.
@@ -216,6 +228,15 @@ Usage: fcopy [OPTION] ... SOURCE ...
 Report bugs to <lange\@informatik.uni-koeln.de>.
 EOF
   exit 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub rfilter {
+
+  # Filter for recursive copying
+  my $nlink;
+  -d && ! ($_ =~ /^CVS$/) && ($nlink=(lstat($_))[3]) && 
+    ( (-d 'CVS') && ($nlink==3) || (nlink==2) ) && 
+      push @rlist,$ffname;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
@@ -227,7 +248,7 @@ $opt_h && usage;
 $opt_m && check_mopt();
 $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
-$source  = $opt_s || $ENV{FAI_FILES};
+$source  = $opt_s || $ENV{FAI_FILES} || `pwd`;
 $target  = $opt_t || $ENV{FAI_ROOT};
 # last class has highest priority
 @classes = reverse split /\s+/,$ENV{classes};
@@ -239,9 +260,10 @@ die "fcopy: source undefined\n" unless $source;
 die "fcopy: target undefined\n" unless $target;
 
 if ($opt_r) {
-  my $pathes = join ' ',@ARGV;
-# TODO: use File::Find
-  @ARGV = split /\n/, `cd  $source ; find $pathes -links 2`;
+  my $olddir=`pwd`;chdir "$source";
+  File::Find::find(\&rfilter,@ARGV);
+  @ARGV = @rlist;
+  chdir "$olddir";
 }
 
 foreach (@ARGV) { copy_one($source,$_,$target); }
