@@ -53,13 +53,11 @@ adddivert() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rmalldivert() {
 
-    # remove all diversions
+    # remove all diversions made by fai
     local item
-    [ -s $divertlist ] || return
-    for item in `dpkg-divert --list fai | awk '{ print $3 }'`; do
+    for item in `$ROOTCMD dpkg-divert --list fai | awk '{ print $3 }'`; do
 	rmdivert $item
     done
-    rm $divertlist
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkdivert() {
@@ -79,11 +77,6 @@ rmdivert() {
 
     # remove diversion
     [ "$verbose" ] || local divertquiet=--quiet
-    # test if diversion exists
-    if [ ! dpkg-divert --list $1 | grep -q " by fai" ]; then
-       echo "WARNING: No diversion for $1 made by fai. Nothing to remove."
-       return
-    fi
     rm -f $FAI_ROOT/$1
     $ROOTCMD dpkg-divert $divertquiet --package fai --rename --remove $1
     # when a diversion was made before the file exists
@@ -278,7 +271,7 @@ task_instsoft() {
 task_finish() {
 
     umount -n $FAI_ROOT/proc
-    # undo fake of all programs in file $divertlist
+    # undo fake of all programs made by fai
     rmalldivert
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
