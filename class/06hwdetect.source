@@ -1,16 +1,13 @@
 #! /bin/sh
 
-# als subroutine definieren!!!!! XXXX
-#echo "0" > /proc/sys/kernel/printk
-
+echo 0 > /proc/sys/kernel/printk
 # let discover do the work
 /etc/init.d/discover start
 
 # load all IDE drivers
 
-# for a 2.6 kernel replace .o with .ko
 # DMA does not work if we load all modules in drivers/ide, so only try pci modules
-mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci ! -type d ! -name ide\* -exec basename {} .o \;)
+mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci -type f | sed 's/\.o$//' | sed 's/\.ko$//' | sed 's/.*\///')
 for i in $mod; do
     modprobe $i
 done
@@ -42,6 +39,7 @@ else
     [ "$verbose" ] && cat /proc/scsi/scsi
     [ "$debug" ] && grep -H . /proc/scsi/*/*
 fi
+echo 6 > /proc/sys/kernel/printk
 
 set_disk_info  # calculate number of available disks
 save_dmesg # save new boot messages (from loading modules)
