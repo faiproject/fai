@@ -221,12 +221,13 @@ fai_sysinfo() {
 	if [ -x /usr/local/bin/fai_sysinfo ]; then
 	    /usr/local/bin/fai_sysinfo
 	else
-	    cat /proc/partitions
+	    lspci
+	    hdparm -iv /dev/hd[a-h]
 	    fdisk -s /dev/hd? /dev/sd?
 	    fdisk -lu
-	    lspci
 	    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
-	    hdparm -iv /dev/hd[a-h]
+	    cat /proc/partitions
+	    file -s /dev/hd* /dev/sd* | egrep -v " can't read | empty$"
 	    echo -n "xserver for graphic card: "; xviddetect -q
 	    #si -p -o shm
 	fi
