@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# all hosts named ant?? are using the classes in file ants
+# all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
 
     ant??)

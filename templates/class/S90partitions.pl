@@ -11,6 +11,7 @@ sub match {
     m#\s/fai-boot\s#         && print "FAI_BOOTPART ";
 }
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine is read only for you
 foreach $class ( $ENV{HOSTNAME}, split /\s+/, $ENV{classes}) {
   $file = "/fai/disk_config/$class";
