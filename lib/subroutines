@@ -1,0 +1,98 @@
+#! /bin/sh
+
+# $Id$
+#*********************************************************************
+#
+# subroutines -- usefull subroutines for FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2000 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+# source this file, then you have these function available in the shell
+# TODO: umount not yet perfect, mount and modprobe print many errors
+
+mount_local_disks() {
+    # try to mount all partitions
+
+    mountoption=ro
+    [ "$1" = "rw" ] && mountoption=$1
+
+    disks=`sfdisk -s |perl -ne 'print "$1\n" if m#^/dev/(\S+):\s#'`
+
+    for disk in $disks; do
+	partitions=`sfdisk -lL /dev/$disk | \
+	    egrep -v " Empty| Extended" | \
+	    perl -ne 'print "$1\n" if m#^/dev/(\S+)\s#'`
+	for partition in $partitions; do
+	    mkdir -p $FAI_ROOT/$partition
+	    mount -o $mountoption /dev/$partition $FAI_ROOT/$partition
+	    # \ && echo $partition mounted successfully
+	    if [ -f $FAI_ROOT/$partition/etc/fstab ]; then
+		echo /etc/fstab found in $partition
+		export fstabpart=$partition
+		export fstablist="$fstablist $partition"
+		export fstabcount=$((fstabcount+1))
+	    fi
+	done
+    done
+    mount | grep $FAI_ROOT
+}
+
+umount_local_disks() {
+
+    test -d $FAI_ROOT || return
+    for part in `ls $FAI_ROOT`; do
+	umount $FAI_ROOT/$part
+    done
+    rmdir $FAI_ROOT/*
+    umount $FAI_ROOT
+}
+
+mount_via_fstab() {
+    _mount_via_fstab < $FAI_ROOT/etc/fstab
+}
+
+_mount_via_fstab() {
+    while read device mntpoint fstype options ; do
+	case $device in
+	    ""|\#*) continue ;;
+
+	    /dev/[sh]*)
+		opt="-o ro"
+#		[ "$options" ] && opt="$opt,$options"
+		mount $opt $device $FAI_ROOT$mntpoint
+	esac
+        unset device mntpoint fstype options opt
+    done
+}
+
+fstab_mount() {
+
+    if [ $fstabcount -eq 1 ]; then
+	umount_local_disks
+	mount -o ro /dev/$fstabpart $FAI_ROOT
+	mount_via_fstab
+	df
+    fi
+    [ $fstabcount -eq 0 ] && echo "No /etc/fstab found"
+    [ $fstabcount -ge 2 ] && echo "Found multiple fstab files in : $fstablist"
+}
