@@ -10,6 +10,9 @@ files:
    # suppress emacs errors
         ${target}/etc/mailname mode=644 owner=0 group=0 action=touch
 
+# floppy and cdroms are accessible for all
+        ${target}/dev include=fd* mode=666   action=fixall r=1
+        ${target}/dev include=sr* mode=444   action=fixall r=1
 
 # everbody should be able to use pppd
 #chmod a+rx $target/usr/sbin/pppd
@@ -136,7 +139,6 @@ editfiles:
 
    SERVER::
 	{ ${target}/etc/shells
-	  AppendIfNoSuchLine "/usr/bin/tcsh"
 	  AppendIfNoSuchLine "/usr/local/bin/tcsh"
 	}	  
 
@@ -165,7 +167,6 @@ editfiles:
 
 	#leave only one tty for login. First tty has the entry
         #..:2345:... in inittab
-	 
 	{ ${target}/etc/inittab
 	  HashCommentLinesContaining ":23:respawn:/sbin/getty"
         }
@@ -173,7 +174,7 @@ editfiles:
 # mount shm filesystem
    kueppers|dom::
         { ${target}/etc/fstab
-	  AppendIfNoSuchLine "none         /dev/shm        shm           defaults       0 0"
+	  AppendIfNoSuchLine "none  /dev/shm  shm  defaults  0 0"
         }
 
 # add NIS printcap
