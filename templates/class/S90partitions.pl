@@ -14,7 +14,7 @@ sub match {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine is read only for you
 foreach $class ( $ENV{HOSTNAME}, split /\s+/, $ENV{classes}) {
-  $file = "/fai/disk_config/$class";
+  $file = "$ENV{FAI}/disk_config/$class";
   next unless -f $file;
   open (PART,"<$file") || die "Can't open $file\n";
   while (<PART>) {
