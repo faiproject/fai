@@ -11,7 +11,7 @@
 
 <debiandoc>
 <book>
-      <title>FAI (Fully automatic installation) Guide 
+      <title>FAI (Fully Automatic Installation) Guide 
 
 NOT YET FINISHED !
 
@@ -97,7 +97,7 @@ First, some terms used in this manual, are described.
 
 The computer, which will be installed using FAI (called client), is
 booted from floppy disk or via network card. It gets an IP-address and
-boots a linux kernel which mounts all filesystems via NFS from the isntall
+boots a linux kernel which mounts all filesystems via NFS from the install
 server. After the operating system is running, the FAI startup script
 performs the automatic installation which doesn't need any
 interaction. First, the hard disks will be partitioned, filesystems are
@@ -127,7 +127,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Hosts can boot from floppy or from network card </p> </item>
 	    <item> <p>BOOTP and DHCP protocol are supported</p> </item>
 	    <item> <p>No initial ramdisk is needed, 8MB RAM suffice</p> </item>
-	    <item> <p>The Installation kernel can use modules</p> </item>
+	    <item> <p>The installation kernel can use modules</p> </item>
 	    <item> <p>Remote login via ssh during installation process
 	    possible</p> </item>
 	    <item> <p>Two additional virtual terminals available
@@ -153,6 +153,8 @@ inspect the hardware or do any other task.
 Following items are required for an installation via FAI.
 
 <taglist>
+	  <tag>A computer: </tag><item> with a network interface card
+	  XXX BOOTPROM</item>
 	  <tag>BOOTP or DHCP server: </tag><item> <p> 
 The clients need one of these daemons to obtain information.<footnote>
 		  <p>It's also possible without a server, if all
@@ -182,12 +184,17 @@ until it will be an official Debian package soon.
 
 
 <sect id="debian-mirror">How to create a local Debian mirror<p> 
-TODO
+There are two scripts available for creating a local partitial
+mirror. XXXX
 
 <sect id=aptsetup> Setting up FAI
 <p>
 
 First, get the newest version of FAI and install it using the
+
+XXXXX<example># apt-get install fai
+</example>
+
 <prgn>dpkg</prgn> command:
 
 <example>
@@ -340,26 +347,24 @@ configuration for the install clients. Start with the templates from
 and read <ref id="config">. Before you can set up a DHCP or BOOTP
 daemon, you should collect some network information of all your
 install clients. This is described in section <ref id="bootfloppy">.
-
 <p>
 When you make changes to &fc or want to install a new kernel to
 nfsroot, the nfsroot has to be rebuild by calling <prgn>fai-setup</prgn>.
 
-<chapt id="booting">Booting hosts <p>
+<chapt id="booting">Preparing booting <p> 
 
-Now it's time to boot your install clients for the first time. You can
-use the boot floppy or configure them to boot via network card, which
-is much smarter. They will fail to boot, because no BOOTP or DHCP
-daemon is running yet or recognizes the hosts. But you can use this
-first boot attempt to easily collect all Ethernet addresses of the
-network cards.
+Before booting for the first time, you have to choose which medium you
+use for booting. You can use the boot floppy or configure the computer
+to boot via network card, which is much smarter. 
 
 <sect id="nicboot">Configuring a 3Com network card
 <p>
 If you have a 3Com network card that is equipped with a boot ROM by
-Lanworks Technologie or already includes the DynamicAccess Managed PC Boot Agent (MBA)
-<footnote>   <p>see <httppath>http://www.3com.com/products/software/dynamicaccess/</httppath>)</p></footnote>
- 
+Lanworks Technologie or already includes the DynamicAccess Managed PC Boot Agent (MBA
+<footnote>   <p>see <httpsite>http://www.3com.com/</httpsite> 
+<httppath>products/software/dynamicaccess/</httppath></p></footnote>)
+
+
  software, you can enter the MBA setup by typing
 <tt>Ctrl+Alt+B</tt> during boot. The setup will look like this:
 
@@ -385,16 +390,17 @@ Boot Failure Prompt:        Wait for key
 Set the boot method to <tt>TCP/IP</tt> and the protocol to either
 <tt>BOOTP</tt> or <tt>DHCP</tt>. I prefer the BOOTP protocol.
 
-<sect id="pxeboot">Booting a PXE conforming boot ROM
+<sect id="pxeboot">Booting from network card with a PXE conforming boot ROM
 <p>
-My notebook has an builtin Intel EtherExpress PRO 100 network card,
+My notebook has an builtin Intel EtherExpress PRO 100 network
+interface card,
 with a fixed configuration for booting using the PXE method. This
 requires a PXE Linux XXXxx. See MAILLINGLIST XXXXXXXX for more information, how to
 boot in such an environment.
 
 See also <file>/usr/share/doc/syslinux/pxelinux.doc.gz</file>.
 
-<sect id="bootnetwork">Set up booting via network card
+<sect id="bootnetwork">Booting via network card
 <p>
 You will find two install kernels in <file>/boot/fai</file>. Make a
 symbolic link from the hostname of your client to the appropriate
@@ -407,15 +413,36 @@ kueppers[~]# ln -s installimage_3com faiserver
 </example>
 
 
-<sect id="bootfloppy">Creating the boot floppy
+<sect id="bootfloppy">Creating a boot floppy
 <p>
 If your network card can't boot itself, you have to boot via
 floppy. Use the command <prgn>make-fai-bootfloppy</prgn> to create the
 boot floppy. Since there's no client specific information on this
 floppy, it's suitable for all your install clients.
-
-<sect id="mac">Collecting Ethernet addresses
 <p>
+You can also specify additional kernel parameters for this boot
+floppy, it desired. See <example>make-fai-bootfloppy -h XX</example>
+for more information.
+
+<p>
+If you have no BOOTP or DHCP server you can supply the network
+ configuration as kernel parameters:
+<footnote>
+<p>For additional information see Documentation/nfsroot.txt in the kernel
+sources.
+</p> </footnote>
+<example>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
+</example>
+<example>"nfsroot=&lt;ip of install server&gt;:/usr/lib/fai/nfsroot"</example>
+
+<sect id="mac">Collecting Ethernet addresses<p>
+
+Now it's time to boot your install clients for the first time. They
+will fail to boot, because no BOOTP or DHCP daemon is running yet or
+recognizes the hosts. But you can use this first boot attempt to
+easily collect all Ethernet addresses of the network cards.
+<p>
+
 You have to collect all Ethernet (MAC) addresses of the install clients
 and assign a hostname and IP address to each client. To collect 
  all MAC addresses, now boot all your install clients. While the
@@ -505,8 +532,9 @@ adjust the other network tags (<tt>sm, gw, dn, ds</tt>) to your local
 needs. The tags for NIS and time servers (<tt>yp, yd, nt</tt>) are
 optional. Tags with prefix <tt>T</tt> (starting from T170) are generic
 tags which are used to transfer some FAI specific data to the
-clients. <strong> It is important, that T171 is set to sysinfo
-!</strong> Later you can set it to <em>install</em>, in order to start
+clients. <strong> It is important, that T171 (equivalent to variable
+<var>FAI_ACTION</var> is set to <tt>sysinfo</tt>
+!</strong> Later you can set it to <tt>install</tt>, in order to start
 the automatic installation. For more information see <manref
 name="bootptab" section="5"> and section (TODO: explain all tags).
 <p>
@@ -541,7 +569,7 @@ Linux version 2.2.17 (root@kueppers) (gcc version 2.95.2 20000220
 .
 .
 </example>
-The rest of the boot message will be equal to those of booting from
+The rest of the boot message will be equal to those when booting from
 network card. When booting from network card you will see:
 <example>
 BOOTP........
@@ -588,7 +616,7 @@ VFS: Insert root floppy and press ENTER
 To compile a new kernel, start using the default kernel configuration
 of FAI. Call <prgn>make
 menuconfig</prgn> and add a driver in menu <tt>Network device
-support / Ethernet</tt>
+support/Ethernet</tt>
 which supports your network card. Then create a Debian package using:
 
 <example>
@@ -596,11 +624,11 @@ kueppers# cd /usr/src/linux
 kueppers# cp /usr/lib/fai/nfsroot/boot/config-2.2.17 .config
 kueppers# make menuconfig
 kueppers# make-kpkg clean
-kueppers# make-kpkg --revision kueppers1 kernel-image
+kueppers# make-kpkg --revision BOOTP2 kernel-image
 </example>
 
 The created file is
-<file>/usr/src/kernel-image-2.2.17_kueppers1_i386.deb</file>. Adjust 
+<file>/usr/src/kernel-image-2.2.17_BOOTP2_i386.deb</file>. Adjust 
 the variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot
 by calling.
 
@@ -611,11 +639,11 @@ kueppers# fai-setup
 After that, you have to create a new boot floppy. Now your network
 card should be recognized and your host should boot correctly.
 
-<sect1 id="sysinfo">Collecting other system information
+<sect id="sysinfo">Collecting other system information
 
 <p>
 
-Now the clients have booted using the action <em>sysinfo</em>. Type
+Now the clients have booted  with <var>FAI_ACTION</var> set to <em>sysinfo</em>. Type
 <tt>ctrl-c</tt> to get a shell or use <tt>Alt-F2</tt> or
 <tt>Alt-F3</tt> to open a virtual terminal, where you can log in as
 <tt>root</tt> with the password defined by <var>FAI_ROOTPW</var> in
@@ -627,9 +655,12 @@ Warning: Permanently added 'faiclient01,134.95.9.200' to the list of known hosts
 root@faiclient01's password: 
 </example>
 
-You have now a shell and can execute various commands (dmesg, lsmod,
-df,...). Look at the log file in <file>/tmp</file>. There you can find
-much information about the boot process.
+You have now a running Linux system without using the local hard
+disk. Use this as a rescue system, if your local disk are damaged or
+the computer can't boot properly from hard disk. You will get a shell
+and can execute various commands (dmesg, lsmod, df, lspci, ...). Look
+at the log file in <file>/tmp</file>. There you can find much
+information about the boot process.
 
 All log files from <file>/tmp </file> are also written to the server
 in the directory <tt>~fai/faiclient01/sysinfo/</tt><footnote>More
@@ -659,11 +690,11 @@ kueppers:/usr/local/share/fai
 
 <strong>This method can be used as an rescue environment !</strong> In
 future it will be possible to make backups or restore data to existing
-filesystems. If you need a filesystem with read-write access try:
+filesystems. If you need a filesystem with read-write access use:
 
-<example>faiclient01:~# mount -o remount,rw /tmp/target/home</example> 
+<example>faiclient01:~# rwmount /tmp/target/home</example> 
 
-Reboot the computer using the command <prgn>faireboot</prgn>.
+You can reboot the computer using the command <prgn>faireboot</prgn>.
 
 <chapt id=instprocess>The installation process<p>
 
@@ -689,7 +720,9 @@ has booted on the install clients.
 
 <enumlist>
 	    <item> <p>Set up FAI </p> </item>
+	    <item> <p>Load kernel modules</p> </item>
 	    <item> <p>Define classes</p> </item>
+	    <item> <p>Define variables</p> </item>
 	    <item> <p>Partitioning local disks</p> </item>
 	    <item> <p>Create and mount local filesystems</p> </item>
 	    <item> <p>Install software packages</p> </item>
@@ -733,7 +766,7 @@ clients. Details are described in <ref id="classes">.XXXX
 All define classes are listed in <file>FAI_CLASSES</file>.
 
 The main scripts executes all scripts in <file>/fai/class</file>,
-which name conforms matches <tt>S[0-9]*.sh,pl}</tt>. Every word that these scripts
+which name conforms matches <tt>S[0-9]*.{sh,pl}</tt>. Every word that these scripts
 print to the standard ouput are interpreted as class names. A complete
 description of all these scripts can be found in <ref id="cscripts">.
 
@@ -751,18 +784,21 @@ how the local disks will be partitioned, which filesystems should be
 created or preserved and how they are mounted. Refer to XXXX for more information.
 This is done by the command <prgn>setup_harddisks</prgn>, which uses
 <prgn>sfdisk</prgn> for obtaining disk information and for partitioning.
+If <prgn>/usr/local/bin/my-fdisk</prgn> exists, this command is used
+instead.
 
 <sect1 id=imount>Create and mount local filesystems<p>
 
-Creation and mounting of filesystems are also done by
-<prgn>setup_harddisks</prgn>. It's possible to specify parameters for
-filesystems creation and also to give mount options.  All local
-filesystems are mounted relativ to <file>/tmp/target</file> during the
-installation process. So, for eg. <file>/tmp/target/home</file> will
-become <file>/home</file> in the new installed system.  A more
-detailed description is in XXXXX.  In future, this command will be
-completely rewritten. Plans are to use <prgn>parted</prgn> and the
-device filesystems <tt>devfs</tt>. Then things are becoming much easier.
+Creation is also done by <prgn>setup_harddisks</prgn>. Mounting the
+filesystems is done by the routine <tt>mount2target</tt>. It's
+possible to specify parameters for filesystems creation and also to
+give mount options.  All local filesystems are mounted relativ to
+<file>/tmp/target</file> during the installation process. So, for
+eg. <file>/tmp/target/home</file> will become <file>/home</file> in
+the new installed system.  A more detailed description is in XXXXX.
+In future, this command will be completely rewritten. Plans are to use
+<prgn>parted</prgn> and the device filesystems <tt>devfs</tt>. Then
+things are becoming much easier.
 
 <sect1 id=ipackages>Install software packages<p>
 When local filesystems are created, they are all empty (except for
@@ -774,7 +810,7 @@ manually interaction needed. If a packages requires an other packages,
 <prgn>apt-get</prgn> resolves this dependency by installing the
 required package.
 
-<sect1 id=icscripts>Call site specific configuration scripts<p>
+<sect1 id=icscripts>Configuration scripts<p>
 
 After all demanded software packages are installed, the system is
 nearly ready to go. But not all default configurations of the software
@@ -839,7 +875,7 @@ clients to <file>/fai</file>. Following subdirectories are available:
 <taglist>
 	  <tag><tt>fai_config/</tt></tag> <item> <p>global parameters</p> </item>
 	  <tag><tt>class/</tt></tag> <item> <p>scripts and files to
-	  load kernel modules and define classes</p> </item>
+	  load kernel modules and define classes and variables</p> </item>
 	  <tag><tt>disk_config/</tt></tag> <item> <p>configuration
 	  files for disk partitioning and file system creation</p> </item>
 	  <tag><tt>package_config/</tt></tag> <item> <p>software
@@ -856,8 +892,8 @@ subdirectories in the listed order.
 
 
 <sect id=classes>Defining classes<p>
-All defined classes are listed in <file>FAI_CLASSES</file>. You can
-also set <var>FAI_ACTION</var> to <em>showclasses</em>.
+All defined classes are listed in <file>/tmp/FAI_CLASSES</file> and in
+the variable <var>$classes</var>.
 
 <sect id=diskconfig>Hard disk configuration<p>
 Please read <file>/usr/share/doc/fai/README.disk_config.gz</file>.
