@@ -1,16 +1,9 @@
-#! /bin/sh
-
 # load kernel modules
-# messages of loading modules are written to syslogd and read with dmesg.
-# for all classes which are defined before this script is called, look for
-# a $class.mod file and execute it.
 
-conffiles="$classes $HOSTNAME"
+kernelmodules="rtc floppy parport_pc usbkbd usb-uhci keybdev"
 
-for cfile in $conffiles ; do
-    if [ -f "${cfile}.mod" ]; then
-	.  ${cfile}.mod  >> $moduleslog 2>&1
-    fi
+for mod in $kernelmodules; do
+    [ "$verbose" ] && echo loading kernel module $mod
+    modprobe -a $mod
 done
-
-unset conffiles cfile
+unset mod kernelmodules
