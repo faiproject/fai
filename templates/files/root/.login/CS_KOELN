@@ -1,0 +1,36 @@
+#
+# $Id$
+#
+
+#if $?LOGINDONE exit 0
+#setenv LOGINDONE
+
+setenv PRINTER kyocera
+
+setenv MYPATH	$HOME/bin
+setenv MYMAN	''
+setenv MYLIB	''
+
+setenv STDPATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/bin/X11
+setenv LD_LIBRARY_PATH ${MYLIB}:/usr/local/lib
+setenv MANPATH ${MYMAN}:/usr/local/man
+
+setenv EDITOR emacs
+setenv PAGER less
+setenv LESS QMci
+setenv LESSOPEN "|lesspipe %s"
+
+setenv  NFSROOT         /usr/lib/fai/nfsroot
+setenv  TMPDIR		/tmp
+
+setenv	PATH ${MYPATH}:${STDPATH}:.
+unsetenv STDPATH MYPATH MYMAN MYLIB
+
+if ( $?DISPLAY == 0 && $?REMOTEHOST == 1 ) then
+   setenv DISPLAY ${REMOTEHOST}:0.0
+endif
+if ( $?USER == 0 || $?term == 0 ) exit 0
+set ttyoutput = `tty`
+if ($ttyoutput != "/dev/console" || $ttyoutput == 'not a tty' ) exit 0
+unset ttyoutput
+source $HOME/.choose_windows
