@@ -1,6 +1,6 @@
 include VERSION
 
-DESTDIR=$(shell pwd)/debian/tmp
+DESTDIR=$(shell pwd)/debian/fai
 DEB_HOST_ARCH=$(MACHTYPE)
 DOCDIR=/usr/share/doc/fai
 LIBDIR = $(DESTDIR)/usr/lib/fai
@@ -18,8 +18,7 @@ clean:
 	$(MAKE) -C doc clean
 
 veryclean: clean
-	rm -f build-stamp
-	dh_clean
+	$(MAKE) -f debian/rules clean
 
 install: 
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)

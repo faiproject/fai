@@ -1,12 +1,12 @@
 #!/usr/bin/make -f
-# Sample debian/rules that uses debhelper.
-# GNU copyright 1997 to 1999 by Joey Hess.
+
+DESTDIR=`pwd`/debian/fai
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
 # This is the debhelper compatability version to use.
-export DH_COMPAT=1
+export DH_COMPAT=2
 
 include VERSION
 
@@ -21,7 +21,7 @@ build-stamp:
 
 clean:
 	dh_testdir
-	dh_testroot
+#	dh_testroot
 	rm -f build-stamp
 	dh_clean
 	# Add here commands to clean up after the build process.
@@ -32,8 +32,8 @@ install: build
 	dh_testroot
 	dh_clean -k
 	dh_installdirs
-	# Add here commands to install the package into debian/tmp.
-	$(MAKE) install DESTDIR=`pwd`/debian/tmp
+	# Add here commands to install the package into debian/fai.
+	$(MAKE) install DESTDIR=`pwd`/debian/fai
 
 
 # Build architecture-independent files here.
@@ -52,11 +52,11 @@ binary-indep: build install
 #	dh_link
 	dh_compress -Xtemplates
 	dh_fixperms
-	chmod a+rx `pwd`/debian/tmp/usr/share/fai/templates/class/S[0-9]*.{sh,pl}
-	chmod a+rx `pwd`/debian/tmp/usr/share/fai/templates/scripts/*
-	chmod a+rx `pwd`/debian/tmp/usr/lib/fai/sbin/rcS_fai
-	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' `pwd`/debian/tmp/usr/share/doc/fai/README
-	find `pwd`/debian/tmp -name CVS |xargs rm -rf
+	chmod a+rx ${DESTDIR}/usr/share/fai/templates/class/S[0-9]*.{sh,pl}
+	chmod a+rx ${DESTDIR}/usr/share/fai/templates/scripts/*
+	chmod a+rx ${DESTDIR}/usr/lib/fai/sbin/rcS_fai
+	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' ${DESTDIR}/usr/share/doc/fai/README
+	find ${DESTDIR} -name CVS |xargs rm -rf
 	# You may want to make some executables suid here.
 	dh_installdeb
 	dh_gencontrol
