@@ -42,47 +42,6 @@ diskandsize() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-adddivert() {
-
-    # add an executable to the list of diversions
-    local item
-    for item in "$@"; do
-	mkdivert $item
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-rmalldivert() {
-
-    # remove all diversions made by fai
-    local item
-    for item in `$ROOTCMD dpkg-divert --list fai | awk '{ print $3 }'`; do
-	rmdivert $item
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-mkdivert() {
-
-    # make a diversion of a file
-    [ "$verbose" ] || local divertquiet=--quiet
-    $ROOTCMD dpkg-divert $divertquiet --package fai --rename --add $1
-    cat > $FAI_ROOT/$1 <<-EOF
-	#! /bin/sh
-	# diversion of $1 created by FAI
-	exit 0
-EOF
-    chmod a+rx $FAI_ROOT/$1
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-rmdivert() {
-
-    # remove diversion
-    [ "$verbose" ] || local divertquiet=--quiet
-    rm -f $FAI_ROOT/$1
-    $ROOTCMD dpkg-divert $divertquiet --package fai --rename --remove $1
-    # when a diversion was made before the file exists
-    [ -f $FAI_ROOT/$1.distrib.dpkg-new ] && mv $FAI_ROOT/$1.distrib.dpkg-new $FAI_ROOT/$1
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 jobsrunning() {
 
     # test if jobs are running
@@ -225,7 +184,7 @@ task_finish() {
     done
     umount -n $FAI_ROOT/proc
     # undo fake of all programs made by fai
-    rmalldivert
+    fai-divert -R
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
