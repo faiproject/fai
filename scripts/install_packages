@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.10, 3-apr-2005";
+my $version = "Version 2.11, 3-apr-2005";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -61,19 +61,22 @@ my @known;   # list of all known packages
 
 $| = 1;
 # order of commands to execute
+
+my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
+
 @commands = qw/hold taskrm taskinst clean aptitude install remove dselect-upgrade/;
 %command = (
-	    install => 'apt-get -y --force-yes --fix-missing install',
-	   ninstall => 'apt-get -y --force-yes --fix-missing -s install',
-	    remove  => 'apt-get -y --purge remove',
-  "dselect-upgrade" => 'apt-get -y dselect-upgrade',
-         "taskinst" => 'tasksel -n install',
-           "taskrm" => 'tasksel -n remove',
-             "hold" => 'dpkg --set-selections',
-            "clean" => 'apt-get clean',
-         "aptitude" => 'aptitude -y install',
-          "pending" => 'dpkg --configure --pending',
-            "dpkgc" => 'dpkg -C',
+	    install => "apt-get $aptopt --force-yes --fix-missing install",
+	   ninstall => "apt-get $aptopt --force-yes --fix-missing -s install",
+	    remove  => "apt-get $aptopt --purge remove",
+  "dselect-upgrade" => "apt-get $aptopt dselect-upgrade",
+         "taskinst" => "tasksel -n install",
+           "taskrm" => "tasksel -n remove",
+             "hold" => "dpkg --set-selections",
+            "clean" => "apt-get clean",
+         "aptitude" => "aptitude $aptopt install",
+          "pending" => "dpkg --configure --pending",
+            "dpkgc" => "dpkg -C",
 );
 
 $test = 0;
