@@ -1,7 +1,7 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .if \n(zZ=1 .ig zZ
 .if \n(zY=1 .ig zY
-.TH make-fai-bootfloppy 8 "27 January 2004" "FAI 2.5.3"
+.TH make-fai-bootfloppy 8 "26 February 2004" "FAI 2.5.4"
 .de }1
 .ds ]X \&\\*(]B\\
 .nr )E 0
@@ -63,10 +63,13 @@ Append default flags to kernel parameters. Same as
 .B \-f FILE
 Make a 1440k floppy image in FILE.
 .TP
+.B \-i FILE
+Make a 1440k iso9660 image in FILE (requires also -f FILE).
+.TP
 .B \-g
 Use GRUB as boot loader (default).
 .TP
-.B \-l 
+.B \-l
 Use LILO as boot loader.
 .TP
 .B \-m DIR
@@ -83,8 +86,14 @@ Print verbose output
 .SH EXAMPLES
 
 Create a generic boot floppy for James ;-)
-
+  
 # make-fai-bootfloppy "FAI_FLAGS=sshd,createvt BOND=007"
+  
+Make a common floppy which uses the DHCP protocol as default, some common flags and action sysinfo
+
+Create a bootable cdrom image, that can be burned using cdrecord(1)
+
+# make-fai-bootfloppy -f /tmp/fai_floppy.img -f /tmp/fai_iso.img "FAI_FLAGS=sshd,createvt"
 
 Make a common floppy which uses the DHCP protocol as default, some common flags and action sysinfo
 
@@ -115,7 +124,7 @@ http://www.informatik.uni-koeln.de/fai.
 .SH FILES
 .PD 0
 .TP
-.FN /etc/fai/fai.conf 
+.FN /etc/fai/fai.conf
 .TP
 .FN CFDIR/fai.conf
 The FAI configuration file. CFDIR is set with option -c
