@@ -29,11 +29,13 @@
 
 # main part
 $| = 1;
-@aptcommands = qw/install remove dselect-upgrade/;
-%options = (
-		       install => '-y --fix-missing',
-		       remove  => '-y --purge',
-             "dselect-upgrade" => '-y',
+# order of commands to execute
+@commands = qw/taskinst install remove dselect-upgrade/;
+%command = (
+	    install => 'apt-get -y --fix-missing install',
+	    remove  => 'apt-get -y --purge remove',
+  "dselect-upgrade" => 'apt-get -y dselect-upgrade',
+         "taskinst" => 'tasksel -n install',
 );
 
 # currently no test, always execute
@@ -41,10 +43,8 @@ $test = 0;
 
 $verbose=$ENV{verbose};
 $FAI_ROOT = $ENV{FAI_ROOT};
-$rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
-
 $classpath = "/fai/package_config";
-
+$rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
 @classes = grep { !/^#|^\s*$/} split(/[\s\n]+/,$ENV{classes});
 
 # read all package config files
@@ -59,17 +59,16 @@ foreach $entry (@preloadlist,@preloadrmlist) {
   execute("wget -nv -P$FAI_ROOT/$directory $url");
 }
 
-# call apt-get for each command and the list of packages
-foreach $type (@aptcommands) {
+# call apt-get or tasksel for each type of command whith the list of packages
+foreach $type (@commands) {
   if ($type eq "dselect-upgrade") {
     dselectupgrade();
     next;
   }
 
   my $packlist = join(' ',@{$list{$type}});
-
   if ($packlist) {
-    execute("$rootcmd apt-get $options{$type} $type $packlist");
+    execute("$rootcmd $command{$type} $packlist");
   }
 }
 
@@ -137,6 +136,6 @@ sub dselectupgrade {
   close TMP;
 
   execute("$rootcmd dpkg --set-selections < $tempfile");
-  execute("$rootcmd apt-get $options{$type} dselect-upgrade");
+  execute("$rootcmd $command{$type}");
   unlink $tempfile;
 }
