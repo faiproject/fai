@@ -1,4 +1,4 @@
-FILES = fai-guide.sgml version.ent common.ent
+FILES = fai-guide.sgml common.ent
 docname = fai-guide
 fdocname = $(docname).sgml
 MISC_DOC = FAQ QUESTIONAIRE classes_description.txt links.html changelog.old README*
