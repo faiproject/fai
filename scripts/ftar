@@ -96,9 +96,14 @@ shift $(($OPTIND - 1))
 [ "$1" ] || usage
 [ -f /tmp/FAI_CLASSES ] && classes=`cat /tmp/FAI_CLASSES`
 # last class has highest priority
-classes=`echo $classes | rev`
+
+# reverse order of classes
+for class in $classes; do
+    revclasses="$class $revclasses"
+done
+
 [ "$debug" ] && vflag="-v"
-[ "$debug" ] && echo "ftar: classes : $classes"
+[ "$debug" ] && echo "ftar: classes : $revclasses"
 [ -z "$source" ] && die "Source directory undefined."
 [ -z "$target" ] && die "Target directory undefined."
 
@@ -110,7 +115,7 @@ fpath=$source/$dir
 [ $deletefiles -eq 1 ] && cd $target/$dir ; rm -f  .* * 2>/dev/null
 [ $removedir -eq 1 ]   && cd $target/$dir ; rm -rf .* * 2>/dev/null
 
-for c in $classes ; do
+for c in $revclasses ; do
     # what if a directory exists, which is equal to the hostname or a classname ?
     # [ -f $fpath/$c ]          && extract $fpath/$c cat
     [ -f $fpath/$c.tar ]      && extract $fpath/$c.tar cat
