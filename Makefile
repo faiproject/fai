@@ -29,7 +29,7 @@ install:
 	cp -dRp examples templates $(DESTDIR)/$(DOCDIR)
 	perl -pi -e 's/KERNELVERSION/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(LIBDIR)/sbin/rcS_fai
-	ln -fs installimage $(DESTDIR)/boot/fai/faiserver
+	ln -fs installimage_3com $(DESTDIR)/boot/fai/faiserver
 	ln -fs installimage $(DESTDIR)/boot/fai/faiclient01
 
 .PHONY: clean veryclean
