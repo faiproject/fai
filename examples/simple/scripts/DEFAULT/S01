@@ -88,12 +88,12 @@ fcopy -M /etc/X11/XF86Config-4 && rm -f $target/etc/X11/XF86Config
 [ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -n 1 | awk -F/ '{print $4}'`
 if [ "$cdromdevice" ]; then
     echo "/dev/$cdromdevice  /cdrom   auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
-    echo "/cdrom        *(ro)" >> $target/etc/exports
+    echo "/cdrom        *(ro,async)" >> $target/etc/exports
 fi
 # if a second cd-rom exists we assume that this is the cd-writer
 if [ `grep "Type:.*CD-ROM" /proc/scsi/scsi | wc -l` -gt 1 ]; then
     echo "/dev/scd1  /cdrec  auto    ro,user,nohide,noauto 0 0" >>$target/etc/fstab
-    echo "/cdrec        *(ro)" >> $target/etc/exports
+    echo "/cdrec        *(ro,async)" >> $target/etc/exports
     mkdir $target/cdrec
 fi
 
