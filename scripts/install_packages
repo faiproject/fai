@@ -6,7 +6,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2003, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2004, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.3.1, 29-dec-2003";
+my $version = "Version 2.4, 29-june-2004";
 
 use strict;
 use Getopt::Std;
@@ -211,14 +211,16 @@ sub readconfig {
 sub execute {
 
   # execute a command or only print it
-  my $command = shift;
+  my @cmds = @_;
+  my $command = join (' ',@cmds);
   my $error;
 
   $test and $verbose = 1;
   $verbose and print "$0: is executing $command\n";
   $test and return;
 
-  $error = system "$command";
+  # @cmds should me more efficient
+  $error = system @cmds;
   warn "ERROR: $error $?\n" if $error;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
