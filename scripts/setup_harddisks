@@ -127,68 +127,73 @@
 #       -h <hash>  : set reiserfs hash
 #       -v <ver>   : set reiserfs version
 #
+#use strict;
+# getopts variables:
+#our ($opt_X, $opt_f, $opt_c, $opt_d);
+my $test;
+
 $| = 1;                     # flush always
 
 #****************************************************
 # Variables
 #****************************************************
 
-$Version = "0.15fai";
+my $Version = "0.16fai";
 
-$megabyte = 1024 * 1024;    # guess
+my $megabyte = 1024 * 1024;    # guess
 # $gigabyte = 1024 * $megabyte;
-$sectorsize = 512;
+my $sectorsize = 512;
 
 # used programs
-$sfdisk_options = "-q";     # be quiet
-$mke2fs_options = "-q";     # be quiet
-$mkreiserfs_options = "";
-$mkswap_options = "";
+my $sfdisk_options = "-q";     # be quiet
+my $mke2fs_options = "-q";     # be quiet
+my $mkreiserfs_options = "";
+my $mkswap_options = "";
 
 # FAI input variables
-$ClassPath = "$ENV{FAI}/disk_config";# this directory contains the classes
-$ConfigFileName = "";   # alternative classfile, only for tests
-$DOS_Alignment = "";    # align partitions for tracks
+my $ClassPath = "$ENV{FAI}/disk_config";# this directory contains the classes
+my $ConfigFileName = "";   # alternative classfile, only for tests
+my $DOS_Alignment = "";    # align partitions for tracks
 
 # FAI output variables
-$BootPartition = "";    # the boot partition like "hda1"
-$BOOT_DEVICE = "";      # the root device like "hda" or "sdb"
-$FAIOutputFile = $ENV{diskvar}; # write output variables to this file
+my $BootPartition = "";    # the boot partition like "hda1"
+my $BOOT_DEVICE = "";      # the root device like "hda" or "sdb"
+my $FAIOutputFile = $ENV{diskvar}; # write output variables to this file
 
 # old partition tables
-%DiskUnits = ();        # unit size of each disk in sectors
-%DiskSize = ();         # size of every disk in units
-%SectorsAlignment = ();  # tracksize in sectors
-%PartOldBoot = ();      # partition was bootable. "yes"=yes
-%PartOldStart = ();     # old startunit of partition
-%PartOldEnd = ();       # old endunit of partition
-%PartOldStartSec = ();  # old startsector of partition
-%PartOldEndSec = ();    # old endsector of partition
-%PartOldID = ();        # old ID of partition
-%OldNotAligned = (); # "yes" if old partition boundaries are not DOS aligned
+my %DiskUnits = ();        # unit size of each disk in sectors
+my %DiskSize = ();         # size of every disk in units
+my %SectorsAlignment = ();  # tracksize in sectors
+my %PartOldBoot = ();      # partition was bootable. "yes"=yes
+my %PartOldStart = ();     # old startunit of partition
+my %PartOldEnd = ();       # old endunit of partition
+my %PartOldStartSec = ();  # old startsector of partition
+my %PartOldEndSec = ();    # old endsector of partition
+my %PartOldID = ();        # old ID of partition
+my %OldNotAligned = (); # "yes" if old partition boundaries are not DOS aligned
 
 # mountpoints  ("/<path>" or "swap<No>" or "no<No>" or "extended<disk>")
-$NofSwapPart = 0;       # number of swap partitions
-$NofNotMoPart = 0;      # number of not mountet partitions
-%DiskMountpoints = ();  # mountpoints of every disk. separated by spaces
-%MountpointPart = ();   # partition of every mountpoint. e.g. "hda2"
-%PartMountpoint = ();   # mountpoint of every partition.
+my $NofSwapPart = 0;       # number of swap partitions
+my $NofNotMoPart = 0;      # number of not mountet partitions
+my %DiskMountpoints = ();  # mountpoints of every disk. separated by spaces
+my %MountpointPart = ();   # partition of every mountpoint. e.g. "hda2"
+my %PartMountpoint = ();   # mountpoint of every partition.
 
 # size of partition/mountpoint
-%MPMinSize = ();        # minimum size of mountpoint in units
-%MPMaxSize = ();        # maximum size of mountpoint in units
-%MPPreserve = ();       # preserve partition: "yes"=yes
-%MPPrimary = ();        # primary partition: "yes"=yes
-%MPStart = ();          # start of partition in units
-%MPSize = ();           # size of partition in units
-%MPID = ();             # id of partition
+my %MPMinSize = ();        # minimum size of mountpoint in units
+my %MPMaxSize = ();        # maximum size of mountpoint in units
+my %MPPreserve = ();       # preserve partition: "yes"=yes
+my %MPPrimary = ();        # primary partition: "yes"=yes
+my %MPStart = ();          # start of partition in units
+my %MPSize = ();           # size of partition in units
+my %MPID = ();             # id of partition
 
 # options
-%MPfstaboptions = ();   # fstab options for every mountpoint
-%MPOptions = ();        # extra options for every mountpoint
+my %MPfstaboptions = ();   # fstab options for every mountpoint
+my %MPOptions = ();        # extra options for every mountpoint
 
 # sfdisk partition tables
-%sfdiskTables = ();     # partition tables for sfdisk
+my %sfdiskTables = ();     # partition tables for sfdisk
 
 # Parse command line
 
@@ -197,7 +202,7 @@ use Getopt::Std;
 USAGE: [-X]                     no test, your harddisks will be formated
                                 default: only test, no real formating
        [-f<config-filename>]    default: parse classes
-       [-c<class-path>]         default: $FAI/disk_config/
+       [-c<class-path>]         default: \$FAI/disk_config/
        [-d]                     default: no DOS alignment
 ";
 
@@ -243,7 +248,7 @@ sub GetAllDisks{
     my $line=""; my $disk=""; my $device=""; my $rest; my $result; my $divi;
     print "disks found:";
     $result = `sh -c "LC_ALL=C sfdisk -g -q"`;
-    foreach $line(split(/\n/,$result)){
+    foreach my $line(split(/\n/,$result)){
 	if($line =~ m'^/dev/(.+?):\s+(\d+)\s+cylinders,\s+(\d+)\s+heads,\s+(\d+)\s+sectors'i){
 	    $disk = $1;
 	    $DiskUnits{$disk} = $3 * $4;# heads * sectors = cylinder size in sectors
@@ -253,7 +258,7 @@ sub GetAllDisks{
 	}
     }
     $result = `sh -c "LC_ALL=C sfdisk -d -q"`;
-    foreach $line(split(/\n/,$result)){
+    foreach my $line(split(/\n/,$result)){
 	if($line =~ m'# partition table of /dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|[a-z]+)'i){
 	   $disk = $1;
         }
@@ -281,15 +286,19 @@ sub GetAllDisks{
 # parse config file or all class files
 #****************************************************
 sub ParseAllConfigFiles{
-    $ConfigFileExists = 0;  # no config file parsed yet
+    my $ConfigFileExists = 0;  # no config file parsed yet
     if ($ConfigFileName){
 	# Read config filename
 	&ParseConfigFile($ConfigFileName);
+	$ConfigFileExists = 1;
     } else {
 	# Read classes
-	foreach $classfile (reverse split(/\s+/,$ENV{"classes"})){
-	    $filename = "$ClassPath/$classfile";
-	    (($classfile) && (-r $filename)) && (&ParseConfigFile($filename));
+	foreach my $classfile (reverse split(/\s+/,$ENV{"classes"})){
+	    my $filename = "$ClassPath/$classfile";
+	    if (($classfile) && (-r $filename)) {
+               &ParseConfigFile($filename);
+               $ConfigFileExists = 1;
+            }
 	    ($ConfigFileExists) && last;
 	}
     }
@@ -307,11 +316,10 @@ sub ParseConfigFile{
     my $filename = shift;
     open (FILE,"$filename")
       || die "config file not found: $filename\n";
-    $ConfigFileExists = 1;
     (print "parsing config file: $filename\n");
     $disk = "";
-    my $a = 1, $paras ="", $number=0;
-    while ($line = <FILE>){
+    my $a = 1, my $paras ="", my $number=0;
+    while (my $line = <FILE>){
 	chomp($line);
 	$a++;
 	next if( $line =~ /^#|^\s*$/ );
@@ -328,7 +336,7 @@ sub ParseConfigFile{
 		      && die "ERROR: there are more than one configuration of disk $disk.\n";
 		    ($DiskSize{$disk}) || die "ERROR: could not read device /dev/$disk\n";
 		    ($test != 1) || (print "config: $disk\n");
-		    $DiskMountpoint{$disk} = "";
+		    $DiskMountpoints{$disk} = "";
 		    $MPPrimary{"extended$disk"} = "";
 		    $LogPartNo = 4;
 		    $PrimPartNo = 0;
@@ -411,14 +419,14 @@ sub ParseConfigFile{
 		    }
 		    ($options =~ /\bboot\b/i) && die "ERROR: line $a, only primary partitions can be bootable.\n";
 		}
-      		($DiskMountpoint{$disk} =~ /\b$mountpoint\b/)
+      		($DiskMountpoints{$disk} =~ /\b$mountpoint\b/)
 		    && die "ERROR in config file line $a, Mountpoint redefined: $mountpoint\n$line\n";
 		$DiskMountpoints{$disk} .= " $mountpoint";
 		# size
 		($size =~ /^preserve\d+$|^\d+\-?\d*$|^-\d+$/i)
 		    || die "SYNTAX ERROR in config file line $a, size: $size\n$line\n";
 		if($size =~ /^preserve(\d+)$/i){
-		    $number = $1;
+		    my $number = $1;
 		    $device = PartName($disk,$number);
 		    ($OldNotAligned{$device} eq "yes")
 		      && die "ERROR: unable to preserve partition /dev/$device. Partition is not DOS aligned.";
@@ -501,7 +509,7 @@ sub BuildNewPartTables{
     ($test != 1) || (print "\nBuilding Partition Tables:\n");
     # Build PartMountpoint array
     foreach $disk(keys %DiskMountpoints) {
-	$DiskMountpoints{$disk} =~ s/\s\s/\s/g;
+	$DiskMountpoints{$disk} =~ s/\s(\s)/$1/g;
 	$DiskMountpoints{$disk} =~ s/^\s//;
 	$DiskMountpoints{$disk} =~ s/\s$//;
 	foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
@@ -684,7 +692,7 @@ sub PartitionPersfdisk{
 	    $part =~ /(\d+)$/;
 	    ($1 < 5) && ($PrimaryNo++);
 	    if ( ($1 == 5) && ($PrimaryNo < 5) ){
-	        for $number($PrimaryNo..4) {
+	        for my $number($PrimaryNo..4) {
 		    $sfdiskTables{$disk} .= BuildsfdiskDumpLine(PartName($disk,$number),0,0,0)."\n";
 	        }
 	    }
@@ -720,7 +728,7 @@ sub BuildsfdiskDumpLine{
 # Format all disks
 #****************************************************
 sub FormatDisks{
-    my ($disk, $device, $mountpoint, $mountpointname, $command);
+    my ($disk, $device, $mountpoint, $mountpointname, $command, $result);
     print "\nFormating disks:\n";
     foreach $disk(keys %DiskMountpoints) {
         foreach $mountpoint (split(/\s/,$DiskMountpoints{$disk})) {
@@ -829,7 +837,7 @@ EOM
     ($MPOptions{'/'} =~ /\b(ext2)\b/i) && ($type = "ext2");
     $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/",$type,$MPfstaboptions{'/'},0,1);
     # 2. swap partitions
-    foreach $mountpoint (%PartMountpoint){
+    foreach my $mountpoint (%PartMountpoint){
 	next if( $mountpoint !~ /^swap/i);
 	$FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{$mountpoint}",
                            "none","swap",$MPfstaboptions{$mountpoint},0,0);
@@ -837,7 +845,7 @@ EOM
     # 3. /proc
     $FileSystemTab .= BuildfstabLine("none","/proc","proc","defaults",0,0);
     # 4. sorted others
-    foreach $mountpoint (sort %PartMountpoint){
+    foreach my $mountpoint (sort %PartMountpoint){
 	next if ( ($mountpoint !~ m#^/#) || ($mountpoint eq "/"));
 	$device = $MountpointPart{$mountpoint};
 	$type = "auto";
