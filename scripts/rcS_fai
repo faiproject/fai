@@ -44,6 +44,8 @@ define_variables() {
     # after all classes are defined, define variables
     # source files *.var , which can set variables
     local class
+
+    call_hook defvar
     cd /fai/class
     for class in $classes ; do
 	if [ -f $class.var ]; then
@@ -58,7 +60,9 @@ define_variables() {
 define_classes() {
 
     local newclasses class f
+
     classes=
+    call_hook defclass
 
     cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the install server."
     echo "Now defining classes"
@@ -318,9 +322,7 @@ fai_install() {
     > $stamp
 
     {
-    call_hook defclass
     define_classes
-    call_hook defvar
     define_variables 
     } > >( tee -a $rcslog )  2>&1
     save_dmesg
