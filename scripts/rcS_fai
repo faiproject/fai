@@ -247,6 +247,7 @@ make_backup() {
 #                  list of devices  list of backup levels
 # this subroutine is not yet tested, not yet used
 # It's only an idea how a backup could be made
+    die "make_backup routine not yet used. But you can use the hook backup."
     mount_local_disks
     for partition in $SAVE_DEVICES ; do
 	# tar cf - $FAI_ROOT/$partition | $FAI_REMOTESH -l $LOGUSER $SERVER dd if= of=$partition.tar
@@ -338,16 +339,16 @@ fai_install() {
 
     > $stamp
 
-    call_hook CLASS
+    call_hook class
     define_classes > >( tee -a $rcslog )  2>&1
-    call_hook VAR
+    call_hook var
     define_variables > >( tee -a $rcslog )  2>&1
     save_dmesg
     ( # execute in a subshell to get all output
 
     load_keymap_consolechars
 
-    call_hook PART
+    call_hook part
     if [ ! -s $diskvar ];then
 	echo "Partitioning local harddisks"
 	setup_harddisks -X > /tmp/format.log 2>&1
@@ -358,19 +359,19 @@ fai_install() {
     fi
     . $diskvar
     [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
-    call_hook MOUNT
+    call_hook mount
     mount2dir $FAI_ROOT /tmp/fstab
 
-    call_hook BASE
+    call_hook base
     echo "Unpacking Debian base archive"
     zcat /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
-    call_hook MIRROR
+    call_hook mirror
     # now we can copy fstab
     [ -f $FAI_ROOT/etc/fstab ] && mv $FAI_ROOT/etc/fstab $FAI_ROOT/etc/fstab.old
     cp -p /tmp/fstab $FAI_ROOT/etc/fstab
     mount_debian_mirror
 
-    call_hook BASEUPDATE
+    call_hook baseupdate
     echo "Installing software may take a while"
     if [ "$debug" ]; then
 	prepare_apt | tee -a /tmp/prepare-apt.log 2>&1
@@ -378,7 +379,7 @@ fai_install() {
 	prepare_apt  > /tmp/prepare-apt.log 2>&1
     fi
 
-    call_hook SOFT
+    call_hook soft
     if [ "$debug" ]; then
 	install_packages | tee -a /tmp/software.log
     elif [ "$verbose" ]; then
@@ -387,7 +388,7 @@ fai_install() {
 	yes '' | install_packages >> /tmp/software.log 2>&1
     fi
 
-    call_hook CONF
+    call_hook conf
     fai_configure
 
     umount -n $FAI_ROOT/proc
@@ -400,6 +401,7 @@ fai_install() {
     date
     echo -e "FAI finished.\a"
 
+    call_hook chboot
     change_boot
 
     rm -f $stamp
@@ -407,6 +409,7 @@ fai_install() {
     save_dmesg
     ) > >( tee -a $rcslog )  2>&1
 
+    call_hook savelog
     save_log_local
     save_log_remote
 
@@ -417,6 +420,7 @@ fai_install() {
     fi
 
     wait_for_jobs
+    call_hook end
     fai_boot
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -424,13 +428,13 @@ fai_install() {
 
 # callarg=$1
 fai_init
-call_hook SETUP
+call_hook setup
 fai_setup  > >( tee -a $rcslog ) 2>&1
 
 # if you want to recall rcS_fai
 # [ -n $callarg ] && FAI_ACTION=$callarg
 
-call_hook ACTION
+call_hook action
 echo "FAI_ACTION: $FAI_ACTION"
 case $FAI_ACTION in
 
@@ -440,6 +444,7 @@ case $FAI_ACTION in
 	;;
     sysinfo)
 	echo Showing system information.
+	call_hook sysinfo
 	fai_sysinfo
 	echo The defined classes are:
 	echo $classes
@@ -448,8 +453,7 @@ case $FAI_ACTION in
 	;;
     backup)
 	echo Doing backup of multiple partitions.
-	echo Sorry but not yet tested !
-	die
+	call_hook backup
 	make_backup
 	;;
     *)
