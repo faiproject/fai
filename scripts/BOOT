@@ -1,6 +1,6 @@
-#! /bin/sh
+#! /bin/bash
 
-# copyright Thomas Lange 2001-2003, lange@debian.org
+# copyright Thomas Lange 2001-2004, lange@debian.org
 # LILO support may be dropped in a future release
 
 gmenu=$target/boot/grub/menu.lst
@@ -12,7 +12,7 @@ grubvars() {
     dfline=$(df $fp | grep '^/dev/')
     dev=$(echo $dfline | cut -d ' ' -f1)
     mntp=$(echo $dfline | awk '{print $6}')
-    broot=`device2grub $dev`
+    broot=$(device2grub $dev)
     gpath=${fp#$mntp}
 }
 
@@ -26,7 +26,7 @@ done
 
 FFLAGS=${FAI_FLAGS// /,}
 
-cd $target/boot && kernelversion=`ls vmlinuz-*`
+cd $target/boot && kernelversion=$(ls vmlinuz-*)
 
 # if class MBR is defined, write lilo into master boot record
 ifclass MBR || BOOT_DEVICE=$ROOT_PARTITION
@@ -137,7 +137,7 @@ EOF
     ifclass GRUB && {
 
 	echo "Add /fai-boot partition to menu.lst for grub"
-	cd $target/fai-boot/ && kernelname=/`ls boot/vmlinuz-*`
+	cd $target/fai-boot/ && kernelname=/$(ls boot/vmlinuz-*)
 	fullpath=$(ls $target/fai-boot/boot/vmlinuz-*)
 	grubvars $fullpath
 	cat >> $gmenu <<-EOF
