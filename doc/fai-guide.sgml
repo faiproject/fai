@@ -868,10 +868,16 @@ shell daemon for remote access is started on demand.
 <sect id=iclass>Defining classes, variables and loading kernel modules<p>
 
 Now scripts in <file>/fai/class/</file> are executed to define classes
-and variables that are later used in the site specific configuration scripts.
-All scripts matching <tt>S[0-9]*.{sh,pl}</tt> are
-executed. Every word that these scripts print to the standard ouput
-are interpreted as class names. After defining the classes, every file
+and variables that are later used in the site specific configuration
+scripts.  All scripts matching <tt>S[0-9]*.{sh,pl}</tt> are executed
+in alphabetical order. Every word that these scripts print to the
+standard ouput are interpreted as class names. These classes are
+defined for this install client. You can also say this client belongs
+to these classes. A class is defined or undefined and has no
+value. Only defined classes are of interest for an install client.
+
+<p>
+After defining the classes, every file
 matching <tt>*.var</tt>, which prefix is a defined class, is executed
 to define variables.
 <p>
@@ -994,10 +1000,94 @@ in the configuration space. There are a lot of things you can use for
 your installation.
 
 A good paper with more aspects of building an infrastructure is
-<url id="http://www.infrastructures.org/papers/bootstrap/
-"> "Bootstrapping an Infrastructure".
+<url id="http://www.infrastructures.org/papers/bootstrap/">
+"Bootstrapping an Infrastructure".
 
-<chapt id=config>Configuration details<p>
+<chapt id=config>Installation details<p>
+
+<sect id=s1> Set up FAI<p>
+
+Since the only the ramdisk is writeable in the beginning, all log
+files are written to <file>/tmp</file>. The main script
+<prgn>rcS_fai</prgn> logs its messages to
+<file>/tmp/rcS.log</file>. If you have any problems during
+installation, look for errors there. You can find the log files for
+some hosts in the download directory of the FAI homepage.<p>
+
+When the kernel has bootet and the network interface is set up the
+BOOTP (or DHCP) server is inquired a second time to get the additional
+information for FAI. The command <manref name="bootpc" section="8"> is
+called and with little changes this output can be used to define
+corresponding global variables.
+
+<example>
+/tmp/bootpc.log:
+
+SERVER='134.95.9.149'
+IPADDR='134.95.9.200'
+BOOTFILE='/boot/fai/bigfoot'
+NETMASK='255.255.255.0'
+NETWORK='134.95.9.0'
+BROADCAST='134.95.9.255'
+GATEWAYS_1='134.95.9.254'
+GATEWAYS='134.95.9.254'
+ROOT_PATH='/usr/lib/fai/nfsroot'
+DNSSRVS_1='134.95.9.136'
+DNSSRVS_2='134.95.100.209'
+DNSSRVS_3='134.95.100.208'
+DNSSRVS_4='134.95.140.208'
+DNSSRVS='134.95.9.136 134.95.100.209 134.95.100.208 134.95.140.208'
+DOMAIN='informatik.uni-koeln.de'
+SEARCH='informatik.uni-koeln.de uni-koeln.de'
+YPSRVR_1='134.95.9.10'
+YPSRVR='134.95.9.10'
+YPDOMAIN='informatik4711.YP'
+TIMESRVS_1='134.95.9.10'
+TIMESRVS='134.95.9.10'
+NTPSRVS_1='134.95.81.172'
+NTPSRVS_2='134.95.140.172'
+NTPSRVS='134.95.81.172 134.95.140.172'
+HOSTNAME='bigfoot'
+T170='kueppers:/usr/local/share/fai'
+T171='sysinfo'
+T171='install'
+T172='sshd'
+T170='kueppers:/usr/local/share/fai'
+</example>
+
+It's not bug, if a variable (T171 in this example) is defined
+twice. The second definition supersedes the first.
+
+
+<sect id=s2> Details of scripts in <tt>class/</tt><p>
+
+All files that are executable and match the shell regular expression
+<tt>S[0-9]*.{sh,pl}</tt> are called in alphabetical order. Every
+output from these scripts is used to define classes. Multiple classes
+in one line must be space separated. The list of all defined classes
+is stored in the variable <var>$classes</var> and in
+<file>/tmp/FAI_CLASSES</file>. The list of all classes is transfered
+to <prgn>cfengine</prgn>, so it can use them too.
+<p>
+The script <prgn>S05modules.sh</prgn> does not define any class, but
+is responsible for loading kernel modules. Kernel modules are
+important for detecting hardware. The script calls all scripts that
+have the format <tt>&lt;classname&gt;.mod</tt>. For eg., if class
+<tt>DEFAULT</tt> is defined (this class is always defined) and a file <file>DEFAULT.mod</file>
+exists, this script is executed. These scripts should contain all
+command for loading kernel modules:
+
+<example>
+DEFAULT.mod:
+
+modprobe parport_probe
+modprobe serial
+</example>
+
+You can find messages from modprobe in <file>/tmp/dmesg.log</file> and
+the on the fourth console terminal (pressing <tt>Alt-F4</tt>).<p>
+
+<sect id=c3> Configuration<p>
 
 The configuration is the collection of information how exactly to
 install a computer. The central configuration space for all install clients is 
@@ -1134,8 +1224,17 @@ to a.out format. Therefore use the program <prgn>elftoaout</prgn>
 (mentioned in the FAQ). The symlink to the kernel image to be booted
 is also not the host name. Look at the FAq for more information.
 
-
 <!--
+<chapt id=hints>Various Hints<p>
+
+check for bad blocks:
+
+4GB 6 min
+
+installation with 520MB software 11min
+90MB 2min
+
+$ROOTCMD dpkg -l
 
 One of the most important feature of FAI are the classes. Using
 classes you can share configuration data among multiple
@@ -1200,8 +1299,6 @@ general hints:
 all in one config file, or multiple small config files. Ypou can
 choose !
 
-470 MB Software in 10 minutes (10 or 100Mbit is equal when only one
-client is installing)
 
 -->
 </book>
