@@ -31,11 +31,10 @@ nfssize="230MB"  # size of the nfsroot
 
 # Packages that are install to nfsroot by default Additional packages are
 # defined with $NFSROOT_PACKAGES in fai.conf
-packages="module-init-tools dhcp3-client ssh portmap file rdate cfengine cvs
-bootpc rsync wget
-rsh-client less dump reiserfsprogs dpkg-dev ext2resize hdparm parted
-dnsutils ntpdate dosfstools sysutils dialog discover mdetect libnet-perl
-netcat"
+packages="module-init-tools dhcp3-client ssh portmap file rdate cfengine
+cvs bootpc rsync wget rsh-client less dump reiserfsprogs
+dpkg-dev ext2resize hdparm parted dnsutils ntpdate dosfstools
+sysutils dialog discover mdetect libnet-perl netcat"
 
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
@@ -194,8 +193,8 @@ copy_fai_files() {
     cd $NFSROOT
     cp -p $SHAREFAI/etc/dhclient.conf etc/dhcp3
     ln -fs ../../sbin/dhclient-script etc/dhcp3/dhclient-script
-    cp -Rpv $cfdir/* etc/fai
-    [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass .cvspass
+    cp -Rpv $cfdir/* $NFSROOT/etc/fai
+    [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass $NFSROOT/.cvspass
     cp -p $LIBFAI/sbin/* sbin/
     cp -p /usr/sbin/{ftar,fcopy,install_packages} usr/sbin/
     cp -p /usr/bin/{fai-do-scripts,fai-class} usr/bin/
@@ -203,7 +202,7 @@ copy_fai_files() {
     cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
 
     cp -p $SHAREFAI/subroutines* usr/share/fai
-    cp -p $v $SHAREFAI/etc/apt.conf etc/apt
+    cp -p $v $SHAREFAI/etc/apt.conf $NFSROOT/etc/apt
     cp -p /usr/share/perl5/Debian/Fai.pm usr/share/perl5/Debian/
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -257,15 +256,15 @@ create_nfsroot() {
         echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     else
 	[ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
-        cp -v $cfdir/sources.list etc/apt/sources.list || \
-        cp -v /etc/apt/sources.list etc/apt/sources.list || \
+        cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list || \
+        cp -v /etc/apt/sources.list $NFSROOT/etc/apt/sources.list || \
 	{ echo "FAI_SOURCES_LIST undefined and no sources.list file found."
 	  echo "I think something is wrong. But I'll try to continue."
 	}
     fi
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
-    [ -f /etc/apt/preferences ] && cp -v /etc/apt/preferences etc/apt
-    [ -f $cfdir/preferences ] && cp -v $cfdir/preferences etc/apt
+    [ -f /etc/apt/preferences ] && cp -v /etc/apt/preferences $NFSROOT/etc/apt
+    [ -f $cfdir/preferences ] && cp -v $cfdir/preferences $NFSROOT/etc/apt
     echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
     echo "Adding additional packages to $NFSROOT:"
