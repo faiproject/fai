@@ -26,7 +26,10 @@
 #*********************************************************************
 
 use strict;
+use Getopt::Std;
 # global variables
+our $opt_l;
+our $opt_v;
 my @commands;
 my %command;
 my $test;
@@ -54,8 +57,9 @@ $| = 1;
 
 # currently no test, always execute
 $test = 0;
+getopts('vl');
 
-$verbose=$ENV{verbose};
+$verbose=$ENV{verbose} || $opt_v;
 $FAI_ROOT = $ENV{FAI_ROOT};
 $classpath = "$ENV{FAI}/package_config";
 $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
@@ -97,7 +101,7 @@ foreach my $type (@commands) {
     next;
   }
 
-  if ($type eq "install") {
+  if ($type eq "install" || $opt_l) {
     # check for packages which don't exist
     # do not try to check packages that end in + or -
     # it's not easy to determine the real package name
@@ -113,6 +117,11 @@ foreach my $type (@commands) {
     my $newlist = "";
     grep { $misspelt{$_} or $newlist .= "$_ "} @{$list{install}};
     $packlist = $newlist;
+    if ($opt_l) {
+      # only print the package list
+      print "$packlist\n";
+      exit 0;
+    }
   }
   execute("$rootcmd $command{$type} $packlist") if $packlist;
 }
@@ -137,7 +146,7 @@ sub readconfig {
   my ($package,$type);
 
   open (FILE,"$filename") || warn "ERROR $0: Can't read config file: $filename\n";
-  print "$0: read config file $filename\n" if $verbose;
+  warn "$0: read config file $filename\n" if $verbose;
 
   while (<FILE>) {
     next if /^#/;    # skip comments
