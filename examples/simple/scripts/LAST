@@ -36,6 +36,12 @@ $ROOTCMD apt-get -f install
 
 [ -f $target/boot/vmlinu* ] || echo "ERROR: No kernel was installed. Have a look at shell.log"
 
+# If we are running from fai-cd eject CD when rebooting. Nice lines from klaus knopper
+if [ -f /boot/RUNNING_FROM_FAICD ];then
+   for dev in /proc/sys/dev/cdrom*/lock; do [ -f "$dev" ] && echo 0 > "$dev"; done
+   for dev in /proc/sys/dev/cdrom*/autoeject; do [ -f "$dev" ] && echo 1 > "$dev"; done
+fi
+
 # copy sources.list
 fcopy /etc/apt/sources.list
 
