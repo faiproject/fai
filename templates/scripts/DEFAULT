@@ -4,6 +4,18 @@
 echo dump keyboard table
 dumpkeys | gzip -9f >$target/etc/console-tools/default.kmap.gz
 
+if [ -n "$hdparm" ]; then
+
+    cat > $FAI_ROOT/etc/init.d/hdparm <<-EOF
+    #! /bin/sh
+    # added by FAI
+    # tune my harddisks
+    $hdparm
+EOF
+    chmod a+rx $FAI_ROOT/etc/init.d/hdparm
+    ln -s ../init.d/hdparm $FAI_ROOT/etc/rcS.d/S61hdparm
+fi
+
 # if $kernelimage if not a debfile, then it's the kernel version
 
 # create dummy link, so package kernel-image-* makes new correcxt link
