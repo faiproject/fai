@@ -2,7 +2,7 @@
 
 #*********************************************************************
 #
-# fai-xx - call configuration scripts for every defined class
+# fai-do-scripts - call configuration scripts for every defined class
 #
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 2003 by Thomas Lange, lange@informatik.uni-koeln.de
@@ -28,13 +28,15 @@
 
 version="version 1.0, 2-apr-2003"
 
-# variables needed: $classes, $FAI, $LOGDIR
+# variables needed: $classes, $cfclasses, $LOGDIR
+# 
 # And many other variables like:
 
 # execute all scripts that match the name of a class.
 # If class is a directory, execute all $class/S[0-9]* scripts in
 # it, but do not execute files ending in ~
     
+# TODO: -n only shows which scripts should be executed, but do not execute them
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fc_check_status() {
 
@@ -52,9 +54,7 @@ fc_check_status() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_conf() {
 
-    local class f
-
-    cd $FAI/scripts
+    cd $1
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
@@ -89,34 +89,56 @@ do_script() {
 	    echo "Executing   $shelldebug shell: $file"
 	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
 	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
-	    fs_check_status $file $? | tee -a $LOGDIR/shell.log
+	    fc_check_status $file $? | tee -a $LOGDIR/shell.log
 	;;
 
 	*"cfengine script"*)
 	    echo "Executing cfengine: $file"
 	    echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
 	    ./$file --no-lock -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
-	    fs_check_status $file $? | tee -a $LOGDIR/cfengine.log
+	    fc_check_status $file $? | tee -a $LOGDIR/cfengine.log
 	;;
 
 	*"perl script"*)
 	    echo "Executing    perl: $file"
 	    echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
 	    ./$file >> $LOGDIR/perl.log 2>&1
-	    fs_check_status $file $? | tee -a $LOGDIR/perl.log
+	    fc_check_status $file $? | tee -a $LOGDIR/perl.log
 	;;
 
 	*"expect script"*)
 	    echo "Executing  expect: $file"
 	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
 	    ./$file >> $LOGDIR/expect.log 2>&1
-	    fs_check_status $file $? | tee -a $LOGDIR/expect.log
+	    fc_check_status $file $? | tee -a $LOGDIR/expect.log
 	;;
 
 	*) echo "File $file has unsupported type $filetype." ;;
     esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    ex=$1
+    cat <<-EOF
+        fai-do-scripts $version. Copyright (C) 2003 Thomas Lange
+        Report bugs to <fai@informatik.uni-koeln.de>.
+
+        Usage: fai-do-scripts [OPTION] DIRECTORY
+
+EOF
+    exit $ex
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  # main program
 
-call_conf
+while getopts "h" opt ; do
+    case "$opt" in
+#	v) verbose=1 ;;
+	h) usage 0 ;;
+    esac
+done
+shift `expr $OPTIND - 1`
+[ -z "$1" ] || [ -n "$2" ] && usage 1
+
+call_conf $1
