@@ -94,6 +94,8 @@ install_kernel_nfsroot() {
     # since woody we can install the kernel using dpkg -i
     echo "do_boot_enable=no" > $NFSROOT/etc/kernel-img.conf
     dpkg -x $KERNELPACKAGE $NFSROOT
+    # change default root device of kernel image to /dev/nfs
+    rdev $NFSROOT/boot/vmlinuz-$KERNELVERSION $NFSROOT/dev/boot255
     # if $NFROOT/proc/modules exists, then update-modules calls depmod -a without
     # these special flags; so umount first
     [ -e $NFSROOT/proc/modules ] && umount $NFSROOT/proc
@@ -110,8 +112,15 @@ setup_ssh() {
     if [ -n "$LOGUSER" ] ; then
         loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
     # is copying of *.pub important ?
-        [ -d $loguserhome/.ssh ] &&
-	  cp -p $loguserhome/.ssh/identity* $loguserhome/.ssh/*.pub $NFSROOT/root/.ssh/
+        [ -d $loguserhome/.ssh ] && {
+	    [ -f $loguserhome/.ssh/identity ] &&
+	       cp -p $loguserhome/.ssh/identity* $NFSROOT/root/.ssh/
+	    [ -f $loguserhome/.ssh/id_dsa ] &&
+	       cp -p $loguserhome/.ssh/id_dsa* $NFSROOT/root/.ssh/
+	    [ -f $loguserhome/.ssh/id_rsa ] &&
+	       cp -p $loguserhome/.ssh/id_rsa* $NFSROOT/root/.ssh/
+	    cp -p $loguserhome/.ssh/*.pub $NFSROOT/root/.ssh/
+	}
     fi
 
     # enable root login
@@ -128,7 +137,8 @@ copy_fai_files() {
     perl -pi -e "s#^root::#root:${FAI_ROOTPW}:#" etc/passwd
     mkdir -p $NFSROOT/$FAI/fai_config $NFSROOT/$SHAREFAI $NFSROOT/etc/fai
     cd $NFSROOT
-    cp -p $LIBFAI/sbin/dhclient-script $SHAREFAI/etc/dhclient.conf etc/
+    cp -p $SHAREFAI/etc/dhclient.conf etc/
+    ln -fs ../sbin/dhclient-script etc/dhclient-script
     cp -Rp /etc/fai etc/
     [ -f /etc/fai/.cvspass ] && cp -p /etc/fai/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
@@ -211,7 +221,7 @@ create_nfsroot() {
     ln -s /tmp/var/run var/run 
     ln -sf /tmp/etc/resolv.conf etc/resolv.conf
     ln -sf /tmp etc/sysconfig
-    ln -s /sbin/rcS_fai etc/init.d/rcS
+    ln -s ../../sbin/rcS_fai etc/init.d/rcS
     ln -s /dev/null etc/network/ifstate
     # for nis
     [ -d var/yp ] && ln -s /tmp/binding var/yp/binding
@@ -306,9 +316,9 @@ setup_bootp(){
 setup_dhcp(){
 
     # pxe and dhcp environment
+    local pxebin=/usr/lib/syslinux/pxelinux.0
     cp -p $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installkernel
-    rdev /boot/fai/installkernel $NFSROOT/dev/boot255
-    [ -f /usr/lib/syslinux/pxelinux.bin ] && cp /usr/lib/syslinux/pxelinux.bin /boot/fai
+    [ -f $pxebin ] && cp $pxebin /boot/fai
     [ -d /boot/fai/pxelinux.cfg ] || mkdir /boot/fai/pxelinux.cfg || true
     cp -p /usr/share/fai/etc/pxelinux.cfg /boot/fai/pxelinux.cfg/default
     echo "DHCP environment prepared. Now enable dhcpd and the special tftp daemon"
