@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.4.2, 8-july-2004";
+$version="version 1.4.3, 21-july-2004";
 
 use Socket;
 use Net::hostent;
@@ -49,13 +49,11 @@ sub host2hex {
     # hostname is already an IP address
     return ip2hex($host);
   }
-
-  if ($host =~ /^default/) {
-    # hostname is already an IP address
-    return ('no IP','default');
-  }
+  return ('no IP','default') if ($host =~ /^default/);
 
   my $h = gethost($host);
+  die "$0: unknown host: $host\n" unless $h;
+
   if ( @{$h->addr_list} > 1 ) {
     my $i;
     for my $addr ( @{$h->addr_list} ) {
