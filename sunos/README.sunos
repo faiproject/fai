@@ -1,0 +1,102 @@
+Installing Sun Solaris 5.9 with FAI
+-----------------------------------------------------------------------
+
+1. Creating an Install Server
+-----------------------------
+
+1) Become superuser on the system that is to become install server. 
+
+2) Insert the Solaris 9 Software 1 of 2 CD in the system's drive.
+
+3) Create a directory for the CD image. (Assume /files/solaris-install/cdimage 
+   will be our Install Server Directory)
+   
+   mkdir -p /files/solaris-install/cdimage
+
+4) Change to the Tools directory on the mounted disc and copy the
+   image in the drive to the install server's hard disk.
+
+   cd /cdrom/sol_9_1/s0/Solaris_9/Tools
+   ./setup_install_server /files/solaris-install/cdimage
+
+5) After the first image has been copied, insert CD 2 and copy the
+   second image.
+
+   cd /cdrom/sol_9_2/s0/Solaris_9/Tools
+   ./add_to_install_server /files/solaris-install/cdimage
+
+6) Extract Solaris FAI package.
+
+   mkdir /files/solaris-install/jumpstart 
+   cd /files/solaris-install/jumpstart 
+   tar xfz /<path-to>/fai-Solaris.tar.gz
+
+7) Add bash to the Install Image.
+   
+      cd /files/solaris-install/cdimage/Solaris_9/Products
+      pkgadd -d . -M -R /files/solaris-install/cdimage/Solaris_9/Tools/Boot/ SUNWbash SUNWless
+
+8) Make fai dir in the NFS-Root
+
+      mkdir /files/solaris-install/cdimage/Solaris_9/Tools/Boot/fai
+
+9) Change newfs and pkgadd
+
+      cd /files/solaris-install/cdimage/Solaris_9/Tools/Boot/usr/sbin/
+      rm newfs
+      cp /files/solaris-install/jumpstart/bin/newfs .
+      mv pkgadd pkgadd.bin
+      cp /files/solaris-install/jumpstart/bin/pkgadd . 
+
+10) Export directories via NFS. Append the follwing lines to
+   /etc/dfs/dfstab on your install server.
+
+   share -F nfs -o nosuid,ro=install-suns,anon=0 /files/solaris-install/jumpstart
+   share -F nfs -o nosuid,ro=install-suns,anon=0 /files/solaris-install/cdimage
+
+   After you've added the two lines execute
+
+      shareall 
+
+   on your install server.
+
+11) Create a sysidcfg.
+
+    cd /files/solaris-install/jumpstart/sysidcfg/
+    
+    Content of sysidcfg:
+
+    root_password=""
+    system_locale=en_US
+    timezone=MET
+    timeserver=<your timeserver}
+    network_interface=primary {protocol_ipv6=no default_route=NONE}
+    security_policy=NONE
+
+12) Check rules file.
+
+    cd /files/solaris-install/jumpstart/
+    ./cdimage/Solaris_9/Misc/jumpstart_sample/check
+
+13) Append
+
+    *         install=server:/files/solaris-install/cdimage \
+                 root=server:/files/solaris-install/cdimage/Solaris_9/Tools/Boot \
+       install_config=server:/files/solaris-install/jumpstart \
+        sysid_config=server:/files/solaris-install/jumpstart/sysidcfg/ \
+             boottype=:in \
+             rootopts=:rsize=32768
+
+   to the install server's bootparams file.
+
+14) Copy CFEngine Tool
+
+    mkdir /files/solaris-install/jumpstart/lib
+    cp .../cfagent /files/solaris-install/jumpstart/bin
+    cp .../libdb-4.1.so /files/solaris-install/jumpstart/lib
+
+    libdb is the Berkeley Database Library version 4
+
+Now you are ready to install a Sun with
+
+    boot net - install
