@@ -139,9 +139,7 @@ fai_init() {
     mount -n -o remount,rw,rsize=8192 /dev/root /
     cat /proc/kmsg >/dev/tty4 &
     create_ramdisk
-    # after FAI 1.4.2, the init process uses much cpu time. Why ?
-    # init should eat up less CPU time
-    renice 19 1
+    # init should eat up less CPU time # renice 19 1
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
     save_dmesg
 
@@ -192,8 +190,8 @@ EOF
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
 
     for flag in $FAI_FLAGS; do
-	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
 	eval "$flag=1"
+	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
     done
     unset flag
 
