@@ -46,9 +46,13 @@ ifclass() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 netdevice_info() {
 
+    # devices that are running
+    netdevices_up=`ifconfig | perl -anF'\s+' -e 'print "$F[0]\n" if $F[0];' | grep -v "^lo"`
     # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
     # if not defined, use boot messages to determine network devices
-    [ -n "$netdevices" ] || netdevices=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
+    [ -n "$netdevices" ] || netdevices=$netdevices_up
+    netdevices_all=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
+
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
@@ -669,7 +673,8 @@ task_sysinfo() {
     # show some system information and save it on the server
     lspci
     lsdev
-    echo "Ethernet cards found: $netdevices"
+    echo "Ethernet cards found: $netdevices_all"
+    echo "Ethernet cards running: $netdevices_up"
     ifconfig -a
 
     echo -n "xserver for graphic card: "; 
