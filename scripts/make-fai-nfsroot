@@ -6,7 +6,7 @@
 # make-fai-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2003 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2004 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,10 +27,12 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
+nfssize="160MB"  # size of the nfsroot
+
 # Packages that are install to nfsroot by default Additional packages are
 # defined with $NFSROOT_PACKAGES in fai.conf
 packages="dhcp3-client ssh portmap file rdate cfengine cvs bootpc rsync wget
-rsh-client less dump reiserfsprogs dpkg-dev ext2resize strace hdparm parted
+rsh-client less dump reiserfsprogs dpkg-dev ext2resize hdparm parted
 dnsutils ntpdate dosfstools sysutils dialog discover mdetect libnet-perl
 netcat"
 
@@ -42,19 +44,33 @@ if [ `id -u` -ne 0 ]; then
 fi
 
 merror="properly"
-while getopts rvf: opt ; do
+while getopts rvc:f: opt ; do
     case "$opt" in
+        c) cfdir=$OPTARG ;;
         v) verbose=1 ;;
         r) recover=1 ;;
         f) cfg=$OPTARG ;;
+        ?) exit 5 ;; # error in option parsing
     esac
 done
 
 set -e
+
+[ -z "$cfdir" ] && cfdir=/etc/fai
+if [ ! -d "$cfdir" ]; then
+    echo "$cfdir is not a directory"
+    exit 6
+fi
+[ "$verbose" ] && echo "Using configuration files from directory $cfdir"
 if [ -n "$cfg" ]; then
-    . $cfg
+    . $cfdir/$cfg
 else
-    . /etc/fai/fai.conf
+    . $cfdir/fai.conf
+fi
+
+if [ -z "$NFSROOT" ]; then
+    echo "\$NFSROOT is not set. Please check your settings in $cfdir/fai.conf."
+    exit 4
 fi
 
 case `uname -m` in
@@ -66,19 +82,16 @@ case `uname -m` in
 esac
 packages="$packages $arch_packages"
  
-
 echo Creating FAI nfsroot can take a long time and will
-echo need more than 160MB disk space in $NFSROOT.
+echo need more than $nfssize disk space in $NFSROOT.
+
 ROOTCMD="chroot $NFSROOT"
 
-RUNDIR=/var/run/fai/make-nfs-root
-[ ! -d $RUNDIR ] && mkdir -p $RUNDIR
-[ ! "$recover" ] && rm -rf $RUNDIR/*
-
+RUNDIR=/var/run/fai/make-fai-nfsroot
 LIBFAI=/usr/lib/fai
 SHAREFAI=/usr/share/fai
-conffile=$NFSROOT/etc/rcS_fai.conf
 export DEBIAN_FRONTEND=noninteractive
+[ "$recover" ] || rm -rf $RUNDIR/*
 
 trap "umount_dirs" EXIT
 trap "bad_exit" ERR
@@ -163,10 +176,10 @@ copy_fai_files() {
     cd $NFSROOT
     cp -p $SHAREFAI/etc/dhclient.conf etc/dhcp3
     ln -fs ../../sbin/dhclient-script etc/dhcp3/dhclient-script
-    cp -Rp /etc/fai etc/
-    [ -f /etc/fai/.cvspass ] && cp -p /etc/fai/.cvspass .cvspass
+    cp -Rp $cfdir etc/fai
+    [ -f $cfdir/.cvspass ] && cp -p $cfdir/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
-    cp -p /usr/sbin/{ftar,fcopy,install_packages,bootsector,fai-chboot} usr/sbin/
+    cp -p /usr/sbin/{ftar,fcopy,install_packages,bootsector} usr/sbin/
     cp -p /usr/bin/{fai-do-scripts,fai-class} usr/bin/
     cp -p $LIBFAI/* usr/lib/fai 2>/dev/null || true  # cp will complain about directories
     cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
@@ -180,7 +193,7 @@ call_debootstrap() {
     
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "Calling debootstrap $1 $NFSROOT $2"
-    yes '' | call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2 || true
+    yes '' | LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2 || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
@@ -223,18 +236,18 @@ create_nfsroot() {
     if [ "$FAI_SOURCES_LIST" ]; then
         echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     else
-        cp /etc/fai/sources.list etc/apt/sources.list || \
+        cp $cfdir/sources.list etc/apt/sources.list || \
         cp /etc/apt/sources.list etc/apt/sources.list
 
     fi
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
     [ -f /etc/apt/preferences ] && cp /etc/apt/preferences etc/apt
-    [ -f /etc/fai/preferences ] && cp /etc/fai/preferences etc/apt
+    [ -f $cfdir/preferences ] && cp $cfdir/preferences etc/apt
     echo "Upgrading $NFSROOT"
-    call_verbose call_with_stamp upgrade_nfsroot  
+    LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
     echo "Adding additional packages to $NFSROOT:"
     echo "$packages"
-    call_verbose call_with_stamp add_packages_nfsroot
+    LC_ALL=C call_verbose call_with_stamp add_packages_nfsroot
     call_with_stamp copy_fai_files
 
     # set timezone
@@ -298,7 +311,7 @@ upgrade_nfsroot() {
     $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
-    $ROOTCMD apt-get --purge -y install debconf </dev/null
+#    $ROOTCMD apt-get --purge -y install debconf </dev/null
 
     # fake start-stop-dameon
     $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
@@ -312,14 +325,14 @@ add_packages_nfsroot() {
 
     $ROOTCMD apt-get -y --fix-missing install $packages </dev/null
     if [ -n "$NFSROOT_PACKAGES" ] ; then
-        $ROOTCMD apt-get -y --fix-missing install $NFSROOT_PACKAGES </dev/null
+        LC_ALL=C $ROOTCMD apt-get -y --fix-missing install $NFSROOT_PACKAGES </dev/null
     fi
     $ROOTCMD apt-get clean
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
 
-    $ROOTCMD dpkg-divert --package fai --rename --remove /sbin/discover
+    LC_ALL=C $ROOTCMD dpkg-divert --package fai --rename --remove /sbin/discover
     cd /
     sleep 2
     umount $NFSROOT/proc 1>/dev/null 2>&1 || true
@@ -340,8 +353,8 @@ get_kernel_version() {
 setup_bootp(){
 
     if [ -x "`which mknbi-linux`" ]; then
-	mknbi-linux --verbose -a "ip=both" \
-	  $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+	mknbi-linux --ip=any --output=/boot/fai/installimage \
+	  $NFSROOT/boot/vmlinuz-$KERNELVERSION 
     else
         echo "Command mknbi-linux not found. Can not set up BOOTP booting. Please install the package netboot and rerun fai-setup."
 	return
