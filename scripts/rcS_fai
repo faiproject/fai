@@ -179,7 +179,7 @@ fai_setup() {
 EOF
     [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
     echo -n "Kernel parameters:"; cat /proc/cmdline
-    # TODO: eval kernel parameters
+    eval_cmdline
 
     [ "$FAI_LOCATION" ] || die "\$FAI_LOCATION not defined."
     mount -o ro,rsize=8192 $FAI_LOCATION /fai &&
@@ -207,6 +207,7 @@ EOF
     # create two virtual terminals
     openvt bash; openvt bash
     [ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+    echo "FAI_ACTION: $FAI_ACTION"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_sysinfo() {
@@ -307,8 +308,9 @@ prepare_apt() {
     chroot $FAI_ROOT apt-get -f -y remove pcmcia-cs
     chroot $FAI_ROOT apt-get -f -y upgrade </dev/null
     # update dpkg info which packages are available
-    chroot $FAI_ROOT apt-cache dumpavail > /tmp/dumpavail
+    chroot $FAI_ROOT apt-cache dumpavail > $target/tmp/dumpavail
     chroot $FAI_ROOT dpkg --update-avail /tmp/dumpavail
+    rm -f $target/tmp/dumpavail
 
     # fake some programs
     mkdivert /usr/sbin/xserver-configure
@@ -405,7 +407,6 @@ fai_setup  > >( tee -a $rcslog ) 2>&1
 # if you want to recall rcS_fai
 # [ -n $callarg ] && FAI_ACTION=$callarg
 
-echo "FAI_ACTION: $FAI_ACTION"
 case $FAI_ACTION in
 
     install)
