@@ -33,7 +33,7 @@
 # lilo, netbase,... will not be set up correctly, but that doesn't matter
 # apt-get must been working on your server (sources.list must be OK)
 
-PATH=/bin:/sbin:/usr/bin:/usr/sbin
+PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 
 while getopts v opt ; do
         case "$opt" in
@@ -185,6 +185,8 @@ install_kernel_nfsroot() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+# main routine
+
 if [ -d $NFSROOT/fai ]; then
     echo $NFSROOT already exists. Removing $NFSROOT
     umount $NFSROOT/dev/pts 2>/dev/null
@@ -192,6 +194,14 @@ if [ -d $NFSROOT/fai ]; then
 fi
     create_nfsroot
     install_kernel_nfsroot
-    mk3comimage $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage $NFSROOT/dev/nfs
+
+# create tftp boot images
+mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+
+# imggen is a tool from 3com
+imggen=`which imggen || true`
+if [ -x $imggen ]; then
+    imggen -a /boot/fai/installimage /boot/fai/installimage_3com
+fi
 
 exit 0
