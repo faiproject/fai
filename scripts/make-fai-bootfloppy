@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 2.0.8, 1-aug-2003"
+version="version 2.1, 4-aug-2003"
 set -e
 timeout=15
 mkimage=0
@@ -67,21 +67,28 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
 
    Usage: make-fai-bootfloppy [parameter]
 
-   -d label   use label when selection the default boot kernel (and parameters).
-	      d for DHCP
+   -d LABEL   use LABEL when selection the default boot kernel (and parameters).
+              a for any boot protocol (kernel tries all compiled in)
 	      b for BOOTP
-	      f for the fixed IP address for the server
-	      Without this option both (dhcp and booth) are used
+	      d for DHCP
+	      f use fixed IP, needs companion option -s
+              r for RARP
+	      Without this option rarp and bootp are used.
    -h         print this message.
-   -f file    make a 1440k floppy image in file
-   -m dir     use dir as mountpoint [/floppy]
-   -s host    use a static ip for host (try to get from DNS)
+   -f FILE    make a 1440k floppy image in FILE
+   -g         use GRUB loader on bootfloppy (default)
+   -l         use LILO loader on bootfloppy
+   -m DIR     use DIR as mountpoint [/floppy]
+   -s HOST    use this static ip for FAI client; try to get all info from DNS
    -v         print verbose output
 
 DESCRIPTION
    Creates a boot floppy for booting a FAI install client.
    No arguments are needed but you must be root.
-   All parameters are passed to the kernel via append in lilo.conf.
+   You may need to use "nfsroot=serverip:path" if you use RARP or if your
+   BOOTP or DHCP server does not pass that info to the clients.
+   All parameters are passed to the kernel via append in lilo.conf,
+   or kernel commandline in grub.conf .
 
 EXAMPLE
     Create a generic boot floppy for James ;-)
@@ -101,7 +108,7 @@ determine_network_parameters() {
 
     local dev ndevices devices 
     ndevices=0
-    devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: '{print $1}'`
+    devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: 'ORS=" " {print $1}'`
     for dev in $devices; do
 	ndevices=$(($ndevices+1))
     done
@@ -109,19 +116,34 @@ determine_network_parameters() {
     if [ $ndevices = 1 ]; then
 	SERVERINTERFACE=$dev
     else
-	while [ -z "$SERVERINTERFACE" ]; do
-	    echo "This FAI server has multiple network interfaces: $devices"
-	    echo -n "Specify which one FAI clients will connect to (eg. eth1): "
-	    read SERVERINTERFACE
-	done
+	case $BTYPE in
+	    b|d)
+		# assume BOOTP/DHCP server will pass NFS info to client
+		;;
+	    *)
+		# find out which IP to use...
+		while [ -z "$SERVERINTERFACE" ]; do
+		    echo "This FAI server has multiple network interfaces: $devices"
+		    echo -n "Specify which one FAI clients will connect to (eg. eth1): "
+		    read SERVERINTERFACE
+		done
+		;;
+	esac
     fi
+
     SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
 
     if [ -n "${TARGETHOST}" ] ; then
+	if expr match "${TARGETHOST}" '[0-9\.][0-9\.]*$'; then
+	# TARGETHOST is a IP address
+	    TARGETIP="$TARGETHOST"
+	    TARGETHOST=`host -t ptr ${TARGETIP} 2> /dev/null|grep Name:|awk '{print $2}'`
+	else
+	    TARGETIP=`host -t a ${TARGETHOST} 2> /dev/null | awk '{print $3}'`
+	fi
 	BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
 	NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
 	GATEWAY=`LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }'`
-	TARGETIP=`host -t a ${TARGETHOST} 2> /dev/null | awk '{print $3}'`
 	fixedparams="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off" 
     fi
 }
@@ -158,20 +180,28 @@ EOF
     default=$lilodef
 
     image=$mountpoint/vmlinuz
-    append="ip=both root=/dev/nfs $params"
+    append="ip=::::::any root=/dev/nfs $params"
+    label=FAI-ANY
+
+    image=$mountpoint/vmlinuz
+    append="ip=::::::both root=/dev/nfs $params"
     label=FAI-BOTH
 
     image=$mountpoint/vmlinuz
-    append="ip=bootp root=/dev/nfs $params"
+    append="ip=::::::bootp root=/dev/nfs $params"
     label=FAI-BOOTP
 
     image=$mountpoint/vmlinuz
-    append="ip=dhcp root=/dev/nfs $params"
+    append="ip=::::::dhcp root=/dev/nfs $params"
     label=FAI-DHCP
 
     image=$mountpoint/vmlinuz
     label=FAI-FIXED-IP
     append="root=/dev/nfs nfsroot=$SERVERIP:$NFSROOT $fixedparams $params"
+
+    image=$mountpoint/vmlinuz
+    append="ip=::::::rarp root=/dev/nfs $params"
+    label=FAI-RARP
 EOF
     $NFSROOT/sbin/lilo -C $mountpoint/etc/lilo.conf
 }
@@ -190,20 +220,28 @@ default $grubdef
 #default saved
 timeout $timeout
 
+title FAI-ANY
+kernel (fd0)/$kernel root=/dev/nfs ip=::::::any $params
+savedefault
+
 title FAI-BOTH
-kernel (fd0)/$kernel root=/dev/nfs ip=both $params
+kernel (fd0)/$kernel root=/dev/nfs ip=::::::both $params
 savedefault
 
 title FAI-BOOTP
-kernel (fd0)/$kernel root=/dev/nfs ip=bootp $params
+kernel (fd0)/$kernel root=/dev/nfs ip=::::::bootp $params
 savedefault
 
 title FAI-DHCP
-kernel (fd0)/$kernel root=/dev/nfs ip=dhcp $params
+kernel (fd0)/$kernel root=/dev/nfs ip=::::::dhcp $params
 savedefault
 
 title FAI-FIXED-IP
-kernel (fd0)/$kernel root=/dev/nfs nfsroot=$SERVERIP:$NFSROOT ip=both $fixedparams $params
+kernel (fd0)/$kernel root=/dev/nfs nfsroot=$SERVERIP:$NFSROOT ip=::::::both $fixedparams $params
+savedefault
+
+title FAI-RARP
+kernel (fd0)/$kernel root=/dev/nfs ip=::::::rarp $params
 savedefault
 "
     echo "$grubconf" > $mountpoint/boot/grub/menu.lst
@@ -233,10 +271,12 @@ while getopts "lgvf:s:m:hd:" opt ; do
 done
 shift `expr $OPTIND - 1`
 case "$BTYPE" in
-    b) lilodef=FAI-BOOTP ; grubdef=1 ;;
-    d) lilodef=FAI-DHCP  ; grubdef=2 ;;
-    f) lilodef=FAI-FIXED-IP ; grubdef=3 ;;
-    *) lilodef=FAI-BOTH  ; grubdef=0 ;;
+    a) lilodef=FAI-ANY      ; grubdef=0 ;;
+    b) lilodef=FAI-BOOTP    ; grubdef=2 ;;
+    d) lilodef=FAI-DHCP     ; grubdef=3 ;;
+    f) lilodef=FAI-FIXED-IP ; grubdef=4 ;;
+    r) lilodef=FAI-RARP     ; grubdef=5 ;;
+    *) lilodef=FAI-BOTH     ; grubdef=1 ;;
 esac
 
 [ $lilo ] && [ $grub ] && die "Specify only one of -l or -g"
@@ -289,3 +329,4 @@ EOF
     echo
     echo "$grubconf"
 }
+
