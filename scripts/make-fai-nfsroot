@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-# Thomas Lange, Universitaet Koeln, 7/2000
+# Thomas Lange, Universitaet Koeln, 2000
 
 # configuration of some packages will need some interactive input
 # lilo, netbase,... will not be set up correctly, but that doesn't matter
@@ -35,19 +35,20 @@
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-rootpw="56hNVqht51tzc"
-url=ftp://ftp.debian.org/debian   # format for http or ftp
-#url=/mnt   # format for a mounted directory
-dversion=2_2
-dname=potato
-verbose=
-# Additional packages that are install to nfsroot
-packages="dhcp-client file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm strace expectk5.31"
+while getopts v opt ; do
+        case "$opt" in
+        v) verbose=1 ;;
+        esac
+done
 
-basetgz=base${dversion}.tgz
-fai=/usr/lib/fai
-root=$fai/nfsroot
-aptconf=$fai/etc/apt.conf.nfsroot
+. /etc/fai.conf
+
+conffile=$NFSROOT/etc/rcS_fai.conf
+aptconf=$LIBFAI/etc/apt.conf.nfsroot
+
+# Additional packages that are install to nfsroot
+packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm strace expect5.31"
+
 export DEBIAN_FRONTEND=Noninteractive
 
 if [ "$verbose" ]; then
@@ -59,39 +60,66 @@ fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
 
-    mkdir -p -m 700 $root/root/.ssh
-    echo "To get remote access to the install client via ssh"
-    echo "without a password, copy your ssh identity.pub to"
-    echo "$root/root/.shh/authorized_keys"
+    # enable root login
+    perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
+    if [ -f "$SSH_IDENTITY" ]; then
+	mkdir -p -m 700 $NFSROOT/root/.ssh
+	cp -p $SSH_IDENTITY $NFSROOT/root/.shh/authorized_keys
+	echo You can log in install clients without password using $SSH_IDENTITY
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-recreate_nfsroot() {
+copy_fai_files() {
 
-    echo "Removing old nfsroot $root"
-    rm -rf $root/*
-    cd $root
+    perl -pi -e "s/^root::/root:${ROOTPW}:/" etc/passwd
+    mkdir -p $NFSROOT/fai/fai_config $NFSROOT/usr/share/fai
+    cp -p $LIBFAI/sbin/dhclient-script $LIBFAI/etc/dhclient.conf $NFSROOT/etc
+    cp -p $LIBFAI/sbin/* $NFSROOT/sbin
+    cp -p /usr/share/fai/* $NFSROOT/usr/share/fai
+    cp -p $LIBFAI/etc/apt.conf $NFSROOT/etc/apt
+    cp -p /usr/lib/perl5/Debian/Fai.pm $NFSROOT/usr/lib/perl5/Debian/
+    cp -p /etc/fai.conf $NFSROOT/etc
+    echo "# rcS_fai.conf -- created by make-fai-nfsroot" >> $conffile
+    [ "LOGUSER" ] && echo "export LOGUSER=$LOGUSER" >> $conffile
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_nfsroot() {
+
+    cd $NFSROOT
     get_basetgz
-    echo "Unpacking $basetgz"
-    tar zxpf /tmp/$basetgz
+    echo -n "Unpacking " ; ls /tmp/base?_?.tgz
+    tar zxpf /tmp/base?_?.tgz
+    mknod dev/boot255 c 0 255
+
+    # hoaks some packages
     touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
     mkdir -p lib/modules/`uname -r`             # dirty trick to hoax lvm
     touch lib/modules/`uname -r`/modules.dep    # dirty trick to hoax lvm
-    mkdir -p $root/etc/ssh ; touch $root/etc/ssh/NOSERVER
-    upgrade_nfsroot
-    perl -pi -e "s/^root::/root:${rootpw}:/" etc/passwd
-    mkdir -p $root/fai/fai_config
-    cp -p /usr/lib/fai/sbin/dhclient-script /usr/lib/fai/etc/dhclient.conf $root/etc
-    cp -p /usr/lib/fai/sbin/* $root/sbin
-    cp -p /usr/lib/fai/etc/apt.conf $root/etc/apt
-    cp -p /usr/lib/perl5/Debian/Fai.pm $root/usr/lib/perl5/Debian/
-    rm -rf etc/mtab etc/apt/sources.list var/run
-    mv $root/etc/init.d/rcS $root/etc/init.d/rcS.orig
-    ln -s /proc/mounts $root/etc/mtab
-    ln -s /tmp/var/run $root/var/run 
-    ln -s /tmp/etc/resolv.conf $root/etc/resolv.conf
-    ln -s /sbin/rcS_fai $root/etc/init.d/rcS
+    mkdir -p $NFSROOT/etc/ssh ; touch $NFSROOT/etc/ssh/NOSERVER
 
-    cat >$root/etc/rc2.d/S01fai_abort <<EOF
+    upgrade_nfsroot
+    copy_fai_files
+
+    # set timezone
+    rm -f $NFSROOT/etc/localtime
+    cp -dp /etc/localtime $NFSROOT/etc
+    cp -dp /etc/timezone $NFSROOT/etc
+
+    # make little changes to nfsroot, because most file systems are read only
+    rm -rf etc/mtab etc/apt/sources.list var/run
+    mv $NFSROOT/etc/init.d/rcS $NFSROOT/etc/init.d/rcS.orig
+    ln -s /proc/mounts $NFSROOT/etc/mtab
+    ln -s /tmp/var/run $NFSROOT/var/run 
+    ln -s /tmp/etc/resolv.conf $NFSROOT/etc/resolv.conf
+    ln -s /sbin/rcS_fai $NFSROOT/etc/init.d/rcS
+
+    # kernel with modules do not log loading of modules
+    rmdir $NFSROOT/var/log/ksymoops/
+    ln -s /dev/null $NFSROOT/var/log/ksymoops
+
+    setup_ssh
+
+    cat >$NFSROOT/etc/rcS.d/S01fai_abort <<EOF
     #!/bin/sh
     echo FAI: installation aborted.
     echo reboot with: faireboot
@@ -101,62 +129,60 @@ recreate_nfsroot() {
     umount -ar
     reboot -dfi
 EOF
-    chmod a+rx $root/etc/rc2.d/S01fai_abort
-    setup_ssh
+    chmod a+rx $NFSROOT/etc/rcS.d/S01fai_abort
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
 
-    echo "Upgrading $root"
-    apt-get -c $aptconf update  > $devnull 
-    apt-get -c $aptconf check    > $devnull 
-    chroot $root mount -n -t proc proc /proc
-    rm -rf $root/etc/pcmcia $root/etc/apm  2> $devnull 
-    apt-get -c $aptconf -y remove pcmcia-cs </dev/null 2>$devnull > $devnull 
+    echo "Upgrading $NFSROOT"
+    {
+    apt-get -c $aptconf update
+    apt-get -c $aptconf check
+    chroot $NFSROOT mount -n -t proc proc /proc
+    rm -rf $NFSROOT/etc/pcmcia $NFSROOT/etc/apm
+    apt-get -c $aptconf -y remove pcmcia-cs </dev/null
 
     # because start-stop-dameon must be faked do it here
-    apt-get -c $aptconf -y install dpkg </dev/null  > $devnull 
-    cp -p /usr/lib/fai/sbin/start-stop-daemon $root/sbin
+    apt-get -c $aptconf -y install dpkg </dev/null
+    cp -p $LIBFAI/sbin/start-stop-daemon $NFSROOT/sbin
 
-    apt-get -c $aptconf -y upgrade </dev/null  > $devnull 
-    echo "Adding additional packages to $root:"
+    apt-get -c $aptconf -y upgrade </dev/null
+    } > $devnull
+    echo "Adding additional packages to $NFSROOT:"
     echo "$packages"
-    apt-get -c $aptconf -y --fix-missing install $packages </dev/null  > $devnull 
-    chroot $root umount -n /proc >/dev/null
+    {
+    apt-get -c $aptconf -y --fix-missing install $packages </dev/null
+    chroot $NFSROOT umount -n /proc
+    } > $devnull
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_basetgz() {
 
-    # TODO: parse sources.list and guess location for baseX_X.tgz
-    if [ ! -f /tmp/$basetgz ]; then
-	case $url in
-	    ftp:*|http:*)
-		echo "Getting base${dversion}.tgz from $url via wget"
-		echo "This may take some time"
-		wget -q -P/tmp $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz
-	        ;;
-	    *) cp -p $url/dists/$dname/main/disks-i386/current/base${dversion}.tgz /tmp
-		;;
-	esac
-    fi
-    if [ ! -f /tmp/$basetgz ]; then
-	echo "Please copy the Debian $basetgz file into /tmp before creating nfsroot for fai."
-	exit 1
-    fi
+    [ -f /tmp/base?_?.tgz ] && return
+    case $BASETGZ in
+	ftp:*|http:*)
+	    echo "Getting $BASETGZ via wget. This may take some time."
+	    wget -q -P/tmp $BASETGZ
+	    ;;
+	*) cd /tmp ; ln -s $BASETGZ
+	    ;;
+    esac
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+install_kernel_nfsroot() {
+    rm -rf /boot/*-$KERNELVERSION $NFSROOT/lib/modules/$KERNELVERSION
+    dpkg -x $KERNELPACKAGE $NFSROOT
+    chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-if [ -d $root/fai ]; then
-    echo $root/fai already exists
-    echo "Do you want to delete and recreate it ?:"
-    read answer
-    case "$answer" in
-	[yY])
-	    recreate_nfsroot
-	    ;;
-    esac
-else
-    recreate_nfsroot
+if [ -d $NFSROOT/fai ]; then
+    echo $NFSROOT already exists. Removing $NFSROOT
+    umount $NFSROOT/dev/pts 2>/dev/null
+    rm -rf $NFSROOT/*
 fi
+    create_nfsroot
+    install_kernel_nfsroot
+    mk3comimage $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage $NFSROOT/dev/nfs
 
 exit 0
