@@ -161,7 +161,7 @@ install_kernel_nfsroot() {
     # these special flags; so umount first
     [ -e $NFSROOT/proc/modules ] && umount $NFSROOT/proc
     chroot $NFSROOT update-modules
-    chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION $KERNELVERSION || true
+    chroot $NFSROOT depmod -qaF /boot/System.map-$KERNELVERSION $KERNELVERSION || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
@@ -252,11 +252,9 @@ create_nfsroot() {
     > etc/raidtab
     mkdir -p lib/modules/$KERNELVERSION           # dirty trick to hoax lvm
     >  lib/modules/$KERNELVERSION/modules.dep  # dirty trick to hoax lvm
-
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
-    # woody uses debconf
-
+    mkdir $NFSROOT/var/state
     [ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
     cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list || \
 	cp -v /etc/apt/sources.list $NFSROOT/etc/apt/sources.list || \
@@ -286,7 +284,7 @@ create_nfsroot() {
     mv etc/init.d/rcS etc/init.d/rcS.orig
     ln -s /proc/mounts etc/mtab
     ln -s /tmp/var/run var/run
-    rmdir var/state/discover && ln -sf /tmp/var/state/discover var/state/discover
+    ln -sf /tmp/var/state/discover var/state/discover
     ln -s /tmp/etc/syslogsocket dev/log
     ln -sf /tmp/etc/resolv.conf etc/resolv.conf
     ln -sf /tmp etc/sysconfig
@@ -342,7 +340,7 @@ upgrade_nfsroot() {
 
     # fake start-stop-dameon
     $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
-    $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/discover
+    $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/discover-modprobe
     cp /sbin/fai-start-stop-daemon $NFSROOT/sbin/
     ln -s /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
     $ROOTCMD apt-get -y dist-upgrade
@@ -359,7 +357,7 @@ add_packages_nfsroot() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
 
-    LC_ALL=C $ROOTCMD dpkg-divert --package fai --rename --remove /sbin/discover
+    LC_ALL=C $ROOTCMD dpkg-divert --package fai --rename --remove /sbin/discover-modprobe
     cd /
     sleep 2
     umount $NFSROOT/proc 1>/dev/null 2>&1 || true
