@@ -60,7 +60,7 @@ call_conf() {
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
-	   for f in $(echo $class/{S,}[0-9][0-9]* | grep -v ~$|grep -v "~ ") ; do
+	   for f in $(echo $class/{S,}[0-9][0-9]* ) ; do
 	       [ -x $f -a -f $f ] && do_script $f
 	   done
 	fi
@@ -76,6 +76,9 @@ do_script() {
     file=$1
 
     # may be remove some day
+    case $file in
+	*~) echo "Skipping backup file $file" ; return ;;
+    esac
     case $file in
 	S*) echo "Script, matching S* will not be executed in the future. Please use names matching [0-9][0-9]*" ;;
     esac
