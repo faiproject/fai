@@ -6,7 +6,7 @@
 # make-fai-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2001 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2002 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -173,6 +173,7 @@ create_nfsroot() {
     else
 	cp /etc/apt/sources.list etc/apt/sources.list
     fi
+    [ -f /etc/apt/preferences ] && cp /etc/apt/preferences etc/apt
     echo "Upgrading $NFSROOT"
     call_verbose upgrade_nfsroot  
     echo "Adding additional packages to $NFSROOT:"
@@ -295,19 +296,25 @@ if [ -f $KERNELPACKAGE ]; then
     # create tftp boot images
     install_kernel_nfsroot
 
-    grep -q ic_bootp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=BOOTP
+    grep -q _dhcp_ $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
     # only BOOTP need a netboot image, DHCP can do with raw kernels
-    if [ "$TYPE" = BOOTP ]; then
-	mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+    if [ "$TYPE" = DHCP ]; then
+	# pxe and dhcp environment
+	cp -p $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installkernel
+	rdev /boot/fai/installkernel $NFSROOT/dev/boot255
+	[ -f /usr/lib/syslinux/pxelinux.bin ] && cp /usr/lib/syslinux/pxelinux.bin /boot/fai
+	mkdir /boot/fai/pxelinux.cfg || true
+	cp -p /usr/lib/fai/etc/pxelinux.cfg /boot/fai/pxelinux.cfg/default
+	echo "DHCP environment prepared. Now enable dhcpd and the special tftp daemon"
     else
-	cp -p $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
-    fi
-    # TODO: does dhcp need imggen ?
-    # imggen is free software from 3com
-    # it converts netboot image to images, that are bootable by 3com network cards
-    imggen=`which imggen || true`
-    if [ -x "$imggen" ]; then
-	imggen -a /boot/fai/installimage /boot/fai/installimage_3com
+	mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+	# imggen is free software from 3com
+	# it converts netboot image to images, that are bootable by 3com network cards
+	imggen=`which imggen || true`
+	if [ -x "$imggen" ]; then
+	    imggen -a /boot/fai/installimage /boot/fai/installimage_3com
+	fi
+	echo "BOOTP environment prepared."
     fi
 else
     echo "Kernel package $KERNELPACKAGE not found."
