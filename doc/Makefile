@@ -1,7 +1,7 @@
 FILES = fai-guide.sgml version.ent common.ent
 docname = fai-guide
 fdocname = $(docname).sgml
-MISC_DOC = QUESTIONAIRE classes_description.txt links.html README*
+MISC_DOC = QUESTIONAIRE classes_description.txt links.html changelog.old README*
 
 
 dvi: test
