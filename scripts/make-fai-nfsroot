@@ -94,7 +94,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
-    mkdir -p $NFSROOT/$MNTPOINT
+    mkdir -p $NFSROOT
     cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
     get_basetgz
     echo -n "Unpacking " ; ls /tmp/base?_?.tgz
@@ -102,6 +102,7 @@ create_nfsroot() {
     mknod $NFSROOT/dev/boot255 c 0 255
 
     if [ "$FAI_PACKAGEDIR" ]; then
+	mkdir -p $NFSROOT/$MNTPOINT
 	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $NFSROOT/$MNTPOINT || die "Can't mount $FAI_PACKAGEDIR"
     fi
 
@@ -113,7 +114,7 @@ create_nfsroot() {
     touch $NFSROOT/etc/ssh/NOSERVER
 
     echo "$FAI_SOURCES_LIST" > $NFSROOT/etc/apt/sources.list
-    upgrade_nfsroot
+    upgrade_nfsroot  
     copy_fai_files
 
     # set timezone
@@ -136,9 +137,11 @@ create_nfsroot() {
     # definition for loopback device
     echo "iface lo inet loopback" >$NFSROOT/etc/network/interfaces
 
+    echo "*.* /tmp/syslog.log" >$NFSROOT/etc/syslog.conf
+
     # if package ssh is installed
     [ -f /var/lib/dpkg/info/ssh.list ] && setup_ssh
-    umount $NFSROOT/dev/pts 2>/dev/null
+    umount $NFSROOT/dev/pts 2>/dev/null || true
 
     cat >$NFSROOT/etc/rc2.d/S01fai_abort <<-EOF
 	#!/bin/sh
@@ -173,6 +176,7 @@ upgrade_nfsroot() {
     echo "$packages"
     {
     chroot $NFSROOT apt-get -y --fix-missing install $packages </dev/null
+    chroot $NFSROOT apt-get clean
     chroot $NFSROOT umount -n /proc
     } > $devnull
 }
@@ -204,13 +208,13 @@ get_basetgz() {
 
 if [ -d $NFSROOT/fai ]; then
     echo $NFSROOT already exists. Removing $NFSROOT
-    umount $NFSROOT/dev/pts 1>/dev/null 2>&1
+    umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
     rm -rf $NFSROOT
 fi
 
 create_nfsroot
 
 # TODO: only umount if created (debian mirror via NFS)
-test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT
+test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
 
 exit 0
