@@ -27,8 +27,6 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-# Thomas Lange, Universitaet Koeln, 2000
-
 # Packages that are install to nfsroot by default
 # Additional packages are defined with $NFSROOT_PACKAGES in fai.conf
 packages="perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils grub"
@@ -69,6 +67,7 @@ die() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 install_kernel_nfsroot() {
+
     rm -rf $NFSROOT/boot/*-$KERNELVERSION $NFSROOT/lib/modules/$KERNELVERSION
     dpkg -x $KERNELPACKAGE $NFSROOT
     # if $NFROOT/proc/modules exists, then update-modules calls depmod -a without
@@ -250,15 +249,16 @@ if [ -f $KERNELPACKAGE ]; then
     # create tftp boot images
     install_kernel_nfsroot
     mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
-    # imggen is a free software from 3com
+    # imggen is free software from 3com
+    # it converts netboot image to images, that are bootable by 3com network cards
     imggen=`which imggen || true`
     if [ -x $imggen ]; then
 	imggen -a /boot/fai/installimage /boot/fai/installimage_3com
     fi
 else
-    echo "No kernel package $KERNELPACKAGE found."
-    echo "No install kernel installed in /boot/fai,"
-    echo "no kernel modules available in nfsroot."
+    echo "Kernel package $KERNELPACKAGE not found."
+    echo "No install kernel installed in /boot/fai."
+    echo "No kernel modules available in nfsroot."
 fi
 
 echo make-fai-nfsroot finished.
