@@ -37,6 +37,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# reiserfs patch 8.11.2001 by Diane Trout <diane@caltech.edu>
 # Last changes: 25.10.2001 by Thomas Lange
 # Last changes: 09.07.2001 by Thomas Lange
 # Last changes: 04.07.2001 by Thomas Lange
@@ -118,6 +119,9 @@
 #     dosfat16     : DOS 16bit FAT file system
 #     winfat32     : Win95 FAT32 file system
 #     writable     : mounts a preserved partition writable
+#     reiser       : reiserfs
+#       -h <hash>  : set reiserfs hash
+#       -v <ver>   : set reiserfs version
 #
 $| = 1;                     # flush always
 
@@ -125,7 +129,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-$Version = "0.8fai";
+$Version = "0.9fai";
 
 $megabyte = 1024 * 1024;    # guess
 $gigabyte = 1024 * $megabyte;
@@ -134,6 +138,7 @@ $sectorsize = 512;
 # used programs
 $sfdisk_options = "-q";     # be quiet
 $mke2fs_options = "-q";     # be quiet
+$mkreiserfs_options = "-q";
 $mkswap_options = "";
 
 # FAI input variables
@@ -436,7 +441,7 @@ sub ParseConfigFile{
 		      && die "ERROR: unable to preserve partitions of size 0.\n$line\n ";
 		  } else {
 		    # If not preserve we must know the filesystemtype
-	            ($options !~ /\b(ext2|swap|dosfat16|winfat32)\b/i ) && ($options .= " ext2");
+	            ($options !~ /\b(ext2|swap|dosfat16|winfat32|reiser)\b/i ) && ($options .= " ext2");
 		  }
 		if($size =~ /^(\d*)(\-?)(\d*)$/){
 		    $Min = $1;
@@ -753,6 +758,20 @@ sub FormatDisks{
 		}
 		next;
 	    }
+	    # Linux Reiser file system
+	    if ($MPOptions{$mountpoint} =~ /\breiser\b/i) {
+	        print "Make Reiser Filesystem:\n";
+	        $command = "echo y | mkreiserfs $mkreiser_options";
+		($MPOptions{$mountpoint} =~ /(\-h\s*\w+)\b/) && ($command .= " $1");
+		($MPOptions{$mountpoint} =~ /(\-v\s*\d+)\b/) && ($command .= " $1");
+		$command .= " /dev/$device";
+		print "  $command\n";
+		if ($test != 1){
+		    $result = `$command`;
+		    (($? >> 8) == 0) || die "\nMKREISERFS ERROR:\n $result\n";
+		}
+		next;
+	    }
 	    # Linux Extended 2 file system
 	    if ($MPOptions{$mountpoint} =~ /\bext2\b/i) {
 	        print "Make Extended 2 Filesystem:\n";
@@ -795,7 +814,9 @@ sub WriteFSTab{
 #<file sys>          <mount point>     <type>   <options>   <dump>   <pass>
 EOM
     # 1. /
-    $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/","ext2",$MPfstaboptions{'/'},0,1);
+    $type = "ext2";
+    ($MPOptions{'/'} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
+    $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/",$type,$MPfstaboptions{'/'},0,1);
     # 2. swap partitions
     foreach $mountpoint (%PartMountpoint){
 	next if( $mountpoint !~ /^swap/i);
@@ -810,6 +831,7 @@ EOM
 	$device = $MountpointPart{$mountpoint};
 	$type = "ext2";
 	($MPOptions{$mountpoint} =~ /\b(dosfat16|winfat32)\b/i) && ($type = "vfat");
+	($MPOptions{$mountpoint} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
 	$FileSystemTab .= BuildfstabLine("/dev/$device",$mountpoint,$type,$MPfstaboptions{$mountpoint},0,2);
     }
     # write it
