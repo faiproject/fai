@@ -2,7 +2,7 @@
 
 # define classes for different network card configurations
 
-require Debian::Fai;
+use Debian::Fai;
 
 @ethernet = read_ethernet_info();
 

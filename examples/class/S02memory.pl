@@ -2,7 +2,7 @@
 
 # define classes for different memory configurations
 
-require Debian::Fai;
+use Debian::Fai;
 
 $ramsize = read_memory_info();
 

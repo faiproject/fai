@@ -7,7 +7,7 @@
 # %disksize{$device}    # size for each device in Mb
 # $sum_disk_size        # sum of all disksizes in Mb
 
-require Debian::Fai;
+use Debian::Fai;
 
 read_disk_info();
 
