@@ -1,28 +1,26 @@
 #! /bin/bash
 
-# display some information about the system
+# display some information about the system and save it to the logserver
 
 sysinfo_linux() {
 
-    load_keymap_consolechar
-    # show some system information and save it on the server
+    load_keymap_consolechars
     lspci
     lsdev
     echo "Ethernet cards found: $netdevices_all"
     echo "Ethernet cards running: $netdevices_up"
     ifconfig -a
 
-    [ -x /sbin/discover ] && {
+    [ -x "`which discover`" ] && {
       discover --xdriver video
       discover ethernet cdrom scsi sound video
       discover --module ethernet cdrom scsi sound video
     }
-    [ -x /usr/sbin/kudzu ] && kudzu -q
-    if [ -x /usr/sbin/detect ]; then
+    [ -x "`which kudzu`" ] && kudzu -q
+    [ -x "`which detect`" ] && {
        cd $LOGDIR
        detect && cat report.txt
-    fi
-
+    }
     [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
     cat /proc/partitions
     disk_info
@@ -33,8 +31,8 @@ sysinfo_linux() {
 	LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
     done
     fdisk -lu
-    mount_local_disks
-    fstab_mount
+    fai-mount-disk -f
+    lsmod
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
