@@ -10,24 +10,34 @@
 # tlink installimage ant06
 # tlink installimage all ant
 # tlink nodeimage all ant
+#
+# tlink             shows all file in /boot/fai
+# tlink ant01       shows syslink for ant01
 
 # define the range for client numbers using prefix
 startnum=1
-endnum=16
+endnum=25
 
 image=$1
 host=$2
 prefix=$3
 
+tftpdir=/boot/fai
 # - - - - - - - - - - - - - - - - - - - -
 link() {
 
-	echo $1 now booting $image
     	rm -f $ $tftpdir/$1
-	ln -s $image $tftpdir/$1 
+	ln -s $image $tftpdir/$1 && echo $1 now booting $image
 }
 # - - - - - - - - - - - - - - - - - - - -
-tftpdir=/boot/fai
+showlink() {
+
+    # show current link for host
+
+    ls -l $tftpdir/$1
+    exit 0
+}
+# - - - - - - - - - - - - - - - - - - - -
 
 # create list of hosts without prefix
 i=$startnum
@@ -36,6 +46,9 @@ while [ $i -le $endnum ]; do
     hostnums="$hostnums $num"
     i=$(($i+1))
 done
+
+# show one or all files
+[ X"$host" = X ] && showlink $1
 
 if [ $host = "all" ];then
     for i in $hostnums
