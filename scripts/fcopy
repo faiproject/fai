@@ -117,8 +117,15 @@ sub copy_one {
       $preserve = 1;
     }
   }
+  #if a package is being purged, our information about its config files is
+  #wrong, so first check if they exist. if not, don't preserve, but copy
+  if ($preserve && ! -e $destfile) {
+    $logcomment="\t# magically disappeared (maybe purged)";
+    $preserve=0;
+  }
+  
   print LOGFILE "$source\t$class$logcomment\n" if $opt_L;
-  if ($preserve) {
+  if ($preserve) { 
     ewarn("preserving $source \n");
     return;
   }
