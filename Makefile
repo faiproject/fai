@@ -6,6 +6,7 @@ DEB_HOST_ARCH=$(MACHTYPE)
 libdir = $(DESTDIR)/usr/lib/fai
 SCRIPTS = rcS_fai setup_harddisks install_packages faireboot
 SBIN_SCRIPTS = mk3comimage make-fai-nfsroot
+KERNEL_FILES = System.map bzImage.install config-$(KERNELVERSION) emptydosdisk.gz imagegen_firstblock
 
 # don't forget 3com patch
 kernel/bzImage.install: kernel/config-$(KERNELVERSION)
@@ -26,7 +27,7 @@ clean:
 
 install: kernel/bzImage.install
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
-	install -m644 kernel/* $(libdir)/kernel
+	cd kernel ; install -m644 $(KERNEL_FILES) $(libdir)/kernel
 	install -m644 conf/apt.conf $(libdir)/etc/
 	install -m644 conf/apt.conf.nfsroot $(libdir)/etc
 	install -m644 lib/Fai.pm $(DESTDIR)/usr/lib/perl5/Debian
