@@ -166,15 +166,12 @@ task_chboot() {
 	    $frsh "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
     else
         # change boot device (local disk or network) when using DHCP
-        # first test if a given filename exists on the server
-	testcmd="test -s /boot/fai/$HOSTNAME-localboot ; echo \$?"
-	ret=`$FAI_REMOTESH -l $LOGUSER ${SERVER} "$testcmd"`
-	if [ -z "$ret" ]; then
-	    echo "Error: $FAI_REMOTESH -l $LOGUSER ${SERVER} failed."
+        # first test if rsh to server works
+	$frsh true >/dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    echo "Error: $frsh failed."
 	    ret=0
-	fi
-
-	if [ "$ret" -ne 0 ]; then
+	else
 	    # copy the kernel to the server
 	    $FAI_REMOTECP $target/boot/vmlinuz-* $LOGUSER@${SERVER}:/boot/fai/$HOSTNAME-localboot
            
@@ -183,15 +180,16 @@ task_chboot() {
               $FAI_REMOTECP $target/boot/initrd.img-* \
                             $LOGUSER@${SERVER}:/boot/fai/$HOSTNAME-initrd.img
             fi
-	fi
-	. $diskvar # read ROOT_PARTITION
+	    . $diskvar # read ROOT_PARTITION
 
-        # Change the pxe configuration, test for initrd
-        if grep -iq do_initrd.*yes $target/etc/kernel-img.conf; then
-	  $frsh /usr/sbin/fai-chboot -k initrd=$HOSTNAME-initrd.img -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
-        else
-	  $frsh /usr/sbin/fai-chboot -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
-        fi
+            # Change the pxe configuration, test for initrd
+	    if grep -iq do_initrd.*yes $target/etc/kernel-img.conf; then
+		$frsh /usr/sbin/fai-chboot -k initrd=$HOSTNAME-initrd.img -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
+	    else
+		$frsh /usr/sbin/fai-chboot -v $HOSTNAME-localboot $ROOT_PARTITION $HOSTNAME
+	    fi
+	fi
+
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
