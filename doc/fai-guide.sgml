@@ -11,7 +11,7 @@
 <!entity faiverdate "XXXX 2003">
 
 <!entity version "2.3">
-<!entity date    "14 july 2003">
+<!entity date    "30 july 2003">
 ]>
 
 <debiandoc>
@@ -324,10 +324,10 @@ Setting up fai-kernels (1.5.3) ...
 </example>
 
 If you like to install all recommended packages that are useful for
-fai, use following commandL
+fai, use following command
 
 <example>
-# apt-get install netboot dhcp3 tftpd-hpa rsh-server wget grub syslinux
+# apt-get install netboot dhcp3-server tftpd-hpa rsh-server wget grub syslinux
 </example>
 
 You can also get the newest version of <package>fai</package> and
@@ -382,7 +382,13 @@ for the install clients) are defined in &fc;. Since FAI doesn't use
 	  will be added to the nfsroot.</p></item>
 	    <tag><var>FAI_LOCATION</var></tag>
 	    <item><p>This is the host name and the remote directory of
-	  the configuration space, which will be mounted via NFS.</p></item>
+	  the configuration space, which will be mounted via NFS. It's
+	  default value is <file>/usr/local/share/fai</file> but some
+	  like to use <file>/home/fai/config</file> or
+	  <file>/var/fai/config</file>. Remember that this directory
+	  must be exported to all install clients, so that all files
+	  can be read by root.
+</p></item>
 
 	    <tag><var>FAI_BOOT</var></tag>
 	    <item><p>
@@ -577,7 +583,7 @@ Default Boot:               Network
 Local Boot:                 Enabled
 Config Message:             Enabled
 Message Timeout:            3 Seconds
-Boot Failure Prompt:        Wait for key
+Boot Failure Prompt:        Wait for timeout
 ===============================================================================
   Use cursor keys to edit: Up/Down change field, Left/Right change value
   ESC to quit, F9 restore previous settings, F10 to save
@@ -975,7 +981,8 @@ to <var>FAI_FLAGS</var>.
 
 Remote login is available via the secure shell if <tt>sshd</tt> is
 added to <var>FAI_FLAGS</var>. The encrypted password is set with
-variable <var>FAI_ROOTPW</var> in &fc; and defaults to "fai". This
+variable <var>FAI_ROOTPW</var> in &fc; and defaults to "fai". You can
+create the encrypted password using <manref name="mkpasswd" section="1">. This
 is only the root password during the installation process, not for the
 new installed system. You can also log in without a password when
 using <var> SSH_IDENTITY</var>. To log in from your server to the
@@ -1249,6 +1256,29 @@ remove the floppy disk and type return or call <prgn>faireboot</prgn>
 from a remote login. You must change the boot device to boot the new
 installed system otherwise the installation would be performed
 again. Read <ref id="changeboot"> for how to change the boot device.
+
+<sect id=impatient>For the impatient user<p>
+
+So, you do not like to read the whole manual? You like to try an
+installation without reading the manual? OK. Here's how to succeed in
+a few minutes.
+
+<list>
+   <item><p>install fai and all recommended packages (see
+<ref id="faisetup"> on your install server</p></item>
+<item><p>get MAC address of your test host</p></item>
+ <item><p>add host information to <file>/etc/hosts</file> and <file>dhcpd.conf</file> using the hostname
+ <tt>demohost</tt></p></item>
+ <item><p>if your demohost has no IDE disk copy
+<file>disk_config</file> to a file called <tt>demohost</tt> and adjust it</p></item>
+<item><p>create a XF86Config-4 file and copy this
+ to <file>/usr/share/fai/files/etc/XF86Config-4/demohost</file></p></item>
+<item><p>Boot your demo host and enyoy the installation</p></item>
+<item><p>If the installation has finished successfully, the computer should boot a
+GNOME desktop. You can login as user <tt>demo</tt> with password <tt>fai</tt>.</p></item>
+
+</list>
+But now don't forget to read the next chapter <ref id="plan">!
 
 <chapt id=plan>How to plan your installation<p>
 <em>Plan your installation, and FAI installs your plans.</em>
@@ -2002,14 +2032,15 @@ is available in <file>/usr/share/fai/utils/</file>.
 
 <sect id=cscripts>Scripts in <tt>/fai/scripts</tt><p>
 
-The default set of scripts in this directory is only an example. But
+The default set of scripts in <file>/fai/scripts</file> is only an example. But
 they should do a reasonable job for your installation. You can edit them
 or add new scripts to match your local needs.
 <p>
-If a directory with a class name exists, all scripts matching
-<file>S[0-9]*</file> are executed in alphabetical order. So it's
-possible to use scripts of different lanuages (sheel, cfengine,
-perl,..) for one class.
+The command <manref name="fai-do-scripts" section="1"> is called to
+execute all scripts in this directory. If a directory with a class
+name exists, all scripts matching <file>S[0-9]*</file> are executed in
+alphabetical order. So it's possible to use scripts of different
+lanuages (sheel, cfengine, perl,..) for one class.
 
 <sect1 id=shell>Shell scripts<p>
 
