@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.8, 10-jan-2002";
+my $version = "Version 1.8.1, 23-jan-2002";
 
 use File::Copy;
 use File::Compare;
@@ -93,7 +93,9 @@ sub copy_one {
 sub postinst {
 
   my ($sourcefile,$destfile,$class) = @_;
-  system "$sourcefile/postinst $class $destfile" if -x "$sourcefile/postinst"; 
+  return unless -x "$sourcefile/postinst"; 
+  warn "executing $sourcefile/postinst $class $destfile\n" if $debug;
+  system "$sourcefile/postinst $class $destfile";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub name2num {
