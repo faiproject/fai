@@ -31,7 +31,7 @@
 # some variables
 FAI_VERSION=FAIVERSIONSTRING
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
-romountopt="-o noatime,ro"
+romountopt="-o noatime,nolock,ro"
 fstab=fstab  # Solaris uses vfstab
 
 # default classes before calling task defvar. Will be overwritten by task defvar
@@ -43,7 +43,7 @@ unset oclass
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
-    local sub
+    local sub osname
     set -a # now export all variables
 
     # read fai.conf
@@ -51,11 +51,15 @@ fai_init() {
     [ -f /etc/fai/fai.conf ] && . /etc/fai/fai.conf
     # solaris dir
     [ -f /tmp/install_config/fai/fai.conf ] && . /tmp/install_config/fai/fai.conf
+    # some variables are not needed here
+    unset KERNELPACKAGE NFSROOT NFSROOT_PACKAGES FAI_ROOTPW SSH_IDENTITY
+    unset ftpserver debdist
 
     # read subroutine definitions
     sub=$FAI_SHAREDIR/subroutines
     [ -f $sub ] && . $sub
     [ -f $sub-$OS_TYPE ] && . $sub-$OS_TYPE
+    unset FAI_SHAREDIR
 
     DEBIAN_FRONTEND=noninteractive
     # local disks are mounted to $FAI_ROOT
@@ -73,12 +77,10 @@ fai_init() {
     diskvar=$LOGDIR/disk_var.sh
     moduleslog=$LOGDIR/modules.log
     rcslog=$LOGDIR/rcS.log
-    # rcsfaivar saves variables which are sourced by remote logins during isntallation
+    # rcsfaivar saves variables which are sourced by remote logins during installation
     rcsfaivar=/tmp/rcsfai.var
 
     # variables for cfengine
-    chroot=/usr/sbin/chroot
-    cf_prefix="cfengine:"
     files=$FAI/files
     target=$FAI_ROOT
 
