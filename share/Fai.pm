@@ -6,7 +6,7 @@
 # Fai.pm -- subroutines used by /fai/class/S*.pl scripts
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (c) 1999-2001 by Thomas Lange, Universitaet zu Koeln
+# Copyright (c) 1999-2003 by Thomas Lange, Universitaet zu Koeln
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -67,7 +67,6 @@ sub read_disk_info {
   my ($size,$bytes_per_block,$diskandsize);
   $bytes_per_block= 1024; # should be constant for /proc/partitions; must be proofed!
 
-  #
   $diskandsize = `disk-info`;
   while ($diskandsize=~ /(\S+)\s+(\d+)/g)  {
     my ($device,$blocks) = ($1,$2);
@@ -92,7 +91,7 @@ sub read_memory_info {
   $size -=4*1024; # man 5 proc says that kcore is phys. mem + 4KB
   $size /=(1024*1024); # return RAM in MB
 }
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub memsize {
 
   my ($lower,$upper) = @_;
@@ -106,7 +105,7 @@ sub read_kernel_messages {
   close DMESG;
 
   # /var/log/messages* are not available during first installation
-  return if -f "/tmp/FAI_INSTALLATION_IN_PROGRESS";
+  return unless -f "/var/log/messages";
   open (LOGS,"gzip -dcf /var/log/messages*|");
   @messages =<LOGS>;
   close LOGS;
