@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.15, 6-feb-2003";
+my $version = "Version 1.16, 15-may-2003";
 
 use strict;
 use File::Copy;
@@ -55,6 +55,7 @@ my %changed;
 my %lastclass;
 my $modeset;
 my $nobackup;
+my $opt_update;
 
 # getopts:
 our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_v, $opt_d, $opt_D, $opt_i);
@@ -263,7 +264,7 @@ sub ewarn {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub read_status {
-  my $n = my @status_files=split(/,/,$opt_P);
+  my $n = my @status_files=split(/,/,$opt_update);
   ($n != 2) && die "fcopy: need both log and changes file\n";
 
   open(LASTLOG,$status_files[0]);
@@ -359,7 +360,12 @@ $target  = $opt_t || $ENV{FAI_ROOT} || $ENV{target};
 $target eq "/" or $ENV{'ROOTCMD'}="chroot $target";
 $logfile = $opt_L || $ENV{LOGDIR} && "$ENV{LOGDIR}/fcopy.log" || 0;
 $logfile and (open(LOGFILE,">> $logfile") || die("can't open logfile: $!"));
-$opt_P and read_status();
+
+if ($ENV{FCOPY_LASTLOG} and $ENV{FCOPY_UPDATELOG}) {
+	$opt_update = "$ENV{FCOPY_LASTLOG},$ENV{FCOPY_UPDATELOG}";
+}
+$opt_P and $opt_update=$opt_P;
+$opt_update and read_status();
 
 #for postinst scripts
 $ENV{'FAI_ROOT'}=$ENV{'target'}=$target;
