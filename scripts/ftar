@@ -1,0 +1,93 @@
+#! /bin/sh
+
+# $Id$
+#*********************************************************************
+#
+# ftar -- extract tar files using FAI classes
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2001 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# '/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+version="Version 0.9 19-Mar-2001"
+
+die() {
+    echo "ftar died: $1"
+    exit 99
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+extract() {
+
+    # if option only one class exit program
+    file=$1
+    option=$2
+
+    echo "ftar: extracting $file to $target/$die"
+    tar -C $target/$dir $vflag $option -xf $file
+    # if option is set, only one class will be used
+    $single && exit
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    echo No help yet available for ftar.
+    exit 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+source=$FAI_FILES
+target=$FAI_ROOT
+
+while getopts 1hDdrvs:t:c: opt ; do
+        case "$opt" in
+        d) deletefiles=1 ;;
+        D) debug=1 ;;
+        r) removedir=1 ;;
+        v) vflag="-v" ;;
+        1) single=1 ;;
+        s) source=$OPTARG ;;
+        t) target=$OPTARG ;;
+        c) classes=$OPTARG ;;
+        h) usage ;;
+	esac
+done
+shift $(($OPTIND - 1))
+
+[ "$1" ] || usage
+[ -f /tmp/FAI_CLASSES ] && classes=`tac /tmp/FAI_CLASSES`
+[ "$verbose" -ne 0 ] && vflag="-v"
+[ "$debug" -ne 0 ]   && echo "ftar: classes : $classes"
+[ -z "$source" ] && die "Source directory undefined."
+[ -z "$target" ] && die "Target directory undefined."
+
+dir=$1
+fpath=$source/$1
+
+[ "$deletefiles" ] && cd $target/$dir ; rm -f .* * 2>/dev/null
+[ "$removedir" ] && cd $target/$dir ; rm -rf .* * 2>/dev/null
+
+for c in $classes ; do
+    # what if a directory exists, which is equal to the hostname or a classname ?
+    # [ -f $fpath/$c ]          && extract $fpath/$c
+    [ -f $fpath/$c.tar ]      && extract $fpath/$c.tar
+    [ -f $fpath/$c.tar.gz ]   && extract $fpath/$c.tar.gz -z
+    [ -f $fpath/$c.tar.bz2 ]  && extract $fpath/$c.tar.bz2 -I
+done
