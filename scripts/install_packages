@@ -18,12 +18,26 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; see the file COPYING. If not, write to the
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
 # MA 02111-1307, USA.
 #*********************************************************************
+
+use strict;
+# global variables
+my @commands;
+my %command;
+my $test;
+my $verbose;
+my $FAI_ROOT;
+my @classes;
+my $classpath;
+my $rootcmd;
+my @preloadlist;
+my @preloadrmlist;
+my %list;
 
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 
@@ -54,7 +68,7 @@ foreach (@classes) {
 }
 
 # get file, which must exist before installing packages
-foreach $entry (@preloadlist,@preloadrmlist) {
+foreach my $entry (@preloadlist,@preloadrmlist) {
   my ($url, $directory) = @$entry;
   if ($url =~ m!^file:/(.+)!) {
     my $file = $1;
@@ -65,18 +79,18 @@ foreach $entry (@preloadlist,@preloadrmlist) {
 }
 
 # call apt-get or tasksel for each type of command whith the list of packages
-foreach $type (@commands) {
+foreach my $type (@commands) {
   if ($type eq "dselect-upgrade") {
-    dselectupgrade();
+    dselectupgrade($type);
     next;
   }
 
   # skip if empty list
   next unless @{$list{$type}};
-  $packlist = join(' ',@{$list{$type}});
+  my $packlist = join(' ',@{$list{$type}});
 
   if ($type eq "hold") {
-    $hold = join " hold\n", @{$list{hold}};
+    my $hold = join " hold\n", @{$list{hold}};
     $hold .= " hold\n";
     execute("echo \"$hold\" | $rootcmd $command{hold}");
     next;
@@ -95,6 +109,7 @@ foreach $type (@commands) {
     warn "These unknown packages are removed from the installation list: $misspelt\n" if $misspelt;
     # remove misspelt package names from packlist
     my %misspelt = map { $_ => 1 } split /\s+/,$misspelt;
+    my $newlist = "";
     grep { $misspelt{$_} or $newlist .= "$_ "} @{$list{install}};
     $packlist = $newlist;
   }
@@ -102,7 +117,7 @@ foreach $type (@commands) {
 }
 
 # remove prelaoded files
-foreach $entry (@preloadrmlist) {
+foreach my $entry (@preloadrmlist) {
   my ($url, $directory) = @$entry;
   $url =~ m#/([^/]+$)#;
   my $file =  "$directory/$1";
@@ -150,7 +165,7 @@ sub execute {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub dselectupgrade {
-
+  my $type = shift;
   my ($package,$action,$list);
   my $tempfile = "$FAI_ROOT/tmp/dpkg-selections.tmp";
 
