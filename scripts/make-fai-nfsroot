@@ -40,15 +40,20 @@ if [ `id -u` -ne 0 ]; then
     exit 9
 fi
 
-while getopts rv opt ; do
+while getopts rvf: opt ; do
     case "$opt" in
         v) verbose=1 ;;
         r) recover=1 ;;
+        f) cfg=$OPTARG ;;
     esac
 done
 
 set -e
-. /etc/fai/fai.conf
+if [ -n "$cfg" ]; then
+    . $cfg
+else
+    . /etc/fai/fai.conf
+fi
 
 case `uname -m` in
     i386|i486|i586|i686) 
