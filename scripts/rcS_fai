@@ -32,7 +32,7 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/bin:/sbin:/usr/bin:/usr
 # some variables
 FAI_VERSION=FAIVERSIONSTRING
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
-romountopt="-o async,noatime,nolock,ro"
+romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 fstab=fstab  # Solaris uses vfstab
 
 # default classes before calling task defvar. Will be overwritten by task defvar
@@ -92,7 +92,7 @@ fai_init() {
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -t devpts devpts /dev/pts
-	mount -o remount,async,noatime,ro,rsize=8192 /dev/root /
+	mount  $romountopt -o remount,rsize=8192 /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
     fi
     if [ X$OS_TYPE = Xsunos ]; then
