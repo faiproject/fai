@@ -1,0 +1,158 @@
+#! /bin/sh
+
+# copyright Thomas Lange 2001-2003, lange@debian.org
+
+# this is the function: AppendIfNoSuchLine
+egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/modules
+
+# a list of modules which are loaded at boot time
+for module in $moduleslist; do
+    echo $module >> $target/etc/modules
+done
+
+# if class MBR is defined, write lilo into master boot record
+ifclass MBR || BOOT_DEVICE=$ROOT_PARTITION
+
+if ifclass LILO; then
+  fcopy /etc/lilo.conf || {
+    # if the installed kernel is using an initial ramdisk
+    if [ -L $target/initrd.img ]; then
+	initrdopt="initrd=/initrd.img"
+    fi
+    # write lilo.conf and install lilo to disk
+    echo "Creating lilo.conf for /vmlinuz"
+    cat > $target/etc/lilo.conf <<-EOF
+	boot=$BOOT_DEVICE
+	root=$ROOT_PARTITION
+	install=/boot/boot.b
+	map=/boot/map
+	vga=normal
+	delay=50
+
+	image=/vmlinuz
+	append="devfs=nomount"
+	$initrdopt
+	label=linux
+        read-only
+
+	image=/vmlinuz.old
+	label=linux.old
+	read-only
+	optional
+	$liloappend
+EOF
+  }
+fi
+
+if ifclass GRUB; then
+    kernelname=/vmlinuz
+    echo "Installing grub and boot entry for $kernelname"
+    grub-install --root-directory=$target $BOOT_DEVICE
+    broot=`device2grub $ROOT_PARTITION`
+    if [ -L $target/initrd.img ]; then
+	initrdopt="initrd $broot/initrd.img"
+    fi
+
+    fcopy /boot/grub/menu.lst || {
+    cat > $target/boot/grub/menu.lst <<-EOF
+
+	# created by FAI
+	
+	timeout 10
+	default 0
+	color cyan/blue white/blue
+
+	title Debian GNU/Linux, $kernelname $kernelimage
+	root $broot
+	kernel $kernelname
+	$initrdopt
+EOF
+    if ifclass BOOTWINDOWS; then
+    cat >> $target/boot/grub/menu.lst <<-EOF
+
+	# created by FAI
+
+	# For booting Windows NT or Windows95
+	title Windows
+	rootnoverify (hd0,0)
+	makeactive
+	chainloader  +1
+EOF
+    fi
+
+    # add entry for memtest
+    if dpkg -l memtest86 > /dev/null 2>&1 ; then
+    cat >> $target/boot/grub/menu.lst <<-EOF
+
+        title  memtest
+        root   $broot
+        kernel /boot/memtest86.bin
+
+EOF
+    fi
+
+    }
+    rdev $target/$kernelname $ROOT_PARTITION
+    echo "Grub installed for $kernelname on $broot"
+
+fi
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# this was the script FAI_BOOTPART
+# this must be executes after the part above, because we append
+# some lines to the boot loader configuration files
+
+# create a partition for booting FAI from local disk and
+# add this kernel to lilo or grub
+
+# Thomas Lange, Uni Koeln, 2000,2002
+
+ifclass FAI_BOOTPART && {
+
+    cp -a $target/boot $target/fai-boot
+
+    cd $target/boot
+    kernelversion=`ls vmlinuz-*`
+
+    ifclass LILO && {
+    # write lilo.conf and install lilo to disk
+	echo "Add /fai-boot partition to lilo.conf"
+
+	cat >> $target/etc/lilo.conf <<-EOF
+	image=/fai-boot/boot/$kernelversion
+	$initrdopt
+	append="devfs=nomount"
+	label=FAI
+EOF
+
+	mkdir $target/fai-boot/etc
+	cp $target/etc/lilo.conf $target/fai-boot/etc
+    }
+
+    ifclass GRUB && {
+
+	echo "Add /fai-boot partition to menu.lst for grub"
+	kernelname=/boot/$kernelversion
+    # get device for this boot partition
+	dev=`df $target/fai-boot | grep '^/dev/' | cut -d ' ' -f1`
+	broot=`device2grub $dev`
+
+	cat >> $target/boot/grub/menu.lst <<-EOF
+
+	# created by FAI
+	
+	title FAI (Fully Automatic Installation) BOOT GNU/Linux
+	root (nd)
+	kernel $kernelname nfsroot=rom
+EOF
+
+	echo "Grub installed for $kernelimage $broot"
+    }
+}
+
+# now call lilo
+# you can also use this
+# $ROOTCMD lilo -v
+if ifclass LILO; then
+    $target/sbin/lilo -r $target
+fi
