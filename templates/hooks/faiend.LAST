@@ -4,10 +4,9 @@
 # print errors and warnings found to error.log
 
 errfile=/tmp/fai/error.log
-cd /tmp/fai/
 
 # Define grep patterns. Do not start or end with an empty line!
-errorpatterns="error
+globalerrorpatterns="error
 fail
 warn
 bad
@@ -30,7 +29,8 @@ unknown option
 [a-z]\+\.log:E: 
 cannot create"
 
-ignorepatterns="[a-z]\+\.log:# 
+globalignorepatterns="[a-z]\+\.log:# 
+^fstab.\+errors=remount
 warned about = ( )
 daemon.warn
 kern.warn
@@ -63,10 +63,19 @@ suppress emacs errors
 echo Error: 
 if you have both a SCSI and an IDE CD-ROM
 not updating .\+ font directory data."
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Things to look for...
-# Followed by things to ignore
+# Here you can define your own patterns. Put one pattern in a line,
+# do not create empty lines.
+myerrorpatterns="XXXXX"
+myignorepatterns="XXXXX"
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# The main routine
+errorpatterns="$globalerrorpatterns
+$myerrorpatterns"
+ignorepatterns="$globalignorepatterns
+$myignorepatterns"
+
+cd /tmp/fai/ || exit 3
 grep -i "$errorpatterns" * | grep -vi "$ignorepatterns" > $errfile
 
 if [ -s $errfile ]; then
