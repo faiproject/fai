@@ -111,7 +111,8 @@ fi
 
 ifclass FAI_BOOTPART && {
 
-    cp -a $target/boot $target/fai-boot
+    mkdir -p $target/fai-boot/boot
+    cp -a /boot/vmlinuz* $target/fai-boot/boot
 
     ifclass LILO && {
     # write lilo.conf and install lilo to disk
@@ -131,20 +132,21 @@ EOF
     ifclass GRUB && {
 
 	echo "Add /fai-boot partition to menu.lst for grub"
-	kernelname=/boot/$kernelversion
+	cd $target/fai-boot/ && kernelname=/`ls boot/vmlinuz-*`
     # get device for this boot partition
 	dev=`df $target/fai-boot | grep '^/dev/' | cut -d ' ' -f1`
 	broot=`device2grub $dev`
 
 	cat >> $target/boot/grub/menu.lst <<-EOF
 
-	# created by FAI
-	
-	title FAI (Fully Automatic Installation) BOOT GNU/Linux
-	root (nd)
-	kernel $kernelname nfsroot=rom
-EOF
+	title start FAI with FAI_ACTION=sysinfo
+	root $broot
+	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FAI_FLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=sysinfo
 
+	title FAI re-Installation
+	root $broot
+	kernel $kernelname root=/dev/nfs ip=dhcp FAI_FLAGS=$FAI_FLAGS FAI_LOCATION=$FAI_LOCATION FAI_ACTION=install
+EOF
 	echo "Grub for $kernelversion installed on $broot"
     }
 }
