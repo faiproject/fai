@@ -56,7 +56,7 @@ add_fai_account() {
 	echo log into this account without a password
     else
 	adduser --system --disabled-password --gecos "fai account for log files" $LOGUSER || true
-	gid=`id -g $LOGUSER`
+	gid=`id -ng $LOGUSER`
 	perl -pi.bak -e "s#^$LOGUSER:(.+):/bin/false#$LOGUSER:\1:/bin/bash#" /etc/passwd
 	echo "+@faiclients root" > /home/$LOGUSER/.rhosts
 	chown $LOGUSER:$gid /home/$LOGUSER/.rhosts
@@ -70,8 +70,12 @@ case "$1" in
 
     add_fai_account >/dev/null
 
+    MYTMPFILE=`mktemp /tmp/make-fai-nfsroot.XXXXXX`
+
     echo Creating FAI nfsroot can take a long time
-    make-fai-nfsroot > /tmp/make-fai-nfsroot.log 2>&1
+    make-fai-nfsroot > $MYTMPFILE 2>&1
+
+    mkdir -p /usr/local/share/fai || true
 
     add_export_line /usr/local/share/fai  "@faiclients(ro)"
     add_export_line $NFSROOT  "@faiclients(ro,no_root_squash)"
