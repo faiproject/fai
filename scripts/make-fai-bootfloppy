@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.5, 25-feb-2004"
+version="Version 2.5.1, 1-july-2004"
 set -e
 timeout=15
 mkimage=0
@@ -138,7 +138,14 @@ determine_network_parameters() {
     [ -z "$SERVERIP" ] && echo "WARNING: Can't determine IP-address for $SERVERINTERFACE"
 
     if [ -n "${TARGETHOST}" ] ; then
-	TARGETIP=`perl -e 'use Socket; use Net::hostent; printf "%s\n", inet_ntoa((gethost($ARGV[0]))->addr);' "${TARGETHOST}"`
+        # if targethost only contains digits and dots, it's an ip address
+	chars=`echo $TARGETHOST | tr -d /0-9./`
+	if [ -z "$chars" ] ; then
+	    TARGETIP=$TARGETHOST
+	else
+	    TARGETIP=`perl -e 'use Socket; use Net::hostent; printf "%s\n", inet_ntoa((gethost($ARGV[0]))->addr);' "${TARGETHOST}"`
+	fi
+
 	TARGETHOST=`perl -e 'use Socket; print gethostbyaddr(inet_aton($ARGV[0]), AF_INET)."\n";' ${TARGETHOST}`
 	BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
 	NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
@@ -179,17 +186,19 @@ EOF
 
     default=$lilodef
 
+    menu-title="FAI $KERNELVERSION"
+
     image=$mountpoint/vmlinuz
     append="ip=::::::any root=/dev/nfs $params"
-    label=FAI-ANY $KERNELVERSION
+    label=FAI-ANY
 
     image=$mountpoint/vmlinuz
     append="ip=::::::bootp root=/dev/nfs $params"
-    label=FAI-BOOTP $KERNELVERSION
+    label=FAI-BOOTP
 
     image=$mountpoint/vmlinuz
     append="ip=::::::dhcp root=/dev/nfs $params"
-    label=FAI-DHCP $KERNELVERSION
+    label=FAI-DHCP
 
     image=$mountpoint/vmlinuz
     label=FAI-FIXED-IP $KERNELVERSION
@@ -199,7 +208,7 @@ EOF
     append="ip=::::::rarp root=/dev/nfs $params"
     label=FAI-RARP
 EOF
-    $NFSROOT/sbin/lilo -C $mountpoint/etc/lilo.conf
+    $NFSROOT/sbin/lilo -C $mountpoint/etc/lilo.conf || die "lilo failed."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 grub_floppy() {
