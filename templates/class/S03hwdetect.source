@@ -6,13 +6,17 @@ setscsi=0
 for d in `discover --module scsi`; do
         modprobe $d  >> $moduleslog 2>&1
         if [ $setscsi -eq 0 ]; then
-                newclasses=SCSI
-                setscsi=1
+	    newclasses=SCSI
+	    modprobe -a sd_mod sr_mod
+            # we want also get the filename in front of each line. So do not use cat, use grep
+	    grep . /proc/scsi/*/*
+	    setscsi=1
         fi
 
         case "$d" in
-                aic7xxx)
-                newclasses="$newclasses ADAPTEC" ;;
+	    aic7xxx)
+              # define a class for adaptec special work to do
+	      newclasses="$newclasses ADAPTEC" ;;
         esac
 done
 unset setscsi
