@@ -1,11 +1,5 @@
 #! /usr/bin/cfengine
 
-##############################################################
-#
-# cf.base - for informatik.uni-koeln.de
-#
-#################################################################
-
 control:
    OutputPrefix = ("${cf_prefix}")
    actionsequence = ( editfiles )
@@ -17,7 +11,7 @@ editfiles:
 	}
 
 	{ ${target}/etc/init.d/sysklogd
-	  ReplaceAll "^SYSLOGD=.*" With "SYSLOGD=${dblquote}-m 240${dblquote}"
+	  ReplaceAll "^SYSLOGD=.*" With "SYSLOGD=${dblquote}-m 360${dblquote}"
 	}
 
 # add second root account using tcsh
@@ -39,19 +33,19 @@ editfiles:
 
    HOME_CLIENT::
 	{ ${target}/etc/fstab
-	  HashCommentLinesContaining "/home"
+	  HashCommentLinesContaining "/home "
 	  AppendIfNoSuchLine "${hserver}:/home /home nfs rw,nosuid,rsize=8192,wsize=8192 0 0"
 	}
 
    DATALESS::
 	{ ${target}/etc/fstab
-	  HashCommentLinesContaining "/usr"
+	  HashCommentLinesContaining "/usr "
 	  AppendIfNoSuchLine "${bserver}:/usr /usr nfs ro,rsize=8192,wsize=8192 0 0"
 	}
 
    USR_LOCAL_MOUNT::
 	{ ${target}/etc/fstab
-	  HashCommentLinesContaining "/usr/local"
+	  HashCommentLinesContaining "/usr/local "
 	  AppendIfNoSuchLine "${bserver}:/usr/local /usr/local nfs ro,rsize=8192,wsize=8192 0 0"
 	}
 
