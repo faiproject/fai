@@ -29,7 +29,7 @@
 # june 2000, Thomas Lange, lange@informatik.uni-koeln.de
 
 $| = 1;
-@typelist = qw/install remove/;
+@aptcommands = qw/install remove/;
 %options = (
 		       install => '-y --fix-missing',
 		       remove  => '-y --purge',
@@ -44,7 +44,7 @@ $aptgetlog = '' if $verbose;
 @classes = grep { !/^#|^\s*$/} split(/[\s\n]/,$ENV{classes});
 
 foreach (@classes) {
-  $filename = "$classpath/$_";
+  my $filename = "$classpath/$_";
   &readconfig($filename) if -f $filename;
 }
 
@@ -58,8 +58,8 @@ foreach $entry (@preloadlist) {
   }
 }
 
-foreach $type (@typelist) {
-  $packlist = join(' ',@{$list{$type}});
+foreach $type (@aptcommands) {
+  my $packlist = join(' ',@{$list{$type}});
 
   if ($packlist) {
     $command = "chroot $FAI_ROOT apt-get $options{$type} $type $packlist $aptgetlog";
@@ -89,5 +89,21 @@ sub readconfig {
     /^PACKAGES\s+([^\s]+)/ and $type = $1,next;
     warn "PACKAGES .. line missing in $filename\n" unless $type;
     push @{$list{$type}}, split;
+  }
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# not yet used
+sub execute {
+
+  # execute a command or only echo it
+  my $command = shift;
+  my $error;
+
+  if ($verbose) {
+    print $command;
+  } else {
+    $error = system $command unless $verbose;
+    return $error;
   }
 }
