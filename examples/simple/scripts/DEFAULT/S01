@@ -36,6 +36,9 @@ dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
 
 fcopy -M /etc/X11/XF86Config   && rm -f $target/etc/X11/XF86Config-4
 fcopy -M /etc/X11/XF86Config-4 && rm -f $target/etc/X11/XF86Config
+[ -n "$videodrv" ] || videodrv=vesa
+grep -q %%VIDEODRV%% $target/etc/X11/XF86Config-4 &&
+   perl -pi.orig -pe "s/%%VIDEODRV%%/$videodrv/" $target/etc/X11/XF86Config-4
 
 # put CD-ROM into fstab and exports
 # if cdromdevice is defined in *.var, use that value
