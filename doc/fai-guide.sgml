@@ -1874,27 +1874,24 @@ available on the FAI homepage.
 <chapt id=beowulf>How to build a Beowulf cluster using FAI<p>
 
 This chapter describes the particularities about building a Beowulf
-cluster using &dgl; and FAI. For more information about the Beowulf concept,
-look at <httpsite>http://www.beowulf.org</httpsite>. Here, the master
-node is called <em>nucleus</em>. It has two network cards. One for the
-connection to the external Internet, one for the connection to the
-internal cluster network. If connected from the external Internet,
-it's called <em>nucleus</em>, but the cluster nodes accesses the
-master node with name <em>atom00</em>, which is a name for the second
-network interface. The master server is also the install server for
-the computing nodes.
+cluster using &dgl; and FAI. For more information about the Beowulf
+concept, look at <httpsite>http://www.beowulf.org</httpsite>. Here,
+the master node (or master server) is called <em>nucleus</em>. It has
+two network cards. One for the connection to the external Internet,
+one for the connection to the internal cluster network. If connected
+from the external Internet, it's called <em>nucleus</em>, but the
+cluster nodes accesses the master node with name <em>atom00</em>,
+which is a name for the second network interface. The master server is
+also the install server for the computing nodes.
 
 <p>
-All computing nodes (called <em>atom01</em> to <em>atom99</em>) are
-connected via a switch with the second interface card of the master
-node. They can only connect to the other nodes or the master, but
-can't communicate to any host outside their cluster network. So, all
-services (NTP, DNS, NIS, ...) must be available on the master
-server.
-<p>
-
+All client nodes <em>atom01</em> to <em>atom99</em> are connected via
+a switch with the second interface card of the master node. They can
+only connect to the other nodes or the master, but can't communicate
+to any host outside their cluster network. So, all services (NTP, DNS,
+NIS, ...) must be available on the master server.
 I choose the class C network address <em>192.168.42.0</em> for building
-the local cluster network. You can replace the subnet 42 with any
+the local Beowulf cluster network. You can replace the subnet 42 with any
 other number you like. I you have more that 253 computing nodes,
 choose a class A network address (10.X.X.X).
 
@@ -1904,20 +1901,15 @@ install client many time, until there's no fault in your configuration
 scripts. Therefore you should have physical access to the master
 server and one client node. If you have few space, connect both
 computers to a switch box, so one keyboard and monitor can be shared
-among both.<p>
-
-
-
-</p>
+among both.
 
 <sect id=master> Set up the master server<p>
 
 The master server will be installed by hand, cause it could be your
 first computer installed with Debian. It you have already a Debian
-host running, you can also install it via FAI. After the normal Debian
-system is installed to the master server, install the FAI package on
-the master server. Create a partition on <file>/files/scratch</file>
-for the local Debian mirror with more that  3GB space available.
+host running, you can also install it via FAI. Create a partition on
+<file>/files/scratch</file> for the local Debian mirror with more that
+3GB space available.
 
 <sect1 id=beonetworkmaster> Set up the network<p>
 
@@ -1930,6 +1922,8 @@ netmask 255.255.255.0
 broadcast 192.168.42.255
 </example>
 
+Now add the IP addresses for the client nodes. The FAI package has an
+example for this file.
 <file>/etc/hosts</file>:
 <example>
 # Beowulf nodes
@@ -1939,36 +1933,55 @@ broadcast 192.168.42.255
 192.168.42.2 atom02
 </example>
 
+Activate the second network interface with: <tt>/etc/init.d/networking start</tt>.
+
 <sect1 id=beonis> Set up NIS<p>
 
-Copy the file <file>netgroup</file> from the examples directory to
-<file>/etc</file>. Set the NIS domainname in <file>/etc/defaultdomain</file>.
-
-<example>
-# ypinit -m
-# /cd /var/yp
-# make
+Add a normal user account <var>tom</var> which is the person how edits
+the configuration space and manages the local Debian mirror:
+<example># adduser tom
+# addgroup linuxadmin
 </example>
 
+This user should also be in the group <var>linuxadmin</var>.
+<example>/etc/group
+linuxadmin:x:101:tom
+</example>
+
+To initialize the master server as NIS server call <tt>ypinit -m</tt>
+<p>
+Then, copy the file <file>netgroup</file> from the examples directory
+to <file>/etc</file> and edit other files there. Adjust access to the
+NIS service.
+
+<example># cat /etc/ypserv.securenets
+# Always allow access for localhost
+255.0.0.0       127.0.0.0
+# This line gives access to the Beowulf cluster
+255.255.255.0 192.168.42.0
+</example>
+
+Rebuild the NIS maps: <tt> # cd /var/yp; make</tt>
 
 <sect1 id=beomirror> Create a local Debian mirror<p>
 
-Create a local Debian mirror on <file>/files/scratch/</file> using
-<prgn>mkdebmirror</prgn>. This will need about 2.6GB disk space for
-Debian 2.2 (aka potato).
+Now user <var>tom</var> can create a local Debian mirror on
+<file>/files/scratch/</file> using <prgn>mkdebmirror</prgn>. This will
+need about 2.6GB disk space for Debian 2.2 (aka potato). Export this
+dirtectory to the netgroup <tt>@faiclients</tt> read only.
 
-
-<sect id=x11> Install FAI package on the master server<p>
+<sect1 id=fai1> Install FAI package on the master server<p>
 
 Add following packages to the install server:
-<example>nucleus:/# apt-get install task-dns-server ntp tftp bootp fai fai-kernels</example>
+<example>nucleus:/# apt-get install task-dns-server ntp tftp bootp nfs-kernel-server fai fai-kernels</example>
+Configure NTP so that the master server and all client nodes will have
+the same correct system time.
 
-
+<p>
 It's very important to use the network name of the cluster network for
-the master node in <file>/etc/bootptab</file> and <file>/etc/fai.conf</file>.
-
-Adjust this file in &fc; so the Beowulf nodes
-can use the name for connecting their master server.
+the master node in <file>/etc/bootptab</file> and
+<file>/etc/fai.conf</file>.  Adjust this file in &fc; so the Beowulf
+nodes can use the name for connecting their master server.
 <example>
 NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
 </example>
@@ -1996,13 +2009,34 @@ NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
 .
 </example>
 
-Build the kernel for the cluster nodes using <manref name="make-kpkg" section="8">.
+<sect1 id=bootp1> Prepare network booting<p>
+
+Uncomment the following line in <file>/etc/inetd.conf</file>:
+<example>#bootps dgram udp wait root /usr/sbin/bootpd bootpd -i -t 120
+</example>
+and restart the inetd daemon.
+
+The user <var>tom</var> should have permission to create and the
+symlinks for booting via network card, so change the group and add
+some utilities.
+
+<example># chgrp -R linuxadmin /boot/fai; chmod -R g+rwx /boot/fai
+# cp /usr/share/doc/fai/utils/* /usr/local/bin
+</example>
+
+Now, the user <var>tom</var> can create a symlink in
+<file>/boot/fai</file> using <prgn>tlink</prgn>
+<example>tlink atom_install atom01</example>
+to boot the first client node for the first
+time. Then start to adjust the configuration for your client
+nodes. Don't forget to build the kernel for the cluster nodes using
+<manref name="make-kpkg" section="8">.
 
 <sect id=beotools> Tools for Beowulf cluster<p>
 
-Follwoing tools for Beowulf cluster are available in <file>/usr/share/doc/fai/utils</file>:
+Following tools for a Beowulf cluster now are available in <file>/usr/local/bin</file>:
 
-<file>tlink, all_hosts, rshall</file>
+<example>tlink, all_hosts, rshall</example>
 
 
 <chapt id=sparc>FAI on SUN SPARC<p>
@@ -2060,11 +2094,9 @@ from floppy.
 </debiandoc>
 
 <!-- 
-buy a switch box for monitor and keyboard
-rdev vmlinuz-2.2.19 /dev/hda1 if your server does not have /dev/hda1
-as root device. The call imggen
-
-chown -R fai /boot/fai
+rdev vmlinuz-2.2.19 /dev/hda1 for the kernel which boot the client
+nodes from local disk if your server does not have /dev/hda1
+as root device. Then call imggen
 
 
 # install pine
