@@ -1,6 +1,9 @@
 #! /bin/sh
 
-# copyright Thomas Lange 2001-2002, lange@debian.org
+# copyright Thomas Lange 2001-2003, lange@debian.org
+
+# generate locales on client
+$ROOTCMD dpkg-reconfigure -u locales
 
 # remove backup files from cfeninge
 dirs="root etc var"
@@ -22,19 +25,14 @@ case "$UTC" in
    no|"") hwopt="--localtime" ;;
    yes)   hwopt="--utc"       ;;
 esac
+$ROOTCMD hwclock $hwopt --systohc
 
 # Make sure everything is configured properly
 echo "Running \"apt-get -f install\" for the last time."
 $ROOTCMD apt-get -f install
-
-
-$ROOTCMD hwclock $hwopt --systohc
 
 # the system is now configured
 rm -f $target/sbin/unconfigured.sh
 
 # copy sources.list forall and update apt-list at next boot
 fcopy /etc/apt/sources.list /etc/rc2.d/S99aptupdate
-
-# generate locales on client
-$ROOTCMD dpkg-reconfigure -u locales
