@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-# read a disk config file and look for several partitions
+# read one disk config file and define classes depending on partition names
 # (c) Thomas Lange, 2001, lange@informatik.uni-koeln.de
 
 sub match {
