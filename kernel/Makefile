@@ -16,13 +16,14 @@ KERNEL_FILES = emptydosdisk.gz imagegen_firstblock
 $(KERNEL): /usr/src/kernel-source-$(KERNELVERSION).tar.bz2
 	mkdir -p $(kerneldir); cd $(kerneldir) ;\
 	tar Ixf /usr/src/kernel-source-$(KERNELVERSION).tar.bz2
+	touch $(KERNEL)
 
 # kernel using BOOTP protocol
 .config-bootp: kernel-config fai-kernel-config-bootp
 	cat kernel-config fai-kernel-config-bootp > .config-bootp
 
 $(BOOTPKERNEL): $(kerneldir)/$(BOOTPKERNEL)
-	cp $(kerneldir)/$(BOOTPKERNEL) .
+	cp -p $(kerneldir)/$(BOOTPKERNEL) .
 
 $(kerneldir)/$(BOOTPKERNEL): .config-bootp
 	cp -p .config-bootp $(KERNEL)/.config
@@ -36,7 +37,7 @@ $(kerneldir)/$(BOOTPKERNEL): .config-bootp
 	cat kernel-config fai-kernel-config-bootp enable-dhcp > .config-dhcp
 
 $(DHCPKERNEL): $(kerneldir)/$(DHCPKERNEL)
-	cp $(kerneldir)/$(DHCPKERNEL) .
+	cp -p $(kerneldir)/$(DHCPKERNEL) .
 
 $(kerneldir)/$(DHCPKERNEL): .config-dhcp
 	cp -p .config-dhcp $(KERNEL)/.config
@@ -45,7 +46,9 @@ $(kerneldir)/$(DHCPKERNEL): .config-dhcp
 	make-kpkg clean ; \
 	fakeroot make-kpkg --revision $(DHCP_REVISION) kernel-image 
 
-all: $(KERNEL) $(BOOTPKERNEL) $(DHCPKERNEL)
+kernels: $(KERNEL) $(BOOTPKERNEL) $(DHCPKERNEL)
+
+all: $(BOOTPKERNEL) $(DHCPKERNEL)
 
 install:
 	install -m644 $(BOOTPKERNEL) $(DHCPKERNEL) $(KERNEL_FILES) $(LIBDIR)/kernel
@@ -57,4 +60,4 @@ clean:
 veryclean: clean
 	rm -rf $(KERNEL) .config-bootp .config-dhcp
 
-.PHONY: clean veryclean
+.PHONY: clean veryclean kernels

@@ -12,7 +12,7 @@ CONFFILES= apt.conf apt.conf.nfsroot dhclient.conf
 KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/S91global.source $(DESTDIR)/$(DOCDIR)/templates/class/S98variables.source
 
 all:
-	$(MAKE) -C kernel all
+	$(MAKE) -C kernel kernels
 
 veryclean: clean
 	$(MAKE) -C kernel veryclean
