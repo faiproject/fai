@@ -1,35 +1,70 @@
-This file is not up to date ! TL, June 2000
-
-
-class BASE after NETWORK is important: All copy action must take place
-before we append something to the same files 
-
-
-Description of the classes
+Description of the classes		Wed, 11 Apr 2001 16:05:29 +0200
 --------------------------
 
-BASE		some base configurations
-BOOT		copy kernel and modules and call lilo
-LAST		remove old version of some files
-NETWORK		configure network related parts like  printer, xntp, network, inetd
-COMPILE		select software packages for software development
-KERNEL_SOFT	installs kernel sources and kernel headers
-KEYBOARD_GERMAN	default.map for german keyboard
-MINI_SOFT	minimal software list
-SOFT		extensive software list
-NIS		configures system as NIS client
-NONIS		do not use NIS
-ROY		several little changes
-TFTP_SERVER	enable tftpd and copy clusterimage and installimage to /tftpboot
-NTP		configures system to use NTP (Network Time Protocol)
-4GB		disk layout for one disk up to 4~GB
-NET_9		network related things that belongs to our class C subnet
-USR_MOUNT	mount /usr from $bserver
-USR_LOCAL_MOUNT	mount /usr/local from bserver
-USR_LOCAL_COPY	make a copy of /usr/local to local filesystem
-SCRATCH		export /scratch to netgroup @sundomain and @linux-cluster
-FILES_SCRATCH	/export /files/scratch to netgroup @sundomain and linux-cluster
-FAISERVER	export filesystem to netgroup @faiclients
-NOPCMCIA	remove software package pcmcia
-NOPPP		remove software packcage ppp
-NFS_SERVER	select software used for a nfs server
+If you want to find all files (except hostnames) that are classes try:
+   find /usr/local/share/fai -type f | egrep '/[[:upper:][:digit:]_]+$'
+
+In cfengine scripts you can find class names using:
+   egrep -r '[[:upper:][:digit:]_]+::' /usr/local/share/fai
+
+Shell scripts are using the commad ifclass. So use:
+   egrep -r 'ifclass[[:space:]]+[[:upper:][:digit:]_]+' /usr/local/share/fai
+
+
+Class name	Description
+------------------------------------------------------------
+
+4GB		disk layout for disk up to 4.5 GB
+ATA33		select UltraDMA mode2 on disk hda
+BOOTP_SERVER	packages for a BOOTP server
+COMPILE		packages for software development
+DEBIAN_DEVEL	packages for a Debian developer
+GERMAN		packages for the german language
+NFS_SERVER	add user space nfs server to package list
+NONIS		dont't use NIS
+NIS		add NIS software, and configure NIS (nsswitch.conf,
+		defaultdomain,host.conf.yp.conf )
+NTP		add ntp software, create ntp.conf
+SERVER		long list of packages, export /home, /usr to
+		@faiclients, add tcsh to /etc/shells
+KERNEL_SOFT	kernel sources and related packages
+
+BASE		set UTC, longer interval for marks in syslogd, set
+		passwd for root account, add account roott with same pw
+
+HOME_CLIENT	add nfs mount $hserver:/home to fstab
+DATALESS	add nfs mount $bserver:/usr to fstab, make /vol
+		symlink, extract /usr/local/vol archive if available
+USR_LOCAL_MOUNT add nfs mount $bserver:/usr/local to fstab
+SCRATCH		export /scratch to netgroup @sundomain and @faiclients
+FILES_SCRATCH	export /files/scratch to netgroup @sundomain and @faiclients
+BOOT		create lilo.conf, call lilo
+FAI_BOOTPART	create FAI boot partition, add it to lilo.coonf
+NET		create eth0 configuration, resolv.conf, copy ssh_known_hosts
+NETWORK		disable fingerd, tald, ntalkd, rexecd, discard,
+		daytime, identd in inetd.conf
+NOTEBOOK	increase max count between two fsck for all partitions
+NET_9		don't use tcp wrapper for rsh, rlogind, rstatd, rusersd
+
+LAST		remove backup files of cfengine, link /tmp partition
+		if necessary, add nfs location of debian mirror to fstab
+DEFAULT		minimal software list, set timezone, hostname, create
+		lo device configuration, keymap copy dot files for
+		root account, make /dev/fd* writeable for all, install
+		kernel package
+
+CS_KOELN	template of dot files for our institute
+S3VIRGE		XF86 configuration for our S3 virge graphic cards
+
+
+
+Following classes should always be define:
+
+LAST, DEFAULT (are defined by default)
+BASE
+BOOT
+NET
+
+Some classes depends on another class. For eg. the class NTP is used
+in script NET. So both classes must be defined, if the ntp
+configuration should be created.
