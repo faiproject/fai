@@ -1,7 +1,5 @@
 include VERSION
 
-# where I can build the kernel
-#ramdisk=/tmp/ram
 DESTDIR=$(shell pwd)/debian/tmp
 DEB_HOST_ARCH=$(MACHTYPE)
 DOCDIR=/usr/share/doc/fai
@@ -18,6 +16,7 @@ kernels:
 
 veryclean: clean
 	$(MAKE) -C kernel clean
+	$(MAKE) -C kernel veryclean
 
 clean:
 	rm -f /tmp/make.log
