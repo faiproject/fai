@@ -1,21 +1,19 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .TH fai-chboot 8 "27 may 2003" "FAI 2.4.2"
-.\" Please adjust this date whenever revising the manpage.
-.\"
-.\" Some roff macros, for reference:
-.\" .nh        disable hyphenation
-.\" .hy        enable hyphenation
-.\" .ad l      left justify
-.\" .ad b      justify to both left and right margins
-.\" .nf        disable filling
-.\" .fi        enable filling
-.\" .br        insert line break
-.\" .sp <n>    insert n+1 empty lines
-.\" for manpage-specific macros, see man(7)
 .SH NAME
-fai-chboot \- manage network boot configuration files
+fai-chboot \- manage the network boot configuration files
 .SH SYNOPSIS
-.B fai-chboot [\fIOPTION\fR]... \fIKERNELNAME\fR \fIROOTFS\fR \fIHOST\fR...
+.B fai-chboot
+[OPTION]... KERNELNAME ROOTFS HOST...
+.br
+.B fai-chboot
+-l
+.br
+.B fai-chboot
+-r HOST...
+.br
+.B fai-chboot
+-i [OPTION]... HOST...
 .SH DESCRIPTION
 This command creates the configuration files for network booting.
 
@@ -43,7 +41,10 @@ verbose,sshd,createvt,syslogd
 Show simle help and version.
 .TP
 .B \-i
-Set parameters for booting the FAI install kernel. Same as fai-chboot -p ip=dhcp vmlinuz-install /dev/nfs
+Set parameters for booting the FAI install kernel. Same as -k ip=dhcp vmlinuz-install /dev/nfs
+.TP
+.BI "\-k " parameters
+Set kernel append parameters.
 .TP
 .B \-l
 List the configuration for all hosts.
@@ -52,8 +53,9 @@ List the configuration for all hosts.
 Do not create configuration but show what will be done. This also
 enables the verbose flag.
 .TP
-.BI "\-p " parameters
-Set kernel append parameters.
+.B \-p
+Preserve existing config files. The default is to overwrite an
+existing config file.
 .TP
 .B \-r
 Disable network booting for HOST. This renames the config file and add
@@ -61,22 +63,21 @@ the suffix .disable to it.
 .TP
 .B \-v
 Create verbose output.
-
 .SH EXAMPLES
 .TP
 fai-chboot -l
 List the configuration for all hosts.
-
 .TP
 fai-chboot -iFv atom02 atom03 dom kueppers
-Hosts atom02, atom03, dom and kueppers will boot the FAI install kernel.
-
+The hosts atom02, atom03, dom and kueppers will boot the FAI install kernel.
 .TP
-fai-chboot -v localboot-atom /dev/hda1 atom03 
-Next time atom03 will boot the kernel localboot-atom which mounts the root filesystem from /deb/hda1.
+fai-chboot -v atom-localboot /dev/hda1 atom03 
+Next time atom03 will boot the kernel atom-localboot which mounts the
+root filesystem from /deb/hda1.
 .TP
-fai-chboot memtest86.bin blabla atom02
-Host atom02 will boot the memory test.
+fai-chboot memtest86.bin koeln atom02
+The host atom02 will boot the memory test. Since memtest does not need
+a root filesystem, you can use any string for it.
 
 .SH NOTES
 Currently only PXE boot is supported. BOOTP configuration can be
