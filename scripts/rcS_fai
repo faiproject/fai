@@ -32,8 +32,6 @@
 timeout=30 # bootpc timeout
 FAI_VERSION=FAIVERSIONSTRING
 classes="DEFAULT $HOSTNAME LAST"  # default before defining classes
-rcslog=/tmp/rcS.log
-divertlist=/tmp/divert.lis
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 romountopt="-o ro,rsize=8192"
 fstab=fstab   # Solaris uses vfstab
@@ -42,9 +40,15 @@ fstab=fstab   # Solaris uses vfstab
 fai_init() {
 
     # everything that must be done, before the ramdisk is available
+    local sub
     set -a # now export all variables
-    . /usr/share/fai/subroutines
-    . /etc/fai/fai.conf
+    # linux dir
+    [ -f /etc/fai/fai.conf ] && . /etc/fai/fai.conf
+    # solaris dir
+    [ -f /tmp/install_config/fai/fai.conf ] && . /tmp/install_config/fai/fai.conf
+    sub=$FAI_SUBDIR/subroutines
+    [ -f $sub ] && . $sub
+    [ -f $sub-$OSTYPE ] && . $sub-$OSTYPE
     DEBIAN_FRONTEND=Noninteractive
     # location of master files for cfengine
     FAI_FILES=$FAI/files
@@ -53,8 +57,11 @@ fai_init() {
     ROOTCMD="chroot $FAI_ROOT"
     # no chroot needed
     [ "FAI_ROOT" = '/' ] && ROOTCMD=
-    diskvar=/tmp/disk_var.sh
-    moduleslog=/tmp/modules.log
+    FTMP=/tmp/fai   # directory where temporary log files are stored
+    diskvar=$FTMP/disk_var.sh
+    moduleslog=$FTMP/modules.log
+    rcslog=$FTMP/rcS.log
+    divertlist=$FTMP/divert.lis
 
     # for cfengine
     chroot=/usr/sbin/chroot
@@ -64,14 +71,17 @@ fai_init() {
 
     umask 022
     PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
-    ifup lo
-    [ -x /sbin/portmap ] && /sbin/portmap
-    mount -n -t proc proc /proc
-    mount -n -t devpts devpts /dev/pts
-    mount -n -o remount,rw,rsize=8192 /dev/root /
-    cat /proc/kmsg >/dev/tty4 &
-    create_ramdisk
     trap 'echo "Now rebooting";faireboot' INT QUIT
+
+    if [ X$OSTYPE = Xlinux ];then
+	ifup lo
+	[ -x /sbin/portmap ] && /sbin/portmap
+	mount -n -t proc proc /proc
+	mount -n -t devpts devpts /dev/pts
+	mount -n -o remount,rw,rsize=8192 /dev/root /
+	cat /proc/kmsg >/dev/tty4 &
+	create_ramdisk
+    fi
 
     {
     cat <<-EOF
@@ -117,7 +127,7 @@ task_install() {
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
 	echo "$stamp was not removed."
-	die "Please look at the log files in /tmp for errors."
+	die "Please look at the log files in $FTMP for errors."
     fi
     wait_for_jobs
     task faiend
