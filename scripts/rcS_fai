@@ -36,17 +36,17 @@ dhcplog=/tmp/dhcp.log
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 globalconf=/fai/fai_config/global.conf
 logdir=/var/log/fai
+maxyes=2000
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-install_base() {
+mount_debian_mirror() {
 
-    # mount debian directory; get baseX_Y.tgz and unpack it
+    # mount debian directory
     if [ "$FAI_PACKAGEDIR" ]; then
 	mkdir -p $FAI_ROOT/$MNTPOINT
 	mount -o ro,rsize=8192 $FAI_PACKAGEDIR $FAI_ROOT/$MNTPOINT ||
 	    die "Can't mount $FAI_PACKAGEDIR"
     fi
-    extract_base /var/tmp/base?_?.tgz
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 read_config() {
@@ -81,8 +81,13 @@ define_variables() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_classes() {
 
+    local newclasses class f
+
     cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the server."
     echo "Now defining classes"
+
+    [ -f $HOSTNAME ] && newclasses=`cat $HOSTNAME`
+    classes="DEFAULT $newclasses"
 
     # alphabetical sort is important
     for f in `ls S[0-9]*.{sh,pl}` ; do
@@ -97,6 +102,7 @@ define_classes() {
 	classes="$classes $newclasses"
 	fi
     done
+    classes="$classes $HOSTNAME LAST"
 
     for class in $classes ; do
 	echo $class >> /tmp/FAI_CLASSES
@@ -142,6 +148,8 @@ fai_init() {
     create_ramdisk
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
     save_dmesg
+    syslogd -p /tmp/etc/syslogsocket
+    klogd -c1 -f /tmp/kernel.log
 
     dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
     dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
@@ -183,6 +191,7 @@ EOF
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
     ststd=$FAI_ROOT/sbin/start-stop-daemon
 
+    local flag
     for flag in $FAI_FLAGS; do
 	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
 	eval "$flag=1"
@@ -246,12 +255,13 @@ fai_configure() {
 # execute scripts; cfengine, shell, perl and expect scripts are known types
 cd /fai/scripts
 
+local class filetype
 for class in $classes ; do
 if [ -x $class -a -f $class ]; then
     filetype=`file $class`
     case $filetype in
 
-	*"shell script"*)
+	*"Bourne shell script"*|*"Bourne-Again shell script"*)
 	    echo "Executing shell: $class"
 	    echo "=====   shell: $class   =====" >> /tmp/shell.log 2>&1
 	    ./$class >> /tmp/shell.log 2>&1
@@ -294,7 +304,7 @@ prepare_apt() {
     chroot $FAI_ROOT apt-get check
     [ $? -ne 0 ] && chroot $FAI_ROOT apt-get -f -y install </dev/null 
     chroot $FAI_ROOT dpkg -C
-    [ $? -ne 0 ] && nice yes ''|  chroot $FAI_ROOT dpkg --configure -a 
+    [ $? -ne 0 ] && myyes ''|  chroot $FAI_ROOT dpkg --configure -a 
     chroot $FAI_ROOT apt-get -f -y remove pcmcia-cs
     chroot $FAI_ROOT apt-get -f -y upgrade </dev/null
 
@@ -319,8 +329,6 @@ fai_install() {
 
     echo "Partitioning local harddisks"
     setup_harddisks -X > /tmp/format.log 2>&1
-#    [ ?$ -ne 0 ] && die "Error in setup_harddisk. Look at /tmp for log file"
-
     if [ -s $diskvar ]; then
 	. $diskvar
     else
@@ -328,7 +336,8 @@ fai_install() {
 	die "Error: $diskvar not found."
     fi
 
-    install_base
+    extract_base /var/tmp/base?_?.tgz
+    mount_debian_mirror
 
     echo "Installing software may take a while"
     if [ "$debug" ]; then
@@ -340,9 +349,9 @@ fai_install() {
     if [ "$debug" ]; then
 	install_packages | tee -a /tmp/software.log
     elif [ "$verbose" ]; then
-	nice yes '' | install_packages | tee -a /tmp/software.log
+	myyes '' | install_packages | tee -a /tmp/software.log
     else
-	nice yes '' | install_packages >> /tmp/software.log 2>&1
+	myyes '' | install_packages >> /tmp/software.log 2>&1
     fi
 
     fai_configure
@@ -404,11 +413,6 @@ case $FAI_ACTION in
     sysinfo)
 	echo Showing system information.
 	fai_sysinfo
-	;;
-    showclasses)
-	define_classes
-	define_variables
-	load_keymap_consolechars
 	echo The defined classes are:
 	echo $classes
 	echo The classes are also saved in /tmp/FAI_CLASSES
