@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# copyright Thomas Lange 2001, lange@debian.org
+# copyright Thomas Lange 2001-2002, lange@debian.org
 
 # this is the function: AppendIfNoSuchLine
 egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/modules
@@ -10,7 +10,13 @@ for module in $moduleslist; do
     echo $module >> $target/etc/modules
 done
 
-ifclass LILO && {
+if ifclass LILO; then
+set -xv 
+  fcopy /etc/lilo.conf || {
+    # if the installed kernel is using an initial ramdisk
+    if [ -L $target/initrd.img ]; then
+	initrdopt="initrd=/initrd.img"
+    fi
     # write lilo.conf and install lilo to disk
     echo "Creating lilo.conf for /vmlinuz"
     cat > $target/etc/lilo.conf <<-EOF
@@ -22,6 +28,8 @@ ifclass LILO && {
 	delay=50
 
 	image=/vmlinuz
+	append="devfs=nomount"
+        $initrdopt
 	label=linux
         read-only
 
@@ -31,11 +39,14 @@ ifclass LILO && {
 	optional
 	$liloappend
 EOF
+  }
+  $target/sbin/lilo -r $target
+  # you can also use this
+  # $ROOTCMD lilo -v
+fi
 
-    $target/sbin/lilo -r $target
-}
-
-ifclass GRUB && {
+if ifclass GRUB; then
+    fcopy /boot/grub/menu.lst || {
 
     kernelname=/vmlinuz
     echo "Installing grub and boot entry for $kernelname"
@@ -54,7 +65,7 @@ ifclass GRUB && {
 	root $broot
 	kernel $kernelname
 EOF
-
-    rdev $target/$kernelname $ROOT_PARTITION
+#    rdev $target/$kernelname $ROOT_PARTITION
     echo "Grub installed for $kernelimage $broot"
-}
+    }
+fi
