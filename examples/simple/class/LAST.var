@@ -1,41 +1,7 @@
 #! /bin/bash
 
-# Thomas Lange, feb 2003
+# Thomas Lange, june 2004
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-mktable() {
-
-    # Here, you have to add all your hosts
-    # This is the table: host -> action
-
-    cat <<-EOT
-
-   kueppers     install
-   bigfoot      sysinfo
-   pittermaennche install
-EOT
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getaction() {
-
-while read host action; do
-    if [ X$HOSTNAME = X$host ]; then
-	echo $action
-	return
-    fi
-done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-# this code defines FAI_ACTION. Is should only by used if fai-chboot or BOOTP
-# can't be used.
-
-act=$(mktable | getaction)
-[ -n "$act" ] && FAI_ACTION=$act
-unset mktable act getaction
-# Define a default value for FAI_ACTION
-# Uncomment the next line if a default value is needed
-# [ -z "$FAI_ACTION" ] && FAI_ACTION=sysinfo && echo "FAI_ACTION now defined as $FAI_ACTION"
-
-# if hdparm was defined, tune harddisks now 
+# if hdparm was defined, tune harddisks now
+# example: in DEMO.var: hdparm="hdparm -d1 /dev/hda"
 [ -n "$hdparm" ] && eval $hdparm
