@@ -1,1 +1,1 @@
-modprobe parport_probe
+modprobe parport_pc
