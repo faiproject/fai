@@ -60,6 +60,7 @@ task_confdir() {
     # check if monitor server is available
     [ -z "$monserver" ] && monserver=$SERVER
     faimond=1
+    sndhostname=$HOSTNAME # save current hostname
     if sndmon check; then
 	echo "Monitoring to server $monserver enabled."
     else
@@ -152,6 +153,8 @@ task_chboot() {
 
     local frsh
     local doexit=0
+    local hostname
+    hostname=`hostname`
     frsh="$FAI_REMOTESH -l $LOGUSER ${SERVER}"
 
     if [ -z "$LOGUSER" ] ; then
@@ -170,7 +173,7 @@ task_chboot() {
     if dmesg | grep -q "Sending BOOTP requests"; then
         # change boot device (local disk or network) when using bootp
 	[ "$LOGUSER" -a "$TFTPLINK" ] &&
-	    $frsh "cd /boot/fai; rm -f $HOSTNAME; ln -s $TFTPLINK $HOSTNAME"
+	    $frsh "cd /boot/fai; rm -f $hostname; ln -s $TFTPLINK $hostname"
     else
         # change boot device (local disk or network) when using PXE
         # first test if rsh to server works
@@ -180,7 +183,7 @@ task_chboot() {
 	    echo "Error: $frsh failed."
 	else
 	    # remove pxe config, so host will use default and boot from local disk
-	    $frsh /usr/sbin/fai-chboot -r $HOSTNAME
+	    $frsh /usr/sbin/fai-chboot -r $hostname
 	fi
     fi
 }
@@ -190,9 +193,9 @@ sndmon() {
     # send message to monitor daemon
     [ "$faimond" -eq 0 ] && return 0
     if [ "$debug" ];then
-	echo "$HOSTNAME $*" | nc $monserver 4711
+	echo "$sndhostname $*" | nc $monserver 4711
     else
-	echo "$HOSTNAME $*" | nc $monserver 4711 2>/dev/null
+	echo "$sndhostname $*" | nc $monserver 4711 2>/dev/null
     fi
     return $?
 }
