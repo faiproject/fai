@@ -1,0 +1,27 @@
+#! /bin/bash
+
+if [ "$FAI_ACTION" = "install" ]; then
+    # some packages must access /proc even in chroot environment
+    mount -t proc proc $FAI_ROOT/proc
+
+    # if libc is upgraded init u is called in chroot environment and
+    # then init will eat up much cpu time
+    fai-divert -a /sbin/init /usr/sbin/liloconfig /usr/sbin/invoke-rc.d
+    # fake some more programs
+    fai-divert -a /etc/init.d/nis /sbin/start-stop-daemon
+    cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
+fi
+
+# update the apt-get information inside the nfsroot 
+
+export aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"'
+$ROOTCMD apt-get $aptopt update
+$ROOTCMD apt-get $aptopt check
+[ $? -ne 0 ] && $ROOTCMD apt-get $aptopt -f -y install </dev/null 
+$ROOTCMD dpkg -C
+[ $? -ne 0 ] && yes '' | $ROOTCMD dpkg --configure -a 
+$ROOTCMD apt-get $aptopt -f -y dist-upgrade </dev/null
+# update dpkg info which packages are available
+$ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
+$ROOTCMD dpkg --update-avail /tmp/dumpavail
+rm -f $FAI_ROOT/tmp/dumpavail
