@@ -189,8 +189,7 @@ create_base() {
         call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
         $ROOTCMD apt-get clean
         echo "Creating base.tgz"
-        tar -l -C $NFSROOT -cf - . | gzip > $NFSROOT/../base.tgz
-        mv $NFSROOT/../base.tgz $NFSROOT/var/tmp/base.tgz
+        tar -l -C $NFSROOT -cf - --exclude var/tmp/base.tgz . | gzip > $NFSROOT/var/tmp/base.tgz
     else
 	die "\$FAI_DEBOOTSTRAP not defined."
     fi
@@ -306,7 +305,7 @@ upgrade_nfsroot() {
     $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/discover
     cp /sbin/fai-start-stop-daemon $NFSROOT/sbin/
     ln -s /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
-    $ROOTCMD apt-get -y upgrade
+    $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_packages_nfsroot() {
