@@ -66,6 +66,7 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
    Usage: make-fai-bootfloppy [parameter]
 
    -h       print this message.
+   -s host  use a static ip for host (try to get from DNS)
    -f file  make a 1440k floppy image
 
 DESCRIPTION
@@ -84,10 +85,11 @@ EOF
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
-while getopts "f:h" opt ; do
+while getopts "f:s:h" opt ; do
         case "$opt" in
         h) usage ;;
 	f) MKIMAGE=1; floppydev="$OPTARG";;
+	s) TARGETHOST="$OPTARG" ;;
         ?) echo "Error parsing arguments"; exit 1;;
 esac
 done
@@ -126,7 +128,16 @@ else
 fi
 SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
 echo "Using interface $SERVERINTERFACE with IP address: $SERVERIP"
-unset SERVERINTERFACE ndevices devices dev
+
+if [ -n "${TARGETHOST}" ] ; then
+    BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
+    NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
+    GATEWAY=`LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }'`
+    TARGETIP=`host -t a ${TARGETHOST} 2> /dev/null | awk '{print $3}'`
+    params="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off $params" 
+fi
+
+unset SERVERINTERFACE ndevices devices dev BROADCAST NETMASK GATEWAY TARGETIP
 
 if [ $MKIMAGE -eq 1 ]; then 
     dd if=/dev/zero of=$floppydev bs=1024 count=1440
@@ -157,7 +168,7 @@ cat >> /floppy/etc/lilo.conf <<-EOF
     root=$NFSROOT/dev/boot255
     install=/floppy/boot/boot.b
     map=/floppy/boot/map
-    append="NFSROOT=$SERVERIP:$NFSROOT $params"
+    append="nfsroot=$SERVERIP:$NFSROOT $params"
     delay=10
     compact
     image=/floppy/vmlinuz
