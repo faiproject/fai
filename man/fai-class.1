@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-class 1 "07 dec 2002" "FAI 2.4"
+.TH fai-class 1 "10 dec 2002" "FAI 2.4"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -20,30 +20,34 @@ fai-class \- define classes using files and scripts.
 .SH DESCRIPTION
 
 fai-class executes scripts in DIRECTORY to define classes. All classes
-are written to CLASSFILE, each class in a line. All scripts or
-executables matching "[0-9][0-9]*" are executed alphabetically. They
-can define classes by writing the names of the classes to
-stdout. Classes can be separated by spaces or written one on a
-line. Lines that start with a "#" are comment lines and are ignored.
+are written to CLASSFILE, each class in a line. Use absolute pathes
+for both arguments. All scripts or executables matching "[0-9][0-9]*"
+are executed in alphabetical order. They can define classes by writing
+the names of the classes to stdout. Classes can be separated by spaces
+or written one on a line. Lines that start with a "#" are comment
+lines and are ignored.
 
 Shell scripts that end in ".source" are sourced and can define classes
 by setting the variable $newclasses. This is useful for scripts were
 you can't control stdout.
 
 All scripts can define additional classes by writing the classes to the
-file $LOGDIR/additional-classes. This temporary file will be removed
+file $LOGDIR/additional-classes. These classes are defined after all
+scripts are executed. This temporary file will be removed
 after use.
 
 The order of the classes is important because it defines the priority
 of the classes from low to high. First, the class DEFAULT is
 defined. Then all scripts are executed to define classes. After that,
-all classes in the file with the hostname are added. After that, the
-classes from the file $LOGDIR/additional-classes are added.  Finally,
-the class with the hostname and LAST is defined.
+the classes from the file $LOGDIR/additional-classes are added. Then,
+all classes in the file with the hostname are added.  Finally, the
+class with the hostname and LAST is defined.
+
+It's important that each line in a file containg a class name ends
+with a newline. It the newline is missing in the last line of a file,
+this class can't be added.
 
 .SH OPTIONS
-.TP
-Currently no options are supported.
 .TP
 .B \-d
 Create debugging output.
@@ -52,10 +56,11 @@ Create debugging output.
 Show help, version and summary of options.
 .TP
 .B \-T
-Test if some classes are defined multiple times. This should never happen.
+Test if classes in CLASSFILE are defined multiple times. This should
+never happen. The test is executed after the classes are defined.
 .TP
 .B \-t tmpdir
-The file additional-classes is read from directory tmpdir. Default
+The file additional-classes is read from the directory tmpdir. Default
 value is /tmp/fai/.
 .TP
 .B \-v
@@ -113,7 +118,7 @@ The script 24nis:
 # add NIS and the NIS domain name if YPDOMAIN is defined
 
 if [ -n "$YPDOMAIN" ];then
-   echo "NIS $YPDOMAIN" | tr '.a-z-' '_A-Z_'
+   echo "NIS $YPDOMAIN" | tr /.a-z-/ /_A-Z_/
 else
    echo NONIS
 fi
