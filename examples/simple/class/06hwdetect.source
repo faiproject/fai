@@ -11,7 +11,6 @@ mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci -type f | sed 's/\.o$
 for i in $mod; do
     modprobe $i
 done
-unset i
 
 # load additional kernel modules (from old 11modules.source)
 # this order should also enable DMA for all IDE drives
@@ -20,7 +19,6 @@ for mod in $kernelmodules; do
     [ "$verbose" ] && echo loading kernel module $mod
     modprobe -a $mod
 done
-unset mod kernelmodules
 # now we can mount the usb file system
 mount -t usbfs  usbfs /proc/bus/usb
 
@@ -44,12 +42,13 @@ else
 fi
 echo 6 > /proc/sys/kernel/printk
 
-set_disk_info  # calculate number of available disks
-save_dmesg # save new boot messages (from loading modules)
-
 # try to detect graphics card
-video=`discover --data-path=xfree86/server/device/driver display`
-case "$video" in
+# the variable videodrv may be used to generate the XF86config file
+videodrv=`discover --data-path=xfree86/server/device/driver display`
+case "$videodrv" in
     mga) newclasses="$newclasses MATROX"
 esac
-unset video
+echo "Video card detected: $videodrv"
+
+set_disk_info  # calculate number of available disks
+save_dmesg # save new boot messages (from loading modules)
