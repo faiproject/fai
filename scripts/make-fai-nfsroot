@@ -42,7 +42,7 @@ dversion=2_2
 dname=potato
 verbose=1
 # Additional packages that are install to nfsroot
-packages="debconf file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm"
+packages="dhcp-client debconf file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm"
 
 
 basetgz=base${dversion}.tgz
@@ -71,10 +71,9 @@ recreate_nfsroot() {
     mkdir -p lib/modules/`uname -r`             # dirty trick to hoax lvm
     touch lib/modules/`uname -r`/modules.dep    # dirty trick to hoax lvm
     upgrade_nfsroot
-
     perl -pi -e "s/^root::/root:${rootpw}:/" etc/passwd
     mkdir -p $root/fai/fai_config
-    touch $root/fai/BOOTP   # enable BOOTP support
+    cp -p /usr/lib/fai/sbin/dhclient-script /usr/lib/fai/etc/dhclient.conf $root/etc
     cp -p /usr/lib/fai/sbin/* $root/sbin
     cp -p /usr/lib/fai/etc/apt.conf $root/etc/apt
     cp -p /usr/lib/perl5/Debian/Fai.pm $root/usr/lib/perl5/Debian/
@@ -96,6 +95,10 @@ recreate_nfsroot() {
     reboot -dfi
 EOF
     chmod a+rx $root/etc/rc2.d/S01fai_abort
+
+    touch $root/fai/BOOTP  && echo "enable BOOTP method for fai"
+#    touch $root/fai/DHCP  && echo "enable DHCP method for fai"
+
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
@@ -105,6 +108,11 @@ upgrade_nfsroot() {
     apt-get -c $aptconf check    > $devnull 
     chroot $root mount -n -t proc proc /proc
     apt-get -c $aptconf -y remove pcmcia-cs </dev/null  > $devnull 
+
+    # because start-stop-dameon must be faked do it here
+    apt-get -c $aptconf -y install dpkg </dev/null  > $devnull 
+    cp -p /usr/lib/fai/sbin/start-stop-daemon $root/sbin
+
     apt-get -c $aptconf -y upgrade </dev/null  > $devnull 
     echo Adding additional packages to $root
     apt-get -c $aptconf -y --fix-missing install $packages </dev/null  > $devnull 
