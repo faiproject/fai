@@ -66,13 +66,13 @@ read_config() {
 define_variables() {
 
     # after all classes are defined, define variables
-    # source files, which can set variables
+    # source files *.var , which can set variables
     cd /fai/class
     for class in $classes ; do
-	if [ -f $class.source ]; then
-	    [ "$verbose" ] && echo "Executing $class.source"
+	if [ -f $class.var ]; then
+	    [ "$verbose" ] && echo "Executing $class.var"
 	    [ "$debug" ] && set -v
-	    . $class.source </dev/null
+	    . $class.var </dev/null
 	    [ "$debug" ] && set +v
 	fi
     done
@@ -173,6 +173,9 @@ fai_setup() {
     ------------------------------------------------------
     $FAI_VERSION
     Fully Automatic Installation for Debian GNU/Linux
+
+    Copyright (c) 1999-2001, Thomas Lange
+            lange@informatik.uni-koeln.de
     ------------------------------------------------------
     Press ctrl-c to interrupt FAI and to get a shell
 
@@ -329,24 +332,30 @@ fai_install() {
 
     define_classes > >( tee -a $rcslog )  2>&1
     define_variables > >( tee -a $rcslog )  2>&1
-    load_keymap_consolechars
     save_dmesg
     ( # execute in a subshell to get all output
 
+    load_keymap_consolechars
+
     echo "Partitioning local harddisks"
-    setup_harddisks -X > /tmp/format.log 2>&1
+    # use local setup harddisk script if available
+    if [ -x /usr/local/bin/my-fdisk ];then
+	/usr/local/bin/my-fdisk
+    else
+	setup_harddisks -X > /tmp/format.log 2>&1
+    fi
     if [ -s $diskvar ]; then
 	. $diskvar
     else
 	cat /tmp/format.log
 	die "Error: $diskvar not found."
     fi
-
+    [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
     mount2target $FAI_ROOT
     extract_base /var/tmp/base?_?.tgz
     # now we can copy fstab
     [ -f $target/etc/fstab ] && mv $target/etc/fstab $target/etc/fstab.old
-    cp -p $fstab $target/etc/fstab
+    cp -p /tmp/fstab $target/etc/fstab
 
     mount_debian_mirror
 
