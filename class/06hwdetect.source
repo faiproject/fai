@@ -1,6 +1,6 @@
-#! /bin/sh
+#! /bin/bash
 
-# (c) Thomas Lange, 2002-2004, lange@informatik.uni-koeln.de
+# (c) Thomas Lange, 2002-2005, lange@informatik.uni-koeln.de
 
 # NOTE: Files named *.source will be evaluated, but their output ignored and instead 
 # the contents of $newclasses will be added to the list of defined classes.
@@ -12,13 +12,18 @@ echo 0 > /proc/sys/kernel/printk
 # DMA does not work if we load all modules in drivers/ide, so only try pci modules
 mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci -type f | sed 's/\.o$//' | sed 's/\.ko$//' | sed 's/.*\///')
 for i in $mod; do
-    modprobe $i
+    modprobe $i 1>/dev/null 2>&1
+done
+# Booting from CD does not enable dma always
+for d in $( echo /proc/ide/hd[a-z] 2>/dev/null); do
+    [ -d $d ] && echo "using_dma:1" > $d/settings
+done
 done
 
 # load additional kernel modules (from old 11modules.source)
 # this order should also enable DMA for all IDE drives
 kernelmodules="rtc floppy usbkbd ide-disk ide-cd"
-case `uname -r` in
+case $(uname -r) in
     2.4*) kernelmodules="$kernelmodules keybdev mousedev hid ide-detect isa-pnp" ;;
     2.6*) kernelmodules="$kernelmodules usbhid usbmouse ide-generic" ;;
 esac
@@ -49,7 +54,7 @@ echo 6 > /proc/sys/kernel/printk
 
 # try to detect graphics card
 # the variable videodrv may be used to generate the XF86config file
-videodrv=`discover --data-path=xfree86/server/device/driver display`
+videodrv=$(discover --data-path=xfree86/server/device/driver display)
 [ -n "$videodrv" ] && echo "videodrv=$videodrv" >> $LOGDIR/additional.var
 case "$videodrv" in
     mga) newclasses="$newclasses MATROX"
