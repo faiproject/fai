@@ -4,25 +4,13 @@
 #
 # subroutine definitions for linux
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-disk_info() {
+set_disk_info() {
 
     # the variable holds a space separated list of devices and their block size
-    device_size=`egrep ' cciss/c.d.\b| ida/c.d.\b| rd/c.d.\b| hd.\b| sd.\b|/disc\b' /proc/partitions | diskandsize`
+    device_size=$(disk-info)
 
     # a list of all local disks, without size
-    disklist=`list_disks $device_size`
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-diskandsize() {
-
-    local isdisk major minor blocks device suffix
-
-    while read major minor blocks device suffix; do
-	isdisk=1
-	# skip ide cdrom
-	[ -f /proc/ide/$device/media ] && grep -q cdrom /proc/ide/$device/media && isdisk=0
-	[ $isdisk -eq 1 ] && echo "$device $blocks"
-    done
+    disklist=$(list_disks $device_size)
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 jobsrunning() {
@@ -37,7 +25,7 @@ eval_cmdline() {
     local word
 
     echo -n "Kernel parameters:"; cat /proc/cmdline
-    for word in `cat /proc/cmdline` ; do
+    for word in $(< /proc/cmdline) ; do
 	case $word in
 	    [a-zA-Z]*=*)
 		echo "Defining variable: $word"
@@ -49,7 +37,7 @@ eval_cmdline() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_confdir() {
 
-    local dnshost bootlog
+    local bootlog
     eval_cmdline
 
     bootlog=$LOGDIR/boot.log
