@@ -270,6 +270,12 @@ task_instsoft() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
 
+    # umount swap space
+    local sd vflag
+    [ "$verbose" ] && vflag=-v
+    for sd in $SWAPLIST; do
+       swapoff $vflag $sd
+    done
     umount -n $FAI_ROOT/proc
     # undo fake of all programs made by fai
     rmalldivert

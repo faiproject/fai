@@ -440,6 +440,14 @@ task_defvar() {
 task_mountdisks() {
 
     [ ! -f $LOGDIR/$fstab ] && die "No $LOGDIR/$fstab created."
+    if islinux; then
+       # mount swap space
+       local sd vflag
+       [ "$verbose" ] && vflag=-v
+       for sd in $SWAPLIST; do
+	   swapon $vflag $sd
+       done
+    fi
     mount2dir $FAI_ROOT $LOGDIR/$fstab
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
