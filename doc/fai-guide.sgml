@@ -1,4 +1,4 @@
-<!DOCTYPE debiandoc PUBLIC "-//DebianDoc//DTD DebianDoc//EN" [
+!DOCTYPE debiandoc PUBLIC "-//DebianDoc//DTD DebianDoc//EN" [
   <!-- include version information so we don't have to hard code it
        within the document -->
   <!-- common, language independent entities -->
@@ -359,7 +359,7 @@ for the install clients) are defined in &fc;. Since FAI doesn't use
 	      Debian package <package>fai-kernels</package> contains the
 	      default install kernels which supports both the BOOTP
 	      and DHCP protocol. You can select one of these protocols
-	      using the kernel option XXX ip=XX
+	      using the kernel option <tt>ip=dhcp</tt> or <tt>ip=bootp</tt>
 	      Do not enable BOOTP support when you have a
 	      DHCP server running in your network and vice versa. This
 	      could lead to missing information. If you do not select
@@ -567,8 +567,7 @@ kueppers# ln -s installimage_3com bigfoot
 </example>
 
 
-<sect id="pxeboot">Booting from network card with a PXE conforming boot ROM
-<p>
+<sect id="pxeboot">Booting from network card with a PXE conforming boot ROM<p>
 Some network cards (e.g. Intel EtherExpress PRO 100) have a fixed
 boot configuration, so they can only use the PXE boot protocol. This requires a PXE
 Linux boot loader and a special version of the <tt>TFTP</tt> daemon,
@@ -604,6 +603,17 @@ format is:
 </example>For additional information see
 <file>/usr/src/linux/Documentation/nfsroot.txt</file> in the kernel
 sources.
+
+<sect id="cdboot">Booting from a CD-ROM<p>
+
+There some ongoing work to create a bootable CD-ROM which can boot and
+install an install client. Currently this script is not included in
+the FAI package but a beta version is available. It will contain the
+nfsroot, the configuration space and a subset of the Debian mirror,
+which contains all packages that you need for an unattended
+installation. Look at the mailling list archive of FAI for more
+information. A first version is available at
+<httpsite>http://members.iinet.net.au</httpsite><httppath>/~niall/fai/</httppath>.
 
 <sect id="mac">Collecting Ethernet addresses<p>
 
@@ -722,6 +732,13 @@ separated. <var>FAI_FLAGS</var> in <file>bootptab</file> must be
 separated by whitespace. If you define <var>FAI_FLAGS</var> as
 an additional kernel parameter, the flags must be separated with a
 comma.<p>
+
+If you do not have full control over the BOOTP or DHCP daemon (because
+this service is managed by a central service group) you can also
+define the variables <var>FAI_ACTION</var> and <var>FAI_FLAGS</var> in
+a <file>/fai/class/*.var</file> scripts. Look at
+<file>DEFAULT.var</file> for an example. The variable <var>T170</var>
+has to be defined by a daemon or must be passed as a kernel parameter.
 
 When you have created your <file>bootptab</file> file, you have to
 enable the BOOTP daemon once. It's installed but Debian does not enable it
@@ -1724,9 +1741,25 @@ for your installation:
 
    <tag>addpackages</tag> <item> <p>The list of additional packages
    which are installed on the new system if they are available in
-   <file>/fai/files/packages</file>. This can be used to install local
-   site specific packages which can't be accessed using <manref
-   name="sources.list" section="5">.
+   <file>/fai/files/packages</file>. You can create a simple
+   repository by using following commands onm the install server:
+
+<example>
+# cd /usr/local/share/fai/files
+# dpkg-scanpackages packages /dev/null | gzip -9 > packages/Packages.gz
+</example>
+
+Additionally, you can also create a Release file in theis
+directory. For more information, refer to the
+repository HOWTO<footnote>http://www.isotton.com/debian/docs/repository-howto/</footnote>.
+
+Then <var>addpackages</var> can be the list of packages without a
+version number. 
+
+
+This can be used to install local site specific
+packages.
+section="5">.
 
 </taglist>
 
