@@ -8,8 +8,8 @@
 conffiles="$classes $HOSTNAME"
 
 for cfile in $conffiles ; do
-    if [ -f "${file}.mod" ]; then
-	.  ${file}.mod  >> $moduleslog 2>&1
+    if [ -f "${cfile}.mod" ]; then
+	.  ${cfile}.mod  >> $moduleslog 2>&1
     fi
 done
 
