@@ -205,9 +205,8 @@ fai_init() {
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
     dmesg > /tmp/dmesg.log
 
-    # or read the parmeter from cmdline ?
-    [ -f /fai/BOOTP ] && get_bootp_info
-    [ -f /fai/DHCP ] && get_dhcp_info
+    dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
+    dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
 
     read_config   # this reads nfsroot/fai/fai_config/; only usefull, if you don't use bootpc or dhcp
 
@@ -264,7 +263,7 @@ fai_setup() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_configure() {
 
-# execute scripts; cfengine, shell and perl scripts are known types
+# execute scripts; cfengine, shell, perl and expect scripts are known types
 cd /fai/scripts
 
 for class in $classes ; do
@@ -288,6 +287,12 @@ if [ -x $class -a -f $class ]; then
 	    echo "executing perl: $class"
 	    echo "=====   perl: $class   =====" >> /tmp/perl.log 2>&1
 	    ./$class >> /tmp/perl.log 2>&1
+	;;
+
+	*"expect script"*)
+	    echo "executing expect: $class"
+	    echo "=====   expect: $class   =====" >> /tmp/expect.log 2>&1
+	    ./$class >> /tmp/expect.log 2>&1
 	;;
 
 
