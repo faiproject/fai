@@ -43,7 +43,7 @@ set -e
 conffile=$NFSROOT/etc/rcS_fai.conf
 
 # Additional packages that are install to nfsroot
-packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 lvm strace expect5.31 hdparm parted"
+packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted"
 
 export DEBIAN_FRONTEND=Noninteractive
 
@@ -66,6 +66,8 @@ setup_ssh() {
     perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
     if [ -f "$SSH_IDENTITY" ]; then
 	mkdir -p -m 700 $NFSROOT/root/.ssh
+	loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+	cp -p $loguserhome/.ssh/identity $NFSROOT/root/.ssh/identity
 	cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
 	echo You can log into install clients without password using $SSH_IDENTITY
     fi
