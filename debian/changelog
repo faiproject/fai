@@ -1,4 +1,4 @@
-fai (2.5.5beta) unstable; urgency=low
+fai (2.6) unstable; urgency=low
 
   * fai.conf: move make-fai-nfsroot specific variables to make-fai-nfsroot.conf
   * fix typo in lib/get-boot-info (closes: #242739, #239405)
@@ -10,13 +10,14 @@ fai (2.5.5beta) unstable; urgency=low
     boot-menu.b, added support for old an new lilo
   * make-fai-nfsroot: add package dmidecode for some archs, add
     module-init-tools, libapt-pkg-perl, smartmontools, usbutils, lvm2,
-    raidtools2, remove portmap package, jove to nfsroot, do not copy
-    bootsector, use mkelf-linux,
+    raidtools2, hwinfo, remove portmap package, jove to nfsroot, do not
+    copy bootsector, use mkelf-linux,
     new code for creating timezone and localtime (closes: #201440), always
     show $NFSROOT when copying verbosely, insert newline before adding
     $FAI_LOCAL_REPOSITORY to sources.list, warning if $FAI_SOURCES_LIST is
     used, use new make-fai-nfsroot.conf file, divert discover-modprobe,
-    add -q to depmod, create var/state dir
+    add -q to depmod, create var/state dir, add subroutine fdivert(),
+    use fdivert instead ov ln or mv commands
   * create_ramdisk: use tmpfs instead of shm, create dir for discover
   * fcopy: -i always exists with 0
   * rcS_fai: if a file /.nocolorlogo exists, do not enable colored
@@ -34,14 +35,15 @@ fai (2.5.5beta) unstable; urgency=low
     add -xdev to find
   * subroutines: use /proc/uptime to determine installation time, use $()
     instead of backticks, set terror when error occurs, add catnc(),
-    report FAI_FLAGS in one line
+    report FAI_FLAGS in one line, send message to faimond when starting a
+    hook
   * subroutines-linux: set terror if error, add sndmon TASKERROR, do not
     copy kernel image and initrd to install server, remove echo command
     when defining kernel append parameters as variables
   * faimond: always flush output
   * fai-chboot: add option -o, special treatment of hostname default, also
     list default config file when using -l, die with error message if
-    hostname is unknown
+    hostname is unknown, remove path from program name
   * install_packages: add option -L, calling system with array should be
     more efficient, new code for detecting unknown package names uses
     AptPkg, add subroutine mkpackagelist(), remove path from program name
@@ -64,7 +66,7 @@ fai (2.5.5beta) unstable; urgency=low
   * new FAQ
   * THANKS: juergen added
 
- -- Thomas Lange <lange@debian.org>  Fri, 23 Jul 2004 12:09:35 +0200
+ -- Thomas Lange <lange@debian.org>  Mon, 26 Jul 2004 17:22:44 +0200
 
 fai (2.5.4) unstable; urgency=low
 
@@ -166,7 +168,9 @@ fai (2.5.2) unstable; urgency=low
     debug code in ifclass
   * install_packages: remove pinning info before checking for misspelt
     package name, usage() points to the man page
-  * fai-setup: chown of /boot/fai
+  * fai-setup: chown of /boot/fai, pass all fai-setup options to
+    make-fai-nfsroot (closes: #255830), fix hostname detection when
+    hostname includes a dash -
   * utils/softupdate, lib/prepare_apt: use dist-upgrade
   * debian/compat created and debian/conffiles removed
   * scripts/DEFAULT1/S20: add noatime,actimeo=900 options, add linux logo
