@@ -27,7 +27,6 @@
 
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 
-# main part
 $| = 1;
 # order of commands to execute
 @commands = qw/hold taskinst install remove dselect-upgrade/;
@@ -72,14 +71,16 @@ foreach $type (@commands) {
     next;
   }
 
+  # skip if empty list
+  next unless @{$list{$type}};
+  $packlist = join(' ',@{$list{$type}});
+
   if ($type eq "hold") {
     $hold = join " hold\n", @{$list{hold}};
     $hold .= " hold\n";
     execute("echo \"$hold\" | $rootcmd $command{hold}");
     next;
   }
-
-  $packlist = join(' ',@{$list{$type}});
 
   if ($type eq "install") {
     # check for packages, that don't exists
