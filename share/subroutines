@@ -48,17 +48,6 @@ defnop() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-islinux() {
-
-    # test is we are running on Linux
-#    [ X$OS_TYPE = X ] && OS_TYPE=`uname -s | tr '[A-Z]' '[a-z]'
-    if [ X$OS_TYPE = Xlinux ]; then
-       return 0
-    else
-       return 1
-    fi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ifclass() {
 
     [ "$debug" ] && echo "Test if class $1 is in $classes"
@@ -317,12 +306,11 @@ task_defvar() {
 task_mountdisks() {
 
     [ ! -f $LOGDIR/$fstab ] && die "No $LOGDIR/$fstab created."
-    if islinux; then
-       # mount swap space
-       local sd
-       for sd in $SWAPLIST; do
-	   swapon $sd && [ "$verbose" ] && echo "Enable swap device $sd"
-       done
+    # mount swap space
+    local sd
+    for sd in $SWAPLIST; do
+	swapon $sd && [ "$verbose" ] && echo "Enable swap device $sd"
+    done
     fi
     mount2dir $FAI_ROOT $LOGDIR/$fstab
 }
