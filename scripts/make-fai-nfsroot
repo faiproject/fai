@@ -231,6 +231,7 @@ create_base() {
     if [ "$FAI_DEBOOTSTRAP" ]; then
         call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
         $ROOTCMD apt-get clean
+	rm -f $NFSROOT/etc/resolv.conf
         echo "Creating base.tgz"
         tar -l -C $NFSROOT -cf - --exclude var/tmp/base.tgz . | gzip > $NFSROOT/var/tmp/base.tgz
     else
@@ -244,6 +245,8 @@ create_nfsroot() {
     cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
 
     call_with_stamp create_base
+    # save the list of all packages in the base.tgz
+    $ROOTCMD dpkg --get-selections | egrep 'install$' | awk '{print $1}' > var/tmp/base-pkgs.lis
 
     if [ "$FAI_DEBMIRROR" ]; then
 	[ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
