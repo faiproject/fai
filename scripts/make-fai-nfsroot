@@ -37,6 +37,11 @@ while getopts v opt ; do
         esac
 done
 
+if [ "$UID" -ne 0 ]; then
+ echo "Run this program as root."
+ exit 9
+fi
+
 set -e
 . /etc/fai.conf
 
@@ -62,14 +67,14 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
 
+    # if no ssh in nfsroot available, do nothing
+    [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return
     mkdir -p -m 700 $NFSROOT/root/.ssh
     hkey=`cat /etc/ssh/ssh_host_key.pub`
     hname=`$NFSROOT/usr/bin/host $HOST |  perl -pe 's/\s+A\s+/,/'`
     echo "$hname  $hkey " > $NFSROOT/root/.ssh/known_hosts
     loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
     [ -d $loguserhome/.ssh ] && cp -p $loguserhome/.ssh/identity* $NFSROOT/root/.ssh/
-
-    [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return
 
     # enable root login
     perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
@@ -94,11 +99,12 @@ copy_fai_files() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
-    mkdir -p $NFSROOT/target # one command - all directories created
+    mkdir -p $NFSROOT
     cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
     get_basetgz
     echo -n "Unpacking " ; ls /tmp/base?_?.tgz
     tar -C $NFSROOT -zxpf /tmp/base?_?.tgz
+    # needed by make-fai-bootfloppy
     mknod $NFSROOT/dev/boot255 c 0 255
 
     if [ "$FAI_PACKAGEDIR" ]; then
@@ -196,10 +202,11 @@ get_basetgz() {
 	    ;;
 	/*/base?_?.tgz)
 	    rm -f /tmp/base?_?.tgz
+	    test -r $FAI_BASETGZ || die "Can't read $FAI_BASETGZ. Check FAI_BASETGZ in fai.conf."
 	    ln -s $FAI_BASETGZ /tmp
 	    ;;
 	*)
-	    die "FAI_BASETGZ $FAI_BASETGZ looks strong."
+	    die "FAI_BASETGZ in fai.conf is $FAI_BASETGZ and looks very strong."
 	    ;;
     esac
 }
