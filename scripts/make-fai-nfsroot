@@ -183,23 +183,23 @@ upgrade_nfsroot() {
 get_basetgz() {
 
     [ -f /tmp/base?_?.tgz ] && return
-    [ "$BASETGZ" ] || die "no /tmp/base?_?.tgz found and BASETGZ not defined."
-    case $BASETGZ in
+    [ "$FAI_BASETGZ" ] || die "no /tmp/base?_?.tgz found and FAI_BASETGZ not defined."
+    case $FAI_BASETGZ in
 	ftp:*|http:*)
-	    echo "Getting $BASETGZ via wget. This may take some time."
+	    echo "Getting $FAI_BASETGZ via wget. This may take some time."
 	    TMPBDIR=`mktemp /tmp/FAI-wget-XXXXXX` || exit 1
 	    rm $TMPBDIR; mkdir $TMPBDIR || exit
-	    wget -P$TMPBDIR $BASETGZ
+	    wget -P$TMPBDIR $FAI_BASETGZ
 	    mv $TMPBDIR/base?_?.tgz /tmp
 	    rm -rf $TMPBDIR
 	    ;;
 	/*/base?_?.tgz)
 	    cd /tmp
 	    rm -f base?_?.tgz
-	    ln -s $BASETGZ
+	    ln -s $FAI_BASETGZ
 	    ;;
 	*)
-	    die "BASETGZ $BASETGZ seems strong."
+	    die "FAI_BASETGZ $FAI_BASETGZ looks strong."
 	    ;;
     esac
 }
