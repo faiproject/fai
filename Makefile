@@ -4,7 +4,7 @@ KERNELVERSION=2.2.15
 KERNEL=/usr/src/kernel-source-$(KERNELVERSION)
 DEB_HOST_ARCH=$(MACHTYPE)
 libdir = $(DESTDIR)/usr/lib/fai
-SCRIPTS = rcS_fai setup_harddisks install_packages faireboot
+SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon
 SBIN_SCRIPTS = mk3comimage make-fai-nfsroot
 KERNEL_FILES = System.map bzImage.install config-$(KERNELVERSION) emptydosdisk.gz imagegen_firstblock
 
