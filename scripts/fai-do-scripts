@@ -1,11 +1,11 @@
-#! /bin/sh
+#! /bin/bash
 
 #*********************************************************************
 #
 # fai-do-scripts - call configuration scripts for every defined class
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2005 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -26,7 +26,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.2, 22-may-2003"
+version="version 1.3, 8-mar-2005"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -40,6 +40,7 @@ version="version 1.2, 22-may-2003"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fc_check_status() {
 
+    local cmd st res
     cmd=$1
     st=$2
 
@@ -54,11 +55,12 @@ fc_check_status() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_conf() {
 
+    local class f
     cd $1
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
-	   for f in `ls $class/S[0-9]* | grep -v ~$` ; do
+	   for f in $(echo $class/S[0-9]* | grep -v ~$) ; do
 	       [ -x $f -a -f $f ] && do_script $f
 	   done
 	fi
@@ -69,11 +71,11 @@ do_script() {
 
     # execute scripts and save their output in log files
     # cfengine, shell, perl and expect scripts are known types
-#    local shelldebug file filetype
+    local shelldebug file filetype
 
     file=$1
 
-    filetype=`file $file`
+    filetype=$(file $file)
 
     if [ "$fake" ]; then
 	echo "Executing $filetype"
@@ -123,7 +125,7 @@ do_script() {
 	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
 	    ./$file >> $LOGDIR/expect.log 2>&1
 	    fc_check_status $file $? | tee -a $LOGDIR/expect.log
-	;;
+<	;;
 
 	*) echo "File $file has unsupported type $filetype." ;;
     esac
@@ -131,6 +133,7 @@ do_script() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
 
+    local ex
     ex=$1
     cat <<-EOF
         fai-do-scripts $version. Copyright (C) 2003 Thomas Lange
@@ -146,13 +149,12 @@ EOF
 
 while getopts "nhL:" opt ; do
     case "$opt" in
-#	v) verbose=1 ;;
 	h) usage 0 ;;
         L) LOGDIR=$OPTARG; export LOGDIR ;;
 	n) fake=1 ;;
     esac
 done
-shift `expr $OPTIND - 1`
+shift $(($OPTIND - 1))
 [ -z "$1" ] || [ -n "$2" ] && usage 1
 
 if [ "x$classes" = "x" ]; then
