@@ -5,12 +5,12 @@
 # for all classes, that are defines before this script is called, lokk for
 # a $class.mod file and execute it.
 
-conffiles="global $classes $HOSTNAME"
+conffiles="$classes $HOSTNAME"
 
-for file in $conffiles ; do
+for cfile in $conffiles ; do
     if [ -f "${file}.mod" ]; then
 	.  ${file}.mod  >> $moduleslog 2>&1
     fi
 done
 
-unset conffiles file
+unset conffiles cfile
