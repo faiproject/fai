@@ -49,6 +49,7 @@ writing to the &fsf-addr;.
 <toc detail="sect2">
 
 <chapt id="intro">Introduction<p>
+<sect id="availability">Availability<p>
 The homepage of FAI is
 <httpsite>http://www.informatik.uni-koeln.de</httpsite><httppath>/fai</httppath>.
 There you will find any information about FAI, for example the mailing
@@ -203,7 +204,8 @@ inspect the hardware or do any other task.
 	    <item> <p>A fully automated installation can be performed</p> </item>
 	    <item> <p>Very quick unattended installation</p> </item>
 	    <item> <p>Hosts can boot from floppy or from network card </p> </item>
-	    <item> <p>Easy creation of the common boot floppy</p> </item>
+	    <item> <p>Easy creation of the common boot floppy which
+	    uses grub or lilo</p> </item>
 	    <item> <p>BOOTP and DHCP protocol and PXE boot method are supported</p> </item>
 	    <item> <p>No initial ramdisk is needed, 8MB RAM suffice</p> </item>
 	    <item> <p>Runs even on a 386 CPU </p> </item>
@@ -228,6 +230,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Easily change the default behavior via hooks</p> </item>
 	    <item> <p>Lilo and grub support</p> </item>
 	    <item> <p>ReiserFS and ext3 support</p> </item>
+	    <item> <p>automatic hardware detection</p> </item>
 </list>
 
 <chapt id="inst">Installing FAI
@@ -315,29 +318,28 @@ You can also get the newest version of <package>fai</package> and
 <package>fai-kernels</package> from the download page of fai and
 install the packages using the
 <prgn>dpkg</prgn> command.
-<p>
-All definitions for the FAI package (not the configuration data) are defined in
-&fc;. Since FAI doesn't use <prgn>debconf</prgn>
-yet, edit this file before calling <prgn>fai-setup</prgn>.
-These are important variables in &fc;:
+<p>The configuration for the FAI package (not the configuration data
+for the install clients) are defined in &fc;. Since FAI doesn't use
+<prgn>debconf</prgn> yet, edit this file before calling
+<prgn>fai-setup</prgn>.  These are important variables in &fc;:
 
 <taglist>
 	    <tag><var>FAI_DEBOOTSTRAP</var></tag>
 	    <item>
-	  <p>For building the nfsroot there's a new command called
-	  <manref name="debootstrap" section="8">, which replaces the
-	  use of the <var>FAI_BASETGZ</var> variable. It needs
-	  the location of a Debian mirror and the distribution
-	  (woody,stable,unstable) for which the basic Debian
+	  <p>For building the nfsroot there's the command called
+	  <manref name="debootstrap" section="8">. It needs
+	  the location of a Debian mirror and the name of the distribution
+	  (woody,sarge,sid) for which the basic Debian
 	  system should be built.
 	    </p> </item>
 
 	    <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>This
-	    multi line string is the definition for
+	    multi line string is the content of
 	    <file>sources.list</file> (used by <manref name="apt-get"
 	    section="8">); it defines the location and access
 	    method for the Debian mirror. If this variable is undefined,
-	    the definitions of <file>/etc/apt/sources.list</file> will
+	    the file <file>/etc/fai/sources.list</file> or
+	    <file>/etc/apt/sources.list</file> will 
 	    be used. For more information on the
 	    file format see <manref name="sources.list" section="5">.
 	    </p> </item>
@@ -355,14 +357,18 @@ These are important variables in &fc;:
 	      name="make-kpkg" section="8"> - which includes
 	      the default kernel for booting the install clients. The
 	      Debian package <package>fai-kernels</package> contains the
-	      default install kernels with BOOTP and DHCP support. Do
-	      not use the kernel with BOOTP support when you have a
+	      default install kernels which supports both the BOOTP
+	      and DHCP protocol. You can select one of these protocols
+	      using the kernel option XXX ip=XX
+	      Do not enable BOOTP support when you have a
 	      DHCP server running in your network and vice versa. This
-	      could lead to missing information.</p></item>
+	      could lead to missing information. If you do not select
+	      a protocol, the kernel selects a default protocol if
+	      both are compiled into the kernel.</p></item>
 	<tag> <var>NFSROOT_PACKAGES</var></tag>
 	    <item>
 	  <p> Contains a list of additional software packages which
-	  will be added to nfsroot.</p></item>
+	  will be added to the nfsroot.</p></item>
 	  </taglist>
 <p>
 
@@ -392,7 +398,7 @@ log into this account without a password.
 /home/fai/.rhosts created.
 User account fai set up.
 Creating FAI nfsroot can take a long time and will
-need more than 160MB disk space in /usr/lib/fai/nfsroot.
+need more than &nfsrootsize disk space in /usr/lib/fai/nfsroot.
 dpkg: base-passwd: dependency problems, but configuring anyway as you request:
  base-passwd depends on libc6 (>= 2.2.4-4); however:
   Package libc6 is not installed.
@@ -409,15 +415,15 @@ portmap file rdate cfengine bootpc wget rsh-client less dump
 ext2resize strace hdparm parted dnsutils grub ntpdate 
 dosfstools sysutils dialog libdetect0 discover mdetect read-edid kudzu hwtools
 Detecting hardware: 3c59x ide-scsi usb-uhci usb-uhci
-modprobe: Can't open dependencies file /lib/modules/2.4.18/modules.dep (No such file or directory)
+modprobe: Can't open dependencies file /lib/modules/2.4.20/modules.dep (No such file or directory)
 Skipping 3c59x; assuming it is compiled into the kernel.
-modprobe: Can't open dependencies file /lib/modules/2.4.18/modules.dep (No such file or directory)
+modprobe: Can't open dependencies file /lib/modules/2.4.20/modules.dep (No such file or directory)
 Skipping usb-uhci; assuming it is compiled into the kernel.
 Creating SSH2 RSA key
 Creating SSH2 DSA key
 Restarting OpenBSD Secure Shell server: sshd.
 DHCP environment prepared. Now enable dhcpd and the special tftp daemon
-Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-2.4.18
+Kernel image file name  = /usr/lib/fai/nfsroot/boot/vmlinuz-&kver;
 Output file name        = /boot/fai/installimage
 Kernel command line     = "auto rw root=/dev/nfs nfsroot=kernel nfsaddrs=kernel ip=both"
 
@@ -446,6 +452,7 @@ FAI setup finished.
 </example>
 
 <p>
+The warning messages above about dependencies problems can be ignored.
 The setup routine adds lines to <file>/etc/exports</file> to export
 the nfsroot and the configuration space to all hosts that belong to
 the netgroup <em>faiclients</em>. If you already export a parent directory
@@ -459,7 +466,7 @@ defined in <file>/etc/netgroup</file> or in the corresponding NIS
 map. An example for the netgroup file can be found in
 <file>/usr/share/doc/fai/examples/etc/netgroup</file>. For more
 information, read the manual pages <manref name="netgroup"
-section="5"> and the NIS HOWTO. After changing the netgroups , the NFS
+section="5"> and the NIS HOWTO. After changing the netgroups, the NFS
 server has to reload its configuration. Use one of the following
 commands, depending on which NFS server you are using:
 
@@ -469,7 +476,8 @@ kueppers# /etc/init.d/nfs-user-server reload
 </example>
 
 <p>
-The setup also creates the account <tt>fai</tt> (defined by $LOGUSER). The log
+The setup also creates the account <tt>fai</tt> (defined by $LOGUSER)
+if not already available. The log
 files of all install clients are saved to the home directory of this
 account. If you boot from network card, you should change the primary
 group of this account, so this account has write permissions to
@@ -534,8 +542,8 @@ Boot Failure Prompt:        Wait for key
 </example>
 
 Set the boot method to <tt>TCP/IP</tt> and the protocol to either
-<tt>BOOTP</tt> or <tt>DHCP</tt>. I prefer BOOTP because the daemon
-automatically reloads its configuration when it has changed.  Make a
+<tt>BOOTP</tt> or <tt>DHCP</tt>. I prefer the BOOTP protocol because the daemon
+automatically reloads its configuration when it has changed. Make a
 symbolic link from the hostname of your client to the appropriate
 kernel image in <file>/boot/fai</file>. In the following example the
 host is called <tt>bigfoot</tt>. The file
@@ -562,15 +570,12 @@ kueppers# ln -s installimage_3com bigfoot
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM
 <p>
 Some network cards (e.g. Intel EtherExpress PRO 100) have a fixed
-configuration for booting using the PXE protocol. This requires a PXE
+boot configuration, so they can only use the PXE boot protocol. This requires a PXE
 Linux boot loader and a special version of the <tt>TFTP</tt> daemon,
 which is available in the Debian package <package>tftpd-hpa</package>.
 First set up the DHCP daemon. A sample configuration files can be
 found in <file>/usr/share/doc/fai/examples/etc/dhcpd.conf</file>.
-If you specify a kernel package in &fc; using the variable
-<tt>KERNELPACKAGE</tt> which contains a kernel that uses the DHCP
-protocol for obtaining boot information, the pxelinux environment will
-be set up automatically. You only have to enable the special tftp daemon
+Then enable the special tftp daemon
 using this line in file <file>/etc/inetd.conf</file>: 
 <example>
 tftp dgram udp wait root /usr/sbin/in.tftpd -s -r blksize /boot/fai
@@ -587,18 +592,18 @@ configuration for pxelinux is written to
 <sect id="bootfloppy">Creating a boot floppy
 <p>
 If your network card can't boot itself, you have to boot via floppy
-disk. To create the boot floppy use the command
-<prgn>make-fai-bootfloppy</prgn>. Since there's no client specific
+disk. To create the boot floppy use the command <manref
+name="make-fai-nfsroot" section="8">. Since there's no client specific
 information on this floppy, it's suitable for all your install
 clients.  You can also specify additional kernel parameters for this
-boot floppy, if desired. There's more help available.  <example># make-fai-bootfloppy -h</example> If you have no BOOTP or DHCP server,
-supply the network configuration as kernel parameters.  <footnote> The
+boot floppy, if desired. There's also a manual page for <manref
+name="make-fai-nfsroot" section="8">.  If you have no BOOTP or DHCP
+server, supply the network configuration as kernel parameters. The
 format is:
 <example>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
 </example>For additional information see
 <file>/usr/src/linux/Documentation/nfsroot.txt</file> in the kernel
 sources.
- </footnote>
 
 <sect id="mac">Collecting Ethernet addresses<p>
 
@@ -613,7 +618,7 @@ and assign a hostname and IP address to each client. To collect
  all MAC addresses, now boot all your install clients. While the
 install clients are booting, they send broadcast packets to the LAN. You
 can log the MAC addresses of these hosts by running the following
-command on the server while the clients are attempting to boot up:
+command simultaneously on the server:
 
 <example># tcpdump -qte broadcast and port bootpc >/tmp/mac.lis</example>
 
@@ -686,16 +691,16 @@ connected. Then adjust the other network tags (<tt>sm, gw, dn,
 ds</tt>) to your local needs.
 
 <taglist>
- <tag>sm</tag> <item>  <p>: Subnet mask</p> </item>
- <tag>gw</tag> <item>  <p>: Default gateway / router</p> </item>
- <tag>dn</tag> <item>  <p>: Domain name</p> </item>
- <tag>ds</tag> <item>  <p>: List of DNS server </p> </item>
- <tag>T170</tag> <item>  <p>Location of the FAI configuration directory
-</p> </item>
-	    <tag>T171</tag> <item>  <p><var>FAI_ACTION</var></p> </item>
-	    <tag>T172</tag> <item>  <p>List of <var>FAI_FLAGS</var>; e.g. verbose, debug, reboot, createvt, sshd</p> </item>
- <tag>T173</tag> <item>  <p>Reserved for future use</p> </item>
- <tag>T174</tag> <item>  <p>Reserved for backup devices and backup options; NOT YET USED
+ <tag>sm:</tag> <item>  <p>Subnet mask</p> </item>
+ <tag>gw:</tag> <item>  <p>Default gateway / router</p> </item>
+ <tag>dn:</tag> <item>  <p>Domain name</p> </item>
+ <tag>ds:</tag> <item>  <p>List of DNS server </p> </item>
+ <tag>T170:</tag> <item>  <p>Location of the FAI configuration directory</p> </item>
+ <tag>T171:</tag> <item>  <p><var>FAI_ACTION</var>; e.g. sysinfo, install</p> </item>
+ <tag>T172:</tag> <item>  <p>List of <var>FAI_FLAGS</var>;
+ e.g. verbose, debug, reboot, createvt, sshd, syslogd</p> </item>
+ <tag>T173:</tag> <item>  <p>Reserved for future use</p> </item>
+ <tag>T174:</tag> <item>  <p>Reserved for backup devices and backup options; NOT YET USED
 </p> </item>
  </taglist>
 
@@ -707,7 +712,7 @@ clients. <strong> It is important that T171 (equivalent to the variable
 installation script <file>rcS_fai</file>. The configuration files for
 DHCP and BOOTP daemons use other names. Example: <var>FAI_ACTION</var>
 is equal to <tt>T171</tt> in bootptab or <tt>option-171</tt> in
-dhcp.conf. </p> </footnote>.) is set to <tt>sysinfo</tt>!</strong>
+dhcp.conf. </p> </footnote>) is set to <tt>sysinfo</tt>!</strong>
 Later you can set it to <tt>install</tt>, in order to start the
 automatic installation. For more information on all tags see <manref
 name="bootptab" section="5">.
@@ -726,16 +731,16 @@ by default. Edit <file>/etc/inetd.conf</file> and remove the comment
 
 <example># /etc/init.d/inetd reload</example>
 
-I recommend to use the BOOTP daemon and protocol for booting because
-it automatically reloads the configuration file if any changes are
+The BOOTP daemon automatically reloads the configuration file if any changes are
 made to it. The daemon for DHCP must always be manually restarted
 after changes to the configuration file are made <footnote> <p>If you
 can't use one of these, there's also the possibility to supply all
 information via a file or compile them into the kernel, but it's
-easier to use a daemon.
+easier to use a daemon. Look at the subroutine <tt>fai_init()</tt>
+to see which files are sources before <file>/fai</file> is
+mounted.
 </p>
 </footnote>. Now it's time to boot all install clients again!
-
 
 FAI can perform several actions when the client is booting. This action
 is defined in the variable <var>FAI_ACTION</var>.
@@ -800,7 +805,7 @@ Partition check:
      FAI &faiver;, &faiverdate;
      Fully Automatic Installation for Debian GNU/Linux
 
-     Copyright (c) 1999-2002, Thomas Lange
+     Copyright (c) 1999-2003, Thomas Lange
              lange@informatik.uni-koeln.de
    ------------------------------------------------------
 
@@ -810,8 +815,13 @@ Defining variable: root=/dev/nfs
 Defining variable: ip=both
 Sending BOOTP request using device eth0
 FAI_FLAGS: verbose=1
+FAI_FLAGS: createvt=1
 .
 Calling task_setup
+.
+.
+Calling task_defclass
+/usr/bin/fai-class: Defining classes.
 .
 .
 Calling task_action
@@ -906,9 +916,15 @@ hard disk. You will get a shell and you can execute various commands
 process.
 
 All log files from <file>/tmp/fai</file> are also written to the
-<var>$LOGSERVER</var> (if not defined: the install server)
-into the directory <tt>~fai/ant01/sysinfo/</tt><footnote>More
-general: <tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION/</tt>. Examples of the log
+<var>$LOGSERVER</var> (if not defined: the install server) into the
+directory <tt>~fai/ant01/sysinfo/</tt><footnote>More general:
+<tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION/</tt>. Two additional symbolic
+links are created. The symlink <file>last</file> points to the log
+directory of the last fai action performed. The symlinks
+<file>last-install</file> and <file>last-sysinfo</file> point to the
+directoy with of the last corresponding action.
+
+Examples of the log
 files can be found on the FAI homepage.
 </footnote>
 
@@ -1013,11 +1029,11 @@ the secure shell daemon for remote access is started on demand.
 
 <sect id=iclass>Defining classes, variables and loading kernel modules<p>
 
-Now several scripts in <file>/fai/class/</file> are executed to define classes
-and variables. All scripts matching <tt>S[0-9]*.{sh,pl,source}</tt>
+Now the script <manref name="fai-class" section="1"> is used to define
+classes. Therefore several scripts in <file>/fai/class/</file> are executed to define classes. All scripts matching <tt>[0-9]*}</tt>
 are executed in alphabetical order. Scripts ending in <tt>.source</tt>
 are sourced, so they can define new classes by adding these classes to
-variable <var>newclasses</var> (see <file>S30menu.source</file> for an
+variable <var>newclasses</var> (see <file>30menu.source</file> for an
 example). Every word that these scripts print to the standard output
 are interpreted as class names. These classes are defined for the
 install client. You can also say this client belongs to these
@@ -1029,13 +1045,13 @@ advisable to document the job a new class performs. Then, this
 documentation is the base for composing a configuration from classes.
 
 <p>
-The scripts <prgn>05modules.source</prgn> loads kernel modules
+The scripts <prgn>11modules.source</prgn> loads kernel modules
 on demand. So you can use classes when loading modules and also define
 more classes after the kernel has loaded modules and recognized new hardware.
 The complete description of all these scripts can be found in <ref id="cscripts">.
 <p>
 
-<p>The script <file>S30menu.source</file> pops up a little menu and asks
+<p>The script <file>30menu.source</file> pops up a little menu and asks
 the user which kind of installation should be performed (e.g. CAD
 workstation, notebook, scientific workstation, workgroup server, Gnome
 desktop...). Keep in mind that this won't lead to a fully automatic
@@ -1057,9 +1073,9 @@ configuration file is described in
 <file>/usr/share/doc/fai/README.disk_config</file>.
 <p>
 During the installation process all local filesystems are mounted
-relative to <file>/tmp/target</file> . So, for
-example, <file>/tmp/target/home</file> will become  <file>/home</file>
-in the new installed system.  
+relative to <file>/tmp/target</file>. For example
+<file>/tmp/target/home</file> will become <file>/home</file> in the
+new installed system.
 
 <sect id=ipackages>Installing software packages<p>
 
@@ -1067,7 +1083,7 @@ When local filesystems are created, they are all empty (except for
 preserved partitions). Now the Debian base system and all requested
 software packages are installed on the new filesystems. First the
 base archive is unpacked, then the command
-<prgn>install_packages</prgn> installs all packages using <manref
+<manref name="install_packages" section="8"> installs all packages using <manref
 name="apt-get" section="8"> without any manual interaction needed. If
 a packages requires an other package, <manref name="apt-get" section="8"> resolves
 this dependency by installing the required package.
@@ -1104,6 +1120,9 @@ the account on the install
 server if <var>$LOGUSER</var> is defined in &fc;. It is also possible to
 specify another host as destination of the log saving by defining
 <var>$LOGSERVER</var> in &fc;.
+
+Additionally, two symlinks will be created to indicated the last
+directory written.
 
 <sect id=ireboot>Reboot the new installed system<p>
 
@@ -1269,7 +1288,7 @@ task and its hooks can be skipped on demand by using the subroutine
 Now follows the description of all default tasks.
 <taglist>
 
-      <tag>confdir</tag> <item><p>The kernel append parameters define
+      <tag>confdir</tag> <item><p>The kernel appended parameters define
 variables, the syslog and kernel log daemon are started. The list of
 network devices is stored in <var>$netdevices</var>. Then additional
 parameters are fetched from a DHCP or BOOTP server and also
@@ -1561,8 +1580,9 @@ of the hardware architecture in uppercase letters.
 # cat 01alias
 
 # echo architecture in upper case
-dpkg --print-installation-architecture | tr /a-z/ /A-Z/
-uname -s | tr '[a-z]' '[A-Z]'
+uname -s | tr /a-z/ /A-Z/
+[ -x "`which dpkg`" ] && \
+  dpkg --print-installation-architecture | tr /a-z/ /A-Z/
 
 # all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
@@ -1577,7 +1597,9 @@ case $HOSTNAME in
 esac
 
 # if host belongs to class C subnet 134.95.9.0 use class NET_9
+# exclude all hosts with an IP address above 200
 case $IPADDR in
+    134.95.9.2??) ;;
     134.95.9.*) echo NET_9 ;;
 esac
 </example>
@@ -1625,7 +1647,12 @@ scripts should contain all commands for loading kernel modules:
 <example>
 DEFAULT.mod:
 
-modprobe parport_probe
+kernelmodules="floppy parport_pc keybdev usb-uhci hid"
+
+for mod in $kernelmodules; do
+    [ "$verbose" ] && echo loading kernel module $mod
+    modprobe -a $mod
+done
 </example>
 
 You can find messages from modprobe in <file>/tmp/fai/dmesg.log</file> and
@@ -1635,8 +1662,8 @@ the on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
 
 The task <tt>defvar</tt> defines the variables for the install
 clients. Variables are defined by scripts in
-<tt>class/*.var</tt><footnote>Also <file>*.source files can define
-variables.</file></footnote>.  All global variables can be set in
+<tt>class/*.var</tt><footnote>Also <file>*.source</file> files can define
+variables.</footnote>.  All global variables can be set in
 <file>DEFAULT.var</file>. For certain groups of hosts use a class file
 or for a single host use the file
 <var>$HOSTNAME</var><tt>.var</tt>. Also here, it's useful to study all
@@ -1646,11 +1673,6 @@ The following variables are used in the examples and may be also useful
 for your installation:
 
 <taglist>
-   <tag>hdparm</tag> <item> <p>Multi line commands to tune the
-   hard disks parameters. They are executed during installation and
-   also create the script <file>/etc/init.d/S61hdparm</file> which
-   tunes the hard disks during boot.</p> </item>
-
    <tag>UTC</tag> <item> <p>Set hardware clock to UTC if
    <tt>$UTC=yes</tt>. Otherwise set clock to local time. See <manref
    name="clock" section="8"> for more information.</p> </item>
