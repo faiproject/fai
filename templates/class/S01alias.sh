@@ -8,7 +8,7 @@ esac
 
 # the Beowulf cluster; all nodes except the master node use classes from file class/atoms
 case $HOSTNAME in
-    atom00) ;;
+    atom00) echo BEOWULF_MASTER ;;
     atom??) cat atoms ;;
 esac
 
