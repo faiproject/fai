@@ -27,27 +27,35 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-# Packages that are install to nfsroot by default
-# Additional packages are defined with $NFSROOT_PACKAGES in fai.conf
-packages="dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize strace hdparm parted dnsutils grub ntpdate psmisc hwtools dosfstools sysutils"
+# Packages that are install to nfsroot by default Additional packages are
+# defined with $NFSROOT_PACKAGES in fai.conf
+packages="dhcp-client file rdate cfengine bootpc wget rsh-client less dump
+ext2resize strace hdparm parted dnsutils grub ntpdate psmisc hwtools
+dosfstools sysutils"
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
 if [ "$UID" -ne 0 ]; then
- echo "Run this program as root."
- exit 9
+    echo "Run this program as root."
+    exit 9
 fi
 
-while getopts v opt ; do
-        case "$opt" in
+while getopts rv opt ; do
+    case "$opt" in
         v) verbose=1 ;;
-        esac
+        r) recover=1 ;;
+    esac
 done
 
 set -e
 . /etc/fai/fai.conf
 packages="$packages $NFSROOT_PACKAGES"
+
 ROOTCMD="chroot $NFSROOT"
+
+RUNDIR=/var/run/fai/make-nfs-root
+[ ! -d $RUNDIR ] && mkdir -p $RUNDIR
+[ ! "$recover" ] && rm -rf $RUNDIR/*
 
 LIBFAI=/usr/lib/fai
 SHAREFAI=/usr/share/fai
@@ -62,12 +70,22 @@ die() {
     exit 99
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+call_with_stamp() {
+
+    local func=$1
+    local stamp=$RUNDIR/$func
+    # call subroutine
+    [ "$recover" -a -f $stamp ] && return 0 
+    "$@"
+    > $stamp
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_verbose() {
 
     if [ "$verbose" ]; then
-	"$@"
+        "$@"
     else
-	"$@" > /dev/null
+        "$@" > /dev/null
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -79,7 +97,7 @@ install_kernel_nfsroot() {
     dpkg -x $KERNELPACKAGE $NFSROOT
     # if $NFROOT/proc/modules exists, then update-modules calls depmod -a without
     # these special flags; so umount first
-    umount $NFSROOT/proc
+    [ -e $NFSROOT/proc/modules ] && umount $NFSROOT/proc
     chroot $NFSROOT update-modules
     chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION $KERNELVERSION
 }
@@ -96,8 +114,8 @@ setup_ssh() {
     # enable root login
     perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
     if [ -f "$SSH_IDENTITY" ]; then
-	cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
-	echo You can log into install clients without password using $SSH_IDENTITY
+        cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
+        echo You can log into install clients without password using $SSH_IDENTITY
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -108,24 +126,24 @@ copy_fai_files() {
     mkdir -p $NFSROOT/$FAI/fai_config $NFSROOT/$SHAREFAI $NFSROOT/etc/fai
     cd $NFSROOT
     cp -p $LIBFAI/sbin/dhclient-script $SHAREFAI/etc/dhclient.conf etc/
-    cp -p /etc/fai/* etc/fai/
+    cp -Rp /etc/fai etc/
     [ -f /etc/fai/.cvspass ] && cp -p /etc/fai/.cvspass .cvspass
     cp -p $LIBFAI/sbin/* sbin/
     cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
 
     cp -p $SHAREFAI/subroutines usr/share/fai
     cp -p $SHAREFAI/etc/apt.conf etc/apt
-# potato / woody code
+    # potato / woody code
     if [ -d usr/lib/perl5/Debian ]; then
-	cp -p /usr/lib/perl5/Debian/Fai.pm usr/lib/perl5/Debian/
+        cp -p /usr/lib/perl5/Debian/Fai.pm usr/lib/perl5/Debian/
     else
-	cp -p /usr/share/perl5/Debian/Fai.pm usr/share/perl5/Debian/
+        cp -p /usr/share/perl5/Debian/Fai.pm usr/share/perl5/Debian/
     fi
     echo $NFSROOT_ETC_HOSTS >> etc/hosts
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
-
+    
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "calling debootstrap $1 $NFSROOT $2"
     yes '' | debootstrap $1 $NFSROOT $2
@@ -134,17 +152,17 @@ call_debootstrap() {
 create_base() {
 
     if [ "$FAI_DEBOOTSTRAP" ]; then
-	call_verbose call_debootstrap $FAI_DEBOOTSTRAP
-	$ROOTCMD apt-get clean
-	echo "Creating base.tgz"
-	tar -C $NFSROOT -cf - . | gzip > $NFSROOT/../base.tgz
-	mv $NFSROOT/../base.tgz $NFSROOT/var/tmp/base.tgz
+        call_verbose call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
+        $ROOTCMD apt-get clean
+        echo "Creating base.tgz"
+        tar -C $NFSROOT -cf - . | gzip > $NFSROOT/../base.tgz
+        mv $NFSROOT/../base.tgz $NFSROOT/var/tmp/base.tgz
     else
-	# old method for potato
-	get_basetgz
-	echo "Unpacking base2_2.tgz"
-	zcat /tmp/base2_2.tgz | tar -C $NFSROOT -xpf -
-	cp -p /tmp/base2_2.tgz $NFSROOT/var/tmp/base.tgz
+        # old method for potato
+        call_with_stamp get_basetgz
+        echo "Unpacking base2_2.tgz"
+        zcat /tmp/base2_2.tgz | tar -C $NFSROOT -xpf -
+        cp -p /tmp/base2_2.tgz $NFSROOT/var/tmp/base.tgz
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -152,13 +170,16 @@ create_nfsroot() {
 
     mkdir -p $NFSROOT/$FAI
     cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
-    create_base
-    mknod dev/boot255 c 0 255
+
+    call_with_stamp create_base
+
+    [ ! -c dev/boot255 ] && mknod dev/boot255 c 0 255
 
     if [ "$FAI_DEBMIRROR" ]; then
-	mkdir -p $NFSROOT/$MNTPOINT
-	mount -o ro,rsize=8192 $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || die "Can't mount $FAI_DEBMIRROR"
-    fi
+        mkdir -p $NFSROOT/$MNTPOINT
+        mount -o ro,rsize=8192 $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || \
+                die "Can't mount $FAI_DEBMIRROR"
+        fi
 
     # hoaks some packages
     # liloconfig, dump and raidtool2 needs these files
@@ -173,17 +194,17 @@ create_nfsroot() {
     # woody uses debconf
 
     if [ "$FAI_SOURCES_LIST" ]; then
-	echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
+        echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
     else
-	cp /etc/apt/sources.list etc/apt/sources.list
+        cp /etc/apt/sources.list etc/apt/sources.list
     fi
     [ -f /etc/apt/preferences ] && cp /etc/apt/preferences etc/apt
     echo "Upgrading $NFSROOT"
-    call_verbose upgrade_nfsroot  
+    call_verbose call_with_stamp upgrade_nfsroot  
     echo "Adding additional packages to $NFSROOT:"
     echo "$packages"
-    call_verbose add_packages_nfsroot
-    copy_fai_files
+    call_verbose call_with_stamp add_packages_nfsroot
+    call_with_stamp copy_fai_files
 
     # set timezone
     rm -f etc/localtime
@@ -211,17 +232,17 @@ create_nfsroot() {
     echo "*.* /tmp/syslog.log" > etc/syslog.conf
     echo ". $SHAREFAI/subroutines" >> root/.profile
 
-    setup_ssh
+    call_verbose call_with_stamp setup_ssh
 
     cat >$NFSROOT/etc/rc2.d/S01fai_abort <<-EOF
-	#!/bin/sh
-	echo FAI: installation aborted.
-	echo reboot with: faireboot
-	echo or after a logout
-	sh
-	cd /
-	umount -ar
-	reboot -dfi
+        #!/bin/sh
+        echo FAI: installation aborted.
+        echo reboot with: faireboot
+        echo or after a logout
+        sh
+        cd /
+        umount -ar
+        reboot -dfi
 EOF
     chmod a+rx $NFSROOT/etc/rc2.d/S01fai_abort
 }
@@ -252,22 +273,22 @@ get_basetgz() {
     [ -f /tmp/base2_2.tgz ] && return
     [ "$FAI_BASETGZ" ] || die "No /tmp/base2_2.tgz found and FAI_BASETGZ not defined."
     case $FAI_BASETGZ in
-	ftp:*|http:*)
-	    echo "Fetching $FAI_BASETGZ via wget. This may take some time."
-	    TMPBDIR=`mktemp /tmp/FAI-wget-XXXXXX` || exit 1
-	    rm $TMPBDIR; mkdir $TMPBDIR || exit
-	    wget -P$TMPBDIR $FAI_BASETGZ
-	    mv $TMPBDIR/base2_2.tgz /tmp
-	    rm -rf $TMPBDIR
-	    ;;
-	/*/base2_2.tgz)
-	    rm -f /tmp/base2_2.tgz
-	    test -r $FAI_BASETGZ || die "Can't read $FAI_BASETGZ. Check FAI_BASETGZ in fai.conf."
-	    ln -s $FAI_BASETGZ /tmp
-	    ;;
-	*)
-	    die "FAI_BASETGZ in fai.conf is $FAI_BASETGZ and looks very strange."
-	    ;;
+        ftp:*|http:*)
+            echo "Fetching $FAI_BASETGZ via wget. This may take some time."
+            TMPBDIR=`mktemp /tmp/FAI-wget-XXXXXX` || exit 1
+            rm $TMPBDIR; mkdir $TMPBDIR || exit
+            wget -P$TMPBDIR $FAI_BASETGZ
+            mv $TMPBDIR/base2_2.tgz /tmp
+            rm -rf $TMPBDIR
+            ;;
+        /*/base2_2.tgz)
+            rm -f /tmp/base2_2.tgz
+            test -r $FAI_BASETGZ || die "Can't read $FAI_BASETGZ. Check FAI_BASETGZ in fai.conf."
+            ln -s $FAI_BASETGZ /tmp
+            ;;
+        *)
+            die "FAI_BASETGZ in fai.conf is $FAI_BASETGZ and looks very strange."
+            ;;
     esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -278,7 +299,7 @@ umount_dirs() {
     umount $NFSROOT/proc 1>/dev/null 2>&1 || true
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 ||true
     if [ "$FAI_DEBMIRROR" ]; then
-	test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
+        test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
     fi
     # show directories still mounted on nfsroot
     mount | grep " on $NFSROOT " || true
@@ -290,9 +311,35 @@ get_kernel_version() {
     KERNELVERSION=`dpkg --info $1 | grep "Package: kernel-image" | sed -e 's/.*kernel-image-'//`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+setup_bootp(){
+
+    mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
+    # imggen is free software from 3com
+    # it converts netboot image to images, that are bootable by 3com network cards
+    imggen=`which imggen || true`
+    if [ -x "$imggen" ]; then
+        imggen -a /boot/fai/installimage /boot/fai/installimage_3com
+    fi
+    echo "BOOTP environment prepared."
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+setup_dhcp(){
+
+    # pxe and dhcp environment
+    cp -p $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installkernel
+    rdev /boot/fai/installkernel $NFSROOT/dev/boot255
+    [ -f /usr/lib/syslinux/pxelinux.bin ] && cp /usr/lib/syslinux/pxelinux.bin /boot/fai
+    [ -d /boot/fai/pxelinux.cfg ] || mkdir /boot/fai/pxelinux.cfg || true
+    cp -p /usr/share/fai/etc/pxelinux.cfg /boot/fai/pxelinux.cfg/default
+    echo "DHCP environment prepared. Now enable dhcpd and the special tftp daemon"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
 
-if [ -d $NFSROOT/$FAI ]; then
+# Kill the directory if not in recover mode
+if [ -d $NFSROOT/$FAI -a ! "$recover" ]
+then
     echo $NFSROOT already exists. Removing $NFSROOT
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
     rm -rf $NFSROOT/.??* $NFSROOT/*
@@ -300,34 +347,23 @@ if [ -d $NFSROOT/$FAI ]; then
     find $NFSROOT ! -type d -xdev -maxdepth 1 | xargs -r rm -f
 fi
 
-create_nfsroot
+# Create a new nfsroot
+call_with_stamp create_nfsroot
 
+# Install the kernel package
 if [ -f $KERNELPACKAGE ]; then
-
     # determine kernel version
     get_kernel_version $KERNELPACKAGE
+
     # create tftp boot images
-    install_kernel_nfsroot
+    call_with_stamp install_kernel_nfsroot
 
     grep -q _dhcp_ $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
     # only BOOTP need a netboot image, DHCP can do with raw kernels
     if [ "$TYPE" = DHCP ]; then
-	# pxe and dhcp environment
-	cp -p $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installkernel
-	rdev /boot/fai/installkernel $NFSROOT/dev/boot255
-	[ -f /usr/lib/syslinux/pxelinux.bin ] && cp /usr/lib/syslinux/pxelinux.bin /boot/fai
-	[ -d /boot/fai/pxelinux.cfg ] || mkdir /boot/fai/pxelinux.cfg || true
-	cp -p /usr/lib/fai/etc/pxelinux.cfg /boot/fai/pxelinux.cfg/default
-	echo "DHCP environment prepared. Now enable dhcpd and the special tftp daemon"
+        call_with_stamp setup_dhcp
     else
-	mknbi-linux --verbose $NFSROOT/boot/vmlinuz-$KERNELVERSION /boot/fai/installimage
-	# imggen is free software from 3com
-	# it converts netboot image to images, that are bootable by 3com network cards
-	imggen=`which imggen || true`
-	if [ -x "$imggen" ]; then
-	    imggen -a /boot/fai/installimage /boot/fai/installimage_3com
-	fi
-	echo "BOOTP environment prepared."
+        call_with_stamp setup_bootp
     fi
 else
     echo "Kernel package $KERNELPACKAGE not found."
