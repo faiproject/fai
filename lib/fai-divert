@@ -74,7 +74,7 @@ usage() {
     cat <<EOF
 fai-divert, add or remove a diversion for fai.
 
-   Copyright (C) 2002 by Thomas Lange
+   Copyright (C) 2002-2004 by Thomas Lange
 
 Usage: fai-divert [OPTION] ... FILE
 
@@ -91,6 +91,12 @@ exit 0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 [ "$1" ] || usage
+
+# do not execute if command is not available
+[ -f $FAI_ROOT/usr/sbin/dpkg-divert ] || {
+    echo "$FAI_ROOT/usr/sbin/dpkg-divert not available. Aborting."
+    exit 1
+}
 
 while getopts arRhv opt ; do
         case "$opt" in
