@@ -6,7 +6,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000, Thomas Lange, Universitaet zu Koeln
+# (c) 2000-2001, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -25,11 +25,9 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-# copyright (c), 2000-2001, Thomas Lange, lange@informatik.uni-koeln.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 
-# TODO: PRELOADandREMOVE also removes files after installing all packages
-
+# main part
 $| = 1;
 @aptcommands = qw/install remove dselect-upgrade/;
 %options = (
@@ -54,12 +52,12 @@ foreach (@classes) {
 }
 
 # get file, which must exist before installing packages
-foreach $entry (@preloadlist) {
+foreach $entry (@preloadlist,@preloadrmlist) {
   my ($url, $directory) = @$entry;
   execute("wget -nv -P$FAI_ROOT/$directory $url");
 }
 
-# call apt-get for each command and the lsit of packages
+# call apt-get for each command and the list of packages
 foreach $type (@aptcommands) {
   if ($type eq "dselect-upgrade") {
     dselectupgrade();
@@ -71,6 +69,15 @@ foreach $type (@aptcommands) {
   if ($packlist) {
     execute("chroot $FAI_ROOT apt-get $options{$type} $type $packlist");
   }
+}
+
+# remove prelaoded files
+foreach $entry (@preloadrmlist) {
+  my ($url, $directory) = @$entry;
+  $url =~ m#/([^/]+$)#;
+  my $file =  "$directory/$1";
+  print "rm $file\n" if $verbose;
+  unlink $file || warn "Can't remove $file\n";
 }
 
 # check if all went right
@@ -92,6 +99,7 @@ sub readconfig {
     next if /^\s*$/; # skip empty lines
     chomp;
     /^PRELOAD\s+([^\s]+)\s+([^\s]+)/ and push(@preloadlist, [$1, $2]),next;
+    /^PRELOADRM\s+([^\s]+)\s+([^\s]+)/ and push(@preloadrmlist, [$1, $2]),next;
     /^PACKAGES\s+([^\s]+)/ and $type = $1,next;
     warn "PACKAGES .. line missing in $filename\n",next unless $type;
     push @{$list{$type}}, split;
