@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # some notebook specific changes
-# Thomas Lange 2000-2002; lange@debian.org
+# Thomas Lange 2000-2003; lange@debian.org
 
 # tune max-mount-counts for notebooks
 maxcount=101
@@ -9,19 +9,3 @@ partitions=`mount|grep $target |grep "type ext2"|perl -ane 'print "$F[0] "'`
 for part in $partitions; do
     tune2fs -c $maxcount $part
 done
-
-# add an account so everybody can shutdown the notebook
-# this account has no password!
-echo "poweroff::0:0:poweroff account:/tmp:/sbin/poweroff" >> $target/etc/passwd
-
-# everbody should be able to use pppd
-chmod a+rx $target/usr/sbin/pppd
-chmod a+r  $target/etc/ppp/peers/* $target/etc/chatscripts/*
-
-# The acer notebook has a winmodem which needs additional kernel modules
-# This Debian package must be installed after a new kernel is installed
-if [ -f $files/packages/$ltmodem ]; then
-   yes 'n' | dpkg --root=$target -i $files/packages/$ltmodem
-else
-   echo "Package $ltmodem not found"
-fi
