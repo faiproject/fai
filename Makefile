@@ -5,7 +5,7 @@ DEB_HOST_ARCH=$(MACHTYPE)
 DOCDIR=/usr/share/doc/fai
 LIBDIR = $(DESTDIR)/usr/lib/fai
 SCRIPTS = rcS_fai setup_harddisks install_packages faireboot start-stop-daemon dhclient-perl dhclient-script
-SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup
+SBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy
 CONFFILES= apt.conf dhclient.conf
 
 # files with variable KERNLEVERSION in it
