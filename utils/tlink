@@ -14,6 +14,8 @@
 # tlink             shows all file in /boot/fai
 # tlink ant01       shows syslink for ant01
 
+version="Version 1.0 12-sep-2001"
+
 # define the range for client numbers using prefix
 startnum=1
 endnum=25
@@ -23,6 +25,28 @@ host=$2
 prefix=$3
 
 tftpdir=/boot/fai
+# - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+cat <<EOF
+tlink:  make symbolic link for booting network card via TFTP. $version
+
+  Copyright (C) 2001 by Thomas Lange
+
+Usage: tlink [bootimage] [all] [hostname|prefix]
+
+The list of all hosts is specified in the script itself.
+
+Examples:
+    tlink                             shows all files in /boot/fai
+    tlink atom02                      shows symlink of host atom02
+    tlink atom_install atom02         host atom02 will boot image atom_install
+    tlink atom_local atom02           host atom02 will boot image atom_local
+    tlink atom_install all atom       all hosts with prefix atom will use atom_install
+
+EOF
+exit 0
+}
 # - - - - - - - - - - - - - - - - - - - -
 link() {
 
@@ -38,6 +62,8 @@ showlink() {
     exit 0
 }
 # - - - - - - - - - - - - - - - - - - - -
+
+[ X"$1" = X ] && usage
 
 # create list of hosts without prefix
 i=$startnum
