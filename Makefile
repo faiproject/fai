@@ -23,7 +23,7 @@ veryclean: clean
 
 install: 
 	$(MAKE) -C doc install DOCDIR=$(DOCDIR)
-	install -m644 lib/* $(LIBDIR)
+	-install -m644 lib/* $(LIBDIR)
 	cd scripts ; install $(SBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(SCRIPTS) $(LIBDIR)/sbin
 	install -m644 share/subroutines* $(SHAREDIR)
