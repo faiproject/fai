@@ -36,7 +36,7 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 install_kernel_nfsroot() {
     rm -rf $NFSROOT/boot/*-$KERNELVERSION $NFSROOT/lib/modules/$KERNELVERSION
     dpkg -x $KERNELPACKAGE $NFSROOT
-    chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION
+    chroot $NFSROOT depmod -a -F /boot/System.map-$KERNELVERSION $KERNELVERSION
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_export_line() {
@@ -76,6 +76,11 @@ add_fai_account
 echo Creating FAI nfsroot can take a long time
 make-fai-nfsroot
 
+if [ -z "$FAI_CONFIGDIR" ]; then
+    echo "FAI_CONFIGDIR not set in /etc/fai.conf."
+    echo "Using /usr/local/share/fai as default"
+    FAI_CONFIGDIR=/usr/local/share/fai
+fi
 mkdir -p $FAI_CONFIGDIR
 
 test -f /etc/init.d/nfs-server && nfsserver=nfs-server
