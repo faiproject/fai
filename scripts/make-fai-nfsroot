@@ -27,14 +27,6 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-nfssize="230MB"  # size of the nfsroot
-
-# Packages that are install to nfsroot by default Additional packages are
-# defined with $NFSROOT_PACKAGES in fai.conf
-packages="module-init-tools dhcp3-client ssh portmap file rdate cfengine
-cvs bootpc rsync wget rsh-client less dump reiserfsprogs usbutils
-dpkg-dev ext2resize hdparm smartmontools parted dnsutils ntpdate dosfstools
-sysutils dialog discover mdetect libnet-perl netcat libapt-pkg-perl"
 
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
@@ -68,13 +60,26 @@ else
     . $cfdir/fai.conf
 fi
 
+# read config file for this tool
+if [ -f "$cfdir/make-fai-nfsroot.conf" ]; then
+    . $cfdir/make-fai-nfsroot.conf
+else
+    echo "Can't read $cfdir/make-fai-nfsroot.conf"
+    exit 8
+fi
+
 if [ -z "$NFSROOT" ]; then
     echo "\$NFSROOT is not set. Please check your settings in $cfdir/fai.conf."
     exit 4
 fi
 
-if [ -z "$FAI_SOURCES_LIST" -a ! -s "$cfdir/sources.list" -a ! -f /etc/apt/sources.list ]; then
-    echo "FAI_SOURCES_LIST undefined and neither $cfdir/sources.list nor /etc/apt/sources.list exists."
+if [ "$FAI_SOURCES_LIST" ]; then
+    echo "The usage of the variable \$FAI_SOURCES_LIST is deprecated. Please use sources.lsit now."
+    exit 3
+fi
+
+if [ ! -s "$cfdir/sources.list" -a ! -f /etc/apt/sources.list ]; then
+    echo "Neither $cfdir/sources.list nor /etc/apt/sources.list exists."
     echo "I think something is wrong. Can't continue."
     exit 7
 fi
@@ -251,18 +256,12 @@ create_nfsroot() {
 
     # woody uses debconf
 
-    # use FAI_SOURCES_LIST, if undefined copy from /etc/fai or last try from /etc/apt
-    if [ "$FAI_SOURCES_LIST" ]; then
-	[ "$verbose" ] && echo "Using variable FAI_SOURCES_LIST for the nfsroot."
-        echo "$FAI_SOURCES_LIST" > etc/apt/sources.list
-    else
-	[ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
-        cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list || \
-        cp -v /etc/apt/sources.list $NFSROOT/etc/apt/sources.list || \
-	{ echo "FAI_SOURCES_LIST undefined and no sources.list file found."
+    [ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
+    cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list || \
+	cp -v /etc/apt/sources.list $NFSROOT/etc/apt/sources.list || \
+	{ echo "No sources.list file found."
 	  echo "I think something is wrong. But I'll try to continue."
-	}
-    fi
+        }
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
     [ -f /etc/apt/preferences ] && cp -v /etc/apt/preferences $NFSROOT/etc/apt
     [ -f $cfdir/preferences ] && cp -v $cfdir/preferences $NFSROOT/etc/apt
