@@ -9,7 +9,16 @@ netdevice_info() {
     # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
+
+    # some network driver do not echo eth0,..; they are not detected
     netdevices_all=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
+
+    # another way to determine all ethernet devices
+    local dev devices
+    devices=$(seq 0 1 8)
+    for dev in $devices; do
+        ifconfig eth$dev up 2>/dev/null && netdevices_all="$netdevices_all eth$dev"
+    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
@@ -34,6 +43,7 @@ diskandsize() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 adddivert() {
+
     # add an executable to the list of diversions
     local item
     for item in "$@"; do
@@ -43,6 +53,7 @@ adddivert() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rmalldivert() {
+
     # remove all diversions
     local item
     [ -s $divertlist ] || return
@@ -77,7 +88,7 @@ rmdivert() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 jobsrunning() {
 
-    # test is jobs are running
+    # test if jobs are running
     ps r | egrep -qv "ps r|TIME COMMAND"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -86,6 +97,7 @@ get_dhcp_info() {
     local dhcplog=$LOGDIR/dhcp.log
     dhclient -lf /dev/null $netdevices >$dhcplog 2> $LOGDIR/dhclient.log
     [ -n "$verbose" -a -f $dhcplog ] && echo "Reading $dhcplog"
+    # define all dhcp information as variables
     eval `grep -v "^#" $dhcplog`
     killall dhclient-2.2.x
 }
@@ -94,7 +106,7 @@ get_bootp_info() {
 
     local device
     local bootlog=$LOGDIR/bootp.log
-    # define all bootpc information as variables
+    # use all devices in $netdevices
     for device in $netdevices; do
 	echo "Sending BOOTP request using device $device"
 	echo "* --- network device $device ---" >> $bootlog
@@ -102,6 +114,7 @@ get_bootp_info() {
     done
 
     [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
+    # define all bootpc information as variables
     eval `grep -v "^\*" $bootlog`
     # Think aboout this:
     # echo next lines >> bootlog; then eval bootlog
@@ -114,28 +127,31 @@ get_bootp_info() {
 load_keymap_consolechars() {
 
     local mapname keymapfile keymaps
-    # support for other keyboards
-    if [ "$FAI_KEYMAP" ]; then
-	for mapname in $FAI_KEYMAP; do
-	    keymapfile=`find /usr/share/keymaps/ $FAI/files \
-	      ! -type d -name $mapname.kmap.gz -o \
-	      -name $mapname.inc.gz -o -name $mapname`
-	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
-	done
 
-	if [ "$keymaps" ]; then
-	    loadkeys $keymaps
-	else
-	    echo "FAI_KEYMAP $FAI_KEYMAP not found"
-	fi
-    fi
     [ "$FAI_CONSOLEFONT" ] &&
 	consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
+
+    # nothing to do if FAI_KEYMAP is undefined
+    [ "$FAI_KEYMAP" ] || return
+
+    # support for other keyboards
+    for mapname in $FAI_KEYMAP; do
+        keymapfile=`find /usr/share/keymaps/ $FAI/files \
+	  ! -type d -name $mapname.kmap.gz -o \
+	   -name $mapname.inc.gz -o -name $mapname`
+	[ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
+    done
+
+    if [ "$keymaps" ]; then
+        loadkeys $keymaps
+    else
+        echo "FAI_KEYMAP $FAI_KEYMAP not found"
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 eval_cmdline() {
 
-    # parse kernel parameters and eval variables
+    # parse kernel parameters and define variables
     local word
 
     echo -n "Kernel parameters:"; cat /proc/cmdline
@@ -170,15 +186,18 @@ task_partition() {
 
     echo "Partitioning local harddisks"
     [ ! -s $diskvar ] && setup_harddisks -d -X > $LOGDIR/format.log 2>&1
+    # setup_harddisks must create $diskvar file
     if [ ! -s $diskvar ]; then
 	cat $LOGDIR/format.log
 	die "Error: $diskvar not found."
     fi
+    # now define variable for root and boot partition and boot device
     . $diskvar
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_extrbase() {
 
+    # extract the tar file which was the result of debootstrap
     echo "Unpacking Debian base archive"
     gzip -dc /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
     # now we can copy fstab
@@ -189,15 +208,15 @@ task_extrbase() {
 task_mirror() {
 
     # mount debian mirror directory
-    if [ "$FAI_DEBMIRROR" ]; then
-	mkdir -p $FAI_ROOT/$MNTPOINT
-	mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT ||
-	    die "Can't mount $FAI_DEBMIRROR"
-    fi
+    [ "$FAI_DEBMIRROR" ] || return   # nothing to do
+    mkdir -p $FAI_ROOT/$MNTPOINT
+    mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT ||
+      die "Can't mount $FAI_DEBMIRROR"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
 
+    # maybe the base system is not up to date
     echo "Updating base"
     if [ "$debug" ]; then
 	prepare_apt | tee -a $LOGDIR/updatebase.log 2>&1
@@ -235,7 +254,7 @@ prepare_apt() {
     rm -f $FAI_ROOT/tmp/dumpavail
 
     # fake some more programs
-    adddivert /usr/sbin/xserver-configure /etc/init.d/nis /sbin/start-stop-daemon
+    adddivert /etc/init.d/nis /sbin/start-stop-daemon
     cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
