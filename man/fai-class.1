@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-class 1 "4 feb 2003" "FAI 2.4"
+.TH fai-class 1 "24 july 2003" "FAI 2.5"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -24,7 +24,7 @@ are written to CLASSFILE, each class in a line. Use absolute pathes
 for both arguments. All scripts or executables matching "[0-9][0-9]*"
 are executed in alphabetical order. They can define classes by writing
 the names of the classes to stdout. Classes can be separated by spaces
-or written one on a line. Lines that start with a "#" are comment
+or written one on a line. All lines that start with a "#" are comment
 lines and are ignored.
 
 Shell scripts that end in ".source" are sourced and can define classes
@@ -42,7 +42,7 @@ The order of the classes is important because it defines the priority
 of the classes from low to high. First, the class DEFAULT is
 defined. Then all scripts are executed to define classes. After that,
 the classes from the file $LOGDIR/additional-classes are added. Then,
-all classes in the file with the hostname are added.  Finally, the
+all classes in the file with the hostname are added. Finally, the
 class with the hostname and LAST is defined.
 
 It's important that each line in a file containg a class name ends
@@ -91,20 +91,23 @@ This is the script 01alias:
 
 #! /bin/sh
 
+catnc() { # cat but no comment lines
+    grep -v "^#" $1
+}
 # echo architecture in upper case
 dpkg --print-installation-architecture | tr /a-z/ /A-Z/
 uname -s | tr /a-z/ /A-Z/
 
 # all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
-    ant??) cat anthill ;;
+    ant??) catnc anthill ;;
 esac
 
 # a Beowulf cluster; all nodes except the master node
 # use classes from file class/atoms
 case $HOSTNAME in
     atom00) echo BEOWULF_MASTER ;;
-    atom??) cat atoms ;;
+    atom??) catnc atoms ;;
 esac
 
 # if host belongs to class C subnet 123.45.6.0 use class NET_6
