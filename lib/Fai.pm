@@ -105,7 +105,7 @@ sub read_kernel_messages {
 
   # /var/log/messages* are not available during first installation
   return if -f "/tmp/FAI_INSTALLATION_IN_PROGRESS";
-  open (LOGS,"zcat -f /var/log/messages*|");
+  open (LOGS,"gzip -dcf /var/log/messages*|");
   @messages =<LOGS>;
   close LOGS;
 }
