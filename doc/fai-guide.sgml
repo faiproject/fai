@@ -1472,7 +1472,7 @@ The default task <em>defclass</em> defines the classes <tt>DEFAULT,
 LAST</tt>, <var>$HOSTNAME</var> and all classes in the file
 <file>/fai/class/</file><var>$HOSTNAME</var> for every hosts.
 Additionally, all files that are executable and match the shell
-regular expression <tt>S[0-9]*.{sh,pl}</tt> are called in alphabetical
+regular expression <tt>S[0-9]*.{sh,pl,source}</tt> are called in alphabetical
 order. Every output from these scripts is used to define
 classes. Multiple classes in one line must be space separated. If a
 hook has written classes to the file
@@ -1848,15 +1848,14 @@ already exists.
 A hook of the form <tt>hookprefix.classname</tt>  can't define
 variables for the installation script, because it's a subprocess. But
 you can use any binary executable or any script you wrote. Hooks that
-has the suffix <tt>.sh</tt> (eg. <file>partition.DEFAULT.sh</file>) must
+has the suffix <tt>.source</tt> (eg. <file>partition.DEFAULT.source</file>) must
 be Bourne shell scripts and are sourced. So it's possible to
 redefine variables for the installation scripts.
 <p>
 
 
- After some basic initialization,
-      all hooks with prefix <tt>confdir</tt> are called. 
-
+After some basic initialization, all hooks with prefix
+<tt>confdir</tt> are called.
 
 Since the configuration directory <file>/fai</file> is mounted in the
 default task <tt>confdir</tt>, the hooks for this task are the only
@@ -2241,6 +2240,17 @@ nucleus[~]> cat /etc/auto.master
 nucleus[~]> cat /etc/nodes.scratch 
 *               -rw,soft,intr           &:/files/scratch
 </example>
+
+<sect id=functions>Useful functions for advanced administrators<p>
+
+<taglist>
+<tag>adddivert</tag> <item> <p>Add a file to the list of diversions
+and replace the file with a dummy script. This is useful when a
+postinst script need manual input. At the end of the installation all
+diversions are removed.</p> </item>
+
+<tag>skipttask</tag> <item> <p>This given list of tasks are
+skipped. For e.g use in <file>partition.DISKLESS</file>.</p> </item> </taglist>
 
 </book>
 </debiandoc>
