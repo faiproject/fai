@@ -25,12 +25,12 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.1.3, 1-aug-2003";
+my $version = "Version 2.2, 4-aug-2003";
 
 use strict;
 use Getopt::Std;
 # global variables
-our ($opt_l,$opt_v,$opt_h,$opt_t);
+our ($opt_l,$opt_v,$opt_h,$opt_t,$opt_m);
 my @commands;
 my %command;
 my $test;
@@ -43,6 +43,7 @@ my @preloadlist;
 my @preloadrmlist;
 my %list;
 my %classisdef;
+my $maxpl;  # maximum length of package list
 
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 
@@ -60,11 +61,15 @@ $| = 1;
 
 # currently no test, always execute
 $test = 0;
-getopts('thvl');
+getopts('thvlm:');
 
 $opt_h && usage();
 $opt_t and $test = 1;
 $verbose=$ENV{verbose} || $opt_v;
+$maxpl=$ENV{MAXPACKAGES} || $opt_m ;
+$maxpl && print "Maxmimum number of packages installed at a time set to $maxpl\n";
+$maxpl or $maxpl = 4711 ; # set default value; a magic number in cologne
+
 $FAI_ROOT = $ENV{FAI_ROOT};
 $classpath = "$ENV{FAI}/package_config";
 $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
@@ -133,6 +138,16 @@ foreach my $type (@commands) {
       print "$packlist\n";
       exit 0;
     }
+    # pass only maxpl packages to apt-get
+    $_ = $packlist;
+    my @spl = split;
+    while (@spl) {
+      my $shortlist = join(' ', splice @spl,0,$maxpl);
+      # print "SL $shortlist\n";
+      execute("$rootcmd $command{install} $shortlist") if $shortlist;
+      execute("$rootcmd apt-get clean");
+    }
+    next;
   }
   execute("$rootcmd $command{$type} $packlist") if $packlist;
 }
