@@ -418,7 +418,7 @@ task_action() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defclass() {
 
-    local newclasses class f
+    local newclasses addclasses class f
 
     cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the install server."
     echo "Defining classes"
@@ -438,7 +438,10 @@ task_defclass() {
 	classes="$classes $newclasses"
 	fi
     done
-    classes="$classes $HOSTNAME LAST"
+
+    [ -f /tmp/additional-classes ] && addclasses=`cat /tmp/additional-classes`
+    [ "$debug" ] && echo "additonal classes: $addclasses"
+    classes="$classes $addclasses $HOSTNAME LAST"
 
     for class in $classes ; do
 	echo $class >> /tmp/FAI_CLASSES
@@ -465,6 +468,10 @@ task_defvar() {
 	    [ "$debug" ] && set +vx
 	fi
     done
+
+    [ "$debug" ] && set -vx
+    [ -f /tmp/additional.var ] && . /tmp/additional.var
+    [ "$debug" ] && set +vx
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_partition() {
