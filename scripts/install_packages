@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.8, 21-jan-2005";
+my $version = "Version 2.9, 23-mar-2005";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -37,7 +37,7 @@ use AptPkg::System '$_system';
 use AptPkg::Cache;
 
 # global variables
-our ($opt_f,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
+our ($opt_d,$opt_f,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our @commands;
 our %command;
@@ -77,12 +77,13 @@ $| = 1;
 );
 
 $test = 0;
-getopts('f:thvlLm:');
+getopts('df:thvlLm:');
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
 $opt_t and $test = 1;
 $verbose=$ENV{verbose} || $opt_v;
+$opt_d && setdownloadonly();
 $maxpl=$ENV{MAXPACKAGES} || $opt_m ;
 $maxpl && $verbose && warn "Maxmimum number of packages installed at a time set to $maxpl\n";
 $maxpl or $maxpl = 99 ; # set default value
@@ -353,5 +354,29 @@ install_packages $version
  Please read the manual pages install_packages(8).
 EOF
   exit 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub setdownloadonly {
+
+# Definitions for install_packages(8) for download only mode
+# Used by fai-mirror(1)
+
+# we are using a variable from %ENV
+# for debugging remove >/dev/null and -q
+
+undef @commands;
+undef %command;
+
+$maxpl=9999;
+@commands = qw/taskinst aptitude install/;
+%command = (
+	    install => "apt-get -qq -d $ENV{aptoptions} -y --force-yes --fix-missing install",
+         "taskinst" => "aptitude -d $ENV{aptoptions} -y install >/dev/null",
+         "aptitude" => "aptitude -d $ENV{aptoptions} -y install >/dev/null",
+            "clean" => 'true',
+          "pending" => 'true',
+            "dpkgc" => 'true',
+);
+
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
