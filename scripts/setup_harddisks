@@ -37,6 +37,7 @@
 # [-d]                     default: no DOS alignment
 #
 #---------------------------------------------------
+# Last changes: 14.07.2003 by Thomas Lange add xfs filesystem support
 # Last changes: 23.01.2003 by Thomas Lange print info data to stdout
 # Last changes: 03.12.2002 by Thomas Lange remove ida, cciss stuff. Just match everything
 # Last changes: 27.11.2002 by Thomas Lange allow more that 3 primary partitions
@@ -129,6 +130,7 @@
 #     dosfat16     : DOS 16bit FAT file system
 #     winfat32     : Win95 FAT32 file system
 #     writable     : mounts a preserved partition writable
+#     xfs          : xfs
 #     reiser       : reiserfs
 #       -h <hash>  : set reiserfs hash
 #       -v <ver>   : set reiserfs version
@@ -144,7 +146,7 @@ $| = 1;                     # flush always
 # Variables
 #****************************************************
 
-my $Version = "0.25fai";
+my $Version = "0.26fai";
 
 my $megabyte = 1024 * 1024;    # guess
 # $gigabyte = 1024 * $megabyte;
@@ -154,6 +156,7 @@ my $sectorsize = 512;
 my $sfdisk_options = "-q $ENV{sfdisk}";     # be quiet
 my $mke2fs_options = "-q";     # be quiet
 my $mkreiserfs_options = "";
+my $mkxfs_options = "";
 my $mkswap_options = "";
 
 # FAI input variables
@@ -468,7 +471,7 @@ sub ParseConfigFile{
 		      && die "ERROR: unable to preserve partitions of size 0.\n$line\n ";
 		  } else {
 		    # If not preserve we must know the filesystemtype
-	            ($options !~ /\b(ext2|ext3|auto|swap|dosfat16|winfat32|reiser)\b/i ) && ($options .= " auto");
+	            ($options !~ /\b(ext2|ext3|auto|swap|dosfat16|winfat32|reiser|xfs)\b/i ) && ($options .= " auto");
 		  }
 		if($size =~ /^(\d*)(\-?)(\d*)$/){
 		    $Min = $1;
@@ -800,6 +803,18 @@ sub FormatDisks{
 		}
 		next;
 	    }
+	    # Linux XFS file system
+	    if ($MPOptions{$mountpoint} =~ /\bxfs\b/i) {
+#	        print "Make XFS Filesystem:\n";
+	        $command = "mkfs -t xfs $mkxfs_options";
+		$command .= " /dev/$device";
+		print "  $command\n";
+		if ($test != 1){
+		    $result = `$command`;
+		    (($? >> 8) == 0) || die "\nMKFS.XFS ERROR:\n $result\n";
+		}
+		next;
+	    }
 	    # Linux Extended 2 file system
 	    if ($MPOptions{$mountpoint} =~ /\b(ext[23]|auto)\b/i) {
 #	        print "Make Extended 2/3 Filesystem:\n";
@@ -844,6 +859,7 @@ EOM
     # 1. /
     $type = "ext2";
     ($MPOptions{'/'} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
+    ($MPOptions{'/'} =~ /\b(xfs)\b/i) && ($type = "xfs");
     ($MPOptions{'/'} =~ /\b(ext3)\b/i) && ($type = "ext3");
     ($MPOptions{'/'} =~ /\b(ext2)\b/i) && ($type = "ext2");
     $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/",$type,$MPfstaboptions{'/'},0,1);
@@ -862,6 +878,7 @@ EOM
 	$type = "ext2";
 	($MPOptions{$mountpoint} =~ /\b(dosfat16|winfat32)\b/i) && ($type = "vfat");
 	($MPOptions{$mountpoint} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
+	($MPOptions{$mountpoint} =~ /\b(xfs)\b/i) && ($type = "xfs");
 	($MPOptions{$mountpoint} =~ /\b(ext3)\b/i) && ($type = "ext3");
 	($MPOptions{$mountpoint} =~ /\b(ext2)\b/i) && ($type = "ext2");
 	$FileSystemTab .= BuildfstabLine("/dev/$device",$mountpoint,$type,$MPfstaboptions{$mountpoint},0,2);
