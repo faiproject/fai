@@ -6,8 +6,8 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity version "1.1">
-<!entity date    "20 july 2001">
+<!entity version "1.2">
+<!entity date    "XXX september 2001">
 
 ]>
 
@@ -16,7 +16,7 @@
       <title>FAI Guide (Fully Automatic Installation)
 
       <author>Thomas Lange <email>lange@informatik.uni-koeln.de</email>
-      <version>Version &version for FAI version 2.1, &date
+      <version>Version &version for FAI version 2.2, &date
 
 <abstract>
 This manual describes the fully automatic installation package for
@@ -95,7 +95,7 @@ installation of Solaris operating system on SUN SPARC hardware, the
 idea to build an automatic installation for Debian was born. Solaris
 has an automatic installation feature called JumpStart<footnote> <p>
 Solaris 8 Advanced Installation Guide at
-<httpsite>docs.sun.com</httpsite></p> </footnote> . In conjunction
+<httpsite>docs.sun.com</httpsite></p> </footnote>. In conjunction
 with the auto-install scripts from Casper Dik<footnote><p><url
 id="ftp://ftp.wins.uva.nl:/pub/solaris/auto-install/"></p> </footnote>,
 I could save a lot of time not only for every new SUN computer, but
@@ -241,9 +241,10 @@ information is put on the boot disk.</p>
 	  <tag>TFTP server:<item> The TFTP daemon is used for
 	  transfering the kernel to the clients. Only needed when
 	  booting from network card with a boot PROM.</item>
-	  <tag>Nfsroot:<item> A mountable directory which contains the whole
+	  <tag>Client root:<item> A mountable directory which contains the whole
 	  filesystem for the install clients during installation. It will
-	  be created during setup of the FAI package.</item>
+	  be created during setup of the FAI package and is also
+	  called <strong>nfsroot</strong>.</item>
 	  <tag>Debian mirror:<item> Access to a Debian
 	  mirror is needed. A local mirror of all Debian
 	  packages is recommended if you install several computers.</item>
@@ -284,11 +285,11 @@ which contains the install kernels for FAI. <footnote> <p><tt># apt-get
 install fai</tt> should also work.</p></footnote>
 
 <example>
-kueppers[~]# dpkg -i fai-kernels_1.1_i386.deb 
+kueppers[~]# dpkg -i fai-kernels_&faikernelver;_i386.deb 
 Selecting previously deselected package fai-kernels.
 (Reading database ... 40562 files and directories currently installed.)
-Unpacking fai-kernels (from .../lange/fai-kernels_1.1_i386.deb) ...
-Setting up fai-kernels (1.1) ...
+Unpacking fai-kernels (from .../lange/fai-kernels_&faikernelver;_i386.deb) ...
+Setting up fai-kernels (&faikernelver;) ...
 </example>
 
 Get the newest version of FAI and install it using the
@@ -352,13 +353,13 @@ These are important variables in &fc;:
 	      <p> If you have NFS access to your local Debian mirror,
 	      specify the remote filesystem. It will be mounted to
 	      <var>$MNTPOINT</var> (defined in
-	      &fc;). It's not needed if you use FTP
-	      or HTTP access.</p> </item>
+	      &fc;). It's not needed if you use acces via FTP
+	      or HTTP.</p> </item>
 
 	    <tag><var>KERNELPACKAGE</var></tag>
 	    <item>
-	  <p> You must specify the software package (build with <manref
-	      name="make-kpkg" section="8">), which includes
+	  <p> You must specify the software package - build with <manref
+	      name="make-kpkg" section="8"> - which includes
 	      the default kernel for booting the install clients. The
 	      Debian package <package>fai-kernels</package> contains the
 	      default install kernels with BOOTP and DHCP support. Do
@@ -376,7 +377,7 @@ The variables <var>FAI_SOURCES_LIST</var> and <var>FAI_DEBMIRROR</var>
 are used by the install server and also by the clients. If your
 install server has multiple network card and different host names for
 each card (as for a beowulf server), use the install
-server name which is used by the install clients.<p>
+server name which is known by the install clients.<p>
 
 FAI uses <manref name="apt-get" section="8"> to create the nfsroot
 filesystem in <file>/usr/lib/fai/nfsroot</file>, which needs about
@@ -384,7 +385,7 @@ filesystem in <file>/usr/lib/fai/nfsroot</file>, which needs about
 the program <prgn>imggen</prgn>,<footnote>Available at the download
 page <httpsite>http://www.ltsp.org</httpsite> or from the FAI download
 page &faidownload;.</footnote> if you like to boot from a 3Com network
-card. This executable converts netboot images (created by <manref
+card. This executable converts netboot images created by <manref
 name="mknbi-linux" section="8">, so they can be booted by network
 cards from 3Com. Put that executable in your path
 (e.g. <file>/usr/local/bin</file>). After editing &fc; call
@@ -903,8 +904,10 @@ has booted on the install clients.
 	    <item> <p>Reboot the new installed system</p> </item>
 	  </enumlist>
 
-You can also define additional programs, that will be run on particular
-occasions. They are called <tt>hooks</tt>. So it's very easy to
+You can also define additional programs or scripts, that will be run on particular
+occasions. They are called <tt>hooks</tt>. Hooks can add aditional
+functions to the installation process or replace the default subtasks
+of FAI. So it's very easy to
 customize the whole installation process. Hooks are explained in
 detail in <ref id="hooks">.
 
@@ -1080,7 +1083,7 @@ A good paper with more aspects of building an infrastructure is
 
 <chapt id=config>Installation details<p>
 
-<sect id=c3>Configuration space<p>
+<sect id=c3>The configuration space<p>
 
 The configuration is the collection of information how exactly to
 install a computer. The central configuration space for all install
@@ -1113,11 +1116,11 @@ to the configuration space and start an installation.
 These files contain configuration for some example hosts.
 
 <taglist>  
-   <tag>bigfoot</tag>  <item> <p>Is a server with much software. It
+   <tag>bigfoot</tag>  <item> <p>This is a server with much software. It
    provides the home directory and all programs for its NFS clients. Also some
    daemons are installed and activated by default.</p> </item>
-   <tag>ant01,...</tag>  <item> <p>Are dataless clients, which
-mounts <file>/usr</file> and <file>/home</file> from bigfoot. Most of
+   <tag>ant01,...</tag>  <item> <p>These dataless clients mount
+   <file>/usr</file> and <file>/home</file> from bigfoot. Most of
    the disk space is spend for a scratch partition, which is exported
    to a netgroup of hosts.</p> </item>
 </taglist>
@@ -1126,6 +1129,9 @@ things to these examples. But don't forget to plan your own
 installation !
 
 <sect id=s1> Set up FAI<p>
+
+This jobs is done by the tasks: <em>confdir</em> and <em>setup</em>.<p>
+
 
 Since only the ramdisk is writable in the beginning, all log
 files are written to <file>/tmp</file>. The main script
@@ -1177,9 +1183,9 @@ T172='createvt sshd'
 It's not a bug, if a variable (T171 in the example above) is defined
 twice. The second definition supersedes the first.
 
-
 <p>
-Following <var>FAI_FLAGS</var> (T172) are known:
+<var>FAI_FLAGS</var> (T172) contains a space separated list of
+flags. Following flags are known:
 <taglist>
  <tag>verbose</tag> <item> <p>Create verbose output during
  installation. This should be alsway the first flag, so consecutive
@@ -1262,7 +1268,9 @@ Hostnames should rarely be used for the configuration files in the
 configuration space. Instead, a class should defined and this class is
 then added to the host.
 
-<sect id=s2> Scripts in <tt>class/</tt><p>
+<sect id=s2> Defining classes<p>
+
+This part is done by the task <em>defclass</em><p>
 
 The main FAI script <file>rcS_fai</file> defines the classes
 <tt>DEFAULT, LAST, $HOSTNAME</tt> and all classes in the file
@@ -1286,7 +1294,6 @@ S01alias.sh:
 
 # all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
-
     ant??)
         cat anthill ;;
 esac
@@ -1341,6 +1348,8 @@ You can find messages from modprobe in <file>/tmp/dmesg.log</file> and
 the on the fourth console terminal (pressing <tt>Alt-F4</tt>).<p>
 
 <sect id=classvariables> Variables in <tt>class/*.var</tt><p>
+
+This part is done by the task <em>defvar</em><p>
 
 All variables can be set global in <file>DEFAULT.var</file>. For
 certain groups of hosts use a class file or for a single host use
@@ -1424,10 +1433,12 @@ simple.
 
 PRELOADRM http://www.location.org/rp8_linux20_libc6_i386_cs1_rpm /root
 
+PACKAGES taskinst
+german science german
+
 PACKAGES install
 adduser netstd ae
 less passwd
-task-x-window-system
 realplayer
 
 PACKAGES remove
@@ -1453,6 +1464,10 @@ in the following lines. If a hyphen is appended to the package name
 <tag>remove:</tag> <item> <p>Remove all packages that are specified in
 the following lines. Append a + to the package name, if the package
 should be installed.</p> </item>
+
+<tag>taskinst:</tag> <item> <p>Install all packages belonging to the
+task that are specified in the following lines. This works only for
+Debian 3.0 and later.</p> </item>
 
 <tag>dselect-upgrade</tag> <item> <p> Set package selections using the
 following lines. The following lines must be the output of the commands
@@ -1615,20 +1630,26 @@ redefine variables for the installation scripts.
 This is the complete list of hooks and when they will be called.
 
 <taglist>
-      <tag>first</tag> <item><p>After some basic initialization, all
-      hooks with prefix <tt>first</tt> are called. Since the
+      <tag>confdir</tag> <item><p>After some basic initialization,
+      all hooks with prefix <tt>confdir</tt> are called. Since the
       configuration directory <file>/fai</file> is not yet mount on
       the install client, these are the only hooks located in
-      <tt>$</tt><file>nfsroot/fai/hooks</file> on the install server.  All
-      other hooks are found in <file>/usr/local/share/fai/hooks</file>.</p>
+      <tt>$</tt><file>nfsroot/fai/hooks</file> on the install server.
+      All other hooks are found in
+      <file>/usr/local/share/fai/hooks</file>. The last step is to
+      mount the configuration directory to <file>/fai</file> and to
+      source the file <file>/fai/hooks/subroutines</file> if it
+      exists. Using this file, you can define your own subroutines or
+      override the definition of FAI's subroutines.</p>
       </item>
 
       <tag>setup</tag> <item><p>These hooks are immediately called
       after the configuration directory is mounted to
       <file>/fai</file>. </p> </item>
 
-<tag>action</tag> <item><p>Hooks called before the variable
-<var>FAI_ACTION</var> is evaluated.</p> </item>
+      <tag>action</tag> <item><p>Hooks called before the variable
+      <var>FAI_ACTION</var> is evaluated and it's decided which action
+      to perform.</p> </item>
 
       <tag>sysinfo</tag> <item><p>Called when no installation is
       performed but the action is <tt>sysinfo</tt>.</p>
@@ -1637,6 +1658,10 @@ This is the complete list of hooks and when they will be called.
      <tag>backup</tag> <item><p>Called when action is
      <tt>backup</tt>. Here you can define your own backup taks.</p>
      </item>
+
+     <tag>install</tag> <item><p>These hooks are called when the
+      <var>FAI_ACTION</var> is <em>install</em> and a automatic
+      installation should be performed.</p> </item>
 
       <tag>defclass</tag> <item><p>Called before defining classes.</p>
       </item>
@@ -1673,6 +1698,19 @@ This is the complete list of hooks and when they will be called.
       finished, but before the automatic reboot is performed.</p> </item>
 
  </taglist>
+
+FAI has default jobs for following values of <var>FAI_ACTION</var>.
+
+<list>
+	    <item>	      <p>sysinfo</p>	    </item>
+	    <item>	      <p>install</p>	    </item>
+	    <item>	      <p>backup</p>	    </item>
+</list>
+
+If another value is defined, FAI will look for a hook
+<file>/fai/hooks/$FAI_ACTION</file> and executes this hook. So you can
+easily define your own actions.<p>
+
 
 All hooks that are called before classes are defined can only use the
 following classes: <tt>DEFAULT $HOSTNAME LAST</tt>. If a hook for
@@ -1719,6 +1757,18 @@ in <file>/fai/class</file>. </p></item>
 </list>
 
 <sect id=errors>Looking for errors<p>
+If the client can't succsessfully boot from the network card, use
+<manref name="tcpdump" section="8"> to look for ethernet packets
+between the install server and the client. Search also for entries in
+several log files made by <manref name="in.tftpd" section="8"> and
+<manref name="bootpd" section="8">:
+
+<example>egrep "tftpd|bootpd" /var/log/*</example>
+
+The BOOTP daemon can also be started in debug modus:
+<example># bootpd -d7</example>
+
+
 If the installation process stops or even it finishes, parse all log files for errors using:
 <example>
 # egrep "no such variable|bad variable|E:|ERROR" *.log
