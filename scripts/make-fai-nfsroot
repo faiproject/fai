@@ -36,12 +36,13 @@ if [ `id -u` -ne 0 ]; then
 fi
 
 merror="properly"
-while getopts rvc:f: opt ; do
+while getopts rvc:f:k opt ; do
     case "$opt" in
         c) cfdir=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
         r) recover=1 ;;
         f) cfg=$OPTARG ;;
+        k) kinstall=1 ;;
         ?) exit 5 ;; # error in option parsing
     esac
 done
@@ -104,9 +105,6 @@ esac
 packages="$packages
 $arch_packages"
  
-echo Creating FAI nfsroot can take a long time and will
-echo need more than $nfssize disk space in $NFSROOT.
-
 ROOTCMD="chroot $NFSROOT"
 
 RUNDIR=/var/run/fai/make-fai-nfsroot
@@ -307,8 +305,7 @@ create_nfsroot() {
 	. $SHAREFAI/subroutines
 	. $SHAREFAI/subroutines-$OS_TYPE
 	set -a
-	. /etc/fai/fai.conf
-	. /tmp/rcsfai.var
+        . /tmp/fai/variables.sh 2>/dev/null
 EOF
 
     call_verbose call_with_stamp setup_ssh
@@ -355,11 +352,12 @@ add_packages_nfsroot() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
 
-    LC_ALL=C $ROOTCMD dpkg-divert --package fai --rename --remove /sbin/discover-modprobe
+    [ -f $NFSROOT/usr/sbin/dpkg-divert ] && 
+       LC_ALL=C $ROOTCMD dpkg-divert --package fai --rename --remove /sbin/discover-modprobe
     cd /
     sleep 2
-    umount $NFSROOT/proc 1>/dev/null 2>&1 || true
-    umount $NFSROOT/dev/pts 1>/dev/null 2>&1 ||true
+    [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
+    [ -d $NFSROOT/proc/self ] && umount $NFSROOT/dev/pts
     if [ "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
     fi
@@ -409,20 +407,7 @@ fdivert() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# main routine
-
-# Kill the directory if not in recover mode
-if [ -d $NFSROOT/$FAI -a ! "$recover" ]
-then
-    echo $NFSROOT already exists. Removing $NFSROOT
-    umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
-    rm -rf $NFSROOT/.??* $NFSROOT/*
-    # also remove files $NFSROOT/.? but not . and ..
-    find $NFSROOT ! -type d -xdev -maxdepth 1 | xargs -r rm -f
-fi
-
-# Create a new nfsroot
-call_with_stamp create_nfsroot
+kernel_install() {
 
 # Install the kernel package
 if [ -f $KERNELPACKAGE ]; then
@@ -450,6 +435,37 @@ else
     echo "No install kernel installed in /boot/fai."
     echo "No kernel modules available in nfsroot."
 fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# main routine
+
+
+# just install a new kernel to the nfsroot
+[ -n "$kinstall" ] && {
+    trap "true" EXIT
+    echo "Installing new kernel into the nfsroot."
+    kernel_install
+    echo "New kernel from $KERNELPACKAGE installed into the nfsroot."
+    exit
+}
+
+echo Creating FAI nfsroot can take a long time and will
+echo need more than $nfssize disk space in $NFSROOT.
+
+# Kill the directory if not in recover mode
+if [ -d $NFSROOT/$FAI -a ! "$recover" ]
+then
+    echo $NFSROOT already exists. Removing $NFSROOT
+    umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
+    rm -rf $NFSROOT/.??* $NFSROOT/*
+    # also remove files $NFSROOT/.? but not . and ..
+    find $NFSROOT ! -type d -xdev -maxdepth 1 | xargs -r rm -f
+fi
+
+# Create a new nfsroot
+call_with_stamp create_nfsroot
+
+kernel_install
 
 echo "make-fai-nfsroot finished $merror."
 exit 0
