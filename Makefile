@@ -12,8 +12,6 @@ SBIN= fai-start-stop-daemon
 USRBIN_SCRIPTS = fai-class fai-do-scripts
 CONFDIR= $(SHAREDIR)/etc
 CONFFILES= apt.conf dhclient.conf fai_modules_off
-# TEMPLATEDIR=$(SHAREDIR)/templates
-UTILSDIR=$(SHAREDIR)/utils
 ADEXAMPLE=$(DOCDIR)/examples/advanced
 SIEXAMPLE=$(DOCDIR)/examples/simple
 
@@ -41,7 +39,7 @@ install:
 	cd conf ; install -m644 $(CONFFILES) $(CONFDIR)
 	install -m644 conf/fai.conf conf/sources.list $(DESTDIR)/etc/fai/
 	cp -a examples $(DOCDIR)
-	cp -a utils/* $(UTILSDIR)
+	cp -a utils $(DOCDIR)/examples
 	cp -a templates/* $(DOCDIR)/examples/advanced
 	cd $(DOCDIR)/examples/advanced/scripts ; mv NETWORK1 NETWORK; mv DEFAULT1 DEFAULT
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
