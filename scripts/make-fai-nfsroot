@@ -50,6 +50,7 @@ packages="$packages $NFSROOT_PACKAGES"
 ROOTCMD="chroot $NFSROOT"
 
 LIBFAI=/usr/lib/fai
+SHAREFAI=/usr/share/fai
 conffile=$NFSROOT/etc/rcS_fai.conf
 export DEBIAN_FRONTEND=Noninteractive
 
@@ -102,15 +103,15 @@ copy_fai_files() {
 
     # copy to nfsroot
     perl -pi -e "s/^root::/root:${FAI_ROOTPW}:/" etc/passwd
-    mkdir -p $NFSROOT/fai/fai_config $NFSROOT/usr/share/fai $NFSROOT/etc/fai
+    mkdir -p $NFSROOT/fai/fai_config $NFSROOT/$SHAREFAI $NFSROOT/etc/fai
     cd $NFSROOT
     cp -p $LIBFAI/sbin/dhclient-script $LIBFAI/etc/dhclient.conf etc/
     cp -p /etc/fai/* etc/fai/
     cp -p $LIBFAI/sbin/* sbin/
-    cp -p $LIBFAI/etc/fai_modules_off etc/modutils/
+    cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
 
-    cp -p /usr/share/fai/subroutines usr/share/fai
-    cp -p $LIBFAI/etc/apt.conf etc/apt
+    cp -p $SHAREFAI/subroutines usr/share/fai
+    cp -p $SHAREFAI/etc/apt.conf etc/apt
 # potato / woody code
     if [ -d /usr/lib/perl5/Debian ]; then
 	cp -p /usr/lib/perl5/Debian/Fai.pm usr/lib/perl5/Debian/
@@ -205,7 +206,7 @@ create_nfsroot() {
     echo "iface lo inet loopback" > etc/network/interfaces
 
     echo "*.* /tmp/syslog.log" > etc/syslog.conf
-    echo ". /usr/share/fai/subroutines" >> root/.profile
+    echo ". $SHAREFAI/subroutines" >> root/.profile
 
     setup_ssh
 
