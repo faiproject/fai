@@ -26,10 +26,46 @@
 # can also obtain it by writing to the Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
-
 # Thomas Lange, Universitaet Koeln, 10/2000
 
 set -e
+
+version="version 1.1, january 2001"
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+
+    echo -e $*
+    exit 99
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+cat <<EOF
+make-fai-bootfloppy, create a boot floppy for FAI. $version
+
+   Copyright (C) 2000, 2001 by Thomas Lange
+
+   Usage: make-fai-bootfloppy
+
+   -h     print this message.
+
+DESCRIPTION
+   Creates a boot floppy for booting a FAI install client.
+   No arguments are needed but you must be root.
+
+EOF
+exit 0
+}
+
+
+while getopts h opt ; do
+        case "$opt" in
+        h) usage ;;
+        esac
+done
+
 
 if [ "$UID" -ne 0 ]; then
  echo "You must be root!"
@@ -42,6 +78,8 @@ SERVERIP=`ifconfig eth0 | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
 
 grep -q ic_bootp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=BOOTP
 grep -q ic_dhcp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
+
+[ "$TYPE" ] || die "Can't determine kernel boot protocol.\nMaybe there's no $NFSROOT/boot/System.map-$KERNELVERSION"
 
 mke2fs -i 8192 -m 0 /dev/fd0 >/dev/null || exit
 mount /floppy || mount /dev/fd0 /floppy || exit
@@ -63,13 +101,14 @@ cat > /floppy/etc/lilo.conf <<-EOF
 EOF
 
 echo now writing boot data to floppy
-lilo -C /floppy/etc/lilo.conf
+$NFSROOT/sbin/lilo -C /floppy/etc/lilo.conf
 cd /
 umount /floppy
 
 cat <<EOF
-FAI bootfloppy ready
+FAI boot floppy created.
    boot protocol : $TYPE
    server        : $SERVERIP
    nfsroot       : $SERVERIP:$NFSROOT
+The kernel configuration is $NFSROOT/boot/config-$KERNELVERISON-$TYPE.
 EOF
