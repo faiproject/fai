@@ -11,16 +11,11 @@ echo The classes are also saved in $LOGDIR/FAI_CLASSES
 
 [ -x "`which dmidecode`" ] && dmidecode
 
-lspci
-lsdev
-echo "Ethernet cards found: $netdevices_all"
-echo "Ethernet cards running: $netdevices_up"
-ifconfig -a
-
 [ -x "`which discover`" ] && {
-    discover --xdriver video
-    discover ethernet cdrom scsi sound video
-    discover --module ethernet cdrom scsi sound video
+    discover
+    discover-modprobe -v
+    discover --data-path=xfree86/server/device/driver display
+    discover --data-path=linux/module/name network
 }
 
 [ -x "`which kudzu`" ] && {
@@ -28,7 +23,11 @@ ifconfig -a
     mv /tmp/hwconf $LOGDIR
 }
 
-[ -x "`which si`" ] && si -p -o nkmhsf
+lspci
+lsdev
+echo "Ethernet cards found: $netdevices_all"
+echo "Ethernet cards running: $netdevices_up"
+ifconfig -a
 
 [ -x "`which sysinfo`" ] && sysinfo -class device -level all
 
