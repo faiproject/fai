@@ -1,0 +1,44 @@
+#! /usr/bin/cfengine
+
+control:
+   OutputPrefix = ("cfengine")
+   actionsequence = ( files directories editfiles )
+   EditFileSize = ( 30000 )
+
+files:
+   any::
+
+directories:
+   any::
+	${target}/tmp mode=1777 owner=0 group=0
+
+editfiles:
+   any::
+	{ ${target}/etc/mailname
+	  AutoCreate
+          AppendIfNoSuchLine "${HOSTNAME}"
+	}
+
+	{ ${target}/etc/default/rcS
+	  ReplaceAll "^UTC=.*" With "UTC=${UTC}"
+	}
+
+	{ ${target}/etc/fstab
+	  AppendIfNoSuchLine "none  /proc/bus/usb  usbdevfs  defaults"
+	  AppendIfNoSuchLine "/dev/fd0  /floppy  auto  users,noauto 0 0"
+	}
+
+	{ ${target}/etc/hosts
+	  AppendIfNoSuchLine "127.0.0.1       localhost"
+	}
+
+# insert encrypted root password
+	{ ${target}/etc/shadow
+	  LocateLineMatching 	"^root:.*"
+	  ReplaceAll 		"^root::" With "root:${rootpw}:"
+	}
+
+	{ ${target}/etc/inittab
+	  ReplaceAll "/sbin/getty"
+		With "/sbin/getty -f /etc/issue.linuxlogo"
+	}
