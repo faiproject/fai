@@ -1,0 +1,102 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH ftar 8 "Mar 30,2001"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+ftar \- extract tar files using classes
+.SH SYNOPSIS
+.B ftar
+.RI [ options ] " SOURCE" ...
+.SH DESCRIPTION
+Extract an archive from SOURCE to its target directory using classes.
+
+Each SOURCE argument is a directory, which contains one or more
+template files for the source archives to extract. Depending on the list of
+defined classes, one or more archives of the source directory are selected and
+extracted to the target. The base target directory is the name of the source
+directory. Template file must have suffix .tar, .tar.gz or .tar.bz2
+depending of the type of the archive.
+
+The exit code returned by ftar is mostly 0. For every successfully
+extracted tar file, a log message is printed to standard output.
+.SH OPTIONS
+.TP
+Options -c, -s, -t (or their analog variables) and a SOURCE are required.
+.TP
+.BI \-1
+Use only the first archive file matching a class name.
+.TP
+.BI "\-c " class[class]
+Define classes. Multiple classes must be space separated. Fisr class
+has the highest priority. If not specified, use the classes from
+the file /tmp/FAI_CLASES, where the last entry has highest priority.
+.TP
+.B \-d
+Delete all files in target directory before extracting the archive(s).
+.TP
+.B \-D
+Create debugging output.
+.TP
+.B \-h
+Show help, version and summary of options.
+.TP
+.B \-r
+Recursively remove files in target directory before extracting archive.
+.TP
+.BI "\-s " source_dir
+Look for SOURCE files relative to \fIsource_dir\fR. Use $FAI_FILES if
+not specified.
+.TP
+.BI "\-t " target_dir
+Extract archives relativ to \fItarget_dir\fR. Use $FAI_ROOT if not specified.
+.TP
+.B \-v
+Be verbose. Not yet used.
+
+
+.SH EXAMPLES
+.br
+Suppose the source directory /files/etc/alternatives consists of following files:
+
+DATALESS.tar.gz faiclient01.tar.bz2
+
+Each file is a compressed archive. If only class DATALESS is defined,
+the following command
+
+   # ftar -s /files -t /target /etc/alternatives
+
+is equal to
+
+   # tar -C /target -zxf /files/etc/alternatives/DATALESS.tar.gz
+
+If additionally class faiclient01 is defined, following command is also executed
+
+   # tar -C /target -Ixf /files/etc/alternatives/faiclient01.tar.bz2
+
+If only one archive should be extracted, the class with highest
+priority is used.
+
+.SH NOTES
+Do not create a file DEFAULT, if no reasonable default configuration file can be
+used. It's better to exit with an error, than to extract a wrong
+archive.
+
+This command can also be used to maintain your complete directory trees on
+a huge number of hosts.
+.SH SEE ALSO
+.br
+The programs is part of FAI (fully automatic installation). See the FAI manual
+for more information how to use ftar. The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+
+.SH AUTHOR
+Thomas Lange <lange@informatik.uni-koeln.de>
