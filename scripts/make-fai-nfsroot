@@ -27,17 +27,18 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-# Thomas Lange, Universitaet Koeln, 6/2000
+# Thomas Lange, Universitaet Koeln, 7/2000
 
 # configuration of some packages will need some interactive input
 # lilo, netbase,... will not be set up correctly, but that doesn't matter
-
 # apt-get must been working on your server (sources.list must be OK)
 
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+rootpw="56hNVqht51tzc"
 dversion=2_2
 verbose=1
 # Additional packages that are install to nfsroot
-packages="debconf file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 lvm"
+packages="debconf file rdate cfengine bootpc wget rsh-client less ssh dump ext2resize raidtools2 lvm"
 
 
 basetgz=base${dversion}.tgz
@@ -61,10 +62,13 @@ recreate_nfsroot() {
     echo Unpacking $basetgz
     tar zxpf /tmp/$basetgz
     touch etc/fstab etc/raidtab # dump and raidtool2 needs these files
+    mkdir -p etc/ssh
+    touch etc/ssh/NOSERVER      # don't start sshd on the host where fai is installed
     mkdir -p lib/modules/`uname -r`             # dirty trick to hoax lvm
     touch lib/modules/`uname -r`/modules.dep    # dirty trick to hoax lvm
-    update_nfsroot
+    upgrade_nfsroot
 
+    perl -pi -e "s/^root::/root:${rootpw}:/" etc/passwd
     mkdir -p $root/fai/fai_config
     cp -p /usr/lib/fai/sbin/* $root/sbin
     cp -p /usr/lib/fai/etc/apt.conf $root/etc/apt
@@ -89,7 +93,7 @@ EOF
     chmod a+rx $root/etc/rc2.d/S01fai_abort
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-update_nfsroot() {
+upgrade_nfsroot() {
 
     echo Upgrading $root
     apt-get -c $aptconf update  > $devnull 
