@@ -206,3 +206,25 @@ get_bootp_info() {
     #FAI_BACKUP_LIST=$T174 # not yet used
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+load_keymap_consolechars() {
+
+    # support for other keyboards
+    if [ "$FAI_KEYMAP" ]; then
+	for mapname in $FAI_KEYMAP; do
+	    keymapfile=`find /usr/share/keymaps/ /fai/files \ 
+	      ! -type d -name $mapname.kmap.gz -o \
+	      -name $mapname.inc.gz -o -name $mapname`
+	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
+	done
+
+	if [ "$keymaps" ]; then
+	    loadkeys $keymaps
+	else
+	    echo "FAI_KEYMAP $FAI_KEYMAP not found"
+	fi
+    fi
+
+    [ "$FAI_CONSOLEFONT" ] &&
+	consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
