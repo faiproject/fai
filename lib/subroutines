@@ -30,28 +30,30 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 disk_info() {
 
-    # look for ide and scsi disks; what about raid?
-    local dev=`egrep 'hd.$|sd.$|/disc$' /proc/partitions`
-    # the variable holds a space separated list of devices and block sizes
-    device_size=`echo $dev | get_disk_size`
-    # a list of all local disks
-    disklist=`echo $dev | list_disks`
+    # the variable holds a space separated list of devices and their block size
+    device_size=`egrep ' cciss/c.d.$| ida/c.d.$| rd/c.d.$| hd.$| sd.$|/disc$' /proc/partitions | diskandsize`
+
+    # a list of all local disks, without size
+    disklist=`echo $device_size | list_disks`
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_disk_size() {
+diskandsize() {
 
-    # echo the device and size
-    local major minor blocks device
-	while read major minor blocks device; do
-	    echo "$device $blocks"
+    local isdisk major minor blocks device
+
+    while read major minor blocks device; do
+	isdisk=1
+	# skip ide cdrom; what about SCSI cdroms ?
+	[ -f /proc/ide/$device/media ] && grep -q cdrom /proc/ide/$device/media && isdisk=0
+	[ $isdisk -eq 1 ] && echo "$device $blocks"
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 list_disks() {
 
-    # list local disks devices
-    local major minor blocks device
-	while read major minor blocks device; do
+    # list local disks device
+    local device blocks
+    while read device blocks; do
 	    echo $device
     done
 }
