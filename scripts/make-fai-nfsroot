@@ -89,20 +89,17 @@ if [ ! -s "$cfdir/sources.list" -a ! -f /etc/apt/sources.list ]; then
 fi
 
 kfile="vmlinuz"
-case `uname -m` in
-    i386|i486|i586|i686|amd64)
+case `dpkg --print-installation-architecture` in
+    i386|amd64)
 	arch_packages="grub lilo read-edid kudzu hwtools dmidecode" ;;
-
-    x86_64)
-	arch_packages="grub lilo kudzu dmidecode" ;;
 
     ia64)
 	arch_packages="elilo gnu-efi efibootmgr" ;;
 
-    sparc|sparc64)
+    sparc)
 	arch_packages="silo sparc-utils" ;;
 
-    ppc)
+    powerpc)
 	arch_packages=""
         kfile="vmlinux" ;;
 
@@ -211,6 +208,7 @@ copy_fai_files() {
     rm -f $NFSROOT/etc/fai/{make-fai-nfsroot.conf,install_packages.conf}
     [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass $NFSROOT/.cvspass
     cp -p $LIBFAI/sbin/* sbin/
+    cp -p /usr/sbin/fai usr/sbin/
     mv sbin/dhclient-script etc/dhcp3
     cp -p /usr/sbin/{ftar,fcopy,install_packages} usr/sbin/
     cp -p /usr/bin/{fai-do-scripts,fai-class,fai-debconf} usr/bin/
@@ -301,7 +299,7 @@ create_nfsroot() {
     ln -s /tmp/etc/syslogsocket dev/log
     ln -sf /tmp/etc/resolv.conf etc/resolv.conf
     ln -sf /tmp etc/sysconfig
-    ln -s ../../sbin/rcS_fai etc/init.d/rcS
+    ln -s /usr/sbin/fai etc/init.d/rcS
     ln -sf /dev/null etc/network/ifstate
     # for nis
     [ -d var/yp ] && ln -s /tmp/binding var/yp/binding
