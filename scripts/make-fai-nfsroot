@@ -29,7 +29,7 @@
 
 # Packages that are install to nfsroot by default
 # Additional packages are defined with $NFSROOT_PACKAGES in fai.conf
-packages="perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils grub ntpdate"
+packages="dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize strace hdparm parted dnsutils grub ntpdate"
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
@@ -112,9 +112,9 @@ copy_fai_files() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
 
-    echo "Creating nfsroot using debootstrap"
+    echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "calling debootstrap $1 $NFSROOT $2"
-    debootstrap $1 $NFSROOT $2
+    debootstrap $1 $NFSROOT $2 > $devnull 2>&1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
@@ -203,7 +203,7 @@ upgrade_nfsroot() {
     $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/pcmcia $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
-    $ROOTCMD apt-get -y remove pcmcia-cs </dev/null
+    $ROOTCMD apt-get -y install debconf pcmcia-cs- ppp- </dev/null
 
     # fake start-stop-dameon
     $ROOTCMD dpkg-divert --quiet --package fai --add --rename /sbin/start-stop-daemon
