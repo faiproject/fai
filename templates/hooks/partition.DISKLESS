@@ -12,13 +12,16 @@ usr=/files/scratch/diskless/$HOSTNAME/usr
 var=
 swap=
 
+# dpkg wants a lock but linux NFS can't do it yet
+mountopt="-o nolock"
+
 # mount2dir can't mount nfs directories yet, so do it now
 # and skip the default task later
 # also clean up the directories (preserve is not yet possible)
-mount $server:$root $target
+mount $mountopt $server:$root $target
 rm -rf $target
 mkdir $target/usr
-mount $server:$usr $target/usr
+mount $mountopt $server:$usr $target/usr
 rm -rf $target/usr
 
 # create fstab
