@@ -1,5 +1,9 @@
 #! /bin/sh
 
+# echo architecture in upper case
+dpkg --print-installation-architecture | tr /a-z/ /A-Z/
+uname -s | tr 'a-z' 'A-Z'
+
 # all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
     ant??) cat anthill ;;
@@ -17,5 +21,3 @@ case $IPADDR in
     134.95.9.*)	echo NET_9 ;;
 esac
 
-# echo architecture in upper case
-dpkg --print-installation-architecture | tr /a-z/ /A-Z/
