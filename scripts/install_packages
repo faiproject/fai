@@ -25,17 +25,15 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
+# copyright (c), 2000-2001, Thomas Lange, lange@informatik.uni-koeln.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
-# june 2000, Thomas Lange, lange@informatik.uni-koeln.de
-
-# TODO: better use qx// instead of system print $@
-
 
 $| = 1;
-@aptcommands = qw/install remove/;
+@aptcommands = qw/install remove dselect-upgrade/;
 %options = (
 		       install => '-y --fix-missing',
 		       remove  => '-y --purge',
+             "dselect-upgrade" => '-y',
 );
 
 $verbose=$ENV{verbose};
@@ -55,30 +53,27 @@ foreach (@classes) {
 # get file, which must exist before installing packages
 foreach $entry (@preloadlist) {
   my ($url, $directory) = @$entry;
-  $command = "wget -nv -P$FAI_ROOT/$directory $url";
-  print "$command\n" if $verbose;
-  $error = system $command; # get return code from system
-  if ($error != 0) {
-    warn "$0 ERROR: $? $error";
-  }
+  execute("wget -nv -P$FAI_ROOT/$directory $url");
 }
 
 # call apt-get for each command and the lsit of packages
 foreach $type (@aptcommands) {
+  if ($type eq "dselect-upgrade") {
+    dselectupgrade();
+    next;
+  }
+
   my $packlist = join(' ',@{$list{$type}});
 
   if ($packlist) {
-    $command = "chroot $FAI_ROOT apt-get $options{$type} $type $packlist $aptgetlog";
-    print "$command\n" if $verbose;
-    $error = system $command; # get return code from system
-    (($? >> 8) == 0) || warn "$0 ERROR: $? $error";
+    execute("chroot $FAI_ROOT apt-get $options{$type} $type $packlist $aptgetlog");
   }
 }
 
 # check is all went right
-system "chroot $FAI_ROOT dpkg -C $aptgetlog";
+execute("chroot $FAI_ROOT dpkg -C $aptgetlog");
 # clean apt-get cache
-system "chroot $FAI_ROOT apt-get clean $aptgetlog";
+execute("chroot $FAI_ROOT apt-get clean $aptgetlog");
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
 
@@ -100,17 +95,37 @@ sub readconfig {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# not yet used
 sub execute {
 
   # execute a command or only print it
   my $command = shift;
   my $error;
 
-  if ($verbose) {
-    print $command;
-  } else {
-    $error = system $command unless $verbose;
-    return $error;
+  # currently no test, always execute
+  my $test = 0;
+
+  $verbose && print "$command\n";
+  $test && return;
+
+  $error = system "$command";
+  print "ERROR: $error $?\n" if $error;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub dselectupgrade {
+
+  my ($package,$action,$list);
+
+  while (@{$list{$type}}) {
+    $package = shift @{$list{$type}};
+    $action = shift @{$list{$type}};
+    $list .= "$package $action\n";
   }
+
+  open TMP, "> $FAI_ROOT/tmp/dselect.tmp" || die " Can't write to $FAI_ROOT/tmp/dselect.tmp";
+  print TMP $list;
+  close TMP;
+
+  execute("chroot $FAI_ROOT dpkg --set-selections < $FAI_ROOT/tmp/dselect.tmp");
+  execute("chroot $FAI_ROOT apt-get $options{$type} dselect-upgrade");
+  unlink "$FAI_ROOT/tmp/dselect.tmp";
 }
