@@ -69,3 +69,54 @@ EOF
     echo "Grub installed for $kernelimage $broot"
     }
 fi
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# this was the script FAI_BOOTPART
+# this must be executes after the part above, because we append
+# some lines to the boot loader configuration files
+
+# create a partition for booting FAI from local disk and
+# add this kernel to lilo or grub
+
+# Thomas Lange, Uni Koeln, 2000,2002
+
+cp -a $target/boot $target/fai-boot
+
+cd $target/boot
+kernelversion=`ls vmlinuz-*`
+
+ifclass LILO && {
+    # write lilo.conf and install lilo to disk
+    echo "Add /fai-boot partition to lilo.conf"
+
+    cat >> $target/etc/lilo.conf <<-EOF
+	image=/fai-boot/boot/$kernelversion
+	$initrdopt
+	append="devfs=nomount"
+	label=FAI
+EOF
+
+    mkdir $target/fai-boot/etc
+    cp $target/etc/lilo.conf $target/fai-boot/etc
+    $target/sbin/lilo -r $target
+}
+
+ifclass GRUB && {
+
+    echo "Add /fai-boot partition to menu.lst for grub"
+    kernelname=/boot/$kernelversion
+    # get device for this boot partition
+    dev=`df $target/fai-boot | grep '^/dev/' | cut -d ' ' -f1`
+    broot=`device2grub $dev`
+
+    cat >> $target/boot/grub/menu.lst <<-EOF
+
+	# created by FAI
+	
+	title FAI (Fully Automatic Installation) BOOT GNU/Linux
+	root (nd)
+	kernel $kernelname nfsroot=rom
+EOF
+
+    echo "Grub installed for $kernelimage $broot"
+}
