@@ -1,0 +1,41 @@
+#! /bin/sh
+
+# copyright Thomas Lange 2001-2005, lange@debian.org
+
+error=0 ; trap "error=$((error|1))" ERR
+
+# enable shadow passwords for passwd and group
+$ROOTCMD dpkg-reconfigure passwd || true
+
+# remove backup files from cfeninge
+dirs="root etc var"
+for path in $dirs; do
+    find $target/$path -maxdepth 20 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
+done
+
+[ "$FAI_DEBMIRROR" ] && 
+echo "#$FAI_DEBMIRROR $MNTPOINT nfs ro 0 0" >> $target/etc/fstab
+
+# set bios clock
+if [ -n "$do_init_task" ] ; then
+    case "$UTC" in
+       no|"") hwopt="--localtime" ;;
+       yes)   hwopt="--utc"       ;;
+    esac
+    $ROOTCMD hwclock $hwopt --systohc
+fi
+
+# Make sure everything is configured properly
+echo "Running \"apt-get -f install\" for the last time."
+$ROOTCMD apt-get -f install
+
+[ -f $target/boot/vmlinu* ] || echo "ERROR: No kernel was installed. Have a look at shell.log"
+
+# copy sources.list
+fcopy -i /etc/apt/sources.list
+
+# the system is now configured
+rm -f $target/sbin/unconfigured.sh
+
+exit $error
+
