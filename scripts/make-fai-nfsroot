@@ -43,7 +43,7 @@ set -e
 conffile=$NFSROOT/etc/rcS_fai.conf
 
 # Additional packages that are install to nfsroot
-packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted"
+packages="$NFSROOT_PACKAGES perl-5.005 dhcp-client file rdate cfengine bootpc wget rsh-client less dump ext2resize raidtools2 strace expect5.31 hdparm parted dnsutils"
 
 export DEBIAN_FRONTEND=Noninteractive
 
@@ -62,12 +62,18 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
 
+    mkdir -p -m 700 $NFSROOT/root/.ssh
+    hkey=`cat /etc/ssh/ssh_host_key.pub`
+    hname=`$NFSROOT/usr/bin/host $HOST |  perl -pe 's/\s+A\s+/,/'`
+    echo "$hname  $hkey " > $NFSROOT/root/.ssh/known_hosts
+    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+    [ -d $loguserhome/.ssh ] && cp -p $loguserhome/.ssh/identity* $NFSROOT/root/.ssh/
+
+    [ -f $NFSROOT/var/lib/dpkg/info/ssh.list ] || return
+
     # enable root login
     perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
     if [ -f "$SSH_IDENTITY" ]; then
-	mkdir -p -m 700 $NFSROOT/root/.ssh
-	loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
-	cp -p $loguserhome/.ssh/identity $NFSROOT/root/.ssh/identity
 	cp -p $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
 	echo You can log into install clients without password using $SSH_IDENTITY
     fi
@@ -84,14 +90,6 @@ copy_fai_files() {
     cp -p /usr/lib/perl5/Debian/Fai.pm $NFSROOT/usr/lib/perl5/Debian/
     cp -p /etc/fai.conf $NFSROOT/etc
     cp -p /tmp/base?_?.tgz $NFSROOT/var/tmp
-    cat > $conffile <<-EOF
-	# rcS_fai.conf -- created by make-fai-nfsroot
-	LOGUSER=$LOGUSER
-	KERNELVERSION=$KERNELVERSION
-	FAI_PACKAGEDIR=$FAI_PACKAGEDIR
-	MNTPOINT=$MNTPOINT
-	UTC=$UTC
-EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
@@ -142,8 +140,7 @@ create_nfsroot() {
     echo "*.* /tmp/syslog.log" >$NFSROOT/etc/syslog.conf
     echo ". /usr/share/fai/subroutines" >> $NFSROOT/root/.profile
 
-    # if package ssh is installed
-    [ -f /var/lib/dpkg/info/ssh.list ] && setup_ssh
+    setup_ssh
     umount $NFSROOT/dev/pts 2>/dev/null || true
 
     cat >$NFSROOT/etc/rc2.d/S01fai_abort <<-EOF
