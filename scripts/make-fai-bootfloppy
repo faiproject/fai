@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.7, february 2001"
+version="version 1.7.1, apr 2002"
 set -e
 MKIMAGE=0
 floppydev=/dev/fd0
@@ -36,7 +36,7 @@ trap "umount_dirs" EXIT
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
     cd /
-    umount /floppy
+    umount /floppy || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -136,8 +136,6 @@ if [ -n "${TARGETHOST}" ] ; then
     TARGETIP=`host -t a ${TARGETHOST} 2> /dev/null | awk '{print $3}'`
     params="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off $params" 
 fi
-
-unset SERVERINTERFACE ndevices devices dev BROADCAST NETMASK GATEWAY TARGETIP
 
 if [ $MKIMAGE -eq 1 ]; then 
     dd if=/dev/zero of=$floppydev bs=1024 count=1440
