@@ -8,10 +8,10 @@
 
 <!entity faikernelver "1.5.3">
 <!entity faiver "2.5">
-<!entity faiverdate "XXXX 2003">
+<!entity faiverdate "6 aug 2003">
 
 <!entity version "2.3">
-<!entity date    "30 july 2003">
+<!entity date    "6 aug 2003">
 ]>
 
 <debiandoc>
@@ -151,7 +151,7 @@ First, some terms used in this manual are described.
 	  <tag>install client : <item> A host which will be installed using
 	  FAI and a configuration from the install server. Also called
 	  client for short. In this manual, the example hosts are
-	  called <tt>bigfoot, ant01, ant02, nucleus, atom01, atom02,...</tt></p> </item>
+	  called <tt>demohost, bigfoot, ant01, ant02, nucleus, atom01, atom02,...</tt></p> </item>
 	  <tag> configuration : <item> The details of how the installation
 	  of the clients should be performed. This includes information about:
 <list>
@@ -226,7 +226,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Easily add your own functions via hooks</p> </item>
 	    <item> <p>Easily change the default behavior via hooks</p> </item>
 	    <item> <p>Lilo and grub support</p> </item>
-	    <item> <p>ReiserFS and ext3 support</p> </item>
+	    <item> <p>ReiserFS, ext3 and XFS filesystem support</p> </item>
 	    <item> <p>Automatic hardware detection</p> </item>
 	    <item> <p>Booting and installing from CD-ROM is in progress</p> </item>
 </list>
@@ -276,7 +276,7 @@ which is recognized by the install kernel.
 <sect id="debian-mirror">How to create a local Debian mirror<p> 
 
 The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
- <p><file>/usr/share/fai/utils/</file>.</p> </footnote> can be used
+ <p><file>/usr/share/doc/fai/examples/utils/</file>.</p> </footnote> can be used
  for creating your own local Debian mirror. This script uses the
  script <prgn>debmirror</prgn><footnote> Available as a Debian package
  or at the FAI homepage.</footnote> and <manref name="rsync"
@@ -287,7 +287,7 @@ The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
  script call <tt>mkdebmirror --debug</tt>. You need not to create and maintain
  the Debian mirror with the root account.
 
-To use HTTP access to the local Debian mirror, install the webserver
+To use HTTP access to the local Debian mirror, install the web server
 software and create a symlink to the local directory where you mirror
 is located:
 
@@ -310,7 +310,7 @@ Reading Package Lists... Done
 Building Dependency Tree... Done
 The following NEW packages will be installed:
   fai fai-kernels 
-0 packages upgraded, 2 newly installed, 0 to remove and 1  not upgraded.
+0 packages upgraded, 2 newly installed, 0 to remove and 1 not upgraded.
 Need to get 0B/12.7MB of archives. After unpacking 13.9MB will be used.
 Selecting previously deselected package fai.
 (Reading database ... 48317 files and directories currently installed.)
@@ -326,9 +326,9 @@ Setting up fai-kernels (1.5.3) ...
 If you like to install all recommended packages that are useful for
 fai, use following command
 
-<example>
+<p><tt>
 # apt-get install netboot dhcp3-server tftpd-hpa rsh-server wget grub syslinux
-</example>
+</tt><p>
 
 You can also get the newest version of <package>fai</package> and
 <package>fai-kernels</package> from the download page of fai and
@@ -472,7 +472,7 @@ Out filename: /boot/fai/installimage_3com
 Adding MBA support...
 MBA support has been succesfully added 
 BOOTP environment prepared.
-make-fai-nfsroot finished.
+make-fai-nfsroot finished.                 <= *
 Stopping NFS kernel daemon: mountd nfsd.
 Unexporting directories for NFS kernel daemon...done.
 Exporting directories for NFS kernel daemon...done.
@@ -480,21 +480,24 @@ Starting NFS kernel daemon: nfsd mountd.
 You have no FAI configuration. Copy FAI template files with:
 cp -a /usr/share/doc/fai/examples/simple/* /usr/local/share/fai
 Then change the configuration files to meet your local needs.
-FAI setup finished.
+FAI setup finished.                        <= *
 </example>
 
 <p>
-It's important that you will see the last line. Otherwise something
-went wrong.
+It's important that you will see both lines that are marked with an
+asterisk. Otherwise something went wrong. If you'll get a lot of blank
+lines, it's likely that you are using <tt>konsole</tt>, the X terminal
+emulation for KDE which has a bug. Try again using <tt>xterm</tt>.
+<p>
 The warning messages from dpkg about dependencies problems can be ignored.
 If you have problems running fai-setup, they stem usually from 
 make-fai-nfsroot. You may restart it by calling 'make-fai-nfsroot -r' 
 (recover). Adding '-v' gives you a more verbose output which may help you 
 pinpoint the error. If you want to create a log file you may use
-<example>
-sudo /usr/sbin/make-fai-nfsroot -r -v | tee make-fai-nfsroot.log
-</example>
-It may helpful to enter manually the chroot environment 
+<p><tt>
+sudo /usr/sbin/make-fai-nfsroot -r -v 2>&1 | tee make-fai-nfsroot.log
+</tt><p>
+It may helpful to enter the chroot environment manually
 <example>
 sudo chroot /usr/lib/fai/nfsroot
 </example>
@@ -597,17 +600,17 @@ it has changed, but using the PXE environment is more comfortable.
 When using BOOTP, you have to make a
 symbolic link from the hostname of your client to the appropriate
 kernel image in <file>/boot/fai</file>. You can also use the utility
-<prgn>tlink</prgn> (<file>/usr/share/fai/utils/tlink</file>) to create
+<prgn>tlink</prgn> (<file>/usr/share/doc/fai/examples/utils/tlink</file>) to create
 this link. The file
 <file>installimage_3com</file> is created by <prgn>imggen</prgn> and
-suitable for booting 3Com network cards<footnote> <p>If you have
+is suitable for booting 3Com network cards<footnote> <p>If you have
 problems booting with a 3Com network card and get the error "BOOTP
 record too large" after the kernel is transfered to the computer, try
 the imggen-1.00 program to convert the netboot image to a
 installimage_3com image. I had this problem using netboot 0.8.1-4 and
 Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001 but only on an
 Athlon computer.
-</p></footnote>
+</p></footnote>.
 
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM<p>
 Most modern bootable network cards support the PXE boot environment.
@@ -619,11 +622,12 @@ which is available in the Debian package <package>tftpd-hpa</package>.
 First install following additional needed packages:
 
 <example>
-# apt-get install dhcp3-server syslinux tftp-hpa
+# apt-get install dhcp3-server syslinux tftpd-hpa
 </example>
 
 Then set up the DHCP daemon. A sample configuration files can be
-found in <file>/usr/share/doc/fai/examples/etc/dhcpd.conf</file>.
+found in <file>/usr/share/doc/fai/examples/etc/dhcpd.conf</file>. Copy
+this file to <file>/etc/dhcp3/dhcpd.conf</file>.
 Then enable the special tftp daemon
 using this line in file <file>/etc/inetd.conf</file>: 
 <example>
@@ -638,8 +642,8 @@ by mknbi-linux) which is copied to
 <file>/boot/fai/vmlinuz-install</file>.
 
 Using the command <manref name="fai-chboot" section="8"> you can
-select which kernel will be loaded by the PXE linux loader. For more
-information about this read the manual pages which also give some examples.
+select which kernel will be loaded by the PXE linux loader. You should
+read the manual pages, which also gives you some good examples.
 
 <sect id="bootfloppy">Creating a boot floppy
 <p>
@@ -653,8 +657,9 @@ booted from floppy <httpsite>http://rom-o-matic.net/</httpsite>. In
 depth documentation about booting via ethernet may be found at
 <httpsite>http://etherboot.sourceforge.net</httpsite>.
 
-The seconde is to via floppy disk that is created with the command <manref
-name="make-fai-bootfloppy" section="8">. Since there's no client specific
+The second option is to boot via floppy disk that is created with the
+command <manref name="make-fai-bootfloppy" section="8">. Since there's
+no client specific 
 information on this floppy, it's suitable for all your install
 clients. You can also specify additional kernel parameters for this
 boot floppy or set other variables, if desired. Do not enable BOOTP
@@ -663,8 +668,10 @@ versa. This could lead to missing information. There's also a manual
 page for <manref name="make-fai-bootfloppy" section="8">. If you have
 no BOOTP or DHCP server, supply the network configuration as kernel
 parameters. The format is:
-<example>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
-</example>For additional information see
+<p>
+<tt>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
+</tt><p>
+For additional information see
 <file>/usr/src/linux/Documentation/nfsroot.txt</file> in the kernel
 sources.
 
@@ -714,6 +721,8 @@ vendor) and the hostname in the front of each chassis.
 
 <sect id=bootptab>Configuration of the BOOTP daemon<p>
 
+You should only use this method if you can't use a DHCP server, since
+it's easier to create and manage the configuration for DHCP.
 An example configuration for the BOOTP daemon can be found in
 <file>/usr/share/doc/fai/examples/etc/bootptab</file>.
 
@@ -819,16 +828,18 @@ and look at all options used therein. If you make any changes
 to this configuration, you must restart the daemon.
 <example># /etc/init.d/dhcp3-server restart</example>
 Therefore it's recommended to only supply data into this configuration
-file, which doesn't change frequently. The command <manref
-name="fai-chboot" section="8"> is used for creating a per host
+file, which doesn't change frequently. By default, the DHCP daemon
+write its log files to <file>/var/log/daemon.log</file>.
+The command <manref name="fai-chboot" section="8"> is used for creating a per host
 configuration for the pxelinux environment.
+
 
 <sect id="bootmesg">Boot messages <p>
 
 These are the messages when booting from floppy disk.
 <example>
 GRUB loading stage2..............
-&lt now the grub menu is displayed &gt;
+&lt now the grub menu with multiple boot options is displayed &gt;
 BOOTING 'FAI-BOTH'
 kernel (fd0)/vmlinuz-2.4.20 root=/dev/nfs ip=both
   [Linux-bzImage, setup=0x1400, size=0xd8450]
@@ -1095,7 +1106,7 @@ filesystems. If you need a filesystem with read-write access use the
 If the install client boots with action <em>sysinfo</em>, you can also
 check if all information from the BOOTP or DHCP daemons are received
 correctly. The received information is written to
-<file>/tmp/fai/boot.log</file>. An example of the result of a BOOTP
+<file>/tmp/fai/boot.log</file>. An example of the result of a DHCP
 request can be found in <ref id="s1">.
 
 
@@ -1169,7 +1180,9 @@ the secure shell daemon for remote access is started on demand.
 <sect id=iclass>Defining classes, variables and loading kernel modules<p>
 
 Now the script <manref name="fai-class" section="1"> is used to define
-classes. Therefore several scripts in <file>/fai/class/</file> are executed to define classes. All scripts matching <tt>[0-9]*</tt>
+classes. Therefore several scripts in <file>/fai/class/</file> are
+executed to define classes. All scripts matching <tt>[0-9]*</tt>
+(they start with a digit)
 are executed in alphabetical order. Scripts ending in <tt>.source</tt>
 are sourced, so they can define new classes by adding these classes to
 the variable <var>newclasses</var> (see <file>06hwdetect.source</file> for an
@@ -1268,26 +1281,25 @@ You can use other methods to save logs to the remote server. The currently
 selected method is defined by the <var>$FAI_LOGPROTO</var> variable in 
 file &fc;:
 <taglist>
-        <tag>ftp</tag><item><p>
-                This option saves logs to the remote FTP server defined
-                by the <var>$LOGSERVER</var> variable (<var>$SERVER</var> value
-                is used if not set). Connection to the FTP server is done as user 
-                <var>$LOGUSER</var> using password <var>$LOGPASSWD</var>.
-                FTP server log directory is defined in 
-                <var>$LOGREMOTEDIR</var>. These variables are also defined 
-                in file &fc;. You need write access for the <var>$LOGREMOTEDIR</var> on 
-                the FTP server.</p><p>
-                Summary: all files in the <tt>/tmp/fai</tt> directory are 
-                copied to the FTP server following this example:
-                <tt>ftp://<var>$LOGUSER</var>:<var>$LOGPASSWD</var>@<var>$LOGSERVER</var>/<var>$LOGREMOTEDIR</var>/</tt>.
-                </p>
-        </item>
-        <!--
-        TODO:
-        <tag>smtp</tag> <item><p>Send logs via e-mail.</p></item>
-        <tag>none</tag> <item><p>Don't save logs to remote server.</p></item>
-        -->
+ <tag>ftp</tag><item><p>
 
+  This option saves logs to the remote FTP server defined by the
+  <var>$LOGSERVER</var> variable (<var>$SERVER</var> value is used if
+  not set). Connection to the FTP server is done as user
+  <var>$LOGUSER</var> using password <var>$LOGPASSWD</var>.  The FTP
+  server log directory is defined in <var>$LOGREMOTEDIR</var>. These
+  variables are also defined in file &fc;. You need write access for
+  the <var>$LOGREMOTEDIR</var> on the FTP server.</p>
+
+  <p> All files in the directory <tt>/tmp/fai</tt> are copied to the
+  FTP server following this example:
+  <tt>ftp://<var>$LOGUSER</var>:<var>$LOGPASSWD</var>@<var>$LOGSERVER</var>/<var>$LOGREMOTEDIR</var>/</tt>.</p>
+  </item>
+ <!--
+ TODO:
+ <tag>smtp</tag> <item><p>Send logs via e-mail.</p></item>
+ <tag>none</tag> <item><p>Don't save logs to remote server.</p></item>
+ -->
 </taglist>
 </p>
 
@@ -1310,44 +1322,43 @@ a few minutes.
 
 <list>
    <item><p>install fai and all recommended packages (see
-<ref id="faisetup"> on your install server</p></item>
+<ref id="faisetup"> on your install server)</p></item>
 
 <item><p>
 Install the simple examples into the configuration space:
-<tt>cp -a /usr/share/doc/fai/examples/simple/* /usr/local/share/fai/</tt>
+<p><tt>cp -a /usr/share/doc/fai/examples/simple/* /usr/local/share/fai/</tt>
 </p></item>
 
-<item><p>get MAC address of your test host</p></item>
- <item><p>add host information to <file>/etc/hosts</file> and <file>dhcpd.conf</file> using the hostname
- <tt>demohost</tt></p></item>
+<item><p>get the MAC address of your demo host</p></item>
+  <item><p>add your host (try to name it <tt>demohost</tt>)
+  to <file>/etc/hosts</file> and <file>dhcpd.conf</file></p></item>
  <item><p>if your demohost has no IDE disk copy
 <file>disk_config</file> to a file called <tt>demohost</tt> and adjust it</p></item>
-<item><p>create a XF86Config-4 file and copy this
+<item><p>create a XF86Config-4 file and save it
  to <file>/usr/share/fai/files/etc/XF86Config-4/demohost</file></p></item>
-<item><p>Boot your demo host and enyoy the installation</p></item>
+<item><p>Boot your demo host and enjoy the installation</p></item>
 <item><p>If the installation has finished successfully, the computer should boot a
 GNOME desktop. You can login as user <tt>demo</tt> with password <tt>fai</tt>.</p></item>
 
 </list>
 But now don't forget to read the next chapter <ref id="plan">!
 
-<chapt id=plan>How to plan your installation<p>
-<em>Plan your installation, and FAI installs your plans.</em>
+<chapt id=plan>Plan your installation, and FAI installs your plans<p>
 <p>
 Before starting your installation, you should spend much time in
 planning your installation. When you're happy with your installation
 concept, FAI can do all the boring, repetitive tasks to turn your plans
 into practice. FAI can't do good installations if your concept is
 imperfect or lacks some important details. Start planning the
-installations by answering the following
+installation by answering the following
 questions:
 
 <taglist>
   <tag></tag> <item> <p>Will I create a Beowulf cluster, or do I
-  have multiple workstations, each only used by a single user?</p> </item>
+  have to install some desktop machines?</p> </item>
   <tag></tag> <item> <p>How does my LAN topology looks like?</p> </item>
-  <tag></tag> <item> <p>Do I have uniform hardware?</p> </item>
-  <tag></tag> <item> <p>Will the hardware stay uniform in the future?</p> </item>
+  <tag></tag> <item> <p>Do I have uniform hardware?
+  Will the hardware stay uniform in the future?</p> </item>
   <tag></tag> <item> <p>Does the hardware need a special kernel?</p> </item>
   <tag></tag> <item> <p>How should the hosts be named?</p> </item>
   <tag></tag> <item> <p>How should the local hard disks be partitioned?</p> </item>
@@ -1359,7 +1370,7 @@ questions:
   <tag></tag> <item> <p>Which remote filesystems should be mounted?</p> </item>
   <tag></tag> <item> <p>How should backups be performed?</p> </item>
   <tag></tag> <item> <p>Do you have sufficient power supply?</p> </item>
-  <tag></tag> <item> <p>How much heat do the nodes produce and how are
+  <tag></tag> <item> <p>How much heat do the cluster nodes produce and how are
   they cooled?</p> </item>
 </taglist>
 
@@ -1426,7 +1437,8 @@ several files:
 </taglist>
 
 The main installation script <prgn>rcS_fai</prgn> uses all these
-subdirectories in the order listed except for hooks. The FAI package contains examples
+subdirectories in the order listed except for hooks. The FAI package
+contains examples 
 for all these configuration scripts and files in
 <file>/usr/share/doc/fai/examples</file>. Copy the configuration examples
 to the configuration space and start an installation. These files need
@@ -1438,13 +1450,12 @@ then edit the configuration with a normal user account.
 # chown -R fai /usr/local/share/fai
 </example>
 
-These files contain configuration for some example hosts. Examples
+These files contain simple configuration for some example hosts. Examples
 are: a demonstration host (called demohost) with the GNOME desktop, a
 cluster of workstations (<em>bigfoot, ant01, ant02,...</em>) and a
 Beowulf cluster with a master node called <em>nucleus</em> and
-computing nodes called <em>atom01, atom02,...</em> and our desktop
-machines <em>kueppers, dom</em> and our notebooks <em>pittermaennche,
-paeffgen</em>.
+computing nodes called <em>atom01, atom02,...</em>.
+
 
 <taglist>  
    <tag>demohost</tag>  <item> <p>A machine with a small IDE hard disk
@@ -1470,12 +1481,6 @@ paeffgen</em>.
    to a netgroup of hosts. All scratch partitions are mounted on all
    Beowulf clients via the automounter.</p> </item>
 
-   <tag>dom</tag> <item> <p>It's a desktop machine, which mounts
-   <file>/home</file> from a server and synchronizes the
-   <file>/usr/local</file> partition via <manref name="rsync"
-   section="1"> from the server. If it belongs to the class
-   <tt>USR_LOCAL_MOUNT</tt> it will mount this directory from the
-   server.</p> </item>
 </taglist>
 Start looking at these examples and study them. Then change or add
 things to these examples. But don't forget to plan your own
@@ -1695,7 +1700,7 @@ known:
  change the boot image or boot device automatically or your assembly robot
  can remove the boot floppy via remote control :-)
  Currently this should only be used when
- booting from network card and using <var>$TFTPLINK</var>.</p> </item>
+ booting from network card.</p> </item>
 </taglist>
 
 
@@ -1788,33 +1793,21 @@ The list of all defined classes is stored in the variable
 <var>$classes</var> and saved to
 <file>/tmp/fai/FAI_CLASSES</file>. The list of all classes is
 transfered to <prgn>cfengine</prgn>, so it can use them too. The
-script <file>01alias</file> (see below) is used to define classes for
-several groups of hosts. First this script defines the class with the
-name of the hardware architecture in uppercase letters.  All hosts
-with the prefix <var>ant</var> use all classes in the file
-<file>anthill</file>. Hosts which have an IP address in subnet
-134.95.9.0 also belong to the class <tt>NET_9</tt>, hosts in ther
-class B subnet 134.95 use all classes of the file
-<file>koeln</file>. All Beowulf nodes with prefix <var>atom</var>
-except <var>atom00</var> (master server) will belong to the classes
-listed in file <file>atoms</file>. Some notebooks get also some
-special classes.
-
+script <file>01alias</file> (below is a stripped version) is used to
+define classes for several groups of hosts. First this script defines
+the class with the name of the hardware architecture in uppercase
+letters. Hosts which have an IP address in subnet 134.95.9.0 also
+belong to the class <tt>NET_9</tt>, hosts in ther class B subnet
+134.95 use all classes of the file <file>koeln</file>. All Beowulf
+nodes with prefix <var>atom</var> except <var>atom00</var> (master
+server) will belong to the classes listed in file <file>atoms</file>.
+This is an example how easy you can group hosts which should belong to
+the same set of classes.
 <example>
 # cat 01alias
 
 uname -s | tr /a-z/ /A-Z/
 [ -x "`which dpkg`" ] && dpkg --print-installation-architecture | tr /a-z/ /A-Z/
-
-# all hosts named ant?? are using the classes in file anthill
-case $HOSTNAME in
-    ant??) cat anthill ;;
-esac
-
-# all hosts named nuerburg? are becoming web kiosk systems
-case $HOSTNAME in
-    nuerburg?) cat wwwkiosk ;;
-esac
 
 # the Beowulf cluster; all nodes except the master node
 # use classes from file class/atoms
@@ -1829,18 +1822,6 @@ case $IPADDR in
     134.95.9.2??) ;;
     134.95.*.*) cat koeln ; echo "CS_KOELN NET_9" ;;
     134.95.9.*) echo "CS_KOELN NET_9" ;;
-esac
-
-# our notebooks
-case $HOSTNAME in
-    paeffgen|schlaeffli)
-        cat notebook
-        echo "BOOTWINDOWS"
-        ;;
-    pittermaennche)
-        cat notebook
-        echo "BOOTP_SERVER"
-        ;;
 esac
 </example>
 
@@ -1866,10 +1847,12 @@ additional classes. For example, if a partition
 defined, which forces the install client to export
 this directory via NFS and to install the NFS server packages.
 <p>
+The script <tt>06hwdetect.source</tt> uses the default Debian commands
+to detect SCSI hardware and to load the required kernel drivers. If
+some specific hardware is found, it can also define a new class for it.
 The script <prgn>11modules.source</prgn> does not define any class, but
-is responsible for loading kernel modules. Kernel modules are
-important for detecting hardware. This
-scripts should contain all commands for loading kernel modules:
+is responsible for loading additional kernel modules. This
+script should contain a list of required kernel modules:
 
 <example>
 11modules.source:
@@ -1900,7 +1883,9 @@ for your installation:
 
 <taglist>
    <tag>FAI_ACTION</tag> <item> <p>Set the action fai should
-   perform. Currently this is done in the script <file>LAST.var</file>.
+   perform. Normally this is done by <manref name="fai-chboot"
+  section="8">. If you can't use this command and are not using a
+   BOOTP server, define it in the script <file>LAST.var</file>.
 
    <tag>FAI_CONSOLEFONT</tag> <item> <p>Is the font which is loaded during
    installation by <manref name="consolechars" section="8">.</p> </item>
@@ -1909,23 +1894,6 @@ for your installation:
    <file>/usr/share/keymaps</file> and <file>$FAI/files</file>. You
    need not specify the complete path, since this file will be located
    automatically.</p> </item>
-
-   <tag>kernelimage</tag> <item> <p>The kernel that is installed to
-   the new system. If a Debian package
-   <file>/fai/files/packages/</file><var>$kernelimage</var> exists,
-   install this kernel package. Otherwise install the package
-   <var>$kernelimage</var> from the Debian mirror. For example, if
-   <tt>kernelimage=kernel-image-&kver;-idepci</tt> this kernel will be
-   installed. 
-
-  <p>The easiest way to install your local kernel package is to put
-   this Debian package in
-   <file>/usr/local/share/fai/files/packages/</file> on the install
-   server. Then add the kernel name to
-   <example>addpackages=kernel-image-&kver;-wwwkiosk</example> without
-   specifining the revision of the Debian package. Now fai will
-   install this kernel using <manref name="apt-get" section="8">.
-   </p></item>
 
    <tag>rootpw</tag> <item> <p>The root password for the new
    system. Additionally, FAI creates an root account with the same
@@ -1950,10 +1918,10 @@ for your installation:
 
    <tag>TFTPLINK</tag> <item> <p>Link to the TFTP kernel image which boots
    using the root file system from the local disk. Only used when
-   using a BOOTP server. </p> </item>
+   using a BOOTP server for booting. </p> </item>
 
    <tag>hserver, bserver</tag> <item> <p>The names of the NFS servers for
-   <file>/home</file> and <file>/usr</file>.</p> </item> 
+   <file>/home</file> and <file>/usr</file> or <file>/usr/local</file>.</p> </item> 
 
    <tag>printers</tag> <item> <p>List of printers, for which a spool
    directory is created. The config scripts does not set up
@@ -1961,7 +1929,8 @@ for your installation:
 
    <tag>addpackages</tag> <item> <p>The list of additional packages
    which are installed on the new system if they are available in
-   <file>/fai/files/packages</file>. You can create a simple
+   <file>/fai/files/packages</file>. It should also contain the name
+   of the kernel package that should be installed. You can create a simple
    repository by using following commands on the install server:
 
 <example>
@@ -1969,13 +1938,14 @@ for your installation:
 # dpkg-scanpackages packages /dev/null | gzip -9 > packages/Packages.gz
 </example>
 
-Additionally, you can also create a Release file in this
+If you will not use this feature (why not ?) create an empty file
+<file>Packages.gz</file> to suppress some warning
+messages. Additionally, you can also create a Release file in this
 directory. Then <var>addpackages</var> can be the list of packages
 without a version number.  For more information, refer to the
 repository HOWTO
 <footnote>http://www.isotton.com/debian/docs/repository-howto/</footnote>.
-This can be used to install local site specific
-packages.
+This can be used to install local site specific packages.
 </taglist>
 
 
@@ -2051,7 +2021,7 @@ lines are the output of the command <tt>dpkg --get-selections</tt>.
 Multiple lines with lists of space separated names of packages follows
 the commands install and remove. All dependencies are resolved and <prgn>apt-get</prgn>
 is used to perform the installation or removal of packages. The order of the
-packages is of no matter. 
+packages is of no matter.
 <p>
 A line which contains the <tt>PRELOADRM</tt> commands, downloads a
 file using <manref name="wget" section="1"> into a directory before
@@ -2074,7 +2044,7 @@ in the file DEFAULT. See this file for some examples.
 If you specify a package that does not exists this package will be
 removed from the installation list. You can also test all software package
 configuration files with the utility <prgn>chkdebnames</prgn>, which
-is available in <file>/usr/share/fai/utils/</file>.
+is available in <file>/usr/share/doc/fai/examples/utils/</file>.
 <example>
 > chkdebnames stable /usr/local/share/fai/package_config/*
 </example>
@@ -2130,8 +2100,15 @@ Changing the boot sequence is normally done in the BIOS setup. But
 you can't change the BIOS from a running Linux system as far as I
 know. If you know how to perform this, please send me an email. But there's
 another way of swapping the boot device of a running Linux system.
+<p>
+So, normally the boot sequence of the BIOS will remain unchanged and
+your computer should always boot from its network card. Then it will
+get different kernel images from the install server, either to perform
+an installation, or to start the local installed OS. When using DHCP,
+this is done usinge <manref name="fai-chboot" section="8">.
 
 <p>
+If you can't use this described boot method you may try another one.
 Change the boot sequence in the BIOS, so the first boot device is the
 local disk where the master boot record is located. The second boot
 device should be set to LAN or floppy disk, depending from which media
@@ -2176,11 +2153,11 @@ enable the boot sector before you want to partition the disk.
 
 If booting from a FAI floppy disk, another solution can be used to skip a
 re-installation if the BIOS is configured to boot from the floppy disk
-first and you are not here to remove the floppy disk : use
+first and you are not here to remove the floppy disk:
 <example>
 # lilo -R ...
 </example>
-to instruct the FAI floppy to boot from the hard disk only once (see
+will instruct the FAI floppy to boot from the hard disk only once (see
 <manref name="lilo" section="8">). Thus after this first reboot, the FAI
 floppy disk can be used for another FAI installation.
 
@@ -2266,23 +2243,27 @@ in <file>/fai/class</file>. </p></item>
 
 <item> <p>Install a diskless client and skip local disk
 partitioning. See <file>hooks/partition.DISKLESS</file>.</p></item>
+
+<item> <p>Partition the hard disk on an IA64 system, which needs a
+special partition table type that must be created with <manref
+name="parted" section="8">. See <file>hooks/partition.IA64</file>.</p></item>
 </list>
 
 <sect id=errors>Looking for errors<p>
 If the client can't successfully boot from the network card, use
 <manref name="tcpdump" section="8"> to look for Ethernet packets
 between the install server and the client. Search also for entries in
-several log files made by <manref name="in.tftpd" section="8"> and
-<manref name="bootpd" section="8">:
+several log files made by <manref name="in.tftpd" section="8">,
+<manref name="dhcpd3" section="8"> or <manref name="bootpd" section="8">:
 
-<example>egrep "tftpd|bootpd" /var/log/*</example>
-
+<example>egrep "tftpd|bootpd|dhcpd" /var/log/*</example>
 
 If the installation process finishes, the hook
 <file>faiend.LAST</file> searches all log files for common errors and
 write them to the file <file>error.log</file>. So, you should first
-look into this file for errors. To be sure, you should look for errors
-in all log files.<p>
+look into this file for errors. Also the file <file>status.log</file>
+give you the exit code of the last command executed in a scipt. To be
+sure, you should look for errors in all log files.<p>
 
 Sometimes the installation seems to stop, but there's only a
 postinstall script of a software package that requires manual input
@@ -2307,21 +2288,19 @@ concept look at <httpsite>http://www.beowulf.org</httpsite>.
 The example of a Beowulf cluster consists of one master node and 25
 clients. A big rack was assembled which all the cases were put into. A
 keyboard and a monitor, which are connected to the master server
-most of the time,
-were also put into the rack. But since we have very long
-cables for monitor and keyboard, they can also be connected to all
+most of the time, were also put into the rack. But since we have very long
+cables for a monitor and a keyboard, they can also be connected to all
 nodes if something has to be changed in the BIOS, or when looking for
 errors when a node does not boot. Power supply is another topic you
 have to think about. Don't connect many nodes to one power cord and
 one outlet. Distribute them among several breakout boxes and outlets.
 And what about the heat emission? A dozen nodes in a small room can
 create too much heat, so you will need an air conditioner. Will the
-power supplies of each node go to stand by mode or are all nodes
+power supplies of each node go to stand-by mode or are all nodes
 turned on simultaneously after a power failure?
 
 <p>
-
-All computers are connected to a Fast Ethernet switch. The master node
+All computers in this example are connected to a Fast Ethernet switch. The master node
 (or master server) is called <em>nucleus</em>. It has two network
 cards. One for the connection to the external Internet, one for the
 connection to the internal cluster network. If connected from the
@@ -2339,7 +2318,7 @@ All client nodes <em>atom01</em> to <em>atom25</em> are connected via
 the switch with the second interface card of the master node. They can
 only connect to the other nodes or the master, but can't communicate
 to any host outside their cluster network. So, all services (NTP, DNS,
-NIS, ...) must be available on the master server. I choose the class C
+NIS, NFS, ...) must be available on the master server. I choose the class C
 network address <em>192.168.42.0</em> for building the local Beowulf
 cluster network. You can replace the subnet 42 with any other number
 you like. If you have more that 253 computing nodes, choose a class A
@@ -2349,17 +2328,16 @@ network address (10.X.X.X).
 In the phase of preparing the installation, you have to boot the first
 install client many time, until there's no fault in your configuration
 scripts. Therefore you should have physical access to the master
-server and one client node. If you have little space, connect both
-computers to a switch box, so one keyboard and monitor can be shared
-among both.
+server and one client node. So, connect both computers to a switch
+box, so one keyboard and monitor can be shared among both.
 
 <sect id=master> Set up the master server<p>
 
-The master server will be installed by hand if it is your
-first computer installed with Debian. If you already have a Debian
-host running, you can also install it via FAI. Create a partition on
-<file>/files/scratch</file> for the local Debian mirror with more that
-&mirrorsize GB space available.
+The master server will be installed by hand if it is your first
+computer installed with Debian. If you already have a host running
+Debian, you can also install the master server via FAI. Create a
+partition on <file>/files/scratch/debmirror</file> for the local
+Debian mirror with more that &mirrorsize GB space available.
 
 <sect1 id=beonetworkmaster> Set up the network<p>
 
@@ -2377,6 +2355,9 @@ broadcast 192.168.42.255
 Add the IP addresses for the client nodes. The FAI package has an
 example for this <file>/etc/hosts</file> file:
 <example>
+# create these entries with the perl one liner
+# perl -e 'for (1..25) {printf "192.168.42.%s atom%02s\n",$_,$_;}'
+
 # Beowulf nodes
 # atom00 is the master server
 192.168.42.250 atom00
@@ -2399,13 +2380,16 @@ the configuration space and manages the local Debian mirror:
 # addgroup linuxadmin
 </example>
 
-This user should also be in the group <var>linuxadmin</var>. So, add a
-line to <file>/etc/group</file>:
+This user should also be in the group <var>linuxadmin</var>.
 <example>
-linuxadmin:x:101:tom
+# adduser tom linuxadmin
 </example>
 
-To initialize the master server as NIS server call <tt>ypinit -m</tt>.
+First set the NIS domainname name by creating the file
+<file>/etc/defaultdomain</file> and call <manref name="domainname" section="8">.
+To initialize the master server as NIS server call <tt>/usr/lib/yp/ypinit -m</tt>.
+Also edit <file>/etc/default/nis</file> so the host becomes a NIS
+master server.
 Then, copy the file <file>netgroup</file> from the examples directory
 to <file>/etc</file> and edit other files there. Adjust access to the
 NIS service.
@@ -2420,84 +2404,75 @@ NIS service.
 Rebuild the NIS maps:
 <example># cd /var/yp; make</example>
 
+You will find much more information about NIS in the
+<file>NIS-HOWTO</file> document.
+
 <sect1 id=beomirror> Create a local Debian mirror<p>
 
 Now the user <var>tom</var> can create a local Debian mirror on
-<file>/files/scratch/</file> using <prgn>mkdebmirror</prgn>. This will
+<file>/files/scratch/debmirror</file> using
+<prgn>mkdebmirror</prgn>. You can add the option <tt>--debug</tt> to
+see which files are received. This will
 need about &mirrorsize GB disk space for Debian 3.0 (aka woody). Export this
 directory to the netgroup <tt>@faiclients</tt> read only.
+Here's the line for <file>/etc/exports</file>
+<p><tt>/files/scratch/debmirror *(ro)</tt>
 
 <sect1 id=fai1> Install FAI package on the master server<p>
 
 Add the following packages to the install server:
-<example>nucleus:/# apt-get install ntp tftp bootp nfs-kernel-server fai fai-kernels
+<p><tt>nucleus:/# apt-get install ntp tftpd-hpa dhcp3-server nfs-kernel-server etherwake fai fai-kernels
 nucleus:/# tasksel -q -n install dns-server
 nucleus:/# apt-get dselect-upgrade
-</example>
+</tt><p>
 Configure NTP so that the master server will have the correct system time.
 
 <p>
 It's very important to use the internal network name <var>atom00</var>
  for the master sever (not the external name <var>nucleus</var>) in
- <file>/etc/bootptab</file> and &fc;. Replace
- the strings FAISERVER with <tt>atom00</tt> in
- <file>/etc/bootptab</file> and uncomment the following line in &fc;
- so the Beowulf nodes can use the name for connecting their master
- server.
+ <file>/etc/dhcp3/dhcpd.con</file> and &fc;. Replace
+ the strings FAISERVER with <tt>atom00</tt> and uncomment the following line in &fc;
+ so the Beowulf nodes can use the name for connecting their master server.
 <example>
 NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
 </example>
 
-<file>/etc/bootptab:</file>
-<example>
-.
-.
-.failocal:\
-        :tc=.faiglobal:\
-        :sa=atom00:\
-        :ts=atom00:\
-        :T172="verbose createvt sshd":\
-        :sm=255.255.255.0:\
-        :gw=192.168.42.250:\
-        :dn=beowulf.debian.org:\
-        :ds=192.168.42.250:\
-        :ys=atom00:yd=nisnucleus:\
-        :nt=atom00:
-.
-.
-</example>
-
 <sect1 id=bootp1> Prepare network booting<p>
 
-Uncomment the following line in <file>/etc/inetd.conf</file>:
-<example>#bootps dgram udp wait root /usr/sbin/bootpd bootpd -i -t 120
-</example>
-and restart the inetd daemon.
+Set up the install server daemon as described in <ref
+id="pxeboot">. If you will have many cluster nodes (more that about
+10) and you will use <tt>rsh</tt> in &fc; raise the number of connects
+per minute to some services in <file>inetd.conf</file>:
+<p><tt>
+shell  stream  tcp  nowait.300  root  /usr/sbin/tcpd /usr/sbin/in.rshd
+login  stream  tcp  nowait.300  root  /usr/sbin/tcpd /usr/sbin/in.rlogind
+</tt><p>
 
 The user <var>tom</var> should have permission to create the
 symlinks for booting via network card, so change the group and add
 some utilities.
 
 <example># chgrp -R linuxadmin /boot/fai; chmod -R g+rwx /boot/fai
-# cp /usr/share/fai/utils/* /usr/local/bin
+# cp /usr/share/doc/fai/examples/utils/* /usr/local/bin
 </example>
 
-Now, the user <var>tom</var> can create a symlink in
-<file>/boot/fai</file> using 
-<example>> tlink atom_install atom01</example>
-to boot the first client node for the first
+Now, the user <var>tom</var> set the boot image for the first beowulf
+node.
+<example>fai-chboot -IFv atom01</example>
+
+Now boot the first client node for the first
 time. Then start to adjust the configuration for your client
 nodes. Don't forget to build the kernel for the cluster nodes using
 <manref name="make-kpkg" section="8"> and store it in <file>/usr/local/share/fai/files/packages</file>.
 
 <sect id=beotools> Tools for Beowulf clusters<p>
 
-The following tools for a Beowulf cluster are now available in
-<file>/usr/local/bin</file>:
+The following tools are useful for a Beowulf cluster:
 
 <taglist>
 	  <tag> tlink <item> <p>Change the symbolic link that points to
-	  the kernel image for booting from a network card.</p></item>
+	  the kernel image for booting from a network card. Only used
+	  when you boot using BOOTP.</p></item>
 
 	  <tag> all_hosts <item> <p>Print a list of all hosts, print
 	  only the hosts which respond to a ping or the hosts which
@@ -2511,6 +2486,10 @@ The following tools for a Beowulf cluster are now available in
 	hosts up. You can also use the <manref name="dsh" section="1">
 	command (dancer's shell, or distributed shell).
 
+</taglist>
+These are some common tools for a clsuter environment:
+
+<taglist>
   <tag>rgang</tag> <item> <p>For a huge cluster try
   <prgn>rgang</prgn>. It's is a tool which executes commands on or
   distributes files to many nodes. It uses an algorithm to build a
@@ -2547,19 +2526,12 @@ motherboard using a 3 pin cable.</p></item>
 <tt>Vaux (3VSBSLT)</tt> which allows to select the voltage supplied to add-in
 PCI cards. Set it to <tt>Add 3VSB</tt> (3 Volt stand by).</p></item>
 <item><p>Turn on the wake on LAN feature in BIOS</p></item>
-<item><p>For a 2.2 kernel you have to use the following driver: 
-<httpsite>http://www.uow.edu.au/</httpsite><httppath>~andrewm/linux/#3c59x-bc</httppath></p></item>
+<item><p>For a 3Com card using the 3c59x driver you must enable the
+WOL feature using the kernel module option <tt>enable_wol</tt>.
 </enumlist>
 
-There's a little problem to enable the wake on LAN feature with a
-2.2.19 kernel and a 3Com 3C905C network card. You have to use a
-patched 3c59x driver. But I managed to get it to work. Download the file
-<file>poll-ioctl-2.2.18-pre16.c.gz</file> and copy it to kernel
-sources to <file>drivers/net/3c59x.c</file>. Then make a new kernel
-package and install this new kernel.
-
-To wake up a computer use the tool etherwake (in woody) or get the
-single C source file. For more information look at
+To wake up a computer use the command <manref name="ether-wake" section="8">.
+Additional information is available from
 <httpsite>http://www.scyld.com/</httpsite><httppath>expert/wake-on-lan.html</httppath>.
 
 <chapt id=sparc>FAI on SUN SPARC hardware running Linux<p>
@@ -2583,6 +2555,14 @@ and a HOWTO can be found at
 <chapt id=solaris>FAI for Solaris<p>
 FAI is also ported to use with SUN Solaris OS installations. It is
 used in cooperation with Solaris jumpstart.
+Get the FAI sources and change to directory <file>sunos</file>. There
+you can call <tt>make</tt> which creates the tarball
+<file>/tmp/fai-solaris.tar.gz</file>. You have to read the file
+<file>README.sunos</file> and have some knowledge about Solaris
+jumpstart.
+<p>
+The file format of the configuration files in <file>disk_config</file> and
+<file>package_config</file> are different that those for Linux.
 
 <chapt id=hints>Various hints<p>
 
@@ -2592,11 +2572,11 @@ detail.
 When using HTTP access to a Debian mirror, the local <tt>/var</tt>
 partition on all install clients must be big enough to keep the
 downloaded Debian packages. Do not try with less than 250 Mbytes
-unless you know why.
+unless you know why. You can limit the number of packages installed at
+a time with the variable <var>$MAXPACKAGES</var>.
 <p>
 You can shorten some script if you will just use one single fcopy
-command.
-<example>fcopy -r /</example>
+command <tt>fcopy -r /</tt>.
 <p>
 You can merge two directories which contain configuration
 information, if one is a global one, and the other a local one. We use
@@ -2667,7 +2647,7 @@ If you remove a file in you local configuration, do not forget to
 remove this file also in the configuration space, otherwise it will
 still be used.
 <p>
-AFter calling <prgn>set-dis-kinfo</prgn>, a list of all local hard disks is
+AFter calling <prgn>set-disk-info</prgn>, a list of all local hard disks is
 stored to <var>$disklist</var> and <var>$device_size</var>
 contains a list of disk devices and their sizes.
 <p>
@@ -2700,24 +2680,13 @@ test or with class mechanisms for <tt>cfengine</tt> scripts.
 If your computer can't boot from the network card, you do not always need to boot
 from floppy. Define a partition <file>/fai-boot</file> in your
 <file>disk_config</file> configuration file. Then the class
-<tt>FAI_BOOTPART</tt> will automatically be defined and will create a lilo entry for
+<tt>FAI_BOOTPART</tt> will automatically be defined and will create a
+lilo or grub entry for
 booting the FAI bootfloppy from this partition. So you can start the
 re-installation without a boot floppy. This will also make the test
 phase shorter, since booting from hard disk is much  faster than booting
 from floppy.
 <p>
-To use the <file>/file/scratch</file> partitions on all Beowulf nodes,
-use the kernel automounter and the following configuration.
-
-<example>
-nucleus[~]> cat /etc/auto.master
-/scratch /etc/nodes.scratch
-</example>
-
-<example>
-nucleus[~]> cat /etc/nodes.scratch 
-*               -rw,soft,intr           &:/files/scratch
-</example>
 
 <sect id=functions>Useful functions for advanced administrators<p>
 
