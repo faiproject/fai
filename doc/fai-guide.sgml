@@ -75,7 +75,7 @@ following commands. The login password is empty, so only press return.
 </example>
 
 You can also use the web interface for the CVS repository at:
-<httpsite>http://cvs.debian.org/</httpsite><httppath>fai/</httppath>
+<httpsite>cvs.debian.org/</httpsite><httppath>fai/</httppath>
 (and <package>fai-kernels</package>).
 <p>
 Now read this manual, then enjoy the fully automatic installation and
@@ -137,7 +137,7 @@ installation process. Changes to the configuration files of the
 operating system can be made by cfengine, shell, perl and expect scripts.
 
 <p>
-FAI's target group are system administrators how have to install
+FAI's target group are system administrators who have to install
 Debian onto one or even hundreds of computers. Because it's a general
 purpose installation tool, it can be used for installing a Beowulf
 cluster, a rendering farm or a Linux laboratory or a classroom. Also
@@ -1324,13 +1324,13 @@ file &fc;:
 <sect id=ireboot>Reboot the new installed system<p>
 
 At least the system is automatically rebooted if "reboot" was added to
-<var>FAI_FLAGS</var>. This is only useful
-if booting from network card or if you can change the boot device
-using the command <manref name="bootsector" section="8">. Otherwise, you have to
-remove the floppy disk and type return or call <prgn>faireboot</prgn>
-from a remote login. You must change the boot device to boot the new
-installed system otherwise the installation would be performed
-again. Read <ref id="changeboot"> for how to change the boot device.
+<var>FAI_FLAGS</var>. Normally this should boot the new installed
+system from its second boot device, the local hard disk. To skip
+booting from network card, you can use the command <manref
+name="fai-chboot" section="8"> to enable localboot. If using a boot
+floppy you have to remove the floppy from the floppy drive. Otherwise
+the installation would be performed again. Read <ref id="changeboot">
+for how to change the boot device.
 
 <sect id=impatient>For the impatient user<p>
 
@@ -1615,7 +1615,7 @@ definition of FAI's subroutines.
 
       <tag>instsoft</tag> <item><p>Installs the desired software
       packages using class files in
-      <file>/fai/packages_config</file>.</p> </item>
+      <file>/fai/package_config</file>.</p> </item>
 
 	<tag>configure</tag> <item><p>Calls scripts in
       <file>/fai/scripts/</file> and its subdirectories for every
@@ -2120,34 +2120,15 @@ know. If you know how to perform this, please send me an email. But there's
 another way of swapping the boot device of a running Linux system.
 <p>
 So, normally the boot sequence of the BIOS will remain unchanged and
-your computer should always boot from its network card. Then it will
-get different kernel images from the install server, either to perform
-an installation, or to start the local installed OS. When using DHCP,
-this is done usinge <manref name="fai-chboot" section="8">.
-
-<p>
-If you can't use this described boot method you may try another one.
-Change the boot sequence in the BIOS, so the first boot device is the
-local disk where the master boot record is located. The second boot
-device should be set to LAN or floppy disk, depending from which media
-you boot when the installation process is performed.
-<p>
-After the installation is performed, <manref name="lilo" section="8">
-or <manref name="grub" section="8">
-will write a valid boot sector to the local disk. Since it's the first
-boot device, the computer will boot the new installed system. If you
-like to perform an installation again, you have to disable this boot
-sector using the command <manref name="bootsector" section="8"><footnote><p>The
-command <manref name="bootsector" section="8"> is part of the package
-<package>fai</package> and will be installed to
-<file>/usr/local/sbin</file> on the install clients.</p></footnote>
-. For more information use: <example># bootsector -h
-</example>
+your computer should always boot first from its network card and the
+second boot device should be the local disk. Then, it will
+get an install kernel image from the install server, when an
+installation should be performed, or we can tell pxelinux to boot from
+local disk. This is done using <manref name="fai-chboot" section="8">.
 
 
-This is how to set up the a 3Com network card as second boot device,
-even if the BIOS doesn't support this. Enable LAN as first boot device
-in the BIOS.
+This is how to set up the a 3Com network card as first boot device.
+Enable LAN as first boot device in the BIOS.
 
 <example>
 Boot From LAN First: Enabled
@@ -2156,18 +2137,14 @@ Boot Sequence      : C only
 
 Then enter the MBA setup of the 3Com network card and change it as follows:
 <example>
-Default Boot           Local
+Default Boot           Local XXXXX
 Local Boot             Enabled
 Message Timeout        3 Seconds
 Boot Failure Prompt    Wait for timeout
 Boot Failure           Next boot device
 </example>
 
-This will enable the first IDE hard disk as first boot device. If the
-boot sector of the hard disk is disabled, the computer will use the
-network interface as second boot device and boot from it. Maybe the
-disk partitioning tool can't work on such a disk. So you have to
-enable the boot sector before you want to partition the disk.
+This will enable the first IDE hard disk as second boot device. 
 
 If booting from a FAI floppy disk, another solution can be used to skip a
 re-installation if the BIOS is configured to boot from the floppy disk
