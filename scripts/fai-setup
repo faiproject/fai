@@ -64,8 +64,8 @@ add_fai_account() {
     fi
 
     adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
-    gid=`id -ng $LOGUSER`
-    perl -pi.bak -e "s#^$LOGUSER:(.+):/bin/false#$LOGUSER:\1:/bin/bash#" /etc/passwd
+    # there's a bug when the encrypted password is !, so change it to *
+    perl -pi.bak -e "s#^$LOGUSER:.:(.+):/bin/false#$LOGUSER:*:\1:/bin/bash#" /etc/passwd
 
     # get the home dir of a user in a variable; do not exit when set -e is used
     # loguserhome is unset if $LOGUSER does not exists
@@ -76,8 +76,6 @@ add_fai_account() {
 	echo "LOGUSER= $LOGUSER    loguserhome= $loguserhome"
 	exit 8
     fi
-    touch $loguserhome/.account_created_by_fai_package
-    echo "User account $LOGUSER created."
 
     if [ $FAI_REMOTESH = "ssh" -o $FAI_REMOTECP = "scp" ]; then
 	# we must set up ssh on the server
@@ -85,14 +83,19 @@ add_fai_account() {
 	ssh-keygen -N '' -f $loguserhome/.ssh/identity -C "$LOGUSER@$HOST"
     	cat $loguserhome/.ssh/identity.pub >> $loguserhome/.ssh/authorized_keys
 	chmod 0700 $loguserhome/.ssh/authorized_keys
+	chown -R $LOGUSER $loguserhome/.ssh
 	echo "$loguserhome/.ssh/authorized_keys created."
-    else
+    fi
+    if [ $FAI_REMOTESH = "rsh" -o $FAI_REMOTECP = "rcp" ]; then
 	# use .rhosts authentication
 	echo "+@faiclients root" > $loguserhome/.rhosts
-	chown $LOGUSER:$gid $loguserhome/.rhosts
 	chmod go-rwx $loguserhome/.rhosts
 	echo "$loguserhome/.rhosts created."
     fi
+
+    logusergid=`id -ng $LOGUSER`
+    touch $loguserhome/.account_created_by_fai_package
+    echo "User account $LOGUSER created."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -101,6 +104,7 @@ add_fai_account
 echo Creating FAI nfsroot can take a long time and will
 echo need more than 100MB disk space in $NFSROOT.
 make-fai-nfsroot
+chown -R $LOGUSER:$logusergid $loguserhome/
 
 if [ -z "$FAI_CONFIGDIR" ]; then
     echo "FAI_CONFIGDIR not set in /etc/fai.conf."
