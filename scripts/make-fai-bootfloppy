@@ -83,16 +83,31 @@ params=$*
 
 . /etc/fai.conf
 
-SERVERIP=`ifconfig eth0 | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
-
 grep -q ic_bootp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=BOOTP
 grep -q ic_dhcp $NFSROOT/boot/System.map-$KERNELVERSION && TYPE=DHCP
 
 [ "$TYPE" ] || die "Can't determine kernel boot protocol.\nMaybe there's no $NFSROOT/boot/System.map-$KERNELVERSION"
 
+devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: '{print $1}'`
+for dev in $devices; do
+    ndevices=$((ndevices+1))
+done
+if [ $ndevices = 1 ]; then
+    SERVERINTERFACE=$dev
+else
+    while [ -z "$SERVERINTERFACE" ]; do
+	echo "Your machine has multiple network interfaces: $devices"
+	echo -n "Specify which one will be used for FAI (eg. eth1): "
+	read SERVERINTERFACE
+    done
+fi
+SERVERIP=`ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
+echo "Using interface $SERVERINTERFACE with IP address: $SERVERIP"
+unset SERVERINTERFACE ndevices devices dev
+
 mke2fs -q -i 8192 -m 0 /dev/fd0 || exit
 mount /floppy || mount /dev/fd0 /floppy || exit
-cp -dpR $NFSROOT/boot /floppy
+cp -au $NFSROOT/boot /floppy
 mkdir -p /floppy/etc
 ln -s boot/vmlinuz-$KERNELVERSION /floppy/vmlinuz
 
