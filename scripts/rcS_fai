@@ -2,7 +2,7 @@
 # $Id$
 #*********************************************************************
 #
-# rcS_fai -- main FAI installation script executed after booting
+# rcS_fai -- main installation script executed after booting
 #
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 1999-2001 by Thomas Lange, lange@informatik.uni-koeln.de
@@ -36,17 +36,8 @@ dhcplog=/tmp/dhcp.log
 stamp=/tmp/FAI_INSTALLATION_IN_PROGRESS
 globalconf=/fai/fai_config/global.conf
 logdir=/var/log/fai
+romountopt="-o ro,rsize=8192"
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-mount_debian_mirror() {
-
-    # mount debian directory
-    if [ "$FAI_DEBMIRROR" ]; then
-	mkdir -p $FAI_ROOT/$MNTPOINT
-	mount -o ro,rsize=8192 $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT ||
-	    die "Can't mount $FAI_DEBMIRROR"
-    fi
-}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 read_config() {
 
@@ -61,12 +52,14 @@ read_config() {
 	[ "$verbose" ] && echo "Reading $hostconf"
 	. $hostconf
     fi
+    unset hostconf
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_variables() {
 
     # after all classes are defined, define variables
     # source files *.var , which can set variables
+    local class
     cd /fai/class
     for class in $classes ; do
 	if [ -f $class.var ]; then
@@ -126,6 +119,7 @@ fai_init() {
     FAI_FILES=/fai/files
     # local disks are mounted on this directory
     FAI_ROOT=/tmp/target
+    ROOTCMD="chroot $FAI_ROOT"
     diskvar=/tmp/disk_var.sh
     moduleslog=/tmp/modules.log
 
@@ -134,7 +128,6 @@ fai_init() {
     cf_prefix="cfengine:"
     files=$FAI_FILES
     target=$FAI_ROOT
-    ROOTCMD="chroot $FAI_ROOT"
 
     umask 022
     PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/sbin:/usr/local/bin:
@@ -146,18 +139,20 @@ fai_init() {
     mount -n -o remount,rw,rsize=8192 /dev/root /
     cat /proc/kmsg >/dev/tty4 &
     create_ramdisk
-    # after FAI 1.4.2 init process uses much memory
+    # after FAI 1.4.2, the init process uses much cpu time. Why ?
     # init should eat up less CPU time
     renice 19 1
     trap 'echo "You can reboot with faireboot";bash' INT QUIT
     save_dmesg
+
+    # TODO: only start on demand; use FAI_FLAGS for that
     syslogd -m 0 -p /tmp/etc/syslogsocket
     klogd -c1 -f /tmp/kernel.log
 
     dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
     dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
 
-    # this reads nfsroot/fai/fai_config/
+    # Since /fai is not yet mounted, this reads nfsroot/fai/fai_config/
     # only usefull, if you don't use bootpc or dhcp
     read_config
 
@@ -189,19 +184,18 @@ EOF
     eval_cmdline
 
     [ "$FAI_LOCATION" ] || die "\$FAI_LOCATION not defined."
-    mount -o ro,rsize=8192 $FAI_LOCATION /fai &&
+    mount $romountopt $FAI_LOCATION /fai &&
 	    echo "/fai mounted from $FAI_LOCATION"
 
     read_config # read config from mounted $FAI_LOCATION
 
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
-    ststd=$FAI_ROOT/sbin/start-stop-daemon
 
-    local flag
     for flag in $FAI_FLAGS; do
 	[ "$verbose" ] && echo "FAI_FLAGS: $flag=1"
 	eval "$flag=1"
     done
+    unset flag
 
     devnull=/dev/null
     [ "$debug" ] && devnull=/dev/console
@@ -304,8 +298,8 @@ done
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 prepare_apt() {
 
-    # ftp and http needs resolv.conf in chroot environment
-    cp /tmp/etc/resolv.conf $FAI_ROOT/etc
+    # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
+    cp /tmp/etc/resolv.conf /etc/hosts $FAI_ROOT/etc
     cp /etc/apt/* $FAI_ROOT/etc/apt/
     # some packages must access /proc even in chroot environment
     mount -t proc proc $FAI_ROOT/proc
@@ -318,9 +312,9 @@ prepare_apt() {
     $ROOTCMD apt-get -f -y remove pcmcia-cs
     $ROOTCMD apt-get -f -y upgrade </dev/null
     # update dpkg info which packages are available
-    $ROOTCMD apt-cache dumpavail > $target/tmp/dumpavail
+    $ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
     $ROOTCMD dpkg --update-avail /tmp/dumpavail
-    rm -f $target/tmp/dumpavail
+    rm -f $FAI_ROOT/tmp/dumpavail
 
     # fake some programs
     mkdivert /usr/sbin/xserver-configure
@@ -328,7 +322,7 @@ prepare_apt() {
 #    mkdivert /usr/sbin/ypbind
     mkdivert /usr/bin/ypwhich
     mkdivert /sbin/start-stop-daemon
-    cp /sbin/start-stop-daemon $ststd
+    cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_install() {
@@ -349,20 +343,20 @@ fai_install() {
     else
 	setup_harddisks -X > /tmp/format.log 2>&1
     fi
-    if [ -s $diskvar ]; then
-	. $diskvar
-    else
+    if [ ! -s $diskvar ]; then
 	cat /tmp/format.log
 	die "Error: $diskvar not found."
     fi
+    . $diskvar
     [ ! -f /tmp/fstab ] && die "No /tmp/fstab created."
     mount2target $FAI_ROOT
+
     echo "Unpacking Debian base archive."
     cd $FAI_ROOT
     tar zxpf /var/tmp/base?_?.tgz
     # now we can copy fstab
-    [ -f $target/etc/fstab ] && mv $target/etc/fstab $target/etc/fstab.old
-    cp -p /tmp/fstab $target/etc/fstab
+    [ -f $FAI_ROOT/etc/fstab ] && mv $FAI_ROOT/etc/fstab $FAI_ROOT/etc/fstab.old
+    cp -p /tmp/fstab $FAI_ROOT/etc/fstab
 
     mount_debian_mirror
 
@@ -442,7 +436,7 @@ case $FAI_ACTION in
 	echo The defined classes are:
 	echo $classes
 	echo The classes are also saved in /tmp/FAI_CLASSES
-	die Now you have shell.
+	die Now you have a shell.
 	;;
     backup)
 	echo Doing backup of multiple partitions.
