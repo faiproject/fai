@@ -31,7 +31,8 @@
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/bin:/sbin:/usr/bin:/usr/sbin:
 # some variables
 export FAI_VERSION=FAIVERSIONSTRING
-stamp=/var/run/fai/FAI_INSTALLATION_IN_PROGRESS
+rundir=/var/run/fai
+stamp=$rundir/FAI_INSTALLATION_IN_PROGRESS
 romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 fstab=fstab  # Solaris uses vfstab
 
@@ -111,7 +112,8 @@ fai_init() {
 	mkdir -p $LOGDIR
     fi
     [ "$DO_INIT_TASKS" ] || LOGDIR=$(mktemp -t -d fai.XXXXXX)
-    
+    ln -s $LOGDIR $rundir/current_log
+
     # several log files
     diskvar=$LOGDIR/disk_var.sh
     moduleslog=$LOGDIR/modules.log
@@ -190,9 +192,9 @@ fstart() {
     task confdir
     task setup
     task defclass
+    set_disk_info
     task defvar
     [ "$DO_INIT_TASKS" ] && load_keymap_consolechars
-    set_disk_info
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
@@ -253,5 +255,12 @@ sleep 1 # wait for tee to complete. One second should be ok
 [ "$1" ] && FAI_ACTION=$1
 
 task action 2>&1 | tee -a $rcslog
+
+# not quiet happy with it
+[ "$FAI_CVSROOT" ] && rm -rf $FAI
+rm -rf $LOGDIR
+
+[ -L "$rundir/current_log" ] && rm -f "$rundir/current_log"
+[ -L "$rundir/current_config" ] && rm -f "$rundir/current_config"
 
 echo "End of $0"
