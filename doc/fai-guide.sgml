@@ -615,10 +615,15 @@ support when you have a DHCP server running in your network and vice
 versa. This could lead to missing information. There's also a manual
 page for <manref name="make-fai-bootfloppy" section="8">. If you have
 no BOOTP or DHCP server, supply the network configuration as kernel
-parameters. The format is:
+parameters. The format is
 <p>
 <tt>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
-</tt><p>
+</tt>
+for setting up the network and
+<tt>nfsroot=[&lt;server-ip&gt;:]&lt;root-dir&gt;[,&lt;nfs-options&gt;]</tt>
+for specifying the nfsroot (which is required as the default path is not
+suitable for FAI.)
+<p>
 For additional information see
 <file>/usr/src/linux/Documentation/nfsroot.txt</file> in the kernel
 sources.
@@ -770,8 +775,15 @@ enabled in <file>inetd.conf</file>:
 An example for <manref name="dhcp.conf" section="5"> is available in
 <file>/usr/share/doc/fai/examples/etc</file>, which is working with
 version 3.x of the DHCP daemon. Start using this example
-and look at all options used therein. If you make any changes
-to this configuration, you must restart the daemon.
+and look at all options used therein. 
+
+One issue to bear in mind when configuring your DHCP daemon is that the
+daemon needs to supply the nfsroot path to the client because
+the kernel uses a path different from 
+<file>/usr/lib/fai/nfsroot</file> by default.
+
+If you make any changes
+to the DHCP daemon configuration, you must restart the daemon.
 <example># /etc/init.d/dhcp3-server restart</example>
 Therefore it's recommended to only supply data into this configuration
 file, which doesn't change frequently. By default, the DHCP daemon
