@@ -5,6 +5,7 @@
 # do not force fsck on ext3 filesystems
 partitions=`mount|grep $target |grep "type ext3"|perl -ane 'print "$F[0] "'`
 for part in $partitions; do
+    echo "Tuning file system parameters for $part"
     tune2fs -c 0 -i 0 $part
 done
 
@@ -39,7 +40,7 @@ echo $HOSTNAME     > $target/etc/hostname
 echo $time_zone    > $target/etc/timezone
 ln -fs /usr/share/zoneinfo/${time_zone} $target/etc/localtime
 
-fcopy /etc/hosts /etc/motd
+fcopy -M /etc/hosts /etc/motd
 
 # make /root accessable only by root
 chmod 0700 $target/root
@@ -51,7 +52,7 @@ fcopy -r /root
 dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
 
 # create NIS/NONIS config
-fcopy /etc/nsswitch.conf /etc/host.conf
+fcopy -M /etc/nsswitch.conf /etc/host.conf
 ifclass NONIS && rm -f $target/etc/defaultdomain
 if ifclass NIS; then
     echo $YPDOMAIN > $target/etc/defaultdomain
@@ -79,7 +80,7 @@ chmod a+rw $target/dev/fd*
 # cdrom's are read only for all
 chmod a+r $target/dev/sr* 
 
-fcopy /etc/X11/XF86Config-4
+fcopy -M /etc/X11/XF86Config-4
 
 # put CD-ROM into fstab and exports
 # if cdromdevice is defined in *.var, use that value
@@ -113,13 +114,13 @@ ifclass NISLPRCLIENT && {
 ftar /etc/cron.d
 
 # copy for all NET_9 Linux-Clients exim.conf
-ifclass LINUX && fcopy /etc/exim/exim.conf /etc/aliases
+ifclass LINUX && fcopy -M /etc/exim/exim.conf /etc/aliases
 
 # only used for acroread5
 ifclass USR_LOCAL_MOUNT || ftar /usr/local
 
 # change cdrecord default
-fcopy -i /etc/default/cdrecord
+fcopy -Mi /etc/default/cdrecord
 # set cdrecord to suid 
 [ -f $target/usr/bin/cdrecord ] && chmod u+s $target/usr/bin/cdrecord
 chmod a+rw $target/dev/scd0 $target/dev/scd1
