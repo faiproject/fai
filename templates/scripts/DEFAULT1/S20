@@ -3,7 +3,7 @@
 control:
    OutputPrefix = ("${cf_prefix}")
    actionsequence = ( files editfiles )
-
+   EditFileSize = ( 30000 )
 files:
    any::
 	${target}/tmp mode=1777 owner=root group=root act=fixdirs
@@ -27,6 +27,10 @@ editfiles:
 	{ ${target}/etc/fstab
 	  AppendIfNoSuchLine "none  /proc/bus/usb  usbdevfs  defaults"
 	  AppendIfNoSuchLine "/dev/fd0  /floppy  auto  users,nosuid,noauto 0 0"
+	}
+
+	{ ${target}/etc/locale.gen
+	  AppendIfNoSuchLine "en_US ISO-8859-1"
 	}
 
 # add second root account using tcsh
@@ -53,7 +57,11 @@ editfiles:
 	  AppendIfNoSuchLine "Options: --borders=no --output=-"
 	}
 
-
+	{ ${target}/etc/ssh/sshd_config
+	  ReplaceAll "X11Forwarding no"
+	        With "X11Forwarding yes"
+	}
+	
 # add netgroup to passwd if client is in NIS and NET_9 and LINUX
    NIS.LINUX.NET_9::
 	{ ${target}/etc/passwd
