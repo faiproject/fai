@@ -6,12 +6,12 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.5.3">
-<!entity faiver "2.5">
-<!entity faiverdate "6 aug 2003">
+<!entity faikernelver "1.6">
+<!entity faiver "2.5.3">
+<!entity faiverdate "28 jan 2004">
 
-<!entity version "2.3.3">
-<!entity date    "6 jan 2004">
+<!entity version "2.4">
+<!entity date    "29 jan 2004">
 ]>
 
 <debiandoc>
@@ -300,8 +300,12 @@ is located:
 # ln -s /files/scratch/debmirror /var/www/debmirror
 </example>
 
-Don't forget to adjust the variable <var>FAI_SOURCES_LIST</var> in &fc;
-to access the Debian mirror.
+Create a file <manref name="sources.list" section="5"> in
+<file>/etc/fai</file> which gives access to your Debian mirror. An
+example can be found in
+<file>/usr/share/doc/fai/examples/etc</file>. Also add the IP-address
+of the http server to the variable <var>NFSROOT_ETC_HOSTS</var> in
+&fc;.
 
 <sect id=faisetup> Setting up FAI<p>
 
@@ -332,7 +336,7 @@ If you like to install all recommended packages that are useful for
 fai, use following command
 
 <p><tt>
-# apt-get install netboot dhcp3-server tftpd-hpa rsh-server wget syslinux
+# apt-get install mknbi dhcp3-server tftpd-hpa rsh-server wget syslinux
 </tt><p>
 
 You can also get the newest version of <package>fai</package> and
@@ -354,15 +358,27 @@ for the install clients) are defined in &fc;. Since FAI doesn't use
 	  system should be built.
 	    </p> </item>
 
-	    <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>This
-	    multi line string is the content of
+	    <tag><var>NFSROOT_ETC_HOSTS</var></tag>
+	    <item>
+	      <p>If you use http or ftp access to the Debain mirror,
+	      add its IP-address and the name to this
+	      variabel. For a Beowulf master node, add the name and
+	      IP-address of both networks to it.</p>
+	    </item>
+
+	    <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>Now
+	    deprecated. Use the file
+	    <file>/etc/fai/sources.list</file> instead.<p>
+	    This multi line string is the content of
 	    <file>sources.list</file> (used by <manref name="apt-get"
 	    section="8">); it defines the location and access
 	    method for the Debian mirror. If this variable is undefined,
 	    the file <file>/etc/fai/sources.list</file> or
 	    <file>/etc/apt/sources.list</file> will 
-	    be used. For more information on the
-	    file format see <manref name="sources.list" section="5">.
+	    be used. An example can be found in
+	    <file>/usr/share/doc/fai/examples/etc</file>. For more
+	    information on the file format see <manref
+	    name="sources.list" section="5">.
 	    </p> </item>
 
 	    <tag><var>FAI_DEBMIRROR</var></tag>
@@ -404,7 +420,7 @@ for the install clients) are defined in &fc;. Since FAI doesn't use
 	  </taglist>
 <p>
 
-The variables <var>FAI_SOURCES_LIST</var> and <var>FAI_DEBMIRROR</var>
+The content of <file>/etc/fai/sources.list</file> and <var>FAI_DEBMIRROR</var>
 are used by the install server and also by the clients. If your
 install server has multiple network card and different host names for
 each card (as for a Beowulf server), use the install
@@ -431,6 +447,7 @@ Using interface eth0 to determine local hostname.
 Adding kueppers to known_hosts.
 /home/fai/.ssh/known_hosts created.
 /home/fai/.ssh/authorized_keys created.
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 User account fai set up.
 Creating FAI nfsroot can take a long time and will
 need more than  &nfsrootsize disk space in /usr/lib/fai/nfsroot.
@@ -450,7 +467,7 @@ Upgrading /usr/lib/fai/nfsroot
 Adding additional packages to /usr/lib/fai/nfsroot:
 portmap file rdate cfengine bootpc wget rsh-client less dump
 ext2resize strace hdparm parted dnsutils grub ntpdate 
-dosfstools sysutils dialog libdetect0 discover mdetect read-edid kudzu hwtools
+dosfstools sysutils dialog discover mdetect read-edid kudzu hwtools
 Detecting hardware: 3c59x ide-scsi usb-uhci usb-uhci
 modprobe: Can't open dependencies file /lib/modules/2.4.20/modules.dep (No such file or directory)
 Skipping 3c59x; assuming it is compiled into the kernel.
@@ -496,7 +513,8 @@ emulation for KDE which has a bug. Try again using <tt>xterm</tt>.
 <p>
 The warning messages from dpkg about dependencies problems can be ignored.
 If you have problems running fai-setup, they stem usually from 
-make-fai-nfsroot. You may restart it by calling 'make-fai-nfsroot -r' 
+<manref name="make-fai-nfsroot" section="8">. You may restart it by
+calling 'make-fai-nfsroot -r'
 (recover). Adding '-v' gives you a more verbose output which may help you 
 pinpoint the error. If you want to create a log file you may use
 <p><tt>
@@ -551,12 +569,14 @@ daemon, you should collect some network information of all your
 install clients. This is described in section <ref id="bootfloppy">.
 <p>
 When you make changes to &fc; or want to install a new kernel to
-nfsroot, the nfsroot has to be rebuilt by calling <prgn>make-fai-nfsroot</prgn>.
+nfsroot, the nfsroot has to be rebuilt by calling <manref
+name="make-fai-nfsroot" section="8">.
 
 <sect1 id=troublefaisetup> Troubleshooting the setup<p>
 
 The setup of FAI adds the FAI account, exports file systems and calls
-<prgn>make-fai-nfsroot</prgn>. If you call <tt>make-fai-nfsroot -v</tt> you
+<manref name="make-fai-nfsroot" section="8">. If you call
+<tt>make-fai-nfsroot -v</tt> you
 will see more messages. When using a local Debian mirror, it's
 important that the install server can mount this directory via
 NFS. If this mount fails, check <file>/etc/exports</file> and <file>/etc/netgroup</file>.
@@ -904,7 +924,7 @@ Looking up port of RPC 1000005/1 on 134.95.9.149
      FAI &faiver;, &faiverdate;
      Fully Automatic Installation for Debian GNU/Linux
 
-     Copyright (c) 1999-2003, Thomas Lange
+     Copyright (c) 1999-2004, Thomas Lange
              lange@informatik.uni-koeln.de
    ------------------------------------------------------
 
@@ -1006,31 +1026,14 @@ VFS: Unable to mount root fs via NFS, trying floppy.
 VFS: Insert root floppy and press ENTER
 </example>
 Then you have to compile the driver for your network card into a new
-kernel. This driver must not be a kernel module. To compile the new
-kernel, start using the default kernel configuration of FAI.
-<example>
-kueppers# cd /usr/src/kernel-source-&kver;
-kueppers# cp /usr/lib/fai/nfsroot/boot/config-&kver; .config
-kueppers# make menuconfig
-</example>
-Call <prgn>make menuconfig</prgn> and add the driver in menu <tt>Network
-device support/Ethernet</tt> which supports your network card. Then
-create a Debian package using <manref name="make-kpkg" section="8">:
-<example>
-kueppers# make-kpkg clean
-kueppers# make-kpkg --revision fai2 kernel-image
-</example>
-
-This command creates the file 
-<file>/usr/src/kernel-image-&kver;_fai2_i386.deb</file>. Adjust 
-the variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot.
-<example>
-kueppers# make-fai-nfsroot
-</example> 
+kernel. This driver must not be a kernel module. The README file of
+the package fai-kernels <file>/usr/share/doc/fai-kernels/README</file>
+describes how to  compile custom fai kernel. After that, adjust the
+variable <var>KERNELPACKAGE</var> in  &fc; and rebuild the nfsroot
+with the command <manref name="make-fai-nfsroot" section="8">.
 After that, you have to create a new boot floppy if you need it. Now your network
 card should be recognized and the install kernel should mount
-the nfsroot successfully. More information how to compile an
-install kernel can be found in the <file>README</file> of the package <tt>fai-kernels</tt>.
+the nfsroot successfully.
 
 <sect id="sysinfo">Collecting other system information 
 <p>
@@ -2455,7 +2458,7 @@ NFSROOT_ETC_HOSTS="192.168.42.250 atom00"
 <sect1 id=bootp1> Prepare network booting<p>
 
 Set up the install server daemon as described in <ref
-id="pxeboot">. If you will have many cluster nodes (more that about
+id="pxeboot">. If you will have many cluster nodes (more than about
 10) and you will use <tt>rsh</tt> in &fc; raise the number of connects
 per minute to some services in <file>inetd.conf</file>:
 <example>
