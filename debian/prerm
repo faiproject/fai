@@ -18,26 +18,20 @@ set -e
 #          <conflicting-package> <version>
 # for details, see /usr/doc/packaging-manual/
 
-# the user space nfs server
-nfsserver=/etc/init.d/nfs-server
-
-
+test -f /etc/init.d/nfs-server && nfsserver=nfs-server
+test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 
 case "$1" in
     remove|upgrade|deconfigure)
 #       install-info --quiet --remove /usr/info/fai.info.gz
 
 umount -n /usr/lib/fai/nfsroot/proc 2>/dev/null || true
+umount -n /usr/lib/fai/nfsroot/dev/pts 2>/dev/null || true
 rm -rf /usr/lib/fai/nfsroot
 
 perl -ni.bak -e "print unless m#^/usr/local/share/fai\s#" /etc/exports
 perl -ni.bak -e "print unless m#^/usr/lib/fai/nfsroot\s#" /etc/exports
-    if [ -x $nfsserver ];then
-	$nfsserver reload
-    else
-	echo "You do not use the user space nfs-server"
-	echo "Please make your nfs server reload it's configuration"
-    fi
+/etc/init.d/$nfsserver reload
 
 # userdel sometimes does not success
 userdel -r fai || true

@@ -10,7 +10,7 @@
 #
 # see: dh_installdeb(1)
 
-set -e
+set -evx
 
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
@@ -30,8 +30,8 @@ set -e
 #     `abort-remove' or `abort-deconfigure'.
 
 faiuser=fai
-# the user space nfs server
-nfsserver=/etc/init.d/nfs-server
+test -f /etc/init.d/nfs-server && nfsserver=nfs-server
+test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 
 add_export_line() {
 
@@ -43,33 +43,31 @@ add_export_line() {
 
     grep -q "^$pattern[[:space:]]" /etc/exports && return
     echo "$pattern $options" >> /etc/exports
-    if [ -x $nfsserver ];then
-	$nfsserver reload
-    else
-	echo "You do not use the user space nfs-server"
-	echo "Please make your nfs server reload it's configuration"
-    fi
+    /etc/init.d/$nfsserver reload
 }
 
 case "$1" in
     configure)
 
-add_export_line /usr/local/share/fai  "@faiclients(ro)"
-add_export_line /usr/lib/fai/nfsroot  "@faiclients(ro,no_root_squash)"
-add_export_line /usr  "@faiclients(ro,no_root_squash)"
-
-# TODO: if $faiuser; then ..... fi
-adduser --system --disabled-password --gecos "fai account for log files" $faiuser || true
-gid=`id -g $faiuser`
-
-# TODO: test if adduser failed
-perl -pi.bak -e "s#^$faiuser:(.+):/bin/false#$faiuser:\1:/bin/bash#" /etc/passwd
-echo "+@faiclients root" > /home/$faiuser/.rhosts
-chown $faiuser:$gid /home/$faiuser/.rhosts
-chmod go-rwx /home/$faiuser/.rhosts
+if id $faiuser 2>/dev/null 1>&2 ; then
+    echo account $faiuser already exists.
+    echo I hope you set up account $faiuser correctly.
+    echo For more inforamtiion, read the manuals.
+else
+    adduser --system --disabled-password --gecos "fai account for log files" $faiuser || true
+    gid=`id -g $faiuser`
+    perl -pi.bak -e "s#^$faiuser:(.+):/bin/false#$faiuser:\1:/bin/bash#" /etc/passwd
+    echo "+@faiclients root" > /home/$faiuser/.rhosts
+    chown $faiuser:$gid /home/$faiuser/.rhosts
+    chmod go-rwx /home/$faiuser/.rhosts
+    # todo: write to fai.conf: faiuser_remove=yes
+fi
 
 [ ! -d /usr/lib/fai/nfsroot/fai ] && make-fai-nfsroot
 
+add_export_line /usr/local/share/fai  "@faiclients(ro)"
+add_export_line /usr/lib/fai/nfsroot  "@faiclients(ro,no_root_squash)"
+add_export_line /usr  "@faiclients(ro,no_root_squash)"
 
 if [ ! -d /usr/local/share/fai/fai_config ];then
     echo "I think you have no fai configuration."
