@@ -1169,7 +1169,12 @@ several files:
 	   <file>/fai/files/etc/nsswich.conf</file>.</p> </item>
 
 	  <tag><tt>hooks/</tt></tag> <item> <p>Hooks are user defined
-	  programs or scripts, which are called during the installation process.
+	  programs or scripts, which are called during the
+	  installation process.</p> </item>
+
+	  <tag><tt>debconf/</tt></tag> <item> <p>This directory holds
+	  all <manref name="debconf" section="8"> data. Not yet used.</p> </item>
+
 </taglist>
 
 The main installation script <prgn>rcS_fai</prgn> uses all these
@@ -1419,6 +1424,19 @@ contains a space separated list of flags. Following flags are known:
 
 <sect id=classc> The class concept<p>
 
+Classes determine which configuration file to choose from a list of
+available templates. Classes are used in all further tasks of the
+installation. To determine which config file to use, an install
+clients searches the list of defined classes and uses all
+configuration files that match a class name. It's also possible to use
+only the configuration file with the highest priority since the order
+of classes define the priority for low to high. There are some
+predefined classes (DEFAULT, LAST and the hostname, all written
+uppercase), but classes can also be listed in a file or defined
+dynamically by scripts. So it's easy to define a class depending on
+the subnet information or on some hardware that is available on the
+install client.
+<p>
 The idea of using classes in general and using certain files matching
 a class name for a configuration is adopted from the installation
 scripts by Casper Dik for Solaris. This technique proved to be very
@@ -1501,6 +1519,10 @@ of the hardware architecture in uppercase letters.
 <example>
 S01alias.sh:
 
+# echo architecture in upper case
+dpkg --print-installation-architecture | tr /a-z/ /A-Z/
+uname -s | tr '[a-z]' '[A-Z]'
+
 # all hosts named ant?? are using the classes in file anthill
 case $HOSTNAME in
     ant??) cat anthill ;;
@@ -1517,13 +1539,10 @@ esac
 case $IPADDR in
     134.95.9.*) echo NET_9 ;;
 esac
-
-# echo architecture in upper case
-dpkg --print-installation-architecture | tr /a-z/ /A-Z/
 </example>
 
 Script <file>S07disk.pl</file> can be used to define classes depending
-on the number of local disks or the size of these scripts<footnote>
+on the number of local disks or the size of these disks<footnote>
 <p>It uses the library <file>Fai.pm</file>, which includes some useful
 subroutines, e.g. <tt>class</tt>, <tt>classes</tt>,
 <tt>read_memory_info</tt>, <tt>read_ethernet_info</tt>.</p>
@@ -1572,10 +1591,12 @@ modprobe serial
 You can find messages from modprobe in <file>/tmp/dmesg.log</file> and
 the on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
 
-<sect id=classvariables> Variables in <tt>class/*.var</tt><p>
+<sect id=classvariables> Defining Variables<p>
 
 The task <em>defvar</em> defines the variables for the install
-clients. All global variables can be set in
+clients. Variables are defined by scripts in
+<tt>class/*.var</tt><footnote>Also <file>*.source files can define
+variables.</file></footnote>.  All global variables can be set in
 <file>DEFAULT.var</file>. For certain groups of hosts use a class file
 or for a single host use the file
 <var>$HOSTNAME</var><tt>.var</tt>. Also here, it's useful to study all
@@ -1754,8 +1775,9 @@ is available in <file>/usr/share/fai/utils/</file>.
 The default set of scripts in this directory is only an example. But
 they should do a reasonable job for your installation. You can edit them
 or add new scripts to match your local needs.
-
-
+<p>
+If a directory with a class name exists, all scripts matching
+<file>S[0-9]*</file> are executed in alphabetical order.
 
 <sect1 id=shell>Shell scripts<p>
 
@@ -2287,10 +2309,29 @@ diversions are removed.</p> </item>
 <tag>skiptask</tag> <item> <p>This given list of tasks are
 skipped. For e.g use in <file>partition.DISKLESS</file>.</p> </item> </taglist>
 
+<example>
+</example>
+
+
+
+<chapt id=solaris>FAI for SUN Solaris<p> 
+
+Currently, FAI will be extended to be used with Solaris Jumpstart. The
+part of partitioning the local disks and installing the operating
+software packes is done using Solaris Jumpstart function. Then the
+postinstall script defines the classes and variables and runs all
+configuration scripts depending on classes.
+
 </book>
 </debiandoc>
 
 <!-- 
+backup:
+via rsync monday -> node01, thuesday -> node02,...
+apt-get update
+apt-get upgrade
+
+
 rdev vmlinuz-2.2.19 /dev/hda1 for the kernel which boot the client
 nodes from local disk if your server does not have /dev/hda1
 as root device. Then call imggen
