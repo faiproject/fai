@@ -1,0 +1,263 @@
+#!/bin/bash
+
+# $Id$
+#*********************************************************************
+#
+# fai-cd -- make a fai CD, a bootable CD that performs the FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2004-2005 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+# based on a script called make-fai-bootcd by Niall Young <niall@holbytla.org>
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+set -e 
+version="fai-cd 1.2"
+
+isoversion="$version -- build $(date '+%c')"
+vname="Fully Automatic Installation CD"
+aname="Fully Automatic Installation by Thomas Lange, $isoversion"
+
+grub_config=/etc/fai/menu.lst
+
+burn=0
+bimagesize=2.88 # mkbimage can create greater images, but mkisofs only accepts up to 2.88
+hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache /media/mirror/.apt-move"
+
+# we need FAI_CONFIGDIR, NFSROOT
+. /etc/fai/fai.conf
+
+trap "unhide_dirs;umount_dirs; mhide -u xfs reiserfs ext3" EXIT ERR
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    cat <<-EOF
+	fai-cd $version. Copyright (C) 2004-2005 Thomas Lange
+	Report bugs to <fai@informatik.uni-koeln.de>.
+
+	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
+	Create a bootable ISO image from partitial mirror
+	Read the man pages pages fai-cd(8).
+EOF
+exit 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    local e=$1   # first parameter is the exit code
+    shift
+
+    echo "$@"    # print error message
+    exit $e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+mhide() {
+
+    local mode m
+
+    mode=$1
+    shift
+    for m in $@; do
+	module-hide $mode $m
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+module-hide() {
+
+    # hide or unhide a kernel module, so mkinitrd-cd can't see it
+    # therefore we rename the modules to XXX-<modulename.o>
+    # this works for 2.4 and 2.6 kernel (.o and .ko modules)
+
+    local dir module newname nam
+    local kdir=$NFSROOT/lib/modules/$kernelversion
+
+    mode=$1
+    shift
+    module=$1
+
+    case $mode in
+	-h) nam=$module;;
+	-u) nam=XXX-$module;;
+    esac
+
+    found=$(find $kdir -name ${nam}.o -o -name ${nam}.ko)
+    # echo "FOUND: $found"
+    if [ -z "$found" ]; then
+#       echo "$module not found."
+       return
+    fi
+    [ -f $found ] || return
+
+    newname=$(basename $found)
+    newname=${newname/XXX-/}  # substitute XXX- with nothing
+    dir=$(dirname $found)
+
+    set +e
+    case $mode in
+	-h) mv $found $dir/XXX-$newname ;;
+	-u) mv $found $dir/$newname ;;
+    esac
+    set -e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_initrd_image() {
+
+    local size=min # full is often bigger than 2.88mb
+    local kdir=$NFSROOT/lib/modules/$kernelversion
+
+    echo "Creating initrd image with kernel $kernelversion"
+
+    sed "s/_VERSION_/$isoversion/" < /etc/mkinitrd-cd/id.txt > $NFSROOT/id.txt
+
+    # mkbimage complains if the image will be too large. So do not include some modules
+    # It would be nice if mkinitrd-cd had a config file!
+
+    mhide -h xfs reiserfs ext3
+
+    mkinitrd-cd $kdir $tmp/initrd.img $size "$isoversion"
+    mhide -u xfs reiserfs ext3
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_grub_image() {
+
+    echo -n "Creating grub boot image ..."
+
+    mkdir -p $tmp/boot/grub
+    > $tmp/boot/RUNNING_FROM_FAICD
+    cp /lib/grub/i386-pc/stage{1,2} $tmp/boot/grub
+    cp $grub_config $tmp/boot/grub/menu.lst
+    # insert date into grub menu
+    perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
+    cp $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot
+    ln -s boot/vmlinuz-$kernelversion $tmp/vmlinuz
+    tar -C $tmp -cf $tmp/make-fai-cd.tar boot vmlinuz initrd.img
+    mkbimage -d $tmp -f $tmp/make-fai-cd.tar -t $bimagesize >/dev/null 2>&1
+    # mkbimage creates the file $tmp/$bimagesize.image
+    rm $tmp/initrd.img $tmp/make-fai-cd.tar
+    mv $tmp/$bimagesize.image $tmp/boot
+    echo "done"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+customize_nfsroot() {
+
+    # hide some dirs to save space and make the CD image smaller
+    local d
+
+    mkdir $tmp/empty
+    for d in $hidedirs; do
+	if [ -d $NFSROOT/$d ]; then
+	    [ "$debug" ] && echo "hiding $d"
+	    mount --bind $tmp/empty $NFSROOT/$d
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+unhide_dirs() {
+
+    set +e
+    for d in $hidedirs; do
+	if [ -d $NFSROOT/$d ]; then
+	    [ "$debug" ] && echo "disclosing $d"
+	    umount $NFSROOT/$d 2>/dev/null
+	fi
+    done
+    set -e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+umount_dirs() {
+
+    set +e
+    local d
+    local dirs="boot fai media/mirror etc/apt/sources.list"
+    for d in $dirs; do
+	umount $NFSROOT/$d 2>/dev/null
+    done
+    set -e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_iso() {
+
+    # Create the El Torito bootable iso9660 cdrom image
+
+    echo "Mounting all needed parts"
+
+    mkdir -p $NFSROOT/media/mirror
+    mount --bind $tmp/boot $NFSROOT/boot
+    mount --bind $FAI_CONFIGDIR $NFSROOT/fai && echo "Config space $FAI_CONFIGDIR mounted"
+    mount --bind $mirrordir $NFSROOT/media/mirror && echo "Mirror $mirrordir mounted"
+# TODO: customize /etc/apt, copy apt preferences etc.
+
+    # this will be the sources.list for the CD
+    tmp1=$(mktemp)
+    cat > $tmp1 <<EOF
+# mirror location for fai CD, file generated by fai-cd
+
+deb file:/media/mirror testing main contrib non-free
+deb file:/fai/files packages/
+EOF
+    mount --bind $tmp1 $NFSROOT/etc/apt/sources.list
+    customize_nfsroot
+    echo "Writing FAI CD-ROM image to $isoname. This may need some time."
+    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -RU -b boot/$bimagesize.image -c boot.catalog -o $isoname $NFSROOT
+    echo -n "ISO image size and filename: "; du -h $isoname
+    rm $tmp/boot/$bimagesize.image $tmp1
+    unhide_dirs
+    umount_dirs
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+burniso() {
+
+    cdrecord -v -eject $isoname
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+# main program
+
+# Parse commandline options
+while getopts "hg:bm:" opt ; do
+    case "$opt" in
+	h)  usage ;;
+	g)  grub_config="$OPTARG" ;;
+	m)  mirrordir="$OPTARG" ;;
+	b)  burn=1 ;;
+	?)  usage ;;
+    esac
+done
+shift $(($OPTIND - 1))
+isoname=$1
+
+[ "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
+[ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
+[ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
+[ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it."
+[ -f "$grub_config" ] || die 6 "Grub menu file $grub_config not found."
+[ `id -u` -ne 0 ]     && die 9 "Run this program as root."
+exit 0
+
+tmp=$(mktemp -t -d fai-cd.XXXXXX)
+kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
+
+create_initrd_image
+create_grub_image
+create_iso
+rm -rf $tmp
+[ "$burn" -eq 1 ] && burniso
+exit 0
