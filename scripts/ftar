@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 0.9 19-Mar-2001"
+version="Version 1.0 20-Mar-2001"
 
 die() {
     echo "ftar died: $1"
@@ -36,7 +36,6 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract() {
 
-    # if option only one class exit program
     file=$1
     option=$2
 
@@ -48,7 +47,25 @@ extract() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
 
-    echo No help yet available for ftar.
+    cat <<EOF
+ftar, extract tar files using classes. $version
+
+   Copyright (C) 2001 by Thomas Lange
+
+Usage: ftar [OPTION] ... SOURCE ...
+
+   -1                   Use only first tar file matching class name.
+   -c class[class]      Define classes (space separated).
+   -d                   Delete all files in target before extracting.
+   -D                   Create debug output.
+   -h                   Show summary of options.
+   -r                   Recursively remove files in target before extracting.
+   -s source_dir        Look for source files relative to source_dir.
+   -t target_dir        Extract files relativ to target_dir.
+   -v                   Be verbose.
+
+Report bugs to <lange@informatik.uni-koeln.de>.
+EOF
     exit 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -79,7 +96,7 @@ shift $(($OPTIND - 1))
 [ -z "$target" ] && die "Target directory undefined."
 
 dir=$1
-fpath=$source/$1
+fpath=$source/$dir
 
 [ "$deletefiles" ] && cd $target/$dir ; rm -f .* * 2>/dev/null
 [ "$removedir" ] && cd $target/$dir ; rm -rf .* * 2>/dev/null
