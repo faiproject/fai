@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 2.0.1, 6-feb-2003"
+version="version 2.0.2, 12-feb-2003"
 set -e
 timeout=15
 mkimage=0
@@ -72,7 +72,7 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
 	      f for the fixed IP address for the server
 	      Without this option both (dhcp and booth) are used
    -h         print this message.
-   -f file    make a 1440k floppy image
+   -f file    make a 1440k floppy image in file
    -m dir     use dir as mountpoint [/floppy]
    -s host    use a static ip for host (try to get from DNS)
    -v         print verbose output (print lilo.conf)
@@ -99,6 +99,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 determine_network_parameters() {
 
+    local dev ndevices devices 
     ndevices=0
     devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: '{print $1}'`
     for dev in $devices; do
@@ -115,7 +116,6 @@ determine_network_parameters() {
 	done
     fi
     SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
-    echo "Using interface $SERVERINTERFACE with IP address: $SERVERIP"
 
     if [ -n "${TARGETHOST}" ] ; then
 	BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
@@ -130,7 +130,7 @@ lilo_floppy() {
 
 # make a boot floppy using lilo
 
-    echo "Using lilo for the boot floppy."
+    echo "Creating the boot floppy with lilo."
     mkdir $mountpoint/boot $mountpoint/etc
     rmdir $mountpoint/lost+found
 
@@ -178,7 +178,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 grub_floppy() {
 
-    echo "Using grub for the boot floppy."
+    echo "Creating the boot floppy with grub."
     # make a boot floppy using grub
     kernel=vmlinuz-$KERNELVERSION
     mkdir -p $mountpoint/boot/grub
@@ -260,12 +260,15 @@ fi
 
 # pay attention: if -i option is too large, then too few inodes
 # are created on the floppy. Check it with df -i
+echo "Creating filesystem on floppy device $floppydev."
 mke2fs $mkfsopt -q -i 40000 -m 0 $floppydev || \
   die "Can't create ext2 file system on $floppydev"
 mount $mountopts $floppydev $mountpoint || die "Can't mount floppy $floppydev"
 
 [ $lilo ] && lilo_floppy
 [ $grub ] && grub_floppy
+echo "Using IP address $SERVERIP of $SERVERINTERFACE for the fixed boot menu."
+
 cat <<-EOF
 	Writing boot data to floppy. The default boot label is: $liloboot
 	The kernel configuration is $NFSROOT/boot/config-$KERNELVERSION.
