@@ -18,6 +18,9 @@ install:
 	cp -a class disk_config package_config scripts files $(FAI)
 	cd ../scripts ; install $(SCRIPTS) $(DESTDIR)/bin
 	cd ../share   ; install $(SHARES) $(DESTDIR)/bin
+	cd ../examples/simple/class ; cp 01alias $(FAI)/class
+
+
 	chmod -R a+rx $(DESTDIR)/bin $(FAI)/scripts
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/bin/subroutines-sunos
 	find $(DESTDIR) -name CVS | xargs rm -rf
