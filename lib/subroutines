@@ -159,13 +159,22 @@ call_hook() {
     [ "$debug" ] && local dflag="-d"
 
     for cl in $classes; do
-	local hfile=/fai/hooks/${hook}-$cl
+	local hfile=/fai/hooks/${hook}.$cl
 	if [ -x $hfile ]; then
-	   	echo "Calling hook: $hook-$cl"
+	   	echo "Call hook: $hook.$cl"
 		# execute the hook
 		$hfile $dflag
+		# is that really good ? Makes sense, if hostname would
+		# be the first hook
+		# execute only one hook if return value is 42
+		# [ $? -eq 42 ] && return
 	fi
-done
+	if [ -x $hfile.sh ]; then
+	   	echo "Source hook: $hook.$cl.sh"
+		# source this hook
+		. $hfile.sh $dflag
+	fi
+     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_boot() {
