@@ -8,6 +8,7 @@ DESTDIR=/tmp/jumpstart
 # $(shell pwd)/debian/fai
 
 SCRIPTS = fcopy ftar fai-class fai-do-scripts
+LIBS = fai-savelog
 SHARES = subroutines subroutines-sunos
 FAI=$(DESTDIR)/fai
 
@@ -20,6 +21,7 @@ install:
 	cp -a README.sunos bin $(DESTDIR)
 	cp -a class disk_config package_config scripts files $(FAI)
 	cd ../scripts ; install $(SCRIPTS) $(DESTDIR)/bin
+	cd ../lib ;     install $(LIBS) $(DESTDIR)/bin
 	cd ../share   ; install $(SHARES) $(DESTDIR)/bin
 	cd ../examples/simple/class ; cp 01alias $(FAI)/class
 
