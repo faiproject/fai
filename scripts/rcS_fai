@@ -29,6 +29,7 @@
 #set -xv # for full debugging
 
 # some variables
+timeout=30 # bootpc timeout
 FAI_VERSION=FAIVERSIONSTRING
 classes="DEFAULT $HOSTNAME LAST"  # default before defining classes
 rcslog=/tmp/rcS.log
@@ -39,8 +40,8 @@ romountopt="-o ro,rsize=8192"
 fai_init() {
 
     # source subroutines must be done before set -a, because of > >( tee )
-    . /usr/share/fai/subroutines
     set -a # now export all variables
+    . /usr/share/fai/subroutines
     . /etc/fai.conf
     DEBIAN_FRONTEND=Noninteractive
     # location of master files for cfengine
@@ -143,7 +144,6 @@ fai_install() {
     > $stamp
 
     {
-    classes=
     task defclass
     task defvar
     } > >( tee -a $rcslog )  2>&1
