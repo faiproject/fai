@@ -14,6 +14,7 @@ CONFDIR= $(SHAREDIR)/etc
 CONFFILES= apt.conf dhclient.conf fai_modules_off
 ADEXAMPLE=$(DOCDIR)/examples/advanced
 SIEXAMPLE=$(DOCDIR)/examples/simple
+libfiles=$(wildcard lib/[a-z]*)  # do not include CVS dir
 
 # files with variable KERNLEVERSION in it; this string will be substituted
 KVERSION_FILES =  $(DESTDIR)/etc/fai/fai.conf $(SIEXAMPLE)/class/DEFAULT.var $(SIEXAMPLE)/class/ATOMCLIENT.var
@@ -29,7 +30,7 @@ veryclean: clean
 
 install: 
 	$(MAKE) -C doc install
-	-install -m755 lib/[a-z]* $(LIBDIR)   # do not copy CVS dir
+	-install -m755 $(libfiles) $(LIBDIR)
 	cd scripts ; install $(SBIN) $(DESTDIR)/sbin
 	cd scripts ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
