@@ -156,7 +156,7 @@ get_fai_dir() {
 	    echo "Configuration space $FAI mounted from $FAI_LOCATION"
     fi
     if [ ! -d $FAI/class ]; then
-	die "$FAI/class not found. Aborting."
+	echo "WARNING: directory $FAI/class not found."
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -234,7 +234,7 @@ task_action() {
 
     if [ -z "$FAI_ACTION" ]; then
 	echo "No action in \$FAI_ACTION defined."
-	sndmon "TASKERROR action 1"
+	sndmon "TASKERROR action 21"
 	task_faiend
 	exit 
     fi
@@ -262,7 +262,7 @@ task_action() {
 		$FAI/hooks/$FAI_ACTION
 	    else
 		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found."
-		sndmon "TASKERROR action 2"
+		sndmon "TASKERROR action 22"
 		task_faiend
 	    fi
 	    ;;
@@ -270,6 +270,13 @@ task_action() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defclass() {
+
+    if [ ! -d $FAI/class ]; then
+	sndmon "TASKERROR defclass 21"
+	echo "Directory $FAI/class not found. Following subdirectories are found:"
+	find $FAI -type d -maxdepth 1 -printf "%p\n"
+	die "Aborting."
+    fi
 
     # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
     fai-class $FAI/class $LOGDIR/FAI_CLASSES
@@ -378,7 +385,7 @@ task_install() {
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
 	echo "$stamp was not removed."
-	sndmon "TASKERROR install 1"
+	sndmon "TASKERROR install 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
 }
