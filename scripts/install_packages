@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.9, 23-mar-2005";
+my $version = "Version 2.10, 3-apr-2005";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -177,7 +177,7 @@ foreach $atype (@commands) {
   execute("$rootcmd $command{$atype} $packlist") if $packlist;
 }
 
-# remove prelaoded files
+# remove preloaded files
 foreach my $entry (@preloadrmlist) {
   my ($url, $directory) = @$entry;
   $url =~ m#/([^/]+$)#;
@@ -285,14 +285,56 @@ sub dselectupgrade {
   unlink $tempfile;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub installable {
+  # ckeck, wether package can be installed.
+  # return false for packages which only exist in 
+  # dpkg status files
+
+  my $package  = shift;
+  # print "Checking wether $package is installable...\n";
+
+  # version list of package
+  my $vlist = $cache->{$package}{VersionList};
+
+  # for each version
+  foreach my $version (@$vlist) {
+    # list of package files
+    my $flist = $version->{FileList};
+    foreach my $fitem (@$flist) {
+      # if the file is a package index (not a dpkg status file)
+      # the package is installable 
+      return 1 if ($fitem->{File}{IndexType} eq "Debian Package Index");
+    }
+  }
+
+  # no package index file found for the current package
+  return 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub mkpackagelist {
 
-  my @orig = @_; # copy original list
+  my @complete = @_; # copy original list
+  my @orig = ();
   @unknown = @known = ();
+  my %complete = ();
 
   # create two list of packages
-  # @unknown contains the unkown packages
-  # @known contains the kown packages
+  # @unknown contains the unknown packages
+  # @known contains the known packages
+
+  foreach (reverse @complete) {
+    my $pack;
+    /^(.*)[_=+-]$/;
+    if ( $1 and $cache->exists($1)) {
+      $pack = $1;
+    } else {
+      $pack = $_;
+    }
+    if (! defined ($complete{$pack})) {
+      $complete{$pack} = 1;
+      unshift @orig, $_;
+    }
+  }
 
   # currently we disable the complete checking of package names if aptitude
   # is used. This is because we can't check task names, which are supported by aptitude
@@ -304,9 +346,10 @@ sub mkpackagelist {
   foreach my $pack (@orig) {
 
     if ($pack =~ /[$\`]/) {
-      # add to known if backtick or $ is found
-      push @known, $pack;
-      next;
+      # evaluate via shell if backtick or $ is found
+      my $packeval=`echo -n $pack`;
+      print " Selecting $packeval for $pack";
+      $pack=$packeval;
     }
 
 #     if ($atype eq "aptitude" && $pack =~ /^~/) {
@@ -321,7 +364,7 @@ sub mkpackagelist {
       # explicitely don't check if the name is provided by some other package:
       # apt-get install <virtual> fails with newer apt
 
-      if (defined ($cache->{$pack}{VersionList})) {
+      if (installable($pack)) {
 	push @known, $pack;
       } else {
 	push @unknown, $pack;
