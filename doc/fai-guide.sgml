@@ -6,8 +6,8 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity version "0.4">
-<!entity date    "april XXX, 2001">
+<!entity version "0.5">
+<!entity date    "end of april, 2001">
 
 ]>
 
@@ -837,6 +837,16 @@ has booted on the install clients.
 	    <item> <p>Reboot the new installed system</p> </item>
 	  </enumlist>
 
+
+The installation time is mainly determined by the amount of software
+that will be installed. A dual Pentium II, 400 MHZ with 128 MB RAM and
+a 10 Mbit network card needs about 11 min when installing 520 MB of
+software to local disk. An installation with 90 MB software (a
+dataless client) only needs two minutes. The checking for bad blocks
+on a 4 GB partition needs addional 6 minutes. Using a 100 Mbit LAN does
+not decrease the installation time considerable, so the network will
+not be the bottleneck when isntalling multiple clients simultaneous.
+
 <sect id=isetup>Set up FAI<p>
 
 After the install client has booted, only the program
@@ -938,7 +948,7 @@ templates for these scripts, but you can write your own bourne, bash,
 perl, cfengine or expect scripts.
 
 <p>
-These important scripts are described in detail in XXXXXXXXXX
+These important scripts are described in detail in <ref id="cscripts">.
 
 <sect id=isavelog>Save log files<p>
 When all installation tasks are finished, the log files are written to
@@ -1059,23 +1069,92 @@ It's not bug, if a variable (T171 in this example) is defined
 twice. The second definition supersedes the first.
 
 
+<p>
+Following <var>FAI_FLAGS</var> are known:
+<taglist>
+ <tag>verbose</tag> <item> <p>Create verbose output during installation. </p> </item>
+
+ <tag>debug</tag> <item> <p>Create debug output. No interactive
+ installation is performed. During package installation you have to
+ answer all questions of the postinstall scripts from the
+ console. </p> </item>
+
+ <tag>sshd</tag> <item> <p>Start ssh daemon to enable remote logins.</p> </item>
+
+ <tag>reboot</tag> <item> <p>Reboot after installation is finished
+ without typing RETURN on the console. Only useful if you can change
+ the boot image or boot device automatically (Can your assembly robot remove the
+ floppy out of the floppy drive via remote control ?). Otherwise the install
+ client would boot the same install kernel and perfoms the installation from
+ scratch. Currently useful if you boot from network card and use
+ <var>$TFTPLINK</var>.</p> </item> 
+</taglist>
+
+
 <sect id=s2> Details of scripts in <tt>class/</tt><p>
 
-All files that are executable and match the shell regular expression
-<tt>S[0-9]*.{sh,pl}</tt> are called in alphabetical order. Every
-output from these scripts is used to define classes. Multiple classes
-in one line must be space separated. The list of all defined classes
-is stored in the variable <var>$classes</var> and in
-<file>/tmp/FAI_CLASSES</file>. The list of all classes is transfered
-to <prgn>cfengine</prgn>, so it can use them too.
+All words in the file <tt>class/$HOSTNAME</tt> are defined as classes.
+Additionally, all files that are executable and match the shell
+regular expression <tt>S[0-9]*.{sh,pl}</tt> are called in alphabetical
+order. Every output from these scripts is used to define
+classes. Multiple classes in one line must be space separated. The
+list of all defined classes is stored in the variable
+<var>$classes</var> and in <file>/tmp/FAI_CLASSES</file>. The list of
+all classes is transfered to <prgn>cfengine</prgn>, so it can use them
+too.
+
+Script <file>S01alias.sh</file> is used to define classes for groups
+of hosts. All hosts with prefix <var>ant</var> use all classes in the
+file <file>anthill</file>. Hosts, which have an IP address in subnet
+<var>134.95.9.0</var> also belongs to class <tt>NET_9</tt>. Finaly
+this scripts defines the class with the name of the hardware
+architecture in uppercase letter.
+
+<example>
+S01alias.sh:
+
+# all hosts named ant?? are using the classes in file anthill
+case $HOSTNAME in
+
+    ant??)
+        cat anthill ;;
+esac
+
+# if host belongs to class C subnet 134.95.9.0 use class NET_9
+case $IPADDR in
+    134.95.9.*)
+        echo NET_9 ;;
+esac
+
+
+# echo architecture
+dpkg --print-installation-architecture | tr 
+</example>
+
+Script <file>S07disk.pl</file> can be used to define classes depending
+on the number of local disks or the size of these scripts. But you can
+also to a range of partition size ins the disk configuration file
+(in <file>disk_config</file>), so you may not need a class for every
+different disk size. The script <file>S24nis.sh</file> automatically
+defines classes corresponding to NIS. The name of the NIS domain
+(defined via BOOTP or DHCP) will also become a class (only uppercase
+letters and minus is replaced by underscore). Depending on several
+partition names, <file>S90partitions.pl</file> defines classes. For
+eg., if a partition <file>/files/scratch</file> exists, the install
+client will export this directory via NFS and install packages to
+become a nfs server.
+
 <p>
 The script <prgn>S05modules.sh</prgn> does not define any class, but
 is responsible for loading kernel modules. Kernel modules are
-important for detecting hardware. The script calls all scripts that
-have the format <tt>&lt;classname&gt;.mod</tt>. For eg., if class
-<tt>DEFAULT</tt> is defined (this class is always defined) and a file <file>DEFAULT.mod</file>
-exists, this script is executed. These scripts should contain all
-command for loading kernel modules:
+important for detecting hardware. The script calls the script
+<tt>$HOSTNAME.mod</tt> and all scripts that have the format
+<tt>&lt;classname&gt;.mod</tt> and those class names are already
+defined. Classes, that are used for loading modules must be defined
+before this script is called. For eg., if class <tt>DEFAULT</tt> is
+defined (this class is always defined) and a file
+<file>DEFAULT.mod</file> exists, this script is executed. These
+scripts should contain all command for loading kernel modules:
 
 <example>
 DEFAULT.mod:
@@ -1086,6 +1165,62 @@ modprobe serial
 
 You can find messages from modprobe in <file>/tmp/dmesg.log</file> and
 the on the fourth console terminal (pressing <tt>Alt-F4</tt>).<p>
+
+<sect id=xxa> Variables in <tt>class/</tt><p>
+
+All these variables can be set global in <file>DEFAULT.var</file> for
+certain groups of hosts using a class file or for a single host unsing
+a file <file>$HOSTNAME.var</file>.
+
+<taglist>
+   <tag>hdparm</tag> <item> <p>Multi line commands to tune the
+   harddisks. Will be executed during installation and creates the
+   script <file>/etc/init.d/S61hdparm</file>.</p> </item>
+
+   <tag>UTC</tag> <item> <p>Set hardware clock to UTC if
+   <tt>$UTC=yes</tt>. Otherwise set clock to locatime.</p> </item>
+
+   <tag>time_zone</tag> <item> <p>File relativ to
+   <file>/usr/share/zoneinfo</file> which indicates your time
+   zone.</p> </item>
+
+   <tag>FAI_CONSOLEFONT</tag> <item> <p>Font that is laoded during
+   installation by <manref name="consolechars" section="8">.</p> </item>
+
+   <tag>FAI_KEYMAP</tag> <item> <p>Keyboard map file in
+   <file>/usr/share/keymaps</file>. You need not specify the complete
+   path, since this file will be located automatically.</p> </item>
+
+   <tag>kernelimage</tag> <item> <p>The kernel that is installed to
+   the new system. If a Debian package
+   <file>/fai/files/packages/$kernelimage</file> exists use this as
+   kernel package. Otherwise try installing the package
+   <file>$kernelimage</file>. If <var>$kernelimage</var> is
+   <tt>2.2.19</tt> the default kernel (package kernel-image-2.2.19)
+   will be installed. To install the a special kernel for host
+   bigfoot, set <var>$kernelimage=kernel-image-2.2.19_bigfoot1_i386.deb</var>.</p></item>
+
+   <tag>liloappend</tag> <item> <p>Append parameters for the kernel of
+   the new system (written to <file>/etc/lilo.conf</file>).</p> </item>
+
+   <tag>moduleslist</tag> <item> <p>Multi line definition. List of modules (including kernel
+   parameters), that are loaded during boot of the new system (written to /etc/modules).</p> </item>
+
+   <tag>rootpw</tag> <item> <p>The root password for the new
+   system. Additionally, FAI creates an root account called <tt>roott</tt>,
+   which uses the <manref name="tcsh" section="1"> </p> </item>
+
+   <tag>TFTPLINK</tag> <item> <p>Link to the TFTP kernel image, that boots
+   using the root file system from the local disk. </p> </item>
+
+   <tag>hserver, bserver</tag> <item> <p>Name of NFS servers for
+   <file>/home</file> and <file>/usr</file>.</p> </item> 
+
+   <tag>printers</tag> <item> <p>List of printer, for which a spool
+   directory is created. Does not set up <file>/etc/printcap</file>.</p> </item>
+   <tag></tag> <item> <p></p> </item>
+</taglist>
+
 
 <sect id=c3> Configuration<p>
 
@@ -1202,6 +1337,12 @@ the packages.
 
 <sect id=cscripts>Scripts in <tt>/fai/class</tt><p>
 
+The default set of scripts in this directory is only an example. But
+they should do a reasonable jobs for installation. You can edit them
+or add new scripts to match your local needs.
+
+
+
 
 <sect id=errors>Looking for errors<p>
 If the installation process stops or even it finishes, parse all log files for errors using:
@@ -1228,11 +1369,6 @@ is also not the host name. Look at the FAq for more information.
 <chapt id=hints>Various Hints<p>
 
 check for bad blocks:
-
-4GB 6 min
-
-installation with 520MB software 11min
-90MB 2min
 
 $ROOTCMD dpkg -l
 
@@ -1299,7 +1435,7 @@ general hints:
 all in one config file, or multiple small config files. Ypou can
 choose !
 
-
+FAI-BOOTPART 
 -->
 </book>
 </debiandoc>
