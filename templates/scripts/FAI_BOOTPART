@@ -1,11 +1,9 @@
 #! /bin/sh
 
 # create a partition for booting FAI from local disk and
-# add this kernel to lilo
+# add this kernel to lilo or grub
 
 # Thomas Lange, Uni Koeln, 12/2000
-
-echo "Add /fai-boot partition to lilo.conf"
 
 cp -a /boot $target/fai-boot
 
@@ -13,13 +11,38 @@ cd $target/boot
 kernelversion=`ls vmlinuz-*`
 mknod $target/dev/boot255 c 0 255
 
-cat >> $target/etc/lilo.conf <<EOF
-image=/fai-boot/boot/$kernelversion
-root=/dev/boot255
-label=FAI
+ifclass LILO && {
+    # write lilo.conf and install lilo to disk
+    echo "Add /fai-boot partition to lilo.conf"
+
+    cat >> $target/etc/lilo.conf <<-EOF
+	image=/fai-boot/boot/$kernelversion
+	root=/dev/boot255
+	label=FAI
 EOF
 
-mkdir $target/fai-boot/etc
-cp $target/etc/lilo.conf $target/fai-boot/etc
+    mkdir $target/fai-boot/etc
+    cp $target/etc/lilo.conf $target/fai-boot/etc
+    $target/sbin/lilo -r $target
+}
 
-$target/sbin/lilo -r $target
+ifclass GRUB && {
+
+    echo "Add /fai-boot partition to menu.lst for grub"
+    kernelname=/boot/$kernelversion
+    # get device for this boot partition
+    dev=`df $target/fai-boot | grep '^/dev/' | cut -d ' ' -f1`
+    broot=`device2grub $dev`
+
+    cat >> $target/boot/grub/menu.lst <<-EOF
+
+	# created by FAI
+	
+	title FAI (Fully Automatic Installation) BOOT GNU/Linux
+	root $broot
+	kernel $kernelname
+EOF
+
+    rdev $target/fai-boot/$kernelname $target/dev/boot255
+    echo "Grub installed for $kernelimage $broot"
+}

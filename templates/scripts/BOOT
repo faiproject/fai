@@ -8,9 +8,9 @@ egrep -q "^auto" $target/etc/modules 2>/dev/null || echo "auto" >> $target/etc/m
 # a list of modules, that are loaded at boot time
 echo $moduleslist >> $target/etc/modules
 
-
 ifclass LILO && {
     # write lilo.conf and install lilo to disk
+    echo " Creating lilo.conf for /vmlinuz"
     cat > $target/etc/lilo.conf <<-EOF
 	boot=$BOOT_DEVICE
 	root=$ROOT_PARTITION
@@ -28,5 +28,25 @@ EOF
 }
 
 ifclass GRUB && {
-    echo "GRUB not yet supported"
+
+    kernelname=/vmlinuz
+    echo "Installing grub and boot entry for $kernelname"
+    grub-install --root-directory=$target $BOOT_DEVICE
+    broot=`device2grub $ROOT_PARTITION`
+
+    cat > $target/boot/grub/menu.lst <<-EOF
+
+	# created by FAI
+	
+	timeout 10
+	default 0
+	color cyan/blue white/blue
+
+	title Debian GNU/Linux, $kernelname $kernelimage
+	root $broot
+	kernel $kernelname
+EOF
+
+    rdev $target/$kernelname $ROOT_PARTITION
+    echo "Grub installed for $kernelimage $broot"
 }
