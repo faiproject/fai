@@ -1,0 +1,274 @@
+# $Id$
+#
+# subroutine definitions for linux
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+netdevice_info() {
+
+    # devices that are running
+    netdevices_up=`ifconfig | perl -anF'\s+' -e 'print "$F[0]\n" if $F[0];' | grep -v "^lo"`
+    # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
+    # if not defined, use boot messages to determine network devices
+    [ -n "$netdevices" ] || netdevices=$netdevices_up
+    netdevices_all=`dmesg|grep "^eth.: "| awk -F: '{print $1}'|sort|uniq`
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+disk_info() {
+
+    # the variable holds a space separated list of devices and their block size
+    device_size=`egrep ' cciss/c.d.$| ida/c.d.$| rd/c.d.$| hd.$| sd.$|/disc$' /proc/partitions | diskandsize`
+
+    # a list of all local disks, without size
+    disklist=`list_disks $device_size`
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+diskandsize() {
+
+    local isdisk major minor blocks device
+
+    while read major minor blocks device; do
+	isdisk=1
+	# skip ide cdrom
+	[ -f /proc/ide/$device/media ] && grep -q cdrom /proc/ide/$device/media && isdisk=0
+	[ $isdisk -eq 1 ] && echo "$device $blocks"
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+adddivert() {
+    # add an executable to the list of diversions
+    local item
+    for item in "$@"; do
+	mkdivert $item
+	echo $item >> $divertlist
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+rmalldivert() {
+    # remove all diversions
+    local item
+    [ -s $divertlist ] || return
+    for item in `cat $divertlist`; do
+	rmdivert $item
+    done
+    rm $divertlist
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkdivert() {
+
+    # make a diversion of a file
+    [ "$verbose" ] || local divertquiet=--quiet
+    $ROOTCMD dpkg-divert $divertquiet --package fai --rename --add $1
+    cat > $FAI_ROOT/$1 <<-EOF
+	#! /bin/sh
+	# diversion of $1 created by FAI
+	exit 0
+EOF
+    chmod a+rx $FAI_ROOT/$1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+rmdivert() {
+
+    # remove diversion
+    [ "$verbose" ] || local divertquiet=--quiet
+    rm -f $FAI_ROOT/$1
+    $ROOTCMD dpkg-divert $divertquiet --package fai --rename --remove $1
+    # when a diversion was made before the file exists
+    [ -f $FAI_ROOT/$1.distrib.dpkg-new ] && mv $FAI_ROOT/$1.distrib.dpkg-new $FAI_ROOT/$1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_dhcp_info() {
+
+    local dhcplog=$FTMP/dhcp.log
+    dhclient -lf /dev/null $netdevices >$dhcplog 2> $FTMP/dhclient.log
+    [ -n "$verbose" -a -f $dhcplog ] && echo "Reading $dhcplog"
+    eval `grep -v "^#" $dhcplog`
+    killall dhclient-2.2.x
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_bootp_info() {
+
+    local device
+    local bootlog=$FTMP/bootp.log
+    # define all bootpc information as variables
+    for device in $netdevices; do
+	echo "Sending BOOTP request using device $device"
+	echo "* --- network device $device ---" >> $bootlog
+	bootpc --dev $device --timeoutwait $timeout --returniffail >> $bootlog 2>&1
+    done
+
+    [ -n "$verbose" -a -f $bootlog ] && echo "Reading $bootlog"
+    eval `grep -v "^\*" $bootlog`
+    # Think aboout this:
+    # echo next lines >> bootlog; then eval bootlog
+    FAI_LOCATION=$T170
+    FAI_ACTION=$T171
+    FAI_FLAGS=$T172
+    #FAI_BACKUP_LIST=$T174 # not yet used
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+load_keymap_consolechars() {
+
+    local mapname keymapfile keymaps
+    # support for other keyboards
+    if [ "$FAI_KEYMAP" ]; then
+	for mapname in $FAI_KEYMAP; do
+	    keymapfile=`find /usr/share/keymaps/ $FAI/files \
+	      ! -type d -name $mapname.kmap.gz -o \
+	      -name $mapname.inc.gz -o -name $mapname`
+	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
+	done
+
+	if [ "$keymaps" ]; then
+	    loadkeys $keymaps
+	else
+	    echo "FAI_KEYMAP $FAI_KEYMAP not found"
+	fi
+    fi
+    [ "$FAI_CONSOLEFONT" ] &&
+	consolechars -v -f /usr/share/consolefonts/$FAI_CONSOLEFONT.psf.gz
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+eval_cmdline() {
+
+    # parse kernel parameters and eval variables
+    local word
+
+    echo -n "Kernel parameters:"; cat /proc/cmdline
+    for word in `cat /proc/cmdline` ; do
+	case $word in
+	    [a-zA-Z]*=*)
+		echo "Defining variable: $word"
+		eval $word
+		;;
+	esac
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_partition() {
+
+    echo "Partitioning local harddisks"
+    [ ! -s $diskvar ] && setup_harddisks -d -X > $FTMP/format.log 2>&1
+    if [ ! -s $diskvar ]; then
+	cat $FTMP/format.log
+	die "Error: $diskvar not found."
+    fi
+    . $diskvar
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_extrbase() {
+
+    echo "Unpacking Debian base archive"
+    gzip -dc /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
+    # now we can copy fstab
+    [ -f $FAI_ROOT/etc/$fstab ] && mv $FAI_ROOT/etc/$fstab $FAI_ROOT/etc/$fstab.old
+    cp -p $FTMP/$fstab $FAI_ROOT/etc/$fstab
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_mirror() {
+
+    # mount debian mirror directory
+    if [ "$FAI_DEBMIRROR" ]; then
+	mkdir -p $FAI_ROOT/$MNTPOINT
+	mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT ||
+	    die "Can't mount $FAI_DEBMIRROR"
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_updatebase() {
+
+    echo "Updating base"
+    if [ "$debug" ]; then
+	prepare_apt | tee -a $FTMP/updatebase.log 2>&1
+    else
+	prepare_apt  > $FTMP/updatebase.log 2>&1
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+prepare_apt() {
+
+    # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
+    # think about using fcopy for these two files
+    [ -f /tmp/etc/resolv.conf ] && cp /tmp/etc/resolv.conf $FAI_ROOT/etc
+    [ -f /etc/hosts ] && cp /etc/hosts $FAI_ROOT/etc
+    # set hostname in $FAI_ROOT
+    echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
+    echo $HOSTNAME >$FAI_ROOT/etc/hostname
+    cp /etc/apt/* $FAI_ROOT/etc/apt/
+    # some packages must access /proc even in chroot environment
+    mount -t proc proc $FAI_ROOT/proc
+
+    # if libc is upgraded init u is called in chroot environment and
+    # then init will eat up much cpu time
+    adddivert /sbin/init /usr/sbin/liloconfig
+
+    $ROOTCMD apt-get update
+    $ROOTCMD apt-get check
+    [ $? -ne 0 ] && $ROOTCMD apt-get -f -y install </dev/null 
+    $ROOTCMD dpkg -C
+    [ $? -ne 0 ] && yes '' | $ROOTCMD dpkg --configure -a 
+    $ROOTCMD apt-get -f -y upgrade </dev/null
+    # update dpkg info which packages are available
+    $ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
+    $ROOTCMD dpkg --update-avail /tmp/dumpavail
+    rm -f $FAI_ROOT/tmp/dumpavail
+
+    # fake some more programs
+    adddivert /usr/sbin/xserver-configure /etc/init.d/nis /sbin/start-stop-daemon
+    cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_instsoft() {
+
+    echo "Installing software may take a while"
+    if [ "$debug" ]; then
+	install_packages | tee -a $FTMP/software.log
+    elif [ "$verbose" ]; then
+	yes '' | install_packages | tee -a $FTMP/software.log
+    else
+	yes '' | install_packages >> $FTMP/software.log 2>&1
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_sysinfo() {
+
+    echo The defined classes are:
+    echo $classes
+    echo The classes are also saved in $FTMP/FAI_CLASSES
+
+    # show some system information and save it on the server
+    lspci
+    lsdev
+    echo "Ethernet cards found: $netdevices_all"
+    echo "Ethernet cards running: $netdevices_up"
+    ifconfig -a
+
+    echo -n "xserver for graphic card: "; 
+    [ -x /usr/bin/xviddetect ] && xviddetect -q
+    [ -x /sbin/discover ] && discover --xdriver video
+    [ -x /sbin/discover ] && discover ethernet cdrom scsi sound video
+    [ -x /sbin/discover ] && discover --module ethernet cdrom scsi sound video
+    [ -x /usr/sbin/kudzu ] && kudzu -q
+    if [ -x /usr/sbin/detect ]; then
+       cd $FTMP
+       detect && cat report.txt
+    fi
+
+    [ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
+    cat /proc/partitions
+    disk_info
+    local disk
+    for disk in $disklist; do
+	hdparm -iv /dev/$disk
+	fdisk -s /dev/$disk
+	LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
+    done
+    fdisk -lu
+    #si -p -o shm
+    mount_local_disks
+    fstab_mount
+
+    load_keymap_consolechars
+
+    save_dmesg
+    save_log_remote
+    task_faiend
+}
