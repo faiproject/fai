@@ -10,7 +10,8 @@
 #
 # see: dh_installdeb(1)
 
-set -eu
+set -e
+
 
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
@@ -33,12 +34,32 @@ set -eu
 case "$1" in
     configure)
 
-    # remove old config file
-    [ -e /etc/fai/fai.conf ] && rm -f /etc/fai.conf
+        . /usr/share/debconf/confmodule
+        # set installserver hostname to a reasonable value with debconf
+        db_get fai/installserver
+        sed -i "s/^installserver=.*\$/installserver=$RET/" /etc/fai/fai.conf
 
-    echo "Now edit fai.conf, make-fai-nfsroot.conf and sources.list in /etc/fai and call fai-setup."
+        # set mirrorhost in  /etc/fai.conf and  /etc/fai/sources.list as
+        # defined in debconf db
+        db_get fai/mirrorhost
+        sed -i "s/MIRRORHOST/$RET/" /etc/fai/fai.conf
+        sed -i "s/MIRRORHOST/$RET/" /etc/fai/sources.list
 
-    ;;
+        db_get fai/fai-setup-done || true
+        FAISETUPDONE=$RET
+        
+        db_get fai/run-faisetup-on-install || true
+        RUNFAISETUP=$RET
+       
+        if [ "$FAISETUPDONE" != true -a "$RUNFAISETUP" = true ]; then 
+            echo "The script fai-setup will be executed now, this procedure can take a while."
+            fai-setup || true
+        else
+            echo "Now edit fai.conf, make-fai-nfsroot.conf and sources.list in /etc/fai and call fai-setup."
+        fi
+        
+
+        ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
 
