@@ -1,0 +1,104 @@
+#! /bin/sh
+
+# $Id$
+#*********************************************************************
+#
+# fai-save-log -- save log files from fai to a local or remote location
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2002 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+save_log_local() {
+
+
+    # can be an extern script
+    # save log files on local disk
+
+    # LOGSERVER is overridable until now
+    [ -z "$LOGSERVER" ] && LOGSERVER=$LOGSERVER
+    local logbase=$FAI_ROOT/var/log/fai
+    local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$RUNDATE
+    find $LOGDIR -size 0 -type f | xargs -r rm
+    mkdir -p $thislog
+    cp -p $LOGDIR/* $thislog
+    ln -sf $HOSTNAME $logbase/localhost
+    ln -snf $FAI_ACTION-$RUNDATE $logbase/$HOSTNAME/last-$FAI_ACTION
+    ln -snf $FAI_ACTION-$RUNDATE $logbase/$HOSTNAME/last
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+save_log_remote() {
+
+    # can be an extern script
+    # save log files to $LOGUSER/$HOSTNAME/.. on $LOGSERVER
+    # also create a link last-$FAI_ACTION the the directory of the
+    # last action. The name of the log directory contains date and
+    # time of the action performed
+
+    [ "$LOGUSER" ] || return
+    # LOGSERVER is overridable until now
+    [ -z "$LOGSERVER" ] && LOGSERVER=$SERVER
+
+    echo "Saving log files remote to $LOGUSER@$LOGSERVER $HOSTNAME/$FAI_ACTION-$RUNDATE"
+    local thislog=$HOSTNAME/$FAI_ACTION-$RUNDATE
+    find $LOGDIR -size 0 -type f | xargs -r rm
+    $FAI_REMOTESH -l $LOGUSER $LOGSERVER " \
+       mkdir -p $thislog ;\
+       cd $HOSTNAME ;\
+       rm -f last-$FAI_ACTION ;\
+       ln -snf $FAI_ACTION-$RUNDATE last-$FAI_ACTION ;\
+       ln -snf $FAI_ACTION-$RUNDATE last"
+
+    $FAI_REMOTECP -p $LOGDIR/* $LOGUSER@$LOGSERVER:$thislog
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    cat <<EOF
+fai-savelog, save log files from fai to a local or remote location
+
+   Copyright (C) 2002 by Thomas Lange
+
+Usage: fai-savelog [OPTION]
+
+   -r       Save log files to \$LOGSERVER using rcp or scp
+   -l       Save log files to local directory \$FAI_ROOT/var/log/fai
+
+Report bugs to <lange@informatik.uni-koeln.de>.
+EOF
+exit 0
+
+
+}
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+[ "$1" ] || usage
+
+while getopts lr opt ; do
+        case "$opt" in
+        l) save_log_local ;;
+        r) save_log_remote ;;
+	*) usage ;;
+        esac
+done
