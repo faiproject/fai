@@ -40,11 +40,19 @@ if ifclass NIS; then
 fi
 
 # make scratch directory writeable for all;
+# decide to use the BSD automounter (class BSDAMD)
+# or to use the kernel automounter per default
 ifclass SCRATCH && chmod 1777 $target/scratch
-if ifclass FILES_SCRATCH; then
+if ifclass FILES_SCRATCH ; then 
   chmod 1777 $target/files/scratch
   # enable kernel automounter
-  fcopy /etc/auto.master /etc/auto.scratch /etc/apt/sources/list
+  fcopy /etc/auto.master /etc/auto.scratch 
+  if ifclass BSDAMD; then
+      mkdir $target/scratch
+      chmod 1555 $target/scratch
+      # enable bsd automounter
+      fcopy /etc/am-utils/amd.conf /etc/default/am-utils 
+  fi
 fi
 
 # copy default dotfiles for root account
@@ -73,7 +81,7 @@ else
    yes 'n' | $ROOTCMD apt-get install $kernelimage
 fi
 
-ifclass X11 && fcopy /etc/X11/XF86Config /etc/X11/Xserver
+fcopy /etc/X11/XF86Config-4
 
 # put CD-ROM into fstab
 # if cdromdevice is defined in *.var, use that value
@@ -81,6 +89,65 @@ ifclass X11 && fcopy /etc/X11/XF86Config /etc/X11/Xserver
 [ "$cdromdevice" ] || cdromdevice=`grep -H cdrom /proc/ide/hd*/media | head -1 | awk -F/ '{print $4}'`
 [ "$cdromdevice" ] || cdromdevice=`grep -q CD-ROM /proc/scsi/scsi && echo "sr0"`
 echo "/dev/$cdromdevice  /cdrom   auto    ro,user,nosuid,noauto 0 0" >>$target/etc/fstab
+# if a second cd-rom exists we assume that this is the cd-writer
+if [ `grep "Type:.*CD-ROM" /proc/scsi/scsi | wc -l` -gt 1 ]; then
+    echo "/dev/sr1  /cdrec  auto    ro,user,nosuid,noauto 0 0" >>$target/etc/fstab
+    mkdir $target/cdrec
+fi
 
 # copy bootsector programm to local disk
 [ -d /usr/local/sbin ] && cp -p /sbin/bootsector $target/usr/local/sbin
+
+# copy ldp.conf if printing is done via Network and NIS
+ifclass NISLPRCLIENT && {
+    ${ROOTCMD} update-rc.d -f lprng remove
+    fcopy /etc/lprng/lpd.conf
+    rm -f $target/etc/cron.daily/lprng
+}
+# generate locales on client
+fcopy /etc/locale.gen && ${ROOTCMD} dpkg-reconfigure -u locales
+
+# copy for all NET_9 Linux-Clients exim.conf
+ifclass LINUX && fcopy /etc/exim/exim.conf
+
+# only used for acroread5
+ifclass USR_LOCAL_MOUNT || ftar /usr/local
+
+# class WWWKIOSK sets the Netscape into KIOSK mode.  
+if ifclass WWWKIOSK; then 
+    fcopy /etc/rc2.d/S99aptupdate /root/.shutdown.sh /etc/network/interfaces /etc/hosts /etc/X11/app-defaults/Netscape /boot/grub/menu.lst
+    chown root:root $target/root/.shutdown.sh
+    chmod 0644 $target/root/.shutdown.sh
+    rm -f $target/usr/X11R6/bin/netscape
+    ln -s /usr/lib/netscape/477/communicator/communicator-smotif.real $target/usr/local/bin/netscape
+fi
+
+# create pseudo /vol
+ifclass LINUX && ifclass CS_KOELN && ln -s /usr/local/vol $target/vol
+
+# change cdrecord default
+fcopy /etc/default/cdrecord
+# set cdrecord to suid 
+[ -f $target/usr/bin/cdrecord ] && chmod u+s $target/usr/bin/cdrecord
+chmod a+rw $target/dev/scd0 $target/dev/scd1
+
+# install mozilla plugins
+ifclass LINUX && ifclass CS_KOELN && ftar /usr/lib/mozilla
+
+# change a2ps site-conf to print in a ps-file by default
+fcopy /etc/a2ps-site.cfg
+
+# enable access to /dev/sg3 for everybody if a scsi scanner exists
+# this makes sure, that xsane is able to find the connected scsi scanners
+# only for kueppers
+# /dev/sg3 is accessed if scanner is added by scsi-add at runtime
+ifclass kueppers && chmod a+rw $target/dev/sg3
+
+# for our local installation we copy a backuped ssh_key
+if [ -d $target/files/scratch/${HOSTNAME}-backup/etc/ssh ]; then
+    cp -p $target/files/scratch/${HOSTNAME}-backup/etc/ssh/ssh_host* $target/etc/ssh
+fi
+
+# copy sshd config if it exists
+fcopy /etc/ssh/sshd_config
+
