@@ -2,6 +2,9 @@
 
 # (c) Thomas Lange, 2002-2004, lange@informatik.uni-koeln.de
 
+# NOTE: Files named *.source will be evaluated, but their output ignored and instead 
+# the contents of $newclasses will be added to the list of defined classes.
+
 echo 0 > /proc/sys/kernel/printk
 # let discover do most of the job
 /etc/init.d/discover start
@@ -46,7 +49,8 @@ echo 6 > /proc/sys/kernel/printk
 videodrv=`discover --data-path=xfree86/server/device/driver display`
 [ -n "$videodrv" ] && echo "videodrv=$videodrv" >> $LOGDIR/additional.var
 case "$videodrv" in
-    mga) newclasses="$newclasses MATROX"
+    mga) newclasses="$newclasses MATROX" ;;
+    nv)  newclasses="$newclasses NVIDIA" ;;
 esac
 echo "Video card detected: $videodrv"
 
