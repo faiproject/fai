@@ -190,9 +190,14 @@ wait_for_jobs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_ramdisk() {
 
-    local ramdevice=/dev/ram0
-    mke2fs -q -m 0 $ramdevice && echo "ramdisk $ramdevice created"
-    mount -n $ramdevice /tmp
+    if [ "$USE_TMPFS" ] ; then
+        mount -t tmpfs none /tmp
+    else
+	local ramdevice=/dev/ram0
+	mke2fs -q -m 0 $ramdevice && echo "ramdisk $ramdevice created"
+	mount -n $ramdevice /tmp
+    fi
+
     # now create the required subdirectories
     mkdir /tmp/var /tmp/etc /tmp/target
     cd    /tmp/var && mkdir tmp log lock run spool
@@ -255,7 +260,7 @@ load_keymap_consolechars() {
     # support for other keyboards
     if [ "$FAI_KEYMAP" ]; then
 	for mapname in $FAI_KEYMAP; do
-	    keymapfile=`find /usr/share/keymaps/ /fai/files \
+	    keymapfile=`find /usr/share/keymaps/ $FAI/files \
 	      ! -type d -name $mapname.kmap.gz -o \
 	      -name $mapname.inc.gz -o -name $mapname`
 	    [ "$keymapfile" ] && keymaps="$keymaps $keymapfile"
@@ -307,7 +312,7 @@ call_hook() {
     [ "$debug" ] && local dflag="-d"
 
     for cl in $classes; do
-	local hfile=/fai/hooks/${hook}.$cl
+	local hfile=$FAI/hooks/${hook}.$cl
 	if [ -x $hfile ]; then
 	   	echo "Call hook: $hook.$cl"
 		# execute the hook
@@ -335,6 +340,19 @@ skiptask() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_fai_dir() {
+
+    # subroutine which gets $FAI (/fai) configuration directory from
+    # a cvs repository. You can redefine this subroutine if you need
+    # access via ftp, http, or from a database
+
+    if [ "$FAI_CVSROOT" ] ; then
+       cd /tmp
+       cvs -P -q -d"$FAI_CVSROOT" co "$FAI_CVSMODULE" > /tmp/cvs-co.log
+       export FAI=/tmp/$FAI_CVSMODULE
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_confdir() {
 
     local dnshost
@@ -356,11 +374,15 @@ task_confdir() {
 	done
     fi
 
-    [ "$FAI_LOCATION" ] || die "\$FAI_LOCATION not defined."
-    mount $romountopt $FAI_LOCATION /fai &&
-	    echo "/fai mounted from $FAI_LOCATION"
+    if [ "$FAI_LOCATION" ]; then
+       echo "Warning $0: \$FAI_LOCATION not defined."
+       get_fai_dir
+    else
+        mount $romountopt $FAI_LOCATION $FAI &&
+	    echo "$FAI mounted from $FAI_LOCATION"
+    fi
     # source user specific subroutines
-    [ -f /fai/hooks/subroutines ] && . /fai/hooks/subroutines
+    [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_setup() {
@@ -416,11 +438,11 @@ task_action() {
 	    task backup
 	    ;;
 	*)
-	    if [ -f /fai/hooks/$FAI_ACTION ]; then
+	    if [ -f $FAI/hooks/$FAI_ACTION ]; then
 		echo "Calling user defined action: $FAI_ACTION"
-		/fai/hooks/$FAI_ACTION
+		$FAI/hooks/$FAI_ACTION
 	    else
-		echo "ERROR: User defined action /fai/hooks/$FAI_ACTION not found."
+		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found."
 		task_faiend
 	    fi
 	    ;;
@@ -431,7 +453,7 @@ task_defclass() {
 
     local newclasses addclasses class f
 
-    cd /fai/class || die "No directory /fai/class found. No configuration in $FAI_LOCATION on the install server."
+    cd $FAI/class || die "No directory $FAI/class found. No configuration in $FAI_LOCATION on the install server."
     echo "Defining classes"
 
     [ -f $HOSTNAME ] && newclasses=`grep -v '^#' $HOSTNAME`
@@ -471,7 +493,7 @@ task_defclass() {
 task_defvar() {
 
     local class
-    cd /fai/class
+    cd $FAI/class
     for class in $classes ; do
 	if [ -f $class.var ]; then
 	    [ "$verbose" ] && echo "Executing $class.var"
@@ -586,7 +608,7 @@ task_configure() {
     # execute scripts; cfengine, shell, perl and expect scripts are known types
     local class filetype f
 
-    cd /fai/scripts
+    cd $FAI/scripts
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
@@ -603,7 +625,7 @@ do_script() {
 local shelldebug file
 
 file=$1
-cd /fai/scripts
+cd $FAI/scripts
 
     filetype=`file $file`
     shelldebug=
