@@ -142,14 +142,19 @@ task_confdir() {
     local dnshost
     eval_cmdline
 
-    # TODO: only start on demand; use FAI_FLAGS for that
-    echo "*.* $LOGDIR/syslog.log" > /tmp/etc/syslog.conf
-    syslogd -m 0 -p /tmp/etc/syslogsocket
-    klogd -c1 -f $LOGDIR/kernel.log
-
     netdevice_info
-    dmesg | grep -q "Sending DHCP requests" && get_dhcp_info
+    dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
     dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
+
+    # define flags to see if syslogd should be started
+    # this routine is called again, so you can use a hook to redefine flags
+    echo 6 > /proc/sys/kernel/printk
+    define_fai_flags
+    [ "$syslogd" ] && {
+      klogd -c7 -f $LOGDIR/kernel.log
+      syslogd -m 0 -p /tmp/etc/syslogsocket
+    }
+
     echo "SERVER=$SERVER" >> $rcsfaivar
     create_resolv_conf
     get_fai_dir
