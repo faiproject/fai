@@ -583,15 +583,29 @@ task_instsoft() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_configure() {
 
-# execute scripts; cfengine, shell, perl and expect scripts are known types
+    # execute scripts; cfengine, shell, perl and expect scripts are known types
+    local class filetype f
+
+    cd /fai/scripts
+    for class in $classes ; do
+	[ -x $class -a -f $class ] && do_script $class
+	if [ -d $class ]; then
+	   for f in `ls $class/S[0-9]*` ; do
+	   [ "$verbose" ] && echo "Executing script $f"
+	       [ -x $f -a -f $f ] && do_script $f
+	   done
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+do_script() {
+
+local shelldebug file
+
+file=$1
 cd /fai/scripts
 
-local class filetype shelldebug
-
-for class in $classes ; do
-if [ -x $class -a -f $class ]; then
-    filetype=`file $class`
-
+    filetype=`file $file`
     shelldebug=
     case $filetype in
 	*"Bourne shell script"*)
@@ -603,33 +617,31 @@ if [ -x $class -a -f $class ]; then
     case $filetype in
 
 	*"Bourne shell script"*|*"Bourne-Again shell script"*)
-	    echo "Executing $shelldebug shell: $class"
-	    echo "=====   shell: $class   =====" >> /tmp/shell.log 2>&1
-	    $shelldebug ./$class >> /tmp/shell.log 2>&1
+	    echo "Executing $shelldebug shell: $file"
+	    echo "=====   shell: $file   =====" >> /tmp/shell.log 2>&1
+	    $shelldebug ./$file >> /tmp/shell.log 2>&1
 	;;
 
 	*"cfengine script"*)
-	    echo "Executing cfengine: $class"
-	    echo "=====   cfengine: $class   =====" >> /tmp/cfengine.log 2>&1
-	    ./$class --no-lock -v -f $class -D${cfclasses} >> /tmp/cfengine.log 2>&1
+	    echo "Executing cfengine: $file"
+	    echo "=====   cfengine: $file   =====" >> /tmp/cfengine.log 2>&1
+	    ./$file --no-lock -v -f $file -D${cfclasses} >> /tmp/cfengine.log 2>&1
 	;;
 
 	*"perl script"*)
-	    echo "Executing perl: $class"
-	    echo "=====   perl: $class   =====" >> /tmp/perl.log 2>&1
-	    ./$class >> /tmp/perl.log 2>&1
+	    echo "Executing perl: $file"
+	    echo "=====   perl: $file   =====" >> /tmp/perl.log 2>&1
+	    ./$file >> /tmp/perl.log 2>&1
 	;;
 
 	*"expect script"*)
-	    echo "Executing expect: $class"
-	    echo "=====   expect: $class   =====" >> /tmp/expect.log 2>&1
-	    ./$class >> /tmp/expect.log 2>&1
+	    echo "Executing expect: $file"
+	    echo "=====   expect: $file   =====" >> /tmp/expect.log 2>&1
+	    ./$file >> /tmp/expect.log 2>&1
 	;;
 
-	*) echo "File $class has unsupported type $filetype." ;;
+	*) echo "File $file has unsupported type $filetype." ;;
     esac
-fi
-done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
