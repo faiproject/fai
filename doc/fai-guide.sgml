@@ -8,10 +8,10 @@
 
 <!entity faikernelver "1.5">
 <!entity faiver "2.4">
-<!entity faiverdate "xx feb 2002">
+<!entity faiverdate "12 feb 2002">
 
 <!entity version "2.0">
-<!entity date    " xx feb 2002">
+<!entity date    " 12 feb 2002">
 ]>
 
 <debiandoc>
@@ -2211,7 +2211,7 @@ The master server will be installed by hand if it is your
 first computer installed with Debian. If you already have a Debian
 host running, you can also install it via FAI. Create a partition on
 <file>/files/scratch</file> for the local Debian mirror with more that
-5GB space available.
+&mirrorsize GB space available.
 
 <sect1 id=beonetworkmaster> Set up the network<p>
 
@@ -2276,7 +2276,7 @@ Rebuild the NIS maps:
 
 Now the user <var>tom</var> can create a local Debian mirror on
 <file>/files/scratch/</file> using <prgn>mkdebmirror</prgn>. This will
-need about 5 GB disk space for Debian 3.0 (aka woody). Export this
+need about &mirrorsize GB disk space for Debian 3.0 (aka woody). Export this
 directory to the netgroup <tt>@faiclients</tt> read only.
 
 <sect1 id=fai1> Install FAI package on the master server<p>
@@ -2436,8 +2436,79 @@ and a HOWTO can be found at
 
 This chapter has various hints which may not always be explained in great
 detail.
+<p>
 
-<sect id=tricks>Advanced tricks<p>
+
+You can merge two directories which contain configuration
+information, if one is a global one, and the other a local one. We use
+it to merge the temples from the fai package, and our local
+configuration, which contains encrypted passwords and other
+information that should not be readable for others. This is how our
+setup looks like.
+<p>
+We have a local configuration space located in
+<file>~admin/additional-fai/</file> which contains following files:
+<example>
+./files
+./files/etc
+./files/etc/hosts
+./files/etc/hosts/NUERBURG1
+./files/etc/hosts/NUERBURG2
+./files/etc/network
+./files/etc/network/interfaces
+./files/etc/network/interfaces/NUERBURG1
+./files/etc/network/interfaces/NUERBURG2
+./files/etc/bootptab
+./files/etc/bootptab/kueppers
+./files/etc/kueppers.tar.gz
+./files/packages
+./files/packages/kernel-image-2.4.20-cskoeln_2_i386.deb
+./files/packages/cloop-2.4.20-cskoeln_0.63.1-4+2_i386.deb
+./files/packages/xv-doc_3.10a-26_all.deb
+./files/packages/xv_3.10a-26_i386.deb
+./files/packages/Packages.gz
+./files/packages/ltmodem-2.4.20_8.26a9_i386.deb
+./files/packages/cloop-2.4.20-acer_0.63.1-4+1_i386.deb
+./files/packages/kernel-image-2.4.20-acer_1_i386.deb
+./files/packages/pcmcia-modules-2.4.20-acer_3.1.33-6+1_i386.deb
+./files/packages/kernel-headers-2.4.20-acer_1_i386.deb
+./files/packages/ltmodem-2.4.20-acer_8.26a9_i386.deb
+./files/packages/debmirror_20020427-1_all.deb
+./files/usr
+./files/usr/local
+./files/usr/local/ACROREAD5.tar.gz
+./files/usr/local/share
+./files/usr/local/share/LPRng
+./files/usr/local/share/LPRng/pcfilter
+./files/usr/local/share/LPRng/pcfilter/NISLPRCLIENT
+./files/usr/lib
+./files/usr/lib/mozilla
+./files/usr/lib/mozilla/CS_KOELN.tar.gz
+./class
+./class/dom.var
+./class/NET_9.var
+./mk-packages-gz
+./scripts
+./scripts/kueppers
+./README
+./disk_config
+./disk_config/dom
+./disk_config/kueppers
+</example>
+
+The file <file>mk-packages-gz</file> is just the simple script which
+creates the <file>Packages.gz</file> as explained above. In order to
+copy this local configuration data into the fai config space we use
+this command:
+
+<example>cp -a ~admin/additional-fai/* /usr/local/share/fai
+</example>
+
+If you remove a file in you local configuration, do not forget to
+remove this file also in the configuration space, otherwise it will
+still be used.
+<p>
+
 
 Use <prgn>fai-divert -a</prgn> if a postinst script calls a
 configuration program, e.g. the postinst script for package apache calls
@@ -2498,23 +2569,6 @@ skipped. For use e.g. in <file>partition.DISKLESS</file>.</p> </item> </taglist>
 
 </book>
 </debiandoc>
-
-<!-- 
-backup:
-via rsync monday -> node01, thursday -> node02,...
-apt-get update
-apt-get upgrade
-
-
-# install pine
-cd /tmp
-dpkg-source -x /usr/src/pine4/pine4_4.21-1.dsc 
-cd /tmp/pine4-4.21
-dpkg-buildpackage 
-cd /tmp
-dpkg -i *.deb
-
--->
 
 <!-- Keep this comment at the end of the file
 Local variables:
