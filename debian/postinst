@@ -29,63 +29,11 @@ set -eu
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
-. /etc/fai.conf
-
-test -f /etc/init.d/nfs-server && nfsserver=nfs-server
-test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
-
-add_export_line() {
-
-    # add a line to /etc/exports
-
-    pattern=$1
-    shift
-    options=$*
-
-    [ -f /etc/exports ] && grep -q "^$pattern[[:space:]]" /etc/exports && return
-    echo "$pattern $options" >> /etc/exports
-    /etc/init.d/$nfsserver start >/dev/null
-    /etc/init.d/$nfsserver reload >/dev/null
-}
-
-add_fai_account() {
-
-    if id $LOGUSER 2>/dev/null 1>&2 ; then
-	echo Account \$LOGUSER=$LOGUSER  already exists.
-	echo Make sure, that all install clients can
-	echo log into this account without a password
-    else
-	adduser --system --disabled-password --gecos "FAI account for log files" $LOGUSER
-	gid=`id -ng $LOGUSER`
-	perl -pi.bak -e "s#^$LOGUSER:(.+):/bin/false#$LOGUSER:\1:/bin/bash#" /etc/passwd
-	echo "+@faiclients root" > /home/$LOGUSER/.rhosts
-	chown $LOGUSER:$gid /home/$LOGUSER/.rhosts
-	chmod go-rwx /home/$LOGUSER/.rhosts
-	touch /home/$LOGUSER/.account_created_by_fai_package
-    fi
-}
 
 case "$1" in
     configure)
 
-    add_fai_account >/dev/null
-
-    MYTMPFILE=`mktemp /tmp/make-fai-nfsroot.XXXXXX`
-
-    echo Creating FAI nfsroot can take a long time
-    make-fai-nfsroot > $MYTMPFILE 2>&1
-
-    mkdir -p /usr/local/share/fai || true
-
-    add_export_line /usr/local/share/fai  "@faiclients(ro)"
-    add_export_line $NFSROOT  "@faiclients(ro,no_root_squash)"
-    add_export_line /usr  "@faiclients(ro,no_root_squash)"
-
-    if [ ! -d /usr/local/share/fai/fai_config ];then
-	echo "You have no FAI configuration. Copy FAI template files with:"
-	echo "cp -pR /usr/share/doc/fai/templates/* /usr/local/share/fai"
-	echo "Then change the configuration files to meet your local needs."
-    fi
+    echo "To set up FAI edit /etc/fai.conf and call fai-setup"
 
     ;;
 
