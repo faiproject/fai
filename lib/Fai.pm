@@ -76,23 +76,6 @@ sub read_disk_info {
     $sum_disk_size += $size;
     $disksize{$device} = $size;
   }
-
-# old version
-#      my $device;
-#      open ( DISK,"sfdisk -l|");
-#      while (<DISK>) {
-#  	if (m!^Disk\s/dev/(\w+)!) {
-#  	    $device = $1;
-#  	}
-#  	if (m!blocks of\s*(\d+)\s*bytes!) {
-#  	    my $bytes_per_block = $1;
-#  	    # blocks -> Mbytes:
-#  	    $size = $blocks{$device} * $bytes_per_block / (1024*1024) ;
-#  	    $sum_disk_size += $size;
-#  	    $disksize{$device} = $size;
-#  	}
-#      }
-#      close DISK;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub disksize {
