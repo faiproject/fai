@@ -7,11 +7,11 @@
   <!entity cvs-rev "$Id$">
 
 <!entity faikernelver "1.2">
-<!entity faiver "2.3">
-<!entity faiverdate "9 apr, 2002">
+<!entity faiver "2.3.1">
+<!entity faiverdate "15 apr, 2002">
 
-<!entity version "1.4.1">
-<!entity date    "12 apr 2002">
+<!entity version "1.5">
+<!entity date    "15 apr 2002">
 ]>
 
 <debiandoc>
@@ -579,18 +579,17 @@ configuration for pxelinux is written to
 
 <sect id="bootfloppy">Creating a boot floppy
 <p>
-If your network card can't boot itself, you have to boot via
-floppy disk. Use the command <prgn>make-fai-bootfloppy</prgn> to create the
-boot floppy. Since there's no client specific information on this
-floppy, it's suitable for all your install clients.
-You can also specify additional kernel parameters for this boot
-floppy, if desired. There's more help available.
- <example># make-fai-bootfloppy -h</example>
-If you have no BOOTP or DHCP server, supply the network
- configuration as kernel parameters.
-<footnote> 
-The format is: <example>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
-</example>For additional information see <file>/usr/src/linux/Documentation/nfsroot.txt</file> in the kernel
+If your network card can't boot itself, you have to boot via floppy
+disk. To create the boot floppy use the command
+<prgn>make-fai-bootfloppy</prgn>. Since there's no client specific
+information on this floppy, it's suitable for all your install
+clients.  You can also specify additional kernel parameters for this
+boot floppy, if desired. There's more help available.  <example># make-fai-bootfloppy -h</example> If you have no BOOTP or DHCP server,
+supply the network configuration as kernel parameters.  <footnote> The
+format is:
+<example>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
+</example>For additional information see
+<file>/usr/src/linux/Documentation/nfsroot.txt</file> in the kernel
 sources.
  </footnote>
 
@@ -997,7 +996,7 @@ the secure shell daemon for remote access is started on demand.
 
 <sect id=iclass>Defining classes, variables and loading kernel modules<p>
 
-Now scripts in <file>/fai/class/</file> are executed to define classes
+Now several scripts in <file>/fai/class/</file> are executed to define classes
 and variables. All scripts matching <tt>S[0-9]*.{sh,pl,source}</tt>
 are executed in alphabetical order. Scripts ending in <tt>.source</tt>
 are sourced, so they can define new classes by adding these classes to
@@ -1006,7 +1005,7 @@ example). Every word that these scripts print to the standard output
 are interpreted as class names. These classes are defined for the
 install client. You can also say this client belongs to these
 classes. A class is defined or undefined and has no value. Only
-defined classes are of interest for an install client.  A description
+defined classes are of interest for an install client. The description
 of all classes can be found in
 <file>/usr/share/doc/fai/classes_description.txt</file>. It is
 advisable to document the job a new class performs. Then, this
@@ -1016,7 +1015,7 @@ documentation is the base for composing a configuration from classes.
 The scripts <prgn>S05modules.source</prgn> loads kernel modules
 on demand. So you can use classes when loading modules and also define
 more classes after the kernel has loaded modules and recognized new hardware.
-A complete description of all these scripts can be found in <ref id="cscripts">.
+The complete description of all these scripts can be found in <ref id="cscripts">.
 <p>
 
 <p>Script <file>S30menu.source</file> pops up a little menu and ask
@@ -1153,19 +1152,28 @@ The configuration is the collection of information how exactly to
 install a computer. The central configuration space for all install
 clients is located on the install server in <file>/usr/local/share/fai</file>
 and its subdirectories. This will be mounted by the install clients to
-<file>/fai</file>. Following subdirectories are present and include
+<file>/fai</file>.  It's also possible to receive all the
+configuration data from a <manref name="cvs" section="1"> repository.
+Following subdirectories are present and include
 several files:
 
 <taglist>
 	  <tag><tt>class/</tt></tag> <item> <p>Scripts and files to
 	   define classes and variables and to load kernel modules.</p> </item>
+
 	  <tag><tt>disk_config/</tt></tag> <item> <p>Configuration
 	  files for disk partitioning and file system creation.</p> </item>
+
+	  <tag><tt>debconf/</tt></tag> <item> <p>This directory holds
+	  all <manref name="debconf" section="8"> data. Not yet used.</p> </item>
+
 	  <tag><tt>package_config/</tt></tag> <item> <p>File with
 	   lists of software
 	  packages to be installed or removed.</p> </item>
+
 	  <tag><tt>scripts/</tt></tag> <item> <p>Script for local site
 	   customization.</p> </item>
+
 	  <tag><tt>files/</tt></tag> <item> <p>Files used by
 	  customization scripts, eg. user created kernel
 	   packages. Most files are located in a subtree structure,
@@ -1176,10 +1184,6 @@ several files:
 	  <tag><tt>hooks/</tt></tag> <item> <p>Hooks are user defined
 	  programs or scripts, which are called during the
 	  installation process.</p> </item>
-
-	  <tag><tt>debconf/</tt></tag> <item> <p>This directory holds
-	  all <manref name="debconf" section="8"> data. Not yet used.</p> </item>
-
 </taglist>
 
 The main installation script <prgn>rcS_fai</prgn> uses all these
@@ -1195,10 +1199,10 @@ then edit the configuration with a normal user account.
 # chown -R fai /usr/local/share/fai
 </example>
 
-All these files contain configuration for some example hosts. 
-A cluster of workstations (<em>bigfoot, ant01, ant02,...</em>) and a Beowulf
-cluster with a master node called <em>nucleus</em> and computing nodes
-<em>atom01, atom02,...</em> are included.
+These files contain configuration for some example hosts. Examples
+are: a cluster of workstations (<em>bigfoot, ant01, ant02,...</em>)
+and a Beowulf cluster with a master node called <em>nucleus</em> and
+computing nodes called <em>atom01, atom02,...</em>
 
 <taglist>  
    <tag>bigfoot</tag>  <item> <p>This is a server with much software. It
@@ -1225,34 +1229,42 @@ installation !
 <sect id=tasks>The default tasks<p>
 
 After the kernel has booted, it mounts the root file system via NFS
-from the install server and init starts the script
-<file>/sbin/rcS_fai</file>. This is the script which controls the
+from the install server and <manref name="init" section="8"> starts the script
+<file>/sbin/rcS_fai</file>. This script controls the
 sequence of the installation. No other scripts in
 <file>/etc/init.d/</file> are used.
 <p>
 
 The installation script uses many subroutines, which are defined in
-<file>/usr/share/fai/subroutines</file>. All important tasks of the
+<file>/usr/share/fai/subroutines</file> and an operating specific
+file <footnote><file>/usr/share/fai/subroutines-linux</file> for Linux,
+<file>/usr/share/fai/subroutines-sunos</file> for Solaris.</footnote>
+. All important tasks of the
 installation are called via the subroutine <tt>task</tt>
 appended by the name of the task as an option (eg. <tt>task
 instsoft</tt>). The subroutine <tt>task</tt> calls hooks with prefix
 <em>name</em> if available and then calls the default task (defined as
 <tt>task_<em>name</em></tt> in <file>subroutines</file>). The default
-task can be skipped on demand if the file
-<file>/tmp/skip.</file><em>name</em> exists.<p>
+task and its hooks can be skipped on demand by using the subroutine
+<tt>skiptask()</tt>.<p>
 
-This is the description of all default tasks.
+Now follows the description of all default tasks.
 <taglist>
 
       <tag>confdir</tag> <item><p>The kernel append parameters define
 variables, the syslog and kernel log daemon are started. The list of
 network devices is stored in <var>$netdevices</var>. Then additional
 parameters are fetched from a DHCP or BOOTP server and also define
-variables.  The resolver configuration file is created and the
+variables.  The DNS resolver configuration file is created. The
 configuration space is mounted from the install server to
-<file>/fai</file>. The file <file>/fai/hooks/subroutines</file> is
-sourced, if it exists. Using this file, you can define your own
-subroutines or override the definition of FAI's subroutines.
+<file>/fai</file> or it is checked out from the corresponding <manref
+name="cvs" section="1"> repository. To use a cvs repository, you have
+to set the variables <var>$FAI_CVSROOT, $FAI_CVSTAG,
+$FAI_CVSMODULE</var>. For details look a the subroutine
+<prgn>get_fai_cvs()</prgn>. After that, the file
+<file>/fai/hooks/subroutines</file> is sourced, if it exists. Using
+this file, you can define your own subroutines or override the
+definition of FAI's subroutines.
 
     <tag>setup</tag> <item><p>This task sets the system time, all
       <var>FAI_FLAGS</var> are defined and two additional virtual
@@ -1301,8 +1313,8 @@ subroutines or override the definition of FAI's subroutines.
 
      <tag>partition</tag> <item><p>Calls <prgn>setup_harddisk</prgn>
       to partition the hard disks. The task writes variable
-      definitions for the root and boot device (<var>$ROOT_PARTITION,
-      $BOOT_PARTITION</var>) to
+      definitions for the root and boot partition and device (<var>$ROOT_PARTITION,
+      $BOOT_PARTITION, $BOOT_DEVICE</var>) to
       <file>/tmp/fai/disk_var.sh</file> and create a fstab file.</p></item>
 
       <tag>mountdisks</tag> <item><p>Mounts the created partitions
@@ -1310,14 +1322,15 @@ subroutines or override the definition of FAI's subroutines.
       <var>$FAI_ROOT</var>.</p> </item>
 
       <tag>extrbase</tag> <item><p>Extracts the base tar file
-      <file>base.tgz</file>, which is created by
-      <prgn>make-fai-nfsroot</prgn>.</p> </item>
+      <file>base.tgz</file>, which consists of all required
+      packages. This is a snapshot of a basic SDebian system created
+      by <manref name="debootstrap" section="8"></p> </item>
 
-      <tag>mirror</tag> <item><p>If a local mirror is accessed via NFS
+      <tag>mirror</tag> <item><p>If a local Debian mirror is accessed via NFS
       ( when <var>$FAI_DEBMIRROR</var> is defined), this directory will
-      be mounted to <var>$MNTPOINT</var>, which is defined in &fc;.</p> </item>
+      be mounted to <var>$MNTPOINT</var>.</p> </item>
 
-      <tag>updatebase</tag> <item><p>Prepares the extracted base
+      <tag>updatebase</tag> <item><p>Prepares the extracted Debian base
       system for further installation and updates the list of available
       packages. Updates the packages to the newest version. Creates
       fake scripts for some commands inside the new installed system
@@ -1328,21 +1341,23 @@ subroutines or override the definition of FAI's subroutines.
       <file>/fai/packages_config</file>.</p> </item>
 
 	<tag>configure</tag> <item><p>Calls scripts in
-      <file>/fai/scripts/</file> for every defined class.</p> </item>
+      <file>/fai/scripts/</file> and its subdirectories for every
+      defined class.</p> </item>
 
       <tag>finish</tag> <item><p>Unmounts all filesystems in the
       new installed system and removes diversions of files
-      (<prgn>rmdivert</prgn>).</p></item>
+      using the subroutine <prgn>rmalldivert</prgn>.</p></item>
 
-      <tag>faiend</tag> <item><p>Automaticly reboots the install
+      <tag>faiend</tag> <item><p>Wais for background jobs to finish
+      and automaticly reboots the install
       clients or waits for manual input before reboot.</p> </item>
 
       <tag>chboot</tag> <item><p>Changes symbolic link on the install
       server, which indicates which kernel image to load on the next
-      boot from network card.</p> </item>
+      boot from network card via TFTP.</p> </item>
 
       <tag>savelog</tag> <item><p>Saves log files to local disk and to
-      the install server.</p> </item>
+      the account <var>$LOGUSER</var> on install server.</p> </item>
 
  </taglist>
 
@@ -1350,14 +1365,15 @@ subroutines or override the definition of FAI's subroutines.
 <sect id=s1>The setup routines of the install clients<p>
 
 After the subroutine <prgn>fai_init</prgn> has done some basic
-initialization, the setup continues by calling the task
-<tt>confdir</tt> and the task <tt>setup</tt>. The command <manref name="bootpc"
-section="8"> is called and its output is used to define the
-corresponding global variables which are save in
-<file>/tmp/fai/bootp.log</file>. This is an example for this log file.
-
+initialization (create ramdisk, read <file>fai.conf</file> and all
+subroutines definitions, set path, print copyright notice), the setup
+continues by calling the task <tt>confdir</tt> and the task
+<tt>setup</tt>. When using the BOOTP daemon, the command <manref name="bootpc" section="8"> is
+called and its output is used to define the corresponding global
+variables which are save in <file>/tmp/fai/bootp.log</file>. This is
+an example for this log file.
 <example>
-/tmp/fai/bootp.log:
+# cat /tmp/fai/bootp.log
 
 # --- network device eth0 ---
 SERVER='134.95.9.149'
@@ -1390,10 +1406,9 @@ T171='install'
 T172='createvt sshd'
 </example>
 
-It's not a bug, if a variable (<tt>T171</tt> in the example above) is
+It's not a bug, that a variable (<tt>T171</tt> in the example above) is
 defined twice. The second definition is created by the host specific
 entry in <file>/etc/bootptab</file> and supersedes the first one.
-<p>
 The tag <tt>T172</tt> is the definition for <var>$FAI_FLAGS</var>. It
 contains a space separated list of flags. Following flags are known:
 <taglist>
@@ -1401,10 +1416,10 @@ contains a space separated list of flags. Following flags are known:
  installation. This should be always the first flag, so consecutive
  definitions of flags will be verbosely displayed.</p> </item>
 
- <tag>debug</tag> <item> <p>Create debug output. No interactive
+ <tag>debug</tag> <item> <p>Create debug output. No unattended
  installation is performed. During package installation you have to
- answer all questions of the postinstall scripts from the
- console. </p> </item>
+ answer all questions of the postinstall scripts on the
+ clients console. </p> </item>
 
  <tag>sshd</tag> <item> <p>Start the ssh daemon to enable remote
  logins.</p> </item>
@@ -1414,7 +1429,7 @@ contains a space separated list of flags. Following flags are known:
   terminal. The additional terminals can be accessed by typing
   <tt>Alt-F2</tt> or <tt>Alt-F3</tt>. Otherwise no terminals are
   available and typing <tt>ctrl-c</tt> will reboot the install
-  client. Useful for installation which should not be
+  client. Useful for debugging or installation which should not be
   interruptible.</p> </item>
 
  <tag>reboot</tag> <item> <p>Reboot the install client after installation
@@ -1422,8 +1437,7 @@ contains a space separated list of flags. Following flags are known:
  change the boot image or boot device automatically or your assembly robot
  can remove the boot floppy via remote control :-) if you cannot use a
  boot device selection trick. Currently this should only be used when
- booting from network card and using <var>$TFTPLINK</var> or changing the
- boot device with the command <prgn>bootsector</prgn>.</p> </item>
+ booting from network card and using <var>$TFTPLINK</var>.</p> </item>
 </taglist>
 
 
@@ -1436,11 +1450,10 @@ clients searches the list of defined classes and uses all
 configuration files that match a class name. It's also possible to use
 only the configuration file with the highest priority since the order
 of classes define the priority for low to high. There are some
-predefined classes (DEFAULT, LAST and the hostname, all written
-uppercase), but classes can also be listed in a file or defined
-dynamically by scripts. So it's easy to define a class depending on
-the subnet information or on some hardware that is available on the
-install client.
+predefined classes (DEFAULT, LAST and the hostname), but classes can
+also be listed in a file or defined dynamically by scripts. So it's
+easy to define a class depending on the subnet information or on some
+hardware that is available on the install client.
 <p>
 The idea of using classes in general and using certain files matching
 a class name for a configuration is adopted from the installation
@@ -1448,7 +1461,7 @@ scripts by Casper Dik for Solaris. This technique proved to be very
 useful for the SUN workstations, so I also use it for the fully
 automatic installation of Linux. One simple and very efficient feature
 of Casper's scripts is to call a command with all files (or ony the
-firsrt one), whose file
+first one), whose file
 names are also a class. The following loop may implement this function
 in a shell script:
 
@@ -1512,7 +1525,7 @@ hook has written classes to the file
 The list of all defined classes is stored in the variable
 <var>$classes</var> and saved to <file>/tmp/fai/FAI_CLASSES</file>. The list of
 all classes is transfered to <prgn>cfengine</prgn>, so it can use them
-too. Script <file>S01alias.sh</file> (see below) is used to define
+too. The script <file>S01alias.sh</file> (see below) is used to define
 classes for groups of hosts. All hosts with prefix <var>ant</var> use
 all classes in the file <file>anthill</file>. Hosts, which have an IP
 address in subnet 134.95.9.0 also belongs to class
@@ -1522,7 +1535,7 @@ file <file>atoms</file>. Finally this scripts defines the class with the name
 of the hardware architecture in uppercase letters.
 
 <example>
-S01alias.sh:
+# cat S01alias.sh
 
 # echo architecture in upper case
 dpkg --print-installation-architecture | tr /a-z/ /A-Z/
@@ -1598,7 +1611,7 @@ the on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
 
 <sect id=classvariables> Defining Variables<p>
 
-The task <em>defvar</em> defines the variables for the install
+The task <tt>defvar</tt> defines the variables for the install
 clients. Variables are defined by scripts in
 <tt>class/*.var</tt><footnote>Also <file>*.source files can define
 variables.</file></footnote>.  All global variables can be set in
@@ -1638,7 +1651,7 @@ for your installation:
    <var>$kernelimage</var> from the Debian mirror. For eg., if
    <tt>kernelimage=kernel-image-&kver;-idepci</tt> this kernel will be
    installed. To install the a special kernel for host bigfoot, set
-   <tt>kernelimage=kernel-image-&kver;_bigfoot1_i386.deb</tt> and this
+   the variable <example>kernelimage=kernel-image-&kver;_bigfoot1_i386.deb</example> and this
    kernel will be installed from
    <file>/fai/files/packages/</file>.</p></item>
 
@@ -1664,6 +1677,13 @@ for your installation:
    <tag>printers</tag> <item> <p>List of printers, for which a spool
    directory is created. The config scripts does not set up
    <file>/etc/printcap</file>.</p> </item> 
+
+   <tag>addpackages</tag> <item> <p>The list of additional packages,
+   that are installed to the new system if they are available in
+   <file>/fai/files/packages</file>. This can be used to install local
+   site specific packages, that can't be accessed using <manref
+   name="sources.list" section="5">.
+
 </taglist>
 
 
@@ -2049,6 +2069,7 @@ host running, you can also install it via FAI. Create a partition on
 Add following lines for the second network card to <file>/etc/network/interfaces</file>:
 <example>
 # Beowulf cluster connection
+auto eth1
 iface eth1 inet static
 address 192.168.42.250
 netmask 255.255.255.0
@@ -2098,7 +2119,8 @@ NIS service.
 255.255.255.0 192.168.42.0
 </example>
 
-Rebuild the NIS maps: <tt> # cd /var/yp; make</tt>
+Rebuild the NIS maps:
+<example># cd /var/yp; make</example>
 
 <sect1 id=beomirror> Create a local Debian mirror<p>
 
@@ -2110,9 +2132,11 @@ directory to the netgroup <tt>@faiclients</tt> read only.
 <sect1 id=fai1> Install FAI package on the master server<p>
 
 Add following packages to the install server:
-<example>nucleus:/# apt-get install task-dns-server ntp tftp bootp nfs-kernel-server fai fai-kernels</example>
-Configure NTP so that the master server and all client nodes will have
-the same correct system time.
+<example>nucleus:/# apt-get install ntp tftp bootp nfs-kernel-server fai fai-kernels
+nucleus:/# tasksel -q -n install dns-server
+nucleus:/# apt-get dselect-upgrade
+</example>
+Configure NTP so that the master server will have the correct system time.
 
 <p>
 It's very important to use the internal network name <var>atom00</var>
@@ -2163,11 +2187,12 @@ some utilities.
 </example>
 
 Now, the user <var>tom</var> can create a symlink in
-<file>/boot/fai</file> using <example>>tlink atom_install atom01</example>
+<file>/boot/fai</file> using 
+<example>> tlink atom_install atom01</example>
 to boot the first client node for the first
 time. Then start to adjust the configuration for your client
 nodes. Don't forget to build the kernel for the cluster nodes using
-<manref name="make-kpkg" section="8">.
+<manref name="make-kpkg" section="8"> and store it in <file>/usr/local/share/fai/files/packages</file>.
 
 <sect id=beotools> Tools for Beowulf cluster<p>
 
@@ -2189,6 +2214,19 @@ Following tools for a Beowulf cluster now are available in <file>/usr/local/bin<
 	hosts up. You can also use the <manref name="dsh" section="1">
 	command (dancer's shell, or distributed shell).
 
+  <tag>rgang</tag> <item> <p>For a huge cluster try
+  <prgn>rgang</prgn>. It's is a tool which executes commands on or
+  distribute files to many nodes. It uses an algorithm to build a
+  tree-like structure to allow the distribution processing time to
+  scale very well to 1000 or more nodes (available at
+  <httpsite>http://fermitools.fnal.gov/</httpsite>
+  <httppath>abstracts/rgang/abstract.html</httppath>). </p></item>
+
+	  <tag>jmon</tag><item><p>For observing the resources of all
+	  clients (CPU, memory, swap,...)  you can use <manref
+	  name="jmon" section="1"> which install a simple daemon on
+	  every cluster node. But there are a lot of other tools
+	  available, which are not yet included in a Debian package. </p> </item>
 </taglist>
 
 
@@ -2303,7 +2341,7 @@ diversions are removed.</p> </item>
 <tag>skiptask</tag> <item> <p>This given list of tasks are
 skipped. For e.g use in <file>partition.DISKLESS</file>.</p> </item> </taglist>
 
-<chapt id=solaris>Using fai for installing Solaris on SUN SPARC hardware<p>
+<chapt id=solaris>Using FAI for installing Solaris on SUN SPARC hardware<p>
 
 Currently, FAI is being extended to support installation of Solaris
 operating system with the help of Solaris Jumpstart. The part of
