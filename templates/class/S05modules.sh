@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # load kernel modules
-# message of oading go to syslog/dmesg
+# message of loading modules are written to syslogd and read with dmesg
 
 conffiles="global $HOSTNAME"
 
