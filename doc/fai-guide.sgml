@@ -2,7 +2,7 @@
   <!-- include version information so we don't have to hard code it
        within the document -->
   <!-- common, language independant entities -->
-  <!entity % commondata  SYSTEM "common.ent" > %commondata;
+  <!entity % commondata SYSTEM "common.ent" > %commondata;
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
@@ -16,7 +16,7 @@
       <title>FAI Guide (Fully Automatic Installation)
 
       <author>Thomas Lange <email>lange@informatik.uni-koeln.de</email>
-      <version>Version &version  for FAI version 2.1, &date
+      <version>Version &version for FAI version 2.1, &date
 
 <abstract>
 This manual describes the fully automatic installation package for
@@ -59,7 +59,7 @@ Debian bug tracking system (BTS)
 for reporting errors.
 <p>
 You can access the CVS repository from a bourne shell using the
-following commands. The login password is blank (press enter). 
+following commands. The login password is empty, so only press return. 
 <example>
 > CVSROOT=:pserver:anonymous@cvs.debian.org:/cvs/debian-boot
 > cvs login
@@ -67,11 +67,11 @@ following commands. The login password is blank (press enter).
 > cvs co -P fai
 </example>
 
-You can also use the WWW interface for the CVS repository at:
+You can also use the web interface for the CVS repository at:
 <httpsite>http://cvs.debian.org/</httpsite><httppath>fai/</httppath>
 (and <package>fai-kernels</package>).
 <p>
-Now read this manual then enjoy the fully automatic installation and
+Now read this manual, then enjoy the fully automatic installation and
 your saved time.
 
 
@@ -137,7 +137,7 @@ large-scale linux networks with different hardware or different installation
 requirements are easy to establish using FAI. But don't forget to plan
 your installation. <ref id="plan"> has some useful hints for this topic.
 <p>
-First, some terms used in this manual, are described.
+First, some terms used in this manual are described.
 
 <taglist>
 	  <tag> install server : <item> <p>The host, where the package FAI
@@ -219,7 +219,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Tested on SUN SPARC hardware</p> </item>
 	    <item> <p>Diskless client support</p> </item>
 	    <item> <p>Easily add your own functions via hooks</p> </item>
-
+	    <item> <p>Lilo and grub support</p> </item>
 </list>
 
 <chapt id="inst">Installing FAI
@@ -312,14 +312,13 @@ These are important variables in &fc;:
 <taglist>
 	    <tag><var>FAI_DEBOOTSTRAP</var></tag>
 	    <item>
-	  <p>For building the nfsroot there's a new tool called
+	  <p>For building the nfsroot there's a new command called
 	  <manref name="debootstrap" section="8">, which replaces the
-	  use of the <var>FAI_BASETGZ</var> variable. The tool needs
+	  use of the <var>FAI_BASETGZ</var> variable. It needs
 	  the location of a Debian mirror and the distribution
 	  (potato,woody,stable,unstable) for which the basic Debian
 	  system should be build.
 	    </p> </item>
-
 
 	    <tag><var>FAI_BASETGZ</var></tag>
 	    <item>
@@ -362,7 +361,10 @@ These are important variables in &fc;:
 	      name="make-kpkg" section="8">), which includes
 	      the default kernel for booting the install clients. The
 	      Debian package <package>fai-kernels</package> contains the
-	      default install kernels with BOOTP and DHCP support.</p></item>
+	      default install kernels with BOOTP and DHCP support. Do
+	      not use the kernel with BOOTP support when you have a
+	      DHCP server running in your network and vice versa. This
+	      could lead to missing information.</p></item>
 	<tag> <var>NFSROOT_PACKAGES</var></tag>
 	    <item>
 	  <p> Contains a list of additional software package, that
@@ -374,7 +376,7 @@ The variables <var>FAI_SOURCES_LIST</var> and <var>FAI_DEBMIRROR</var>
 are used by the install server and also by the clients. If your
 install server has multiple network card and different host names for
 each card (as for a beowulf server), use the install
-servers name, which is used by the install clients.<p>
+server name which is used by the install clients.<p>
 
 FAI uses <manref name="apt-get" section="8"> to create the nfsroot
 filesystem in <file>/usr/lib/fai/nfsroot</file>, which needs about
@@ -697,7 +699,8 @@ is a definition for all clients.
 
 <sect id="bootdhcp">Configuration of the DHCP daemon <p>
 An example for <manref name="dhcp.conf" section="5"> is available in
-<file>/usr/share/doc/fai/examples/etc</file>. If you make any changes
+<file>/usr/share/doc/fai/examples/etc</file>. Start using this example
+and look at all options used therein. If you make any changes
 to this configuration, you must restart the daemon.
 
 
@@ -805,7 +808,7 @@ install kernel can be found in the <file>README</file> of the package <tt>fai-ke
 <sect id="sysinfo">Collecting other system information 
 <p>
 
-Now the clients have booted  with <var>FAI_ACTION</var> set to <em>sysinfo</em>. Type
+Now the clients have booted with <var>FAI_ACTION</var> set to <em>sysinfo</em>. Type
 <tt>ctrl-c</tt> to get a shell or use <tt>Alt-F2</tt> or
 <tt>Alt-F3</tt> and you will get another console terminal, if you have added <tt>createvt</tt>
 to <var>FAI_FLAGS</var>.
@@ -864,6 +867,16 @@ filesystems. If you need a filesystem with read-write access use the
 <prgn>rwmount</prgn> command:
 
 <example>ant01:~# rwmount /tmp/target/home</example> 
+
+<sect id=checkbootp>Checking parameters from BOOTP and DHCP servers<p>
+
+If the install client boots with action <em>sysinfo</em>, you can also
+check if all information from the BOOTP or DHCP daemons are received
+correctly. If the kernel uses BOOTP requests to receive data, these
+information will be written to <file>/tmp/bootp.log</file>. If the
+kernel support the DHCP protocol all is written to
+<file>/tmp/dhcp.log</file>. And example for the result of a BOOTP
+requests can be found in <ref id="s1">.
 
 
 <sect id=reboot>Rebooting the computer<p>
@@ -1077,14 +1090,16 @@ and its subdirectories. This will be mounted by the install clients to
 
 <taglist>
 	  <tag><tt>class/</tt></tag> <item> <p>Scripts and files to
-	  load kernel modules and define classes and variables</p> </item>
+	  load kernel modules and define classes and variables.</p> </item>
 	  <tag><tt>disk_config/</tt></tag> <item> <p>Configuration
-	  files for disk partitioning and file system creation</p> </item>
+	  files for disk partitioning and file system creation.</p> </item>
 	  <tag><tt>package_config/</tt></tag> <item> <p>Software
-	  packages to be installed or removed</p> </item>
-	  <tag><tt>scripts/</tt></tag> <item> <p>Script for customization</p> </item>
+	  packages to be installed or removed.</p> </item>
+	  <tag><tt>scripts/</tt></tag> <item> <p>Script for customization.</p> </item>
 	  <tag><tt>files/</tt></tag> <item> <p>Files used by
-	  customization scripts</p> </item>
+	  customization scripts.</p> </item>
+	  <tag><tt>hooks/</tt></tag> <item> <p>Hooks are user defined
+	  programs, which are called during the installation process.
 </taglist>
 
 The main installation script <prgn>rcS_fai</prgn> uses these
@@ -1123,10 +1138,10 @@ When the kernel has booted and the network interface is set up, the
 BOOTP (or DHCP) server is inquired a second time to get the additional
 information for FAI. The command <manref name="bootpc" section="8"> is
 called and its output is used to define the corresponding global
-variables.
+variables which are save in <file>/tmp/bootp.log</file>.
 
 <example>
-/tmp/bootpc.log:
+/tmp/bootp.log:
 
 SERVER='134.95.9.149'
 IPADDR='134.95.9.200'
@@ -1168,7 +1183,7 @@ Following <var>FAI_FLAGS</var> (T172) are known:
 <taglist>
  <tag>verbose</tag> <item> <p>Create verbose output during
  installation. This should be alsway the first flag, so consecutive
- definitions of flags will be  verbosely displayed.</p> </item>
+ definitions of flags will be verbosely displayed.</p> </item>
 
  <tag>debug</tag> <item> <p>Create debug output. No interactive
  installation is performed. During package installation you have to
@@ -1337,7 +1352,7 @@ the file <tt>$</tt><file>HOSTNAME.var</file>.
    script <file>/etc/init.d/S61hdparm</file>.</p> </item>
 
    <tag>UTC</tag> <item> <p>Set hardware clock to UTC if
-   <tt>$UTC=yes</tt>. Otherwise set clock to locatime. (See <manref
+   <tt>$UTC=yes</tt>. Otherwise set clock to locatime. See <manref
    name="clock" section="8"> for more information.</p> </item>
 
    <tag>time_zone</tag> <item> <p>File relative to
@@ -1353,13 +1368,14 @@ the file <tt>$</tt><file>HOSTNAME.var</file>.
 
    <tag>kernelimage</tag> <item> <p>The kernel that is installed to
    the new system. If a Debian package
-   <file>/fai/files/packages/</file><tt>$kernelimage</tt> exists use
-   this as kernel package. Otherwise try installing the package
-   <tt>$kernelimage</tt>. If <var>$kernelimage</var> is
-   <tt>&kver;</tt> the default kernel (package kernel-image-&kver;)
-   will be installed. To install the a special kernel for host
-   bigfoot, set
-   <tt>kernelimage=kernel-image-&kver;_bigfoot1_i386.deb</tt>.</p></item>
+   <file>/fai/files/packages/</file><tt>$kernelimage</tt> exists,
+   isntall this kernel package. Otherwise install the package
+   <tt>$kernelimage</tt> from the Debian mirror. For eg., if
+   <tt>kernelimage=kernel-image-&kver;-idepci</tt> this kernel will be
+   installed. To install the a special kernel for host bigfoot, set
+   <tt>kernelimage=kernel-image-&kver;_bigfoot1_i386.deb</tt> and this
+   kernel will be installed from
+   <file>/fai/files/packages/</file>.</p></item>
 
    <tag>liloappend</tag> <item> <p>Append parameters for the kernel of
    the new system (written to <file>/etc/lilo.conf</file>).</p> </item>
@@ -1384,22 +1400,18 @@ the file <tt>$</tt><file>HOSTNAME.var</file>.
 </taglist>
 
 
+<sect id=diskconfig>Hard disk configuration<p> 
 
-<sect id=diskconfig>Hard disk configuration<p> The format of the hard
-disk configuration files is described in
-<file>/usr/share/doc/fai/README.disk_config.gz</file>.  The config
-file <file>/fai/disk_config/CS_KOELN</file> is a generic description
-for one IDE hard disk, which should be OK for most installations.  If
-you can't partition your harddisk using this configuration and script
-<footnote><p>Currently this script uses the command
-<tt>sfdisk(8)</tt>, which isn't available on SUN SPARC. There could
-also be problems when using raid controllers or the new devfs
-filesystem.</p> </footnote> , you can create a script
-<file>/usr/local/bin/my-fdisk</file>, which will be used instead. This
-script should write the new partition table, create the file systems
-and create the file <file>/tmp/fstab</file> and
-<file>/tmp/disk_var.sh</file>, which contains definitions of boot and
-root partitions.
+The format of the hard disk configuration files is described in
+<file>/usr/share/doc/fai/README.disk_config.gz</file>. The config file
+<file>/fai/disk_config/CS_KOELN</file> is a generic description for
+one IDE hard disk, which should fit for most installations. If you
+can't partition your harddisk using this script <footnote><p>Currently
+this script uses the command <tt>sfdisk(8)</tt>, which isn't available
+on SUN SPARC.</p> </footnote>, use a hook instead. The hook should
+write the new partition table, create the file systems and create the
+file <file>/tmp/fstab</file> and <file>/tmp/disk_var.sh</file>, which
+contains definitions of boot and root partitions.
 
 <sect id=packageconfig>Software package configuration<p>
 The script <prgn>install_packages</prgn> installs the selected software
@@ -1453,10 +1465,10 @@ the commands install and remove. All dependencies are resolved and <prgn>apt-get
 is used to perform the installation or removal of packages. The order of the
 packages is of no matter. 
 <p>
-A line, that contains the <tt>PRELOADRM</tt> token, loads a file into a
-directory before installing the packages. For examples the package
-<prgn>realplayer</prgn> needs an archive to install the software, so
-this archive is downloaded to the directory
+A line, that contains the <tt>PRELOADRM</tt> commands, loads a file
+into a directory before installing the packages. For examples the
+package <prgn>realplayer</prgn> needs an archive to install the
+software, so this archive is downloaded to the directory
 <file>/root</file>.  After installing the packages this file will be
 removed. If the file shouldn't be removed, use the the command
 <tt>PRELOAD</tt> instead.
@@ -1573,43 +1585,47 @@ enable the boot sector before you want to partition the disk.
 <sect id=hooks>Hooks<p>
 
 Hooks let you specify functions or programs, that are run at certain
-steps of the installation process. FAI provides many locations, where
-hooks are called. As you might expect, classes are also used when
+steps of the installation process. FAI provides many locations where
+hooks can be called. As you might expect, classes are also used when
 calling hooks. Hooks are executed for every defined class. You only
-have to create the hook with the name of the desired class and it will
-be used.  If <tt>debug</tt> is included in <var>$FAI_FLAG</var> the
-option <tt>-d</tt> is passed to all hooks, so you can debug your own hooks.
+have to create the hook with the name for the desired class and it
+will be used. If <tt>debug</tt> is included in <var>$FAI_FLAG</var>
+the option <tt>-d</tt> is passed to all hooks, so you can debug your
+own hooks.
 <p>
-The directory <file>/usr/local/share/fai/hooks/</file> contains all
-hooks, except the hooks with prefix <tt>first</tt>. The file name of a
-hook consists of a hook name as a prefix and a class name, chained by
-a dot. The prefix describes the time when the hook is called, if the
-class if defined for the install client. For example, the hook
-<file>partition.DISKLESS</file> is called for every client belonging
-to the class <tt>DISKLESS</tt> before the local disks would be
-partitioned. Since it should become a diskless client, this hook can
-mount remote filesystems via NFS and create a <tt>/tmp/fstab</tt>.
-After that, the installation process will not try to partition and
+The directory <file>/fai/hooks/</file> contains all hooks. The file
+name of a hook consists of a hook name as a prefix and a class name,
+chained by a dot. The prefix describes the time when the hook is
+called, if the class if defined for the install client. For example,
+the hook <file>partition.DISKLESS</file> is called for every client
+belonging to the class <tt>DISKLESS</tt> before the local disks would
+be partitioned. If it should become a diskless client, this hook
+can mount remote filesystems via NFS and create a <tt>/tmp/fstab</tt>.
+After that, the installation process would not try to partition and
 format a local hard disk, because a file <file>/tmp/fstab</file>
 already exists.
 <p>
 A hook of the form <tt>hookprefix.classname</tt>  can't define
 variables for the installation script, because it's a subprocess. But
-you can use any binary executable or any script you wrote. Hook which
-has a suffix <tt>.sh</tt> (eg. <file>partition.DEFAULT.sh</file>) must
+you can use any binary executable or any script you wrote. Hooks that
+has the suffix <tt>.sh</tt> (eg. <file>partition.DEFAULT.sh</file>) must
 be bourne shell scripts and are sourced. So it's possible to
-redefine variables for the installation script.
+redefine variables for the installation scripts.
 <p>
 This is the complete list of hooks and when they will be called.
 
 <taglist>
       <tag>first</tag> <item><p>After some basic initialization, all
-      hooks with prefix <tt>first</tt> are called. Since the configuration directory
-      <file>/fai</file> is not yet mount on the install client, these
-      are the only hooks located in <tt>$</tt><file>nfsroot/fai/hooks</file> on the server. </p> </item>
+      hooks with prefix <tt>first</tt> are called. Since the
+      configuration directory <file>/fai</file> is not yet mount on
+      the install client, these are the only hooks located in
+      <tt>$</tt><file>nfsroot/fai/hooks</file> on the install server.  All
+      other hooks are found in <file>/usr/local/share/fai/hooks</file>.</p>
+      </item>
 
       <tag>setup</tag> <item><p>These hooks are immediately called
-      after the configuration directory is mounted.  </p> </item>
+      after the configuration directory is mounted to
+      <file>/fai</file>. </p> </item>
 
 <tag>action</tag> <item><p>Hooks called before the variable
 <var>FAI_ACTION</var> is evaluated.</p> </item>
@@ -1618,14 +1634,16 @@ This is the complete list of hooks and when they will be called.
       performed but the action is <tt>sysinfo</tt>.</p>
       </item>
 
-	    <tag>backup</tag> <item><p>Called when action is
-	    <tt>backup</tt>. Here you can define your own backup taks.</p> </item>
+     <tag>backup</tag> <item><p>Called when action is
+     <tt>backup</tt>. Here you can define your own backup taks.</p>
+     </item>
 
-      <tag>defclass</tag> <item><p>Called before defining classes.</p> </item>
+      <tag>defclass</tag> <item><p>Called before defining classes.</p>
+      </item>
 
-      <tag>defvar</tag> <item><p>Called before defining variables.</p> </item>
-      <tag>partition</tag> <item><p>Called before partitioning the
-      local hard disks.</p> </item>
+      <tag>defvar</tag> <item><p>Called before defining variables.</p>
+      </item> <tag>partition</tag> <item><p>Called before partitioning
+      the local hard disks.</p> </item>
 
       <tag>mountdisks</tag> <item><p>Called before the local disks are
       mounted to <var>$FAI_ROOT</var>.</p> </item>
@@ -1634,24 +1652,25 @@ This is the complete list of hooks and when they will be called.
     <file>base.tgz</file> in unpacked.</p> </item>
 
       <tag>mirror</tag> <item><p>Called before the Debian mirror would
-      be mounted.</p> </item>
+      be mounted when accessing he Debian mirror via NFS.</p> </item>
 
-      <tag>updatebase</tag> <item><p>Called before the base system is upgraded.</p> </item>
+      <tag>updatebase</tag> <item><p>Called before the base system is
+      upgraded.</p> </item>
 
       <tag>instsoft</tag> <item><p>Called before the software packages
       are installed.</p> </item>
 
-      <tag>configure</tag> <item><p>Called before the local
-      customisation of the new installed system is performed.</p> </item>
+	<tag>configure</tag> <item><p>Called before the scripts in
+      <file>/fai/scripts/</file> are called.</p> </item>
 
-      <tag>chboot</tag> <item><p>Called before the boot devices should
+      <tag>chboot</tag> <item><p>Called before the boot device should
       be changed.</p> </item>
 
       <tag>savelog</tag> <item><p>Called before are log files are save
-      to local disk an to the install server.</p> </item>
+      to local disk and to the install server.</p> </item>
 
-      <tag>faiend</tag> <item><p>Called when the installation has
-      finished, before the automatic reboot is performed.</p> </item>
+      <tag>faiend</tag> <item><p>Called when the installation is
+      finished, but before the automatic reboot is performed.</p> </item>
 
  </taglist>
 
@@ -1667,7 +1686,8 @@ hookexample.DEFAULT:
 #! /bin/sh
 
 # skip DEFAULT hook, if a hook for $HOSTNAME exists
-[-f /fai/hooks/$HOSTNAME ] && exit
+scriptname=$(basename $0 .DEFAULT)
+[-f /fai/hooks/$scriptname.$HOSTNAME ] && exit
 # here follows the actions for class DEFAULT
 .
 .
