@@ -618,7 +618,7 @@ you have no <file>/etc/bootptab</file> file you can use
  :nt=time.rrz.uni-koeln.de,time2.rrz.uni-koeln.de:
 
 # now one entry for each install client
-bigfoot:ha=0x00105A240012:bf=bigfoot:tc=.failocal:T171="sysinfo":T172="sshd verbose debug ":
+bigfoot:ha=0x00105A240012:bf=bigfoot:tc=.failocal:T171="sysinfo":T172="verbose sshd createvt debug ":
 ant01:ha=0x00105A000000:bf=ant01:tc=.failocal:T172="sshd":
 </example>
 
@@ -638,7 +638,7 @@ ds</tt>) to your local needs.
  <tag>T170</tag> <item>  <p>Location of the FAI configuration directory
 </p> </item>
  <tag>T171</tag> <item>  <p>FAI_ACTION</p> </item>
- <tag>T172</tag> <item>  <p>List of FAI_FLAGS; e.g. verbose, debug, reboot, sshd</p> </item>
+ <tag>T172</tag> <item>  <p>List of FAI_FLAGS; e.g. verbose, debug, reboot, createvt, sshd</p> </item>
  <tag>T173</tag> <item>  <p>Reserved for future use</p> </item>
  <tag>T174</tag> <item>  <p>Reserved for backup devices and backup options; NOT YET USED
 </p> </item>
@@ -805,13 +805,15 @@ install kernel can be found in the <file>README</file> of the package <tt>fai-ke
 
 Now the clients have booted  with <var>FAI_ACTION</var> set to <em>sysinfo</em>. Type
 <tt>ctrl-c</tt> to get a shell or use <tt>Alt-F2</tt> or
-<tt>Alt-F3</tt> and you will get another console terminal.
+<tt>Alt-F3</tt> and you will get another console terminal, if you have added <tt>createvt</tt>
+to <var>FAI_FLAGS</var>.
 
-Remote login is available via the secure shell. The encrypted password
-is set with variable <var>FAI_ROOTPW</var> in &fc; and is default to
-"fai". You can also log in without a password when using <var>
-SSH_IDENTITY</var>. To log in from your server to the install client (for
-eg. named ant01) use:
+Remote login is available via the secure shell, if <tt>sshd</tt> if
+added to <var>FAI_FLAGS</var>. The encrypted password is set with
+variable <var>FAI_ROOTPW</var> in &fc; and is default to "fai". You
+can also log in without a password when using <var>
+SSH_IDENTITY</var>. To log in from your server to the install client
+(for eg. named ant01) use:
 
 <example>> ssh -l root ant01
 Warning: Permanently added 'ant01,134.95.9.200' to the list of known hosts.
@@ -1162,7 +1164,9 @@ twice. The second definition supersedes the first.
 <p>
 Following <var>FAI_FLAGS</var> (T172) are known:
 <taglist>
- <tag>verbose</tag> <item> <p>Create verbose output during installation. </p> </item>
+ <tag>verbose</tag> <item> <p>Create verbose output during
+ installation. This should be alsway the first flag, so consecutive
+ definitions of flags will be  verbosely displayed.</p> </item>
 
  <tag>debug</tag> <item> <p>Create debug output. No interactive
  installation is performed. During package installation you have to
@@ -1170,6 +1174,8 @@ Following <var>FAI_FLAGS</var> (T172) are known:
  console. </p> </item>
 
  <tag>sshd</tag> <item> <p>Start ssh daemon to enable remote logins.</p> </item>
+
+	    <tag>createvt</tag> <item> <p>Create two virtual terminals and execute a bash if <tt>ctrl-c</tt> it typed. The terminals can be accessed by typing <tt>Alt-F2</tt> or <tt>Alt-F3</tt>. Otherwiese no terminals are available and typing <tt>ctrl-c</tt> will reboot the install client. Useful for installation which should not be interruptible.</p> </item>
 
  <tag>reboot</tag> <item> <p>Reboot after installation is finished
  without typing RETURN on the console. Only useful if you can change
