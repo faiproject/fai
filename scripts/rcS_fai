@@ -106,9 +106,9 @@ fai_init() {
     umask 022
     trap 'echo "Now rebooting";faireboot' INT QUIT
 
-    # set hostname if not yet set and kernel parameter HOST= was given
-    if [ $HOSTNAME = '(none)' -a -n "$HOST" ]; then
-	eval_cmdline
+    # if HOST was specified on the commandline, set hostname to it
+    eval_cmdline
+    if [ -n "$HOST" ]; then
 	HOSTNAME=$HOST
 	hostname $HOST
 	echo "Hostname set to $HOST" | tee -a $rcslog
