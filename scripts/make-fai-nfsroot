@@ -154,13 +154,13 @@ call_debootstrap() {
     
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "calling debootstrap $1 $NFSROOT $2"
-    yes '' | debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2 || true
+    yes '' | call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2 || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
     if [ "$FAI_DEBOOTSTRAP" ]; then
-        call_verbose call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
+        call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
         $ROOTCMD apt-get clean
         echo "Creating base.tgz"
         tar -l -C $NFSROOT -cf - . | gzip > $NFSROOT/../base.tgz
