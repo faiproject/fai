@@ -41,13 +41,14 @@ $classpath = "/fai/package_config";
 $aptgetlog = ">> /tmp/apt-get.log 2>&1";
 $aptgetlog = '' if $verbose;
 
-@classes = grep { !/^#|^\s*$/} split(/[\s\n]/,$ENV{classes});
+@classes = grep { !/^#|^\s*$/} split(/[\s\n]+/,$ENV{classes});
 
-foreach (@classes) {
+# read all package config files
   my $filename = "$classpath/$_";
   &readconfig($filename) if -f $filename;
 }
 
+# get file, which must exist before installing packages
 foreach $entry (@preloadlist) {
   my ($url, $directory) = @$entry;
   $command = "wget -nv -P$FAI_ROOT/$directory $url";
@@ -58,6 +59,7 @@ foreach $entry (@preloadlist) {
   }
 }
 
+# call apt-get for each command and the lsit of packages
 foreach $type (@aptcommands) {
   my $packlist = join(' ',@{$list{$type}});
 
@@ -69,9 +71,10 @@ foreach $type (@aptcommands) {
   }
 }
 
+# check is all went right
 system "chroot $FAI_ROOT dpkg -C $aptgetlog";
+# clean apt-get cache
 system "chroot $FAI_ROOT apt-get clean $aptgetlog";
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
 
@@ -82,21 +85,20 @@ sub readconfig {
   print "$0: read config file $filename\n" if $verbose;
 
   while (<FILE>) {
+    next if /^#/;    # skip comments
+    next if /^\s*$/; # skip empty lines
     chomp;
-    next if /^#/;
-    next if /^\s*$/;
     /^PRELOAD\s+([^\s]+)\s+([^\s]+)/ and push(@preloadlist, [$1, $2]),next;
     /^PACKAGES\s+([^\s]+)/ and $type = $1,next;
     warn "PACKAGES .. line missing in $filename\n" unless $type;
     push @{$list{$type}}, split;
   }
 }
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # not yet used
 sub execute {
 
-  # execute a command or only echo it
+  # execute a command or only print it
   my $command = shift;
   my $error;
 
