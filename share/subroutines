@@ -242,7 +242,7 @@ task_action() {
 
     if [ -z "$FAI_ACTION" ]; then
 	echo "No action in \$FAI_ACTION defined."
-	task_faiend # task faiend should never return
+	task_faiend
 	exit 
     fi
     echo "FAI_ACTION: $FAI_ACTION"
@@ -350,8 +350,13 @@ task_faiend() {
     echo "Rebooting $HOSTNAME now"
     cd /
     sync
-    umount -ar
-    exec reboot -dfi
+
+    case `uname -s` in
+	Linux)
+	    umount -ar
+	    exec reboot -dfi
+	    ;;
+    esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_backup() {
