@@ -253,7 +253,7 @@ create_nfsroot() {
     >  lib/modules/$KERNELVERSION/modules.dep  # dirty trick to hoax lvm
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
-    mkdir $NFSROOT/var/state
+    [ -d $NFSROOT/var/state ] || mkdir $NFSROOT/var/state
     [ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
     cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list || \
 	cp -v /etc/apt/sources.list $NFSROOT/etc/apt/sources.list || \
@@ -467,5 +467,7 @@ call_with_stamp create_nfsroot
 
 kernel_install
 
+umount_dirs
+trap "true" EXIT
 echo "make-fai-nfsroot finished $merror."
 exit 0
