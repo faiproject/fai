@@ -25,10 +25,10 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.2.1, 21-jan-2005"
+version="Version 1.3, 23-mar-2005"
 
-# additional files: install_packages.conf
 # variables: NFSROOT, FAI_CONFIGDIR
+# NFSROOT_PACKAGES, packages from make-fai-nfsroot.conf
 
 # TODO:
 # - add support for package that will be removed like: lilo-
@@ -36,8 +36,8 @@ version="Version 1.2.1, 21-jan-2005"
 
 set -a 
 . /etc/fai/fai.conf
+. /etc/fai/make-fai-nfsroot.conf
 FAI_ROOT=/ # do not execute in chroot
-[ -z "$MAXPACKAGES" ] && MAXPACKAGES=9999
 set +a
 
 trap "umount_dirs" EXIT ERR
@@ -122,17 +122,12 @@ initialize() {
     # TODO: root is only needed when FAI_DEBMIRROR is defined. Then we
     # must mount a directory
 
-    if [ ! -f /etc/fai/install_packages.conf ]; then
-	echo "/etc/fai/install_packages.conf not found. Aborting."
-	exit 3
-    fi
-
     # store all packages temporary in the mirror partition so we need only a move,
     # not a copy later during apt-move
     aptcache=$mirrordir/aptcache   # holds the package cache data
     archivedir=$aptcache/var/cache/apt/archives
     aptmovefile=$aptcache/etc/apt-move.conf # stores apt-move.conf
-    statefile=$aptcache/statefile   # also used in install_packages.conf
+    statefile=$aptcache/statefile
 
     # also used in install_pacakges.conf
     export aptoptions=" \
@@ -176,6 +171,20 @@ delete_base_packages() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_base_packages() {
+
+    local plist
+    # add packages from base.tgz and additional packages in nfsroot
+
+    echo "Adding packages from base.tgz and packages defined in make-fai-nfsroot.conf."
+    if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
+	plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
+	apt-get -qq -d $aptoptions -y --force-yes --fix-missing install $plist
+    fi
+    # also add packages defined in make-fai-nfsroot.conf
+    apt-get -qq -d $aptoptions -y --force-yes --fix-missing install $packages $NFSROOT_PACKAGES
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set-classes() {
 
     # if -c is given, ignore -x
@@ -186,7 +195,7 @@ set-classes() {
 
     set +e
     # all available file names are classes
-    classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep "^[A-Z0-9_]+$")
+    classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep "^[A-Z0-9_-]+$")
     addclasses=$(grep -h PACKAGES $FAI_CONFIGDIR/package_config/* | awk '{printf $3"\n"$4"\n"$5"\n"$6"\n"}')
     export classes=$(echo -e "$classes\n$addclasses\n" | sort | uniq)
     [ -n "$exclasses" ] && excludeclass $exclasses
@@ -196,14 +205,16 @@ set-classes() {
 
 preserve=0
 verbose=0
-while getopts "vhx:pc:" opt ; do
+add=0
+while getopts "avhx:pc:" opt ; do
     case "$opt" in
+	a) add=1 ;;
 	h) usage ;;
 	x) exclasses="$OPTARG";;
 	c) cclasses="$OPTARG";;
 	p) preserve=1;;
 	v) verbose=1; vflag=-v;;
-	?) echo "Unknown option"; exit 1;;
+	?) die 1 "Unknown option";;
     esac
 done
 shift $(($OPTIND - 1))
@@ -214,12 +225,10 @@ debug=0
 
 mirrordir=$1
 if [ -z "$mirrordir" ]; then
-    echo "Please give the directory for the mirror."
-    exit 2
+    die 2 "Please give the directory for the mirror."
 fi
 if [ -d $mirrordir/pool -o -d $mirrordir/dists ]; then
-    echo "Please first remove $mirrordir/pool and $mirrordir/dists"
-    exit 3
+    die 3 "Please first remove $mirrordir/pool and $mirrordir/dists"
 fi
 
 initialize
@@ -229,7 +238,10 @@ initialize
 # if sources.list includes file AND FAI_DEBMIRROR is defined we have to mount
 # otherwise mounting is not needed. call task_mirror
 
-[ "$FAI_DEBMIRROR" ] && mount -r $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT || exit 9
+if [ "$FAI_DEBMIRROR" ]; then
+    mount -r $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT || exit 9
+fi
+
 # TODO: use -p to preserve sources.list
 perl -p -e 's/file:/copy:/' /etc/fai/sources.list > $aptcache/etc/apt/sources.list
 
@@ -239,11 +251,12 @@ apt-get $quiet $aptoptions update >/dev/null
 set-classes
 echo "Downloading packages for classes:" $classes
 # will use install_packages.conf for download only
-FAI=$FAI_CONFIGDIR install_packages $vflag
+FAI=$FAI_CONFIGDIR install_packages -d $vflag
+[ $add -eq 1 ] && add_base_packages
 get_addpackages
 umount_dirs
 trap "" EXIT ERR
-delete_base_packages
+[ $add -eq 0 ] && delete_base_packages
 
 # create mirror directory structure
 echo "Calling apt-move"
@@ -255,6 +268,7 @@ FILECACHE=$archivedir
 LISTSTATE=$aptcache/var/lib/apt/lists
 DELETE=no
 CONTENTS=no
+PKGCOMP='none gzip'
 EOF
 apt-move $quiet -c $aptmovefile update
 echo "$0 finished."
