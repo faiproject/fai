@@ -2,7 +2,7 @@ include ../VERSION
 
 # don't forget 3c90x patch, Thomas !
 
-# where I can build the kernel
+# where I can build the kernel. I have a very huge ramdisk (160MB)
 kerneldir=/tmp/ram
 
 DEB_HOST_ARCH=$(MACHTYPE)
@@ -22,10 +22,10 @@ $(KERNEL): /usr/src/kernel-source-$(KERNELVERSION).tar.bz2
 	cat kernel-config fai-kernel-config-bootp > .config-bootp
 
 $(BOOTPKERNEL): $(kerneldir)/$(BOOTPKERNEL)
-	cp -p $(kerneldir)/$(BOOTPKERNEL) .
+	cp $(kerneldir)/$(BOOTPKERNEL) .
 
 $(kerneldir)/$(BOOTPKERNEL): $(KERNEL) .config-bootp
-	cp -p .config-bootp $(KERNEL)
+	cp -p .config-bootp $(KERNEL)/.config
 	cd $(KERNEL) ; \
 	echo -e "\t\n\n" | make menuconfig ; \
 	make-kpkg clean ; \
@@ -36,10 +36,10 @@ $(kerneldir)/$(BOOTPKERNEL): $(KERNEL) .config-bootp
 	cat kernel-config fai-kernel-config-bootp enable-dhcp > .config-dhcp
 
 $(DHCPKERNEL): $(kerneldir)/$(DHCPKERNEL)
-	cp -p $(kerneldir)/$(DHCPKERNEL) .
+	cp $(kerneldir)/$(DHCPKERNEL) .
 
 $(kerneldir)/$(DHCPKERNEL): $(KERNEL) .config-dhcp
-	cp -p .config-dhcp $(KERNEL)
+	cp -p .config-dhcp $(KERNEL)/.config
 	cd $(KERNEL) ; \
 	echo -e "\t\n\n" | make menuconfig ; \
 	make-kpkg clean ; \
@@ -52,10 +52,9 @@ install:
 
 
 clean:
-	cd $(KERNEL) ; make-kpkg clean
-	rm -f .config-bootp .config-dhcp $(BOOTPKERNEL) $(DHCPKERNEL)
+	rm -f $(BOOTPKERNEL) $(DHCPKERNEL)
 
 veryclean:
-	rm -rf $(KERNEL)
+	rm -rf $(KERNEL) .config-bootp .config-dhcp
 
 .PHONY: clean veryclean

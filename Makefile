@@ -11,14 +11,14 @@ CONFFILES= apt.conf apt.conf.nfsroot dhclient.conf
 # files with variable KERNLEVERSION in it
 KVERSION_FILES = $(DESTDIR)/$(DOCDIR)/templates/package_config/KERNEL_SOFT $(DESTDIR)/$(DOCDIR)/templates/class/S91global.source $(DESTDIR)/$(DOCDIR)/templates/class/S98variables.source
 
-kernels:
+all:
 	$(MAKE) -C kernel all
 
 veryclean: clean
-	$(MAKE) -C kernel clean
 	$(MAKE) -C kernel veryclean
 
 clean:
+	$(MAKE) -C kernel clean
 	rm -f /tmp/make.log
 
 install: 
@@ -35,4 +35,4 @@ install:
 	ln -fs installimage $(DESTDIR)/boot/fai/faiserver
 	ln -fs installimage $(DESTDIR)/boot/fai/faiclient01
 
-.PHONY: clean veryclean kernels
+.PHONY: clean veryclean
