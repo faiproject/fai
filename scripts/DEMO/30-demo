@@ -1,0 +1,29 @@
+#! /usr/bin/cfengine
+
+control:
+   OutputPrefix = ("cfengine")
+   actionsequence = ( files directories editfiles )
+   EditFileSize = ( 30000 )
+
+files:
+   any::
+
+# floppy and cdroms are accessible for all
+        ${target}/dev include=fd* mode=666   action=fixall r=1
+        ${target}/dev include=sr* mode=444   action=fixall r=1
+
+directories:
+
+editfiles:
+   any::
+
+	{ ${target}/etc/init.d/sysklogd
+	  ReplaceAll "^SYSLOGD=.*" With "SYSLOGD=${dblquote}-m 360${dblquote}"
+	}
+
+	# add second root account using tcsh
+	{ ${target}/etc/passwd
+	  LocateLineMatching 	"^root:.*"
+	  InsertLine 		"roott::0:0:root:/root:/usr/bin/tcsh"
+	  ReplaceAll		"^roott::" With "roott:${rootpw}:"
+	}
