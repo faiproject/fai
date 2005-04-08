@@ -18,7 +18,7 @@ BEOEXAMPLE=$(DOCDIR)/examples/beowulf
 libfiles=$(wildcard lib/[a-z]*)  # do not include CVS dir
 
 # files with variable KERNLEVERSION in it; this string will be substituted
-KVERSION_FILES =  $(DESTDIR)/etc/fai/make-fai-nfsroot.conf $(SIEXAMPLE)/class/DEFAULT.var $(BEOEXAMPLE)/class/ATOMCLIENT.var
+KVERSION_FILES =  $(DESTDIR)/etc/fai/make-fai-nfsroot.conf
 
 all:
 	$(MAKE) -C doc all
