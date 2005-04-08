@@ -4,6 +4,12 @@
 
 error=0 ; trap "error=$((error|1))" ERR
 
+# a list of modules which are loaded at boot time
+fcopy -i /etc/modules
+for module in $moduleslist; do
+    echo $module >> $target/etc/modules
+done
+
 # disable fsck on ext3 filesystems
 partitions=`mount|grep $target |grep "type ext3"|perl -ane 'print "$F[0] "'`
 for part in $partitions; do
@@ -31,7 +37,7 @@ echo "root:$rootpw" | $ROOTCMD chpasswd --encrypted
 chmod 0700 $target/root
 chown root:root $target/root
 # copy default dotfiles for root account
-fcopy -r /root
+fcopy -ir /root
 
 # create keyboard layput table
 $ROOTCMD bash -c "echo 'console-data console-data/keymap/full select $FAI_KEYMAP' | debconf-set-selections"
