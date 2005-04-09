@@ -6,12 +6,12 @@
   <!-- CVS revision of this document -->
   <!entity cvs-rev "$Id$">
 
-<!entity faikernelver "1.8.3">
+<!entity faikernelver "1.9">
 <!entity faiver "2.8">
-<!entity faiverdate "05 apr 2005">
+<!entity faiverdate "9 apr 2005">
 
 <!entity version "2.5">
-<!entity date    "05 apr 2005">
+<!entity date    "9 apr 2005">
 
 <!entity packageinstall     system "entities/packageinstall.sgml">
 <!entity faisetup           system "entities/faisetup.sgml">
@@ -69,7 +69,7 @@ you can add following line to your <file>/etc/apt/sources.list</file> file.
 <p> Send any bug or comment to
 <email>fai@informatik.uni-koeln.de</email>. You can also use the
 Debian bug tracking system (BTS)
-<url id="&url-bts"> for reporting errors.
+<url id="http://&www-debian-org;/Bugs/"> for reporting errors.
 <p>
 You can access the CVS repository containing the newest developer
 version of FAI from a Bourne shell using the
@@ -212,10 +212,11 @@ inspect the hardware or do any other task.
 <list>
 	    <item> <p>A fully automated installation can be performed</p> </item>
 	    <item> <p>Very quick unattended installation</p> </item>
-	    <item> <p>Hosts can boot from floppy or from network card </p> </item>
-	    <item> <p>Easy creation of the common boot floppy</p> </item>
+	    <item> <p>Update of running system without reinstallation</p> </item>
+	    <item> <p>Hosts can boot from floppy, network card or CD </p> </item>
+	    <item> <p>Easy creation of the boot floppy or CD</p> </item>
 	    <item> <p>DHCP and BOOTP protocol and PXE boot method are supported</p> </item>
-	    <item> <p>No initial ramdisk is needed, 8MB RAM suffice, runs even on a 386 CPU</p> </item>
+	    <item> <p>No initial ramdisk is needed, runs even on a 486 CPU</p> </item>
 	    <item> <p>Remote login via ssh during installation process
 	    possible</p> </item>
 	    <item> <p>Two additional virtual terminals available
@@ -286,10 +287,9 @@ which is recognized by the install kernel.
 The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
  <p><file>/usr/share/doc/fai/examples/utils/</file>.</p> </footnote> can be used
  for creating your own local Debian mirror. This script uses the
- script <prgn>debmirror</prgn><footnote> Available as a Debian package
- or at the FAI homepage.</footnote> and <manref name="rsync"
+ script <manref name="debmirror" section="1"> and <manref name="rsync"
  section="1">. A partial Debian mirror only for i386 architecture for
- Debian 3.0 (aka woody) without the source packages needs about
+ Debian 3.1 (aka sarge) without the source packages needs about
  &mirrorsize of disk space. Accessing the mirror via NFS will be the
  normal and fastest way in most cases. To see more output from the
  script call <tt>mkdebmirror --debug</tt>. You need not to create and maintain
@@ -303,7 +303,7 @@ To use HTTP access to the local Debian mirror, install the web server
 software and create a symlink to the local directory where you mirror
 is located:
 
-<example># apt-get install apache
+<example># apt-get install apache2
 # ln -s /files/scratch/debmirror /var/www/debmirror
 </example>
 
@@ -320,14 +320,23 @@ Before installing FAI, you have to install the package <package>fai-kernels</pac
 which contains the install kernels for FAI. You can install both
 packages using
 
-& packageinstall
+&packageinstall
 
 If you like to install all recommended packages that are useful for
 fai, use following command
 
-<p><tt>
-# apt-get install mknbi dhcp3-server tftpd-hpa rsh-server wget syslinux
-</tt><p>
+<p><example>
+# aptitude -r install fai fai-kernels
+Reading Package Lists... Done
+Building Dependency Tree       
+Reading extended state information      
+Initializing package states... Done
+Reading task descriptions... Done  
+The following NEW packages will be automatically installed:
+  binutils debootstrap dhcp3-server mtools nfs-kernel-server rsh-server 
+  syslinux tftpd-hpa 
+Do you want to continue? [Y/n/?] 
+</example><p>
 
 You can also get the newest version of <package>fai</package> and
 <package>fai-kernels</package> from the download page of fai and
@@ -488,9 +497,11 @@ and read <ref id="config">. Before you can set up a DHCP or BOOTP
 daemon, you should collect some network information of all your
 install clients. This is described in section <ref id="bootfloppy">.
 <p>
-When you make changes to &fc;, &mfnc; or want to install a new kernel to
-the nfsroot, the nfsroot has to be rebuilt by calling <manref
-name="make-fai-nfsroot" section="8">.
+When you make changes to &fc;, &mfnc; the nfsroot has to be rebuilt by calling <manref
+name="make-fai-nfsroot" section="8">. If you only like to install a new kernel to
+the nfsroot add the flags <tt>-k</tt> or <tt>-K</tt> to
+<tt>make-fai-nfsroot</tt>. This will not recreate your nfsroot, but
+only updates your kernel and kernel modules inside the nfsroot
 
 <sect1 id=troublefaisetup> Troubleshooting the setup<p>
 
@@ -701,7 +712,6 @@ An example configuration for the BOOTP daemon can be found in
  :gw=134.95.9.254:\
  :dn=informatik.uni-koeln.de:\
  :ds=134.95.9.136,134.95.100.209,134.95.100.208,134.95.140.208:\
- :ys=rubens:yd=informatik4711.YP:\
  :nt=time.rrz.uni-koeln.de,time2.rrz.uni-koeln.de:
 
 # now one entry for each install client
@@ -728,7 +738,7 @@ ds</tt>) to your local needs.
  e.g. verbose, debug, reboot, createvt, sshd, syslogd</p> </item>
  </taglist>
 
-The tags for NIS and time servers (<tt>yp, yd, nt</tt>) are
+The tag for time servers (<tt>nt</tt>) are
 optional. Tags with prefix <tt>T</tt> (starting from T170) are generic
 tags which are used to transfer some FAI specific data to the
 clients<footnote>T170=FAI_LOCATION (now defined in
@@ -803,7 +813,7 @@ These are the messages when booting from floppy disk.
 GRUB loading stage2..............
 &lt now the grub menu with multiple boot options is displayed &gt;
 BOOTING 'FAI-BOTH'
-kernel (fd0)/vmlinuz-2.4.26 root=/dev/nfs ip=both
+kernel (fd0)/vmlinuz-2.4.27 root=/dev/nfs ip=both
   [Linux-bzImage, setup=0x1400, size=0xd8450]
 
 Uncompressing Linux... OK, booting the Kernel.
@@ -834,7 +844,8 @@ but you do not want to perform an installation!
 
 This is the error message you will see, when your network card is
 working, but the install server does not export the configuration
-space directory to the install clients.
+space directory to the install clients, mostly a problem of missing
+permissions on the isntall server side.
 <example>
 Root-NFS: Server returned error -13 while mounting /usr/lib/fai/nfsroot
 VFS: Unable to mount root fs via NFS, trying floppy.
@@ -1104,9 +1115,10 @@ preserved partitions). Now the Debian base system and all requested
 software packages are installed on the new filesystems. First the
 base archive is unpacked, then the command
 <manref name="install_packages" section="8"> installs all packages using <manref
-name="apt-get" section="8"> without any manual interaction needed. If
-a packages requires an other package, <manref name="apt-get" section="8"> resolves
-this dependency by installing the required package.
+name="apt-get" section="8"> or <manref name="aptitude" section="1">
+without any manual interaction needed. If a packages requires an other
+package, both commands resolve this dependency by installing the
+required package.
 <p>
 
 Classes are also used when selecting the configuration files in
@@ -1122,7 +1134,7 @@ packages will meet your site specific needs. So you can call arbitrary
 scripts which adjust the system configuration. Therefore scripts which
 match a class name in <file>/fai/scripts</file> will be executed. If
 <file>/fai/scripts/</file><var>classname/</var> is a directory, all
-scripts that match <tt>S[0-9]*</tt> in this directory are executed. So
+scripts that match <tt>[0-9][0-9]*</tt> in this directory are executed. So
 it is possible to have several scripts of different types (shell,
 cfengine, ...) to be executed for one class. FAI comes with some
 examples for these scripts, but you can write your own Bourne, bash,
@@ -1194,9 +1206,6 @@ Install the simple examples into the configuration space:
 <item><p>get the MAC address of your demo host</p></item>
   <item><p>add your host (try to name it <tt>demohost</tt>)
   to <file>/etc/hosts</file> and <file>dhcpd.conf</file></p></item>
- <item><p>if your demohost has no IDE disk copy the file
-<file>disk_config/SMALL_IDe</file> to a file called <tt>demohost</tt>
-  and change the disk name hda to your specific value</p></item>
 <item><p>When using PXE, tell the install client to boot the install
   kernel and perform an installation during the next boot <example>fai-chboot -IFv demohost</example>
 </p></item>
@@ -1276,7 +1285,8 @@ several files:
 
 	  <tag><tt>debconf/</tt></tag> <item> <p>This directory holds
 	  all <manref name="debconf" section="8"> data. The format is
-	  the same a for <manref name="debconf-set-selections" section="8">.</p> </item>
+	  the same that is used by <manref name="debconf-set-selections"
+	  section="8">.</p> </item>
 
 	  <tag><tt>package_config/</tt></tag> <item> <p>File with
 	   lists of software
@@ -1340,26 +1350,20 @@ then edit the configuration with a normal user account.
 # chown -R fai /usr/local/share/fai
 </example>
 
-These files contain simple configuration for some example hosts. Examples
-are: a demonstration host (called demohost) with the GNOME desktop and a
-Beowulf cluster with a master node called <em>nucleus</em> and
-computing nodes called <em>atom01, atom02,...</em>.
-
+These files contain simple configuration for some example
+hosts. Depending on the hostname used, your computer will be
+configured as follows:
 
 <taglist>  
-   <tag>demohost</tag>  <item> <p>A machine with a small IDE hard disk
-   installed with GNOME and using DHCP for getting its network
-   configuration. This is the easiest example. You only have to add a
-   <file>XF86Config</file> file.
+   <tag>demohost</tag>  <item> <p>A machine which need only a small
+   hard disk. This machine is configured with network (as DHCP
+   client), and an account demo is created.<p>
 
-   <tag>nucleus</tag>  <item> <p>This Beowulf master node is a server with much software. It
-   provides the home directory and <file>/usr/local</file> for its computing nodes. Also some
-   daemons are installed and activated by default.</p> </item>
-   <tag>atom01,...</tag>  <item> <p>These Beowulf clients mount
-   <file>/usr/local</file> and <file>/home</file> from <em>nucleus</em>. Most of
-   the disk space is spent on a scratch partition, which is exported
-   to a netgroup of hosts. All scratch partitions are mounted on all
-   Beowulf clients via the automounter.</p> </item>
+   <tag>gnomehost</tag>  <item> <p>A GNOME desktop is installed, and
+   the account demo is created. <p>
+
+   <tag>other hostnames</tag>  <item> Hosts with other hostname will
+   only use the main class FAIBASE.<p>
 
 </taglist>
 Start looking at these examples and study them. Then change or add
@@ -1475,10 +1479,12 @@ definition of FAI's subroutines.
       <tag>debconf</tag> <item><p>Calls <manref name="fai-debconf"
       section="8"> to set the values for the debconf database.</p> </item>
 
-      <tag>updatebase</tag> <item><p>Prepares the extracted Debian
-      base system for further installation and updates the list of
-      available packages. Updates the packages to the newest
-      version. It also fakes some commands (called diversions) inside
+      <tag>prepareapt</tag> <item><p>Set up resolv.conf and some
+      other file, for the next task updatebase.</p> </item>
+
+      <tag>updatebase</tag> <item><p>Updates the base packages of the
+      new system and updates the list of
+      available packages. It also fakes some commands (called diversions) inside
       the new installed system using <manref name="dpkg-divert"
       section="8">.</p>
       </item>
@@ -1643,13 +1649,11 @@ among several hosts.
 
 <sect id=s2> Defining classes<p>
 
-The default task <em>defclass</em> calls the script <manref
+The task <em>defclass</em> calls the script <manref
 name="fai-class" section="1"> to define classes. Therefore, scripts
 matching <tt>[0-9][0-9]*</tt> in <tt>/fai/class</tt> are
-executed. Additionally, files in this directory can contain a list of
-classes. We use a file <file>koeln</file> which is used for all our
-hosts that belong to a certain subnet. When we want to add a class to
-all these hosts, we just add the class to this file.
+executed. Additionally, a file with the hostname may contain a list of
+classes. 
 For more information on defining class, read the manual pages for <manref
 name="fai-class" section="1">. <p>
 
@@ -1657,53 +1661,32 @@ The list of all defined classes is stored in the variable
 <var>$classes</var> and saved to
 <file>/tmp/fai/FAI_CLASSES</file>. The list of all classes is
 transfered to <prgn>cfengine</prgn>, so it can use them too. The
-script <file>01alias</file> (below is a stripped version) is used to
-define classes for several groups of hosts. First this script defines
+script <file>10-base-classes</file> (below is a stripped version) is used to
+define classes depending on the host name. First this script defines
 the class with the name of the hardware architecture in uppercase
-letters. Hosts which have an IP address in subnet 134.95.9.0 also
-belong to the class <tt>NET_9</tt>, hosts in the class B subnet
-134.95 use all classes of the file <file>koeln</file>. All Beowulf
-nodes with prefix <var>atom</var> except <var>atom00</var> (master
-server) will belong to the classes listed in file <file>atoms</file>.
-This is an example how easy you can group hosts which should belong to
-the same set of classes.
+letters. 
 <example>
-# cat 01alias
+# cat 10-base-classes
 
-uname -s | tr /a-z/ /A-Z/
-[ -x "`which dpkg`" ] && dpkg --print-installation-architecture | tr /a-z/ /A-Z/
+# echo architecture and OS name in upper case. Do NOT remove these two lines
+uname -s | tr '[:lower:]' '[:upper:]'
+dpkg --print-installation-architecture | tr /a-z/ /A-Z/
 
-# the Beowulf cluster; all nodes except the master node
-# use classes from file class/atoms
+[ -f /boot/RUNNING_FROM_FAICD ] && echo "FAICD"
+
+# use a list of classes for our demo machine
 case $HOSTNAME in
-    atom00) echo BEOWULF_MASTER ;;
-    atom??) cat atoms ;;
-esac
-
-# if host belongs to class C subnet 134.95.9.0 use class NET_9
-# exclude all hosts with an IP address above 200
-case $IPADDR in
-    134.95.9.2??) ;;
-    134.95.*.*) cat koeln ; echo "CS_KOELN NET_9" ;;
-    134.95.9.*) echo "CS_KOELN NET_9" ;;
+    demohost)
+        echo "FAIBASE GRUB DHCPC DEMO" ;;
+    gnomehost)
+        echo "FAIBASE GRUB DHCPC DEMO XFREE GNOME";;
+    *)
+        echo "FAIBASE GRUB DHCPC" ;;
 esac
 </example>
 
-The script <file>24nis</file> automatically defines classes
-corresponding to NIS. The name of the NIS domain (defined via BOOTP or
-DHCP) will also become a class (only uppercase letters and minus is
-replaced by underscore). If no NIS domain is defined, then only the
-class NONIS is defined.
-<p>
-Depending on partition names defined in the first matching
-<file>disk_config</file> found, <file>70partitions</file> defines
-additional classes. For example, if a partition
-<file>/files/scratch</file> exists, the class FILES_SCRATCH is
-defined, which forces the install client to export
-this directory via NFS and to install the NFS server packages.
-<p>
-The script <tt>06hwdetect.source</tt> uses the default Debian commands
-to detect SCSI hardware and to load the required kernel drivers. If
+The script <tt>20-hwdetect.source</tt> uses the default Debian commands
+to detect hardware and to load some kernel modules. If
 some specific hardware is found, it can also define a new class for it.
 You can find messages from modprobe in <file>/tmp/fai/kernel.log</file> and
 on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
@@ -1735,10 +1718,8 @@ for your installation:
    need not specify the complete path, since this file will be located
    automatically.</p> </item>
 
-   <tag>rootpw</tag> <item> <p>The root password for the new
-   system. Additionally, FAI creates an root account with the same
-   password called <tt>roott</tt>, which uses the <manref name="tcsh"
-   section="1">.</p> </item>
+   <tag>rootpw</tag> <item> <p>The root encrypted password for the new
+   system.</p> </item>
 
    <tag>UTC</tag> <item> <p>Set hardware clock to UTC if
    <tt>$UTC=yes</tt>. Otherwise set clock to local time. See <manref
@@ -1748,57 +1729,22 @@ for your installation:
    <file>/usr/share/zoneinfo/</file> which indicates your time
    zone.</p> </item>
 
-   <tag>liloappend</tag> <item> <p>Append parameters for the kernel of
-   the new system (written to <file>/etc/lilo.conf</file>).</p> </item>
-
    <tag>moduleslist</tag> <item> <p>Can be a multi line
    definition. List of modules (including kernel parameters) which are
    loaded during boot of the new system (written to /etc/modules).</p>
    </item>
 
-   <tag>TFTPLINK</tag> <item> <p>Link to the TFTP kernel image which boots
-   using the root file system from the local disk. Only used when
-   using a BOOTP server for booting. </p> </item>
-
-   <tag>hserver, bserver</tag> <item> <p>The names of the NFS servers for
-   <file>/home</file> and <file>/usr</file> or <file>/usr/local</file>.</p> </item> 
-
-   <tag>printers</tag> <item> <p>List of printers, for which a spool
-   directory is created. The config scripts does not set up
-   <file>/etc/printcap</file>.</p> </item> 
-
-   <tag>addpackages</tag> <item> <p>The list of additional packages
-   which are installed on the new system if they are available in
-   <file>/fai/files/packages</file>. It should also contain the name
-   of the kernel package that should be installed. You can create a simple
-   repository by using following commands on the install server:
-
-<example>
-# cd /usr/local/share/fai/files
-# dpkg-scanpackages packages /dev/null | \
-  gzip -9 > packages/Packages.gz
-</example>
-
-If you will not use this feature (why not ?) create an empty file
-<file>Packages</file> to suppress some warning
-messages. Additionally, you can also create a Release file in this
-directory. Then <var>addpackages</var> can be the list of packages
-without a version number.  For more information, refer to the
-repository HOWTO
-<footnote>http://www.isotton.com/debian/docs/repository-howto/</footnote>.
-This can be used to install local site specific packages.
 </taglist>
-
 
 <sect id=diskconfig>Hard disk configuration<p> 
 
 The format of the hard disk configuration files is described in
 <file>/usr/share/doc/fai/README.disk_config.gz</file>. The config file
-<file>/fai/disk_config/CS_KOELN</file> is a generic description for
-one IDE hard disk, which should fit for most installations. If you
+<file>/fai/disk_config/FAIBASE</file> is a generic description for
+one hard disk (IDE or SCSI), which should fit for most installations. If you
 can't partition your hard disk using this script <footnote><p>Currently
 this script uses the command <tt>sfdisk(8)</tt>, which isn't available
-on SUN SPARC and IA64.</p> </footnote>, use a hook instead. The hook should
+on SUN SPARC, IA64 and PowerPC.</p> </footnote>, use a hook instead. The hook should
 write the new partition table, create the file systems and create the
 files <file>/tmp/fai/fstab</file> and <file>/tmp/fai/disk_var.sh</file>, which
 contains definitions of boot and root partitions.
@@ -1814,14 +1760,17 @@ simple.
 # an example package class
 
 PACKAGES taskinst
-german science
+german 
 
-PACKAGES install
+PACKAGES aptitude
 adduser netstd ae
 less passwd
 
 PACKAGES remove
 gpm xdm
+
+PACKAGES aptitude GRUB
+lilo- grub
 
 PACKAGES dselect-upgrade
 ddd                     install
@@ -1851,12 +1800,16 @@ should be installed.</p> </item>
 
 <tag>taskinst:</tag> <item> <p>Install all packages belonging to the
 task that are specified in the following lines using <manref
-name="tasksel" section="1">.</p> </item>
+name="tasksel" section="1">. You can also use <tt>aptitude</tt> for
+installing tasks.</p> </item>
 
 <tag>aptitude:</tag> <item> <p>Install all packages with
-the command <prgn>aptitude</prgn>. Will be the default in a future
-releaes and may replace taskinst. Aptitude can also install task
+the command <prgn>aptitude</prgn>. This will be the default in the future
+and may replace apt-get and taskinst. Aptitude can also install task
 packages.</p> </item>
+
+<tag>aptitude-r:</tag> <item> <p>Same as aptitude with option
+<tt>--with-recommends</tt>.
 
 <tag>dselect-upgrade</tag> <item> <p> Set package selections using the
 following lines and install or remove the packages specified. These
@@ -1865,9 +1818,9 @@ lines are the output of the command <tt>dpkg --get-selections</tt>.
 
 
 Multiple lines with lists of space separated names of packages follows
-the commands install and remove. All dependencies are resolved and <prgn>apt-get</prgn>
-is used to perform the installation or removal of packages. The order of the
-packages is of no matter.
+the PACKAGES lines. All dependencies are resolved. Packages with
+suffix <tt>-</tt> (eg. <tt>lilo-</tt>)will be removed instead of
+installed. The order of the packages is of no matter.
 <p>
 A line which contains the <tt>PRELOADRM</tt> commands, downloads a
 file using <manref name="wget" section="1"> into a directory before
@@ -1880,7 +1833,7 @@ installing the packages this file will be removed. If the file
 shouldn't be removed, use the the command <tt>PRELOAD</tt> instead.
 
 <p>
-Now it's possible to append a list of class names after the command for
+It's possible to append a list of class names after the command for
 apt-get. So this <tt>PACKAGE</tt> command will only be executed when
 the corresponding class is defined. So you can combine many small
 files into the file DEFAULT. <tt>WARNING!</tt> Use this feature only
@@ -1904,7 +1857,7 @@ or add new scripts to match your local needs.
 <p>
 The command <manref name="fai-do-scripts" section="1"> is called to
 execute all scripts in this directory. If a directory with a class
-name exists, all scripts matching <file>S[0-9]*</file> are executed in
+name exists, all scripts matching <file>[0-9][0-9]*</file> are executed in
 alphabetical order. So it's possible to use scripts of different
 lanuages (shell, cfengine, perl,..) for one class.
 
@@ -2311,6 +2264,12 @@ The following tools are useful for a Beowulf cluster:
 	hosts up. You can also use the <manref name="dsh" section="1">
 	command (dancer's shell, or distributed shell).
 
+	<tag>rup<item><p> The command <manref name="rup" section="1">
+	shows briefly the CPU load of every host.
+
+	<tag>clusterssh<item><p> The package clusterssh allows you to
+	control multiple ssh or rsh sessions at the same time.
+
 </taglist>
 These are some common tools for a cluster environment:
 
@@ -2329,13 +2288,10 @@ These are some common tools for a cluster environment:
   every cluster node. </item>
 
   <tag>ganglia</tag><item><p>This toolkit is very good for monitoring
-   your cluster. Available at
+   your cluster with a nice web frontend. Available at
    <httpsite>ganglia.sourceforge.net/</httpsite> </p> </item>
 
 </taglist>
-
-But there are a lot of other tools
-available which are not yet included in a Debian package. </p>
 
 <sect id=wol> Wake on LAN with 3Com network cards<p>
 
@@ -2360,13 +2316,13 @@ Additional information is available from
 <httpsite>www.scyld.com/</httpsite><httppath>expert/wake-on-lan.html</httppath>.
 
 <chapt id=arch>FAI on other architectures and distributions<p>
-If you want to use FAI on other architectures than i386 you might need to take care for 
-some things yourself.
+If you want to use FAI on other architectures than i386 you might need
+to take care for some things yourself.
 
 These are things that may have to be changed on other architectures:
 
 <taglist>
-   <tag> fai-nfsroot.conf <item> <p>FAI_DEBOOTSTRAP_OPTS must be adopted to the
+   <tag> make-nfsroot.conf <item> <p>FAI_DEBOOTSTRAP_OPTS must be adopted to the
    architecture you're using.</p>
 
    <tag> task partition: <item> <p>Currently setup_harddisks
@@ -2376,32 +2332,26 @@ These are things that may have to be changed on other architectures:
    for creating the file <file>fstab</file>. Alternatively you use a 
    hook (see <ref id="hooks">) to format and mount your partitions.
 
-   <tag> Boot loader: <item> <p>Currently the script
-   <file>DEFAULT/S10</file> has support for <manref name="lilo"
-    section="8"> and <manref name="grub" section="8">. Here you may
+   <tag> Boot loader: <item> <p> There are scripts for setting up
+ <manref name="lilo" section="8"> and <manref name="grub" section="8">. Here you may
    add support for your specific boot loader.
 </taglist>
 
-If you want to serve multiple architectures on one FAI server, you need to create
-arch specific config directories in <file>/etc</file> for fai, like 
-<file>/etc/fai-i386</file> and <file>/etc/fai-powerpc</file>.
-Then you need to set the <var>NFSROOT</var> variables to different directories and run
-'make-fai-nfsroot -c /etc/fai-powerpc'. You have to create the nfsroot on the target arch!
-
+If you want to serve multiple nfsroot directories on one FAI server,
+you need to create specific config directories in <file>/etc</file>
+for fai, like <file>/etc/fai-sarge</file> and
+<file>/etc/fai-etch</file>. Then you need to set the
+<var>NFSROOT</var> variables to different directories and run
+<tt>make-fai-nfsroot -c /etc/fai-sarge</tt>.
 
 <sect id=amd64>FAI on AMD64<p>
 No problems. Have a look at
-
 <httpsite>www.informatik.uni-koeln.de</httpsite><httppath>/fai/download/amd64/</httppath>
 
 <sect id=powerpc>FAI on PowerPC<p>
 There's some stuff on <httpsite>www.layer-acht.org</httpsite><httppath>/fai</httppath>. 
 Most notably there are hooks for partitioning and config-files to 
 setup bootloaders for oldworld and newworld. 
-
-You can build the fai-kernels package on powerpc if you copy the file
-<file>debian/control.powerpc</file> to <file>debian/control</file> and 
-rebuild the package on powerpc. Please give feedback if you do!
 
 <sect id=ia64>FAI on IA64<p>
 There's one big IA64 Beowulf cluster running which was installed with
@@ -2411,7 +2361,6 @@ since sfdisk is not available on IA64.
 <sect id=alpha>FAI on Alpha<p>
 There is a Mini-HowTo available at
 <httpsite>pandora.aei.mpg.de</httpsite><httppath>/~steffeng/fai/fai-alpha.html</httppath>
-
 
 <sect id=odists>FAI for Suse, Redhat and Gentoo<p>
 Many people are interested in FAI for other (mostly rpm based) Linux
@@ -2526,31 +2475,36 @@ the generated line from your <file>~/.cvspass</file> into
 </sect>
 
 <sect id=softupdate>Using FAI for on-line updates
-<p>FAI is even usable for system updates, using the same configuration as 
-if initially installing. An updated client will almost look like a
-newly installed machine, though all local data is preserved (except of course
-newer configuration files introduced in the FAI config).</p>
+<p>FAI is even usable for system updates, using the same configuration
+as if initially installing. System updates means update the running
+system without doing a reinstallation. An updated client will almost
+look like a newly installed machine, though all local data is
+preserved (except of course newer configuration files introduced in
+the FAI config).</p>
 
 <sect1 id=aboutsoftupdate>How does a softupdate work?
-<p>Softupdates take the same configuration files as a new FAI installation. They
-even use the same FAI internals as an installation, so they behave
-<em>nearly</em> in the same way as an installation, tough some things are
-different:
+<p>Softupdates are using the same configuration files as a new FAI installation. They
+even use the default FAI commands, so they behave <em>nearly</em> in
+the same way as an installation, tough some things are different:
 <list>
+	<item>By default the old list of classes (created during the
+	initial installation) is used, so <prgn>fai-class</prgn>
+	is not called to define a new list of classes. This can be
+	changed by calling <tt>fai -N softupdate</tt>.</item>
 	<item>No partitioning and filesystem creation is performed</item>
 	<item>The basesytem isn't bootstrapped</item>
-	<item>FAI doesn't do tasks only useful when booting, such as setting up
-		a keymap or starting daemons</item>
-	<item>FAI doesn't prevent daemon (re-)starts</item>
+	<item>FAI skips tasks only useful when installing, such as setting up
+		a keymap or starting special daemons</item>
+	<item>FAI doesn't prevent software packages to (re-)start daemons</item>
 	<item>FAI doesn't reboot at the end of a softupdate</item>
 </list>
 Except these changes, things are the same as when installing a new computer: 
 <enumlist>
-	<item>define classes and variables</item>
+	<item>define classes (by default use old list) and variables</item>
 	<item>update the installed packages</item>
 	<item>install new software</item>
 	<item>call configuration scripts</item>
-	<item>check and save the logfiles</item>
+	<item>save the logfiles</item>
 </enumlist>
 </sect1>
 
@@ -2561,7 +2515,7 @@ installation:
 	<example>
 		/usr/sbin/fai softupdate
 	</example>
-starts a softupdate on the client it is run on.</p>
+starts a softupdate.</p>
 
 <sect2 id=startsoftupdate>How to do mass softupdates
 <p>Probably you don't want to run to each client and start a softupdate there
@@ -2670,7 +2624,6 @@ for local changes and notify you about them.</p>
 </sect>
 </chapt>
 
-
 <chapt id=hints>Various hints<p>
 
 This chapter has various hints which may not always be explained in great
@@ -2689,67 +2642,7 @@ You can merge two directories which contain configuration
 information, if one is a global one, and the other a local one. We use
 it to merge the templates from the fai package, and our local
 configuration, which contains encrypted passwords and other
-information that should not be readable for others. This is how our
-setup looks like.
-<p>
-We have a local configuration space located in
-<file>~admin/additional-fai/</file> which contains following files:
-<example>
-./files
-./files/etc
-./files/etc/hosts
-./files/etc/hosts/NUERBURG1
-./files/etc/hosts/NUERBURG2
-./files/etc/network
-./files/etc/network/interfaces
-./files/etc/network/interfaces/NUERBURG1
-./files/etc/network/interfaces/NUERBURG2
-./files/etc/bootptab
-./files/etc/bootptab/kueppers
-./files/etc/kueppers.tar.gz
-./files/packages
-./files/packages/kernel-image-2.4.20-cskoeln_2_i386.deb
-./files/packages/cloop-2.4.20-cskoeln_0.63.1-4+2_i386.deb
-./files/packages/xv-doc_3.10a-26_all.deb
-./files/packages/xv_3.10a-26_i386.deb
-./files/packages/Packages.gz
-./files/packages/ltmodem-2.4.20_8.26a9_i386.deb
-./files/packages/cloop-2.4.20-acer_0.63.1-4+1_i386.deb
-./files/packages/kernel-image-2.4.20-acer_1_i386.deb
-./files/packages/pcmcia-modules-2.4.20-acer_3.1.33-6+1_i386.deb
-./files/packages/kernel-headers-2.4.20-acer_1_i386.deb
-./files/packages/ltmodem-2.4.20-acer_8.26a9_i386.deb
-./files/packages/debmirror_20020427-1_all.deb
-./files/usr
-./files/usr/local
-./files/usr/local/ACROREAD5.tar.gz
-./files/usr/local/share
-./files/usr/local/share/LPRng
-./files/usr/local/share/LPRng/pcfilter
-./files/usr/local/share/LPRng/pcfilter/NISLPRCLIENT
-./files/usr/lib
-./files/usr/lib/mozilla
-./files/usr/lib/mozilla/CS_KOELN.tar.gz
-./class
-./class/dom.var
-./class/NET_9.var
-./mk-packages-gz
-./scripts
-./scripts/kueppers
-./README
-./disk_config
-./disk_config/dom
-./disk_config/kueppers
-</example>
-
-The file <file>mk-packages-gz</file> is just the simple script which
-creates the <file>Packages.gz</file> as explained above. In order to
-copy this local configuration data into the fai config space we use
-this command:
-
-<example>cp -a ~admin/additional-fai/* /usr/local/share/fai
-</example>
-
+information that should not be readable for others. 
 If you remove a file in you local configuration, do not forget to
 remove this file also in the configuration space, otherwise it will
 still be used.
