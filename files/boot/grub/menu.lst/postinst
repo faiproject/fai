@@ -6,10 +6,10 @@ set -a
 [ -r $target/etc/fai/disk_var.sh ] && . $target/etc/fai/disk_var.sh
 
 # if class NOMBR is defined, write boot loader into root partition, not into mbr
-ifclass NOMBR && BOOT_DEVICE=$ROOT_PARTITION
+ifclass NOMBR && BOOT_DEVICE=$BOOT_PARTITION
 
 grub-install --no-floppy --root-directory=$target $BOOT_DEVICE
-GROOT=$(device2grub $ROOT_PARTITION)
+GROOT=$(device2grub $BOOT_PARTITION)
 perl -pi -e 's/#(\w+)#/$ENV{$1}/' $2
 $ROOTCMD /sbin/update-grub
 echo "Grub installed on $BOOT_DEVICE on $GROOT"
