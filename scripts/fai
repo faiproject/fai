@@ -41,7 +41,6 @@ oclass=$(uname -s | tr /a-z/ /A-Z/)
 # $classes is now set so we can call hooks before fai-class defines the classes
 classes="DEFAULT $oclass $HOSTNAME LAST"
 faimond=0
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 prcopyleft() {
 
@@ -92,6 +91,9 @@ fai_init() {
     DO_INIT_TASKS=0
     [ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
     [ $DO_INIT_TASKS -eq 1 ] && renewclass=1 # always renew class list when installing
+
+    # color logo only if initial install
+    COLOR_FAI_LOGO=$DO_INIT_TASKS
 
     DEBIAN_FRONTEND=noninteractive
     # local disks are mounted to $FAI_ROOT
@@ -157,24 +159,20 @@ fai_init() {
 	osname='Sun Solaris'
     fi
 
-    # set red color, but not on sparc
+    # set red color, but not on some archs
+    [ -e /.nocolorlogo ] && COLOR_FAI_LOGO=0
     case $HOSTTYPE in
-	sparc*|powerpc*) ;;
-	*)  [ -e /.nocolorlogo ] || echo -ne "\ec\e[1;31m" ;;
+	sparc*|powerpc*) COLOR_FAI_LOGO=0 ;;
     esac
+
+    [ $COLOR_FAI_LOGO -eq 1 ] && echo -ne "\ec\e[1;31m"
 
     prcopyleft | tee -a $rcslog
 
-    # set scroll region, but not on sparc
-    case $HOSTTYPE in
-	sparc*) ;;
-	*) 
-	    if [ ! -e /.nocolorlogo ]; then
-		echo -ne "\e[7;0r"
-		echo -ne "\e[9B\e[1;m"
-	    fi
-	    ;;
-    esac
+    if [ $COLOR_FAI_LOGO -eq 1 ]; then
+	echo -ne "\e[7;0r"
+	echo -ne "\e[9B\e[1;m"
+    fi
     save_dmesg
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
