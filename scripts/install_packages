@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.13, 22-apr-2005";
+my $version = "Version 2.14, 28-apr-2005";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -91,6 +91,9 @@ $opt_d && setdownloadonly();
 $maxpl=$ENV{MAXPACKAGES} || $opt_m ;
 $maxpl && $verbose && warn "Maxmimum number of packages installed at a time set to $maxpl\n";
 $maxpl or $maxpl = 99 ; # set default value
+
+my $qopt="-qq" unless $verbose;
+my $devnull=">/dev/null" unless verbose;
 
 $FAI_ROOT = $ENV{FAI_ROOT};
 $classpath = "$ENV{FAI}/package_config";
@@ -400,9 +403,9 @@ undef %command;
 $maxpl=9999;
 @commands = qw/taskinst aptitude install/;
 %command = (
-	    install => "apt-get -qq -d $ENV{aptoptions} -y --force-yes --fix-missing install",
-         "taskinst" => "aptitude -d $ENV{aptoptions} -y install >/dev/null",
-         "aptitude" => "aptitude -d $ENV{aptoptions} -y install >/dev/null",
+	    install => "apt-get $qopt -d $ENV{aptoptions} -y --force-yes --fix-missing install",
+         "taskinst" => "aptitude -d $ENV{aptoptions} -y install $devnull",
+         "aptitude" => "aptitude -d $ENV{aptoptions} -y install $devnull",
             "clean" => 'true',
           "pending" => 'true',
             "dpkgc" => 'true',
