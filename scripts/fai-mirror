@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.3.6, 20-apr-2005"
+version="Version 1.4, 28-apr-2005"
 
 # variables: NFSROOT, FAI_CONFIGDIR
 # NFSROOT_PACKAGES, packages from make-fai-nfsroot.conf
@@ -82,13 +82,14 @@ get_addpackages() {
 
     local f p pkg pkglist
 
-    [ -z "$addpackages" ] && return
-    echo -n "Adding packages from variable \$addpackages:"
     for f in $(echo $FAI_CONFIGDIR/class/*.var); do
 	pkg=$(egrep ^addpackages= $f | sed 's/addpackages=//'|sed 's/"//g'| perl -pe 's/\$[\w_-]+//g')
-	pkglist="$pkglist $pkg"
-    done
 
+	[ -n "$pkg" ] && pkglist="$pkglist $pkg"
+    done
+    [ -z "$pkglist" ] && return 0
+
+    echo -n "Adding packages from variable \$addpackages:"
     # loop over the list, because maybe some packages doesn't exist in the
     # partitial mirror, but only in the local repository. These can't be
     # downloaded via the normal method
@@ -96,7 +97,7 @@ get_addpackages() {
 	echo -n " $p"
 	# test if .deb file is available
 	if [ ! -f $FAI_CONFIG/files/packages/${p}_*.deb ]; then
-	    apt-get -qq -d $aptoptions -y --force-yes --fix-missing install $p
+	    apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $p
 	fi
     done
     echo ""
@@ -179,17 +180,17 @@ add_base_packages() {
     echo "Adding packages from base.tgz and packages defined in make-fai-nfsroot.conf."
     if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
 	plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
-	apt-get -qq -d $aptoptions -y --force-yes --fix-missing install $plist
+	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
     fi
 
     # arch dependent packages defined in make-fai-nfsroot
     if [ -f $NFSROOT/var/tmp/packages.arch ]; then
 	plist=$(< $NFSROOT/var/tmp/packages.arch)
-	apt-get -qq -d $aptoptions -y --force-yes --fix-missing install $plist
+	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
     fi
 
     # also add packages defined in make-fai-nfsroot.conf
-    apt-get -qq -d $aptoptions -y --force-yes --fix-missing install $packages $NFSROOT_PACKAGES
+    apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $packages $NFSROOT_PACKAGES
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set-classes() {
@@ -215,6 +216,7 @@ set-classes() {
 preserve=0
 verbose=0
 add=0
+qflag=-qq
 while getopts "avhx:pc:" opt ; do
     case "$opt" in
 	a) add=1 ;;
@@ -222,7 +224,7 @@ while getopts "avhx:pc:" opt ; do
 	x) exclasses="$OPTARG";;
 	c) cclasses="$OPTARG";;
 	p) preserve=1;;
-	v) verbose=1; vflag=-v;;
+	v) verbose=1; vflag=-v; qflag='';;
 	?) die 1 "Unknown option";;
     esac
 done
