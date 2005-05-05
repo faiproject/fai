@@ -24,6 +24,7 @@ $ROOTCMD dpkg -C
 export aptopt=
 $ROOTCMD apt-get $aptopt -f -y dist-upgrade </dev/null
 # update dpkg info which packages are available
-$ROOTCMD apt-cache dumpavail > $FAI_ROOT/tmp/dumpavail
-$ROOTCMD dpkg --update-avail /tmp/dumpavail
-rm -f $FAI_ROOT/tmp/dumpavail
+tmp=$($ROOTCMD mktemp)
+$ROOTCMD apt-cache dumpavail > $FAI_ROOT/$tmp
+$ROOTCMD dpkg --update-avail $tmp
+rm -f $FAI_ROOT/$tmp
