@@ -43,12 +43,13 @@ install:
 	install -m644 conf/menu.lst conf/sources.list $(DESTDIR)/etc/fai/
 	install -m644 conf/fai.conf conf/sources.list $(DESTDIR)/etc/fai/
 	install -m600 conf/make-fai-nfsroot.conf $(DESTDIR)/etc/fai/
+	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
+	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
 	cp -a utils $(DOCDIR)/examples
 	cp -a templates/* $(DOCDIR)/examples/advanced
 	cd $(DOCDIR)/examples/advanced/scripts ; mv DEFAULT1 DEFAULT
 	cd $(DOCDIR)/examples/simple/scripts ; mv LAST1 LAST
-	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
-	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
+
 
 .PHONY: clean veryclean
