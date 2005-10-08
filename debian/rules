@@ -2,7 +2,10 @@
 
 DESTDIR=`pwd`/debian/fai
 SHAREDIR = $(DESTDIR)/usr/share/fai
-DOCDIR=$(DESTDIR)/usr/share/doc/fai
+DOCDIR=`pwd`/debian/fai-doc/usr/share/doc/fai-doc
+
+# we never want CVS and subversion files in our packages
+export DH_ALWAYS_EXCLUDE=CVS:.svn
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
@@ -32,7 +35,7 @@ install: build
 	dh_clean -k
 	dh_installdirs
 # Add here commands to install the package into debian/fai.
-	$(MAKE) install DESTDIR=${DESTDIR}
+	$(MAKE) install
 
 # Build architecture-independent files here.
 binary-indep: build install
@@ -54,7 +57,6 @@ binary-indep: build install
 	find ${DOCDIR}/examples/*/files -name postinst | xargs chmod a+x
 	chmod a+rx ${DOCDIR}/examples/utils/*
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' ${DOCDIR}/README
-	find ${DESTDIR} -name CVS |xargs rm -rf
 # You may want to make some executables suid here.
 	dh_installdeb
 	dh_gencontrol

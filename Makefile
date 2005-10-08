@@ -2,7 +2,7 @@ include VERSION
 
 DESTDIR=$(shell pwd)/debian/fai
 DEB_HOST_ARCH=$(MACHTYPE)
-export DOCDIR = $(DESTDIR)/usr/share/doc/fai
+export DOCDIR = $(shell pwd)/debian/fai-doc/usr/share/doc/fai-doc
 LIBDIR = $(DESTDIR)/usr/lib/fai
 SHAREDIR = $(DESTDIR)/usr/share/fai
 SCRIPTSDIR = $(LIBDIR)/sbin
