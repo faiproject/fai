@@ -28,6 +28,9 @@
 #*********************************************************************
 
 
+#TODO: fdivert koennte vielleicht durch /usr/lib/fai/fai-divert ersetzt werden
+
+
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 if [ `id -u` -ne 0 ]; then
@@ -203,23 +206,15 @@ copy_fai_files() {
     perl -pi -e "s#^root::#root:${FAI_ROOTPW}:#" etc/passwd
     mkdir -p $NFSROOT/$SHAREFAI $NFSROOT/$LIBFAI $NFSROOT/etc/fai
     cd $NFSROOT
-    fdivert /etc/dhcp3/dhclient-script /etc/dhcp3/dhclient.conf
-    cp -p $SHAREFAI/etc/dhclient.conf etc/dhcp3
     cp -Rpv $cfdir/* $NFSROOT/etc/fai
     # remove some files that should not be copied
     rm -f $NFSROOT/etc/fai/make-fai-nfsroot.conf
     [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass $NFSROOT/.cvspass
-    cp -p $LIBFAI/sbin/* sbin/
-    cp -p /usr/sbin/fai usr/sbin/
-    mv sbin/dhclient-script etc/dhcp3
-    cp -p /usr/sbin/{ftar,fcopy,install_packages} usr/sbin/
-    cp -p /usr/bin/{fai-do-scripts,fai-class,fai-debconf} usr/bin/
+#    cp -p $LIBFAI/sbin/* sbin/
+#    cp -p /usr/sbin/fai usr/sbin/
+#    cp -p /usr/sbin/{ftar,fcopy,install_packages} usr/sbin/
+#    cp -p /usr/bin/{fai-do-scripts,fai-class,fai-debconf} usr/bin/
     cp -p $LIBFAI/* usr/lib/fai 2>/dev/null || true  # cp will complain about directories
-    cp -p $SHAREFAI/etc/fai_modules_off etc/modutils/
-
-    cp -p $SHAREFAI/subroutines* usr/share/fai
-    cp -p $v $SHAREFAI/etc/apt.conf $NFSROOT/etc/apt
-    cp -p /usr/share/perl5/Debian/Fai.pm usr/share/perl5/Debian/
     $ROOTCMD shadowconfig on
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -351,10 +346,7 @@ upgrade_nfsroot() {
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
 
-    # fake start-stop-dameon
-    fdivert /etc/init.d/rcS /sbin/start-stop-daemon /sbin/discover-modprobe
-    cp /sbin/fai-start-stop-daemon $NFSROOT/sbin/
-    ln -s /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
+    fdivert /sbin/discover-modprobe
     $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
