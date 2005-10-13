@@ -42,14 +42,14 @@ binary-indep: build install
 	dh_testdir
 	dh_testroot
 #	dh_installdebconf	
-	dh_installdocs
+	dh_installdocs -Nfai-server -Nfai-quickstart
 #	dh_installexamples
 #	dh_installmenu
 	dh_installman
 	dh_install --sourcedir=debian/tmp
 #	dh_installinfo
+	dh_link
 	dh_installchangelogs 
-#	dh_link
 	dh_compress -Xexamples -X.pdf
 	dh_fixperms -X make-fai-nfsroot.conf
 	chmod a+rx ${DOCDIR}/examples/*/class/[0-9][0-9]*
@@ -57,7 +57,7 @@ binary-indep: build install
 	chmod a+rx ${DOCDIR}/examples/*/hooks/*
 	find ${DOCDIR}/examples/*/files -name postinst | xargs chmod a+x
 	chmod a+rx ${DOCDIR}/examples/utils/*
-	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' ${DESTDIR}/usr/share/doc/fai/README
+	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(shell pwd)/debian/fai-client/usr/share/doc/fai-client/README
 # You may want to make some executables suid here.
 	dh_installdeb
 	dh_gencontrol
