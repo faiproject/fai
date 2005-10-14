@@ -27,10 +27,6 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-
-#TODO: fdivert koennte vielleicht durch /usr/lib/fai/fai-divert ersetzt werden
-
-
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 if [ `id -u` -ne 0 ]; then
@@ -120,8 +116,6 @@ ROOTCMD="chroot $NFSROOT"
 
 RUNDIR=/var/run/fai/make-fai-nfsroot
 [ ! -d $RUNDIR ] && mkdir -p $RUNDIR
-LIBFAI=/usr/lib/fai
-SHAREFAI=/usr/share/fai
 export DEBIAN_FRONTEND=noninteractive
 [ "$recover" ] || rm -rf $RUNDIR/*
 
@@ -204,17 +198,11 @@ copy_fai_files() {
 
     # copy to nfsroot
     perl -pi -e "s#^root::#root:${FAI_ROOTPW}:#" etc/passwd
-    mkdir -p $NFSROOT/$SHAREFAI $NFSROOT/$LIBFAI $NFSROOT/etc/fai
     cd $NFSROOT
     cp -Rpv $cfdir/* $NFSROOT/etc/fai
     # remove some files that should not be copied
     rm -f $NFSROOT/etc/fai/make-fai-nfsroot.conf
     [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass $NFSROOT/.cvspass
-#    cp -p $LIBFAI/sbin/* sbin/
-#    cp -p /usr/sbin/fai usr/sbin/
-#    cp -p /usr/sbin/{ftar,fcopy,install_packages} usr/sbin/
-#    cp -p /usr/bin/{fai-do-scripts,fai-class,fai-debconf} usr/bin/
-    cp -p $LIBFAI/* usr/lib/fai 2>/dev/null || true  # cp will complain about directories
     $ROOTCMD shadowconfig on
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -313,8 +301,8 @@ create_nfsroot() {
     cat >> root/.profile <<-EOF
         PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/bin:/sbin:/usr/bin:/usr/sbin:
         export PATH
-	. $SHAREFAI/subroutines
-	. $SHAREFAI/subroutines-$OS_TYPE
+	. /usr/lib/fai/subroutines
+	. /usr/lib/fai/subroutines-$OS_TYPE
 	set -a
         . /tmp/fai/variables.sh 2>/dev/null
 EOF
@@ -362,7 +350,7 @@ add_packages_nfsroot() {
 umount_dirs() {
 
     [ -f $NFSROOT/usr/sbin/dpkg-divert ] && 
-       LC_ALL=C $ROOTCMD dpkg-divert --package fai --rename --remove /sbin/discover-modprobe
+       LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /sbin/discover-modprobe
     cd /
     sleep 2
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
@@ -413,7 +401,7 @@ fdivert() {
 
     local item
     for item in "$@"; do
-	LC_ALL=C $ROOTCMD dpkg-divert --quiet --package fai --add --rename $item
+	LC_ALL=C $ROOTCMD dpkg-divert --quiet --add --rename $item
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
