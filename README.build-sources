@@ -1,21 +1,10 @@
-#show differences to previous release
-cvs diff -r r-2_8_2
+# check out the sources to the directory fai-sources
+svn co svn://svn.debian.org/svn/fai/trunk fai-sources
 
-#create new version:
-dch -v 2.8.3
-
-# create final fai version
-# DO NOT FORGET TO CHANGE FILE VERSION
-
-changelog: C-c C-f
-cvs tag r-2_8.3
-cvs co -P fai
-mv fai fai-2.8.3
-make veryclean
-
-# build and install fai packages from fai sources
-cvs co -P fai
-cd fai
-dpkg-buildpackage -rfakeroot -ICVS
+# build the packages
+cd fai-sources
+dpkg-buildpackage -I.svn -rfakeroot -uc -us
 cd ..
-dpkg -i fai_2.8.3_all.deb
+
+# Now you have some fai Debian packages
+ls fai*.deb
