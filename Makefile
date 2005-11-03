@@ -6,8 +6,6 @@ LIBDIR = $(DESTDIR)/usr/lib/fai
 USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai setup_harddisks faireboot dhclient-perl
 
 USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub
-CONFFILES= 
-SIEXAMPLE=$(DOCDIR)/examples/simple
 libfiles=$(wildcard lib/[a-z]*)  # do not include CVS dir
 
 # files with variable KERNLEVERSION in it; this string will be substituted
