@@ -211,6 +211,7 @@ call_debootstrap() {
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "Calling debootstrap $1 $NFSROOT $2"
     yes '' | LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2 || true
+    touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
@@ -334,7 +335,8 @@ upgrade_nfsroot() {
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
 
-    fdivert /sbin/discover-modprobe
+    fdivert /sbin/start-stop-daemon /sbin/discover-modprobe
+    cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
     $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
