@@ -30,7 +30,7 @@ install:
 	-install $(libfiles) $(LIBDIR)
 	cd scripts ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd scripts ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
-	install scripts/start-stop-daemon $(DESTDIR)/sbin
+	install scripts/fai-start-stop-daemon $(DESTDIR)/sbin
 	install scripts/dhclient-script  $(DESTDIR)/etc/dhcp3
 	install -m644 conf/dhclient.conf $(DESTDIR)/etc/dhcp3
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt.conf.d/90fai
