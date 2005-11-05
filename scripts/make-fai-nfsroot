@@ -211,7 +211,6 @@ call_debootstrap() {
     echo "Creating nfsroot for $1 using debootstrap"
     [ "$verbose" ] && echo "Calling debootstrap $1 $NFSROOT $2"
     yes '' | LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2 || true
-    touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
@@ -222,6 +221,7 @@ create_base() {
 	rm -f $NFSROOT/etc/resolv.conf
         echo "Creating base.tgz"
         tar -l -C $NFSROOT -cf - --exclude var/tmp/base.tgz . | gzip > $NFSROOT/var/tmp/base.tgz
+	touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
     else
 	die "\$FAI_DEBOOTSTRAP not defined."
     fi
