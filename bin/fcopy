@@ -6,7 +6,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2004 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2005 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 1.23, 24-march-2005";
+my $version = "Version 2.0, 11-nov-march-2005";
 
 use strict;
 use File::Copy;
@@ -35,6 +35,8 @@ use File::Compare;
 use File::Find;
 use File::Path;
 use File::Basename;
+use File::Spec;
+use File::Temp qw/tempfile/;
 use Getopt::Std;
 
 use vars qw/*name/;
@@ -78,6 +80,7 @@ sub copy_one {
   my $tpath = "$target/" . dirname $source;
   my $preserve = 0;
   my $logcomment = "";
+  my ($tmpfh,$tmpfile);
 
   warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debug;
 
@@ -93,15 +96,22 @@ sub copy_one {
   unless (defined $class) {
     ewarn("no matching file for any class for $source defined.");
     # do not copy
-    $opt_d and -f $destfile and ($nobackup and unlink($destfile) or 
-      (-d $bpath or mkpath($bpath,$debug,0755)) and move($destfile,$backupfile));
+    if ($opt_d and -f $destfile) {
+      print LOGFILE "$source\tNONE\t# removed (no matching class)\n" if $logfile;
+      if ($nobackup) {
+        unlink($destfile)
+      } else {
+        mkpath($bpath,$debug,0755) unless -d $bpath;
+	move($destfile,$backupfile) if -d $bpath;;
+      }
+    }
     return;
   }
   warn "using class: $class\n" if $debug;
-  $sourcefile = "$ps/$class";
+  $tmpfile = $sourcefile = "$ps/$class";
 
   # do nothing if source and destination files are equal 
-  if ($opt_update) {
+  if ($opt_update and not -x "$ps/preinst") {
     # compare logically
     if ($lastclass{$source}) {
       # $source has already been copied last time
@@ -123,8 +133,17 @@ sub copy_one {
     }
   } else {
     # compare literally
+    if ( -x "$ps/preinst" ) {
+      warn "preinst script found, switching to literal change detection" if
+        ($opt_P and $debug);
+      ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
+      warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
+      ewarn("copying $sourcefile for preinst processing failed !") unless
+        copy($sourcefile,$tmpfh);
+      runscript("preinst",$ps,$tmpfile,$class);
+    };
 
-    if ( compare($sourcefile,$destfile)) {
+    if ( compare($tmpfile,$destfile)) {
       $logcomment="\t# new (literal)";
     } else {
       $logcomment="\t# preserved (literal)" if $logfile;
@@ -157,21 +176,21 @@ sub copy_one {
   # what should I do if $destfile is a symlink?
   $nobackup or (-f $destfile and 
     (-d $bpath or mkpath($bpath,$debug,0755)) and move($destfile,$backupfile));
-  if (copy($sourcefile,$destfile)) {
+  if (copy($tmpfile,$destfile)) {
     print "fcopy: copied $sourcefile to $destfile\n" ;
-    postinst($ps,$destfile,$class);
+    runscript("postinst",$ps,$destfile,$class);
     set_mode($ps,$destfile,$class);
   } else {
     ewarn("copy $sourcefile to $destfile failed. $!") ;
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub postinst {
+sub runscript {
 
-  my ($sourcefile,$destfile,$class) = @_;
-  return unless -x "$sourcefile/postinst"; 
-  warn "executing $sourcefile/postinst $class $destfile\n" if $debug;
-  system "$sourcefile/postinst $class $destfile";
+  my ($scriptname,$sourcefile,$destfile,$class) = @_;
+  return unless -x "$sourcefile/$scriptname"; 
+  warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
+  system "$sourcefile/$scriptname $class $destfile";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub name2num {
@@ -342,20 +361,6 @@ EOF
   exit 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub rfilter {
-
-  # Filter for recursive copying
-  
-  # are we in a directory ? should we ignore it ?
-  my $location=$_;
-  (-d and (! grep $location eq $_,@ignoredirs )) or return 0;
-  # a directory without subdirs has two hard links
-  # don't count @ignoredirs as subdirs
-  my $subdirs=(lstat($_))[3] - 2 - grep(-d,@ignoredirs);
-  # push leaf
-  push @rlist,$File::Find::name unless $subdirs;
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
 
 $|=1;
@@ -396,8 +401,20 @@ die "fcopy: target undefined\n" unless $target;
 
 if ($opt_r) {
   foreach (@ARGV) { $_="$source/$_"; } # add prefix to list of directories
-  File::Find::find(\&rfilter,@ARGV);
-  foreach (@rlist) { $_=~ s#^$source/##; }   # remove prefix from all fines found
+  my %has_subdirs;
+  my %ignoredirs;
+  map $ignoredirs{$_}=1,@ignoredirs;
+  File::Find::find({
+    wanted=>sub{ $has_subdirs{$File::Find::dir} |= -d},
+    preprocess=>sub{grep ! (-d and exists($ignoredirs{$_})),@_}},
+    @ARGV);
+  foreach (keys %has_subdirs) {
+    unless ($has_subdirs{$_}) {
+      # remove prefix from all files found
+      s#^$source/##;
+      push @rlist,$_;
+    }
+  }
   warn "List of all files found by File::Find::find: @rlist" if $debug;
   @ARGV = @rlist;
 }
