@@ -540,7 +540,7 @@ only updates your kernel and kernel modules inside the nfsroot
 
 <sect1 id=troublefaisetup> Troubleshooting the setup<p>
 
-The setup of FAI adds the FAI account, exports file systems and calls
+The setup of FAI adds the FAI account, exports filesystems and calls
 <manref name="make-fai-nfsroot" section="8">. If you call
 <tt>make-fai-nfsroot -v</tt> you
 will see more messages. When using a local Debian mirror, it's
@@ -976,7 +976,7 @@ files can be found on the FAI homepage.
 <p>
 A very nice feature is that FAI mounts all filesystems it finds on
 the local disks read only. It also tells you on which partition a file
-<file>/etc/fstab</file> exists. When only one file system table is found, the
+<file>/etc/fstab</file> exists. When only one filesystem table is found, the
 partitions are mounted according to this information. Here's an
 example:
 <example>
@@ -1129,8 +1129,8 @@ others. By default, <var>FAI_ACTION</var> is defined via the command
 <sect id=ipartition>Partitioning local disks, creating filesystems<p>
 
 For disk partitioning exactly one disk configuration file from
-<file>/fai/disk_config</file> is selected using classes. It's the
-description of how all the local disks will be partitioned, where
+<file>/fai/disk_config</file> is selected using classes. This file
+describes how all the local disks will be partitioned, where
 filesystems should be created (and their types like ext2, ext3,
 reiserfs), and how they are mounted. It's also possible to preserve
 the disk layout or to preserve the data on certain partitions. It's
@@ -1289,7 +1289,7 @@ several files:
 	   define classes and variables and to load kernel modules.</p> </item>
 
 	  <tag><tt>disk_config/</tt></tag> <item> <p>Configuration
-	  files for disk partitioning and file system creation.</p> </item>
+	  files for disk partitioning and filesystem creation.</p> </item>
 
 	  <tag><tt>debconf/</tt></tag> <item> <p>This directory holds
 	  all <manref name="debconf" section="8"> data. The format is
@@ -1380,7 +1380,7 @@ installation!
 
 <sect id=tasks>The default tasks<p>
 
-After the kernel has booted, it mounts the root file system via NFS
+After the kernel has booted, it mounts the root filesystem via NFS
 from the install server and <manref name="init" section="8"> starts the script
 <file>/usr/sbin/fai</file>. This script controls the
 sequence of the installation. No other scripts in
@@ -1751,11 +1751,11 @@ the local disks. It uses all configuration files in
 <file>/fai/disk_config/</file> which are also defined as classes.
 Lines beginning with # are comments. The config file
 <file>/fai/disk_config/FAIBASE</file> is a generic description for
-one hard disk (IDE or SCSI), which should fit for most installations. If you
+one hard disk (IDE or SCSI), which most installations should be able to adapt. If you
 can't partition your hard disk using this script <footnote><p>Currently
 this script uses the command <tt>sfdisk(8)</tt>, which isn't available
 on SUN SPARC, IA64 and PowerPC.</p> </footnote>, use a hook instead. The hook should
-write the new partition table, create the file systems and create the
+write the new partition table, create the filesystems and create the
 files <file>/tmp/fai/fstab</file> and <file>/tmp/fai/disk_var.sh</file>, which
 contains definitions of boot and root partitions.
 
@@ -1765,7 +1765,7 @@ and for the second SCSI disk <tt>disk2</tt> The numbering of the disks comes
 from the order in <file>/proc/partitions</file>.
 
 <example>
-# &lt;Type&gt; &lt;mount point&gt; &lt;Size in mb&gt; [mount options]  [;extra options]
+# &lt;type&gt; &lt;mount point&gt; &lt;size in MB&gt; [mount options]  [;extra options]
 
 disk_config disk1
 
@@ -1786,16 +1786,16 @@ logical   /var/tmp    preserve9                      ;format
 primary   /tmp/mytmp  -300
 </example>
 
-Every disk configuration starts with the command <prgn>disk_config</prgn>
+Every disk configuration starts with the command <tt>disk_config</tt>
 followed by <tt>diskX</tt> where <tt>X</tt> is the number of the HDD. The
 Linux device names <file>/dev/hda</file> and <file>/dev/sda</file>
-corresponds to <tt>disk1</tt>, <tt>disk2</tt> is equal to
+correspond to <tt>disk1</tt>, <tt>disk2</tt> corresponds to
 <file>/dev/hdb</file> and <file>/dev/sdb</file> and so on.
 <p>
-After this command for each partition a line containing the type, mount
-point and size is added. Mount options and additional parameters for
-<prgn>mke2fs</prgn> -- separated from the mount options by a semicolon --
-can be added.
+After <tt>disk_config</tt> one line containing the type, mount point
+and size is added for each partition on the harddisk. Mount options
+and additional parameters for <prgn>mke2fs</prgn> -- separated from
+the mount options by a semicolon -- can be added.
 
 <taglist>
   <tag>Type</tag> <item> <p>There are two types of partitions: primary
@@ -1806,7 +1806,7 @@ can be added.
   All other partitions are called logical. Because logical partitions
   are gathered internally in one big primary partition, only three
   primary partitions can be used if logical partitions are defined.
-  Normally only one primary partition for the root file system is
+  Normally only one primary partition for the root filesystem is
   created and all others are logical, like <tt>disk1</tt> in the example above.
 
   <tag>Mount point</tag> <item> <p> The mount point is the full path
@@ -1814,11 +1814,11 @@ can be added.
   defines a Linux swap partition.  Both types will be automatically
   added to <file>/etc/fstab</file>.  A dash <tt>-</tt> indicates that
   the partition will not be mounted and can be used for other types of
-  filesystems (VAT, UFS, MINIX, ...)
+  filesystems (FAT, NTFS, UFS, MINIX, ...)
 
   <tag>Size</tag> <item> <p> This is the size of the partition in
   megabytes. This value is rounded up to fit to a cylinder
-  number. There are several forms to define the size:
+  number. There are several ways of defining the size:
   <example>
 	"200" means about 200MB, no more no less
 	"100-300" sets a 100MB minimum and a 300MB maximum
@@ -1843,24 +1843,22 @@ can be added.
   <tag>Extra options</tag> <item> <p>The last field is a space
   separated extra options list. The following options are known:
   <example>
-boot         : make this partition the boot-partition (the
-               linux root filesystem is the default)
--i &lt;bytes&gt;   : Bytes per inode
-               (only ext2/3 filesystem)
--m &lt;blocks&gt;  : Reserved blocks percentage for superuser
-               (only ext2/3 filesystem)
--j           : Create the filesystem with an ext3 journal
--c           : Check for bad blocks
-ext2         : flag the partition as ext2 instead of auto in /etc/fstab
-ext3         : flag the partition as ext3 instead of auto in /etc/fstab
+boot         : Make this partition the boot-partition (the
+               Linux root filesystem is the default).
+-i &lt;bytes&gt;   : bytes per inode (ext2/3 only)
+-m &lt;blocks&gt;  : reserved blocks percentage (ext2/3 only)
+-j           : Create the filesystem with an ext3 journal.
+-c           : Check for bad blocks.
+ext2         : Flag as ext2 instead of auto in /etc/fstab.
+ext3         : Flag as ext3 instead of auto in /etc/fstab.
 swap         : swap partition
-dosfat16     : DOS 16bit FAT file system
-winfat32     : Win95 FAT32 file system
-reiser       : create a reiser file system, not an ext2
-xfs          : xfs
-format       : Always format this partition even if preserve
-writable     : mounts a preserved partition writable
-lazyformat   : Do not format if partition has not moved
+dosfat16     : DOS 16 bit FAT filesystem
+winfat32     : Win95 FAT32 filesystem
+reiser       : Create a ReiserFS filesystem, not an ext2.
+xfs          : XFS
+format       : Always format even if preserve is specified.
+writable     : Mounts a preserved partition writable.
+lazyformat   : Do not format if partition has not moved.
   </example>
   <p>
   The order of the extra options is not relevant. For more information
@@ -1869,34 +1867,34 @@ lazyformat   : Do not format if partition has not moved
   Thus, we have the following interactions between <tt>-j</tt>,
   <tt>ext2</tt> and <tt>ext3</tt> :
   <example>
-&lt;no option&gt; : an ext2 fs flagged as auto in the fstab
--j          : an ext3 fs flagged as auto in the fstab
-ext2        : an ext2 fs flagged as ext2 in the fstab
--j ext2     : an ext3 fs flagged as ext2 in the fstab
--j ext3     : an ext3 fs flagged as ext3 in the fstab
-ext3        : an ext2 fs flagged as ext3 in the fstab !!BAD!!
+&lt;no option&gt; : An ext2 fs flagged as auto in the fstab
+-j          : An ext3 fs flagged as auto in the fstab.
+ext2        : An ext2 fs flagged as ext2 in the fstab.
+-j ext2     : An ext3 fs flagged as ext2 in the fstab.
+-j ext3     : An ext3 fs flagged as ext3 in the fstab.
+ext3        : An ext2 fs flagged as ext3 in the fstab. !!BAD!!
   </example>
   <p>
-  The use of auto in the fstab for ext3fs enable a non-ext3 enabled
-  kernel or tool to cope with these partitions.
+  Using <tt>auto</tt> in the fstab for ext3 filesystems enables a
+  non-ext3-enabled kernel or tool to cope with these partitions.
 </taglist>
 
 <p>
-It is possible to preserve the size of a partition or additionally to
-preserve the existing data on this partition. To preserve only the
+It is possible to preserve the size and even the existing
+data on a partition. To preserve only the
 partition size, the number of the partition must be unchanged and the
 size must be specified as <tt>preserve&lt;no&gt;</tt> The number
-<tt>&lt;no&gt;</tt> is the device number (used by <file>/dev/hda*</file>,
-or see output of <prgn>df</prgn>) of the partition. Primary partitions
+<tt>&lt;no&gt;</tt> is the device number (as in <file>/dev/hda&lt;no&gt;</file>,
+or see the output of <prgn>df</prgn>) of the partition. Primary partitions
 are numbered from one to four, the numbers for logical partitions
 begin at five.
 <p>
-Problems were reported (feb 2003) when using more than two primary
+Problems were reported (February 2003) when using more than two primary
 partitions and trying to preserve a logical partition. If you have
 this problem, try to use only two primary partitions.
 <p>
-In this example, the partitions' numbers  (= device number) are also
-shown for disk disk2:
+In the following example, the partition numbers (= device number) are also
+shown for disk <tt>disk2</tt>:
 
 <example>
 primary   /tmp        300-500     #  1
@@ -1912,8 +1910,8 @@ primary   /tmp/mytmp  -300        #  4
 <p>
 The first two partitions are of type primary, so they get the numbers
 1 and 2. The logical partitions start at 5 and the last gets number
-8. All logical partitions define the primary partition 3, but this
-number is not used. So, if you want to preserve <file>/dev/hda7</file>
+9. All logical partitions define the primary partition 3, but this
+number is not used. So if you want to preserve <file>/dev/hda7</file>
 you have to insert a minimum of two logical partitions before it.
 
 <p>
@@ -1926,7 +1924,7 @@ the swap partition to gain a minor installation speed improvement
 after the first installation!
 
 <p>
-If your have a separate partition <file>/boot</file>, you must add the
+If you have a separate <file>/boot</file> partition, you must add the
 extra option <tt>boot</tt> to make it your boot partition. Otherwise
 your system will not be bootable. By default (if no boot option was
 specified) the root partition (<file>/</file>) will become the boot
