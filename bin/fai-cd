@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 1.2.2"
+version="fai-cd 1.2.3"
 
 isoversion="$version -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
@@ -255,7 +255,10 @@ isoname=$1
 [ -f "$grub_config" ] || die 6 "Grub menu file $grub_config not found."
 [ `id -u` -ne 0 ]     && die 9 "Run this program as root."
 
-[ -x "$(which mkinitrd-cd)" ] || die 4 "mkinitrd-cd not found. Please install package."
+[ -x "$(which mkinitrd-cd)" ] || die 7 "mkinitrd-cd not found. Please install package."
+[ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
+[ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
+
 tmp=$(mktemp -t -d fai-cd.XXXXXX)
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 
