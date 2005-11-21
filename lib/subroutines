@@ -120,6 +120,14 @@ call_hook() {
 
     for cl in $classes; do
 	hfile=$FAI/hooks/$hook.$cl
+	if [ -f $hfile -a ! -x $hfile ]; then
+	    echo "WARNING: Skipping $hfile execustion because it's not executable."
+	    continue
+	fi
+	if [ -f $hfile.source -a ! -x $hfile.source ]; then
+	    echo "WARNING: Skipping $hfile.source execustion because it's not executable."
+	    continue
+	fi
 	if [ -x $hfile ]; then
 	    echo "Calling hook: $hook.$cl"
 	    sndmon "HOOK $hook.$cl"
