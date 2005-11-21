@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.0, 11-nov-2005";
+my $version = "Version 2.0, 21-nov-2005";
 
 use strict;
 use File::Copy;
@@ -197,8 +197,16 @@ sub name2num {
 
   # convert names to numeric uid, gid
   my ($user,$group) = @_;
-  my $uid = ($user  =~ /^\d+$/) ? $user  : getpwnam $user;
-  my $gid = ($group =~ /^\d+$/) ? $group : getgrnam $group;
+  if( !defined( $ENV{ROOTCMD} ) || $ENV{ROOTCMD} =~ /^\s*$/ )
+  {
+    my $uid = ($user  =~ /^\d+$/) ? $user  : getpwnam $user;
+    my $gid = ($group =~ /^\d+$/) ? $group : getgrnam $group;
+  }
+  else
+  {
+    my $uid = ($user  =~ /^\d+$/) ? $user  : `$ENV{ROOTCMD} perl -e '\$uid = getpwnam $user; print \$uid'`;
+    my $gid = ($group =~ /^\d+$/) ? $group : `$ENV{ROOTCMD} perl -e '\$gid = getgrnam $group; print \$gid'`;
+  }
   warn "name2id $user = $uid ; $group = $gid\n" if $debug;
   return ($uid,$gid);
 }
