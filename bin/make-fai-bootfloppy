@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.5.6, 22-april-2005"
+version="Version 2.5.7, 21-november-2005"
 set -e
 timeout=15
 mkimage=0
@@ -261,18 +261,16 @@ cd_image() {
 	exit 5
     }
     echo "Creating the iso9660 cd image in $cddev from floppy image $floppydev."
-    cd /tmp
-    TMPDIR=`mktemp -d`
-    cd $TMPDIR || exit 7
-
+    TMPDIR=`mktemp -d` || exit 7
     mkdir $TMPDIR/boot
-    cp $floppydev ./boot/boot.img
+    cp $floppydev $TMPDIR/boot/boot.img
+    cd $TMPDIR
     mkisofs -V "FAI boot CDROM" -b boot/boot.img -c boot/boot.catalog -o bootcd.iso .
-    rm -rf $TMPDIR/boot
-
+    cd -
     mv $TMPDIR/bootcd.iso $cddev
     echo "ISO-Image created in $cddev"
 
+    rm -rf $TMPDIR/boot
     rmdir $TMPDIR
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
