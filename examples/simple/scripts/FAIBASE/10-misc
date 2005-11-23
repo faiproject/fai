@@ -11,17 +11,11 @@ for module in $moduleslist; do
 done
 
 # disable fsck on ext3 filesystems
-case $(uname -r) in
-    2.6*) : ;; # may cause major kernel problems on 2.6 kernel
-    *)
 for part in $(mount|grep $target |grep "type ext3"|perl -ane 'print "$F[0] "')
 do
     echo "Disable periodic fsck on $part"
     tune2fs -c 0 -i 0 $part
 done
-    ;;
-
-esac
 
 # assuming that make-fai-nfsroot.conf sets
 # FAI_LOCAL_REPOSITORY="deb file:/fai/files packages/"
