@@ -27,13 +27,14 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.5.7, 21-november-2005"
+version="Version 2.6, 23-november-2005"
 set -e
 timeout=15
 mkimage=0
 floppydev=/dev/fd0
 [ -d /floppy ] && mountpoint=/floppy
 [ -d /media  ] && mountpoint=/media/floppy
+CLIENTINTERFACE=eth0
 mountopts="-t ext2"
 sd="savedefault"
 BTYPE=d # default boot protocol is DHCP
@@ -74,6 +75,7 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
    -f FILE    make a 1440k floppy image in FILE
    -g         use GRUB loader on bootfloppy (default)
    -i FILE    make a 1440k iso9660 image in FILE
+   -I IF      use IF as the client's network interface
    -l         use LILO loader on bootfloppy
    -m DIR     use DIR as mountpoint [/floppy or /media/floppy]
    -s HOST    use this static ip for FAI client; try to get all info from DNS
@@ -141,7 +143,7 @@ determine_network_parameters() {
 	BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
 	NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
 	GATEWAY=`LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }'`
-	fixedparams="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}::off" 
+	fixedparams="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}:${CLIENTINTERFACE}:off" 
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -186,15 +188,15 @@ EOF
     menu-title="FAI $KERNELVERSION"
 
     image=$mountpoint/vmlinuz
-    append="ip=::::::any root=/dev/nfs $params"
+    append="ip=:::::$CLIENTINTERFACE:any root=/dev/nfs $params"
     label=FAI-ANY
 
     image=$mountpoint/vmlinuz
-    append="ip=::::::bootp root=/dev/nfs $params"
+    append="ip=:::::$CLIENTINTERFACE:bootp root=/dev/nfs $params"
     label=FAI-BOOTP
 
     image=$mountpoint/vmlinuz
-    append="ip=::::::dhcp root=/dev/nfs $params"
+    append="ip=:::::$CLIENTINTERFACE:dhcp root=/dev/nfs $params"
     label=FAI-DHCP
 
     image=$mountpoint/vmlinuz
@@ -202,7 +204,7 @@ EOF
     append="root=/dev/nfs nfsroot=$SERVERIP:$NFSROOT $fixedparams $params"
 
     image=$mountpoint/vmlinuz
-    append="ip=::::::rarp root=/dev/nfs $params"
+    append="ip=:::::$CLIENTINTERFACE:rarp root=/dev/nfs $params"
     label=FAI-RARP
 EOF
     $NFSROOT/sbin/lilo -C $mountpoint/etc/lilo.conf || die "lilo failed."
@@ -276,13 +278,14 @@ cd_image() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
 
-while getopts "lgvf:s:m:hd:c:Fi:" opt ; do
+while getopts "lgvf:s:m:hd:c:Fi:I:" opt ; do
     case "$opt" in
 	c) cfdir=$OPTARG ;;
 	l) lilo=1 ;;
 	g) grub=1 ;;
         h) usage ;;
         i) mkcd=1; cddev="$OPTARG" ; sd='';;
+        I) CLIENTINTERFACE="$OPTARG" ;;
 	f) mkimage=1; floppydev="$OPTARG" ;;
 	m) mountpoint="$OPTARG" ;;
 	s) TARGETHOST="$OPTARG" ;;
