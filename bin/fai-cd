@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 1.2.3"
+version="fai-cd 1.2.4"
 
 isoversion="$version -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
@@ -234,6 +234,11 @@ burniso() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
+
+case `dpkg --print-installation-architecture` in
+    i386|amd64) : ;;
+       *) die 11 "fai-cd only works on i386 and maybe on amd64 architecture. Exiting."
+esac
 
 # Parse commandline options
 while getopts "hg:bm:" opt ; do
