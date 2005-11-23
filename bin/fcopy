@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.0, 21-nov-2005";
+my $version = "Version 2.1, 23-nov-2005";
 
 use strict;
 use File::Copy;
@@ -64,7 +64,7 @@ my @ignoredirs = qw'CVS .svn .arch-ids {arch}';
 # getopts:
 our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_M, $opt_v, $opt_d, $opt_D, $opt_i);
 our ($opt_B, $opt_c, $opt_C, $opt_h, $opt_F, $opt_l, $opt_L, $opt_P, $opt_b);
-our $opt_I;
+our ($opt_I, $opt_U);
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub copy_one {
@@ -196,16 +196,18 @@ sub runscript {
 sub name2num {
 
   # convert names to numeric uid, gid
-  my ($user,$group) = @_;
+  my ($user, $group) = @_;
+  my ($uid, $gid);
+
   if( !defined( $ENV{ROOTCMD} ) || $ENV{ROOTCMD} =~ /^\s*$/ )
   {
-    my $uid = ($user  =~ /^\d+$/) ? $user  : getpwnam $user;
-    my $gid = ($group =~ /^\d+$/) ? $group : getgrnam $group;
+    $uid = ($user  =~ /^\d+$/) ? $user  : getpwnam $user;
+    $gid = ($group =~ /^\d+$/) ? $group : getgrnam $group;
   }
   else
   {
-    my $uid = ($user  =~ /^\d+$/) ? $user  : `$ENV{ROOTCMD} perl -e '\$uid = getpwnam $user; print \$uid'`;
-    my $gid = ($group =~ /^\d+$/) ? $group : `$ENV{ROOTCMD} perl -e '\$gid = getgrnam $group; print \$gid'`;
+    $uid = ($user  =~ /^\d+$/) ? $user  : `$ENV{ROOTCMD} perl -e '\$uid = getpwnam $user; print \$uid'`;
+    $gid = ($group =~ /^\d+$/) ? $group : `$ENV{ROOTCMD} perl -e '\$gid = getgrnam $group; print \$gid'`;
   }
   warn "name2id $user = $uid ; $group = $gid\n" if $debug;
   return ($uid,$gid);
@@ -372,7 +374,7 @@ EOF
 # main program
 
 $|=1;
-getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:');
+getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:U');
 $opt_h && usage;
 $opt_M and $opt_m="root,root,0644";  # set default modes
 $opt_m && check_mopt();
@@ -385,6 +387,11 @@ $target eq "/" or $ENV{'ROOTCMD'}="chroot $target";
 $logfile = $opt_L || $ENV{LOGDIR} && "$ENV{LOGDIR}/fcopy.log" || 0;
 $logfile and (open(LOGFILE,">> $logfile") || die("can't open logfile: $!"));
 $backupdir = $opt_b || $ENV{FAI_BACKUPDIR};
+
+if ($opt_U && -f "/var/run/fai/fai_softupdate_is_running" ) {
+  print "Skipping this fcopy command during softupdate." if $verbose;
+  exit 0;
+}
 
 if ($ENV{FCOPY_LASTLOG} and $ENV{FCOPY_UPDATELOG}) {
 	$opt_update = "$ENV{FCOPY_LASTLOG},$ENV{FCOPY_UPDATELOG}";
