@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 1.2.5"
+version="fai-cd 1.2.6"
 
 isoversion="$version -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
@@ -66,7 +66,7 @@ die() {
     local e=$1   # first parameter is the exit code
     shift
 
-    echo "$@"    # print error message
+    echo "ERROR: $@"    # print error message
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -221,7 +221,7 @@ EOF
     mount --bind $tmp1 $NFSROOT/etc/apt/sources.list
     customize_nfsroot
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -RU -b boot/$bimagesize.image -c boot.catalog -o $isoname $NFSROOT
+    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -RU -b boot/$bimagesize.image -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
     echo -n "ISO image size and filename: "; du -h $isoname
     rm $tmp/boot/$bimagesize.image $tmp1
     unhide_dirs
