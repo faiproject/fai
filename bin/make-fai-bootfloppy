@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.6, 23-november-2005"
+version="Version 2.6.1, 27-november-2005"
 set -e
 timeout=15
 mkimage=0
@@ -153,7 +153,6 @@ lilo_floppy() {
 
     echo "Creating the boot floppy with lilo."
     mkdir $mountpoint/boot $mountpoint/etc
-    rmdir $mountpoint/lost+found
 
     [ "$verbose" ] && echo "Copying the kernel $NFSROOT/boot/$kernel to the floppy."
     cd $NFSROOT && cp -dp boot/vmlinuz-$KERNELVERSION $mountpoint/boot
@@ -347,6 +346,7 @@ if [ ! -d $mountpoint ]; then
     mpcreated=1  # we created the mountpoint
 fi
 mount $mountopts $floppydev $mountpoint || die "Can't mount floppy $floppydev"
+rmdir $mountpoint/lost+found
 
 [ $lilo ] && lilo_floppy
 [ $grub ] && grub_floppy
