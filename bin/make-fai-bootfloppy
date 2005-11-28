@@ -27,10 +27,11 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.6.1, 27-november-2005"
+version="Version 2.7, 28-november-2005"
 set -e
 timeout=15
 mkimage=0
+size=1440
 floppydev=/dev/fd0
 [ -d /floppy ] && mountpoint=/floppy
 [ -d /media  ] && mountpoint=/media/floppy
@@ -61,6 +62,7 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
 
    Usage: make-fai-bootfloppy [parameter]
 
+   -B         make a big 2.88M floppy instead of the default 1.44M floppy.
    -c CFDIR   use CFDIR instead of /etc/fai as configuration directory
    -d LABEL   use LABEL when selecting the default boot kernel (and parameters).
               a for any boot protocol (kernel tries all compiled in)
@@ -72,9 +74,9 @@ make-fai-bootfloppy, create a boot floppy for FAI. $version
    -h         print this message.
    -F         append default flags to kernel parameters.
               Same as "FAI_FLAGS=verbose,sshd,createvt,syslogd"
-   -f FILE    make a 1440k floppy image in FILE
+   -f FILE    make a floppy image in FILE
    -g         use GRUB loader on bootfloppy (default)
-   -i FILE    make a 1440k iso9660 image in FILE
+   -i FILE    make a iso9660 image in FILE
    -I IF      use IF as the client's network interface
    -l         use LILO loader on bootfloppy
    -m DIR     use DIR as mountpoint [/floppy or /media/floppy]
@@ -277,9 +279,10 @@ cd_image() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main part
 
-while getopts "lgvf:s:m:hd:c:Fi:I:" opt ; do
+while getopts "lBgvf:s:m:hd:c:Fi:I:" opt ; do
     case "$opt" in
 	c) cfdir=$OPTARG ;;
+	B) size=2880 ;;
 	l) lilo=1 ;;
 	g) grub=1 ;;
         h) usage ;;
@@ -327,7 +330,7 @@ determine_network_parameters
 
 if [ $mkimage -eq 1 ]; then 
     [ -e $floppydev ] && die "$floppydev already exists. Please remove it and restart again."
-    dd if=/dev/zero of=$floppydev bs=1024 count=1440
+    dd if=/dev/zero of=$floppydev bs=1024 count=$size
     mountopts="$mountopts -o loop"
     mkfsopt=-F
 else
