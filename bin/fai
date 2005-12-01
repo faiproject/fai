@@ -148,6 +148,7 @@ fai_init() {
 	if [ $DO_INIT_TASKS -eq 1 ]; then
 	    grep -q '[[:space:]]sysfs' /proc/filesystems && mount -t sysfs sysfs /sys
 	    ifup lo
+	    [ -x /etc/init.d/udev ] && /etc/init.d/udev start
 	    [ -x /sbin/portmap ] && /sbin/portmap
 	    mount -t devpts devpts /dev/pts
 	    # add other options for nfs mount of /dev/root to root-path in dhcpd.conf
@@ -161,6 +162,7 @@ fai_init() {
 
     # set red color, but not on some archs
     [ -e /.nocolorlogo ] && COLOR_FAI_LOGO=0
+    [ -n "$console" ] && COLOR_FAI_LOGO=0  # no red logo if console was defined on the command line
     case $HOSTTYPE in
 	sparc*|powerpc*) COLOR_FAI_LOGO=0 ;;
     esac
