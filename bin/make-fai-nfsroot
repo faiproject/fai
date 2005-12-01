@@ -90,10 +90,10 @@ fi
 kfile="vmlinuz"
 case `dpkg --print-installation-architecture` in
     i386)
-	arch_packages="grub lilo kudzu dmidecode hwtools read-edid" ;;
+	arch_packages="grub lilo dmidecode hwtools read-edid" ;;
 
     amd64)
-	arch_packages="grub lilo kudzu dmidecode" ;;
+	arch_packages="grub lilo dmidecode" ;;
 
     ia64)
 	arch_packages="elilo gnu-efi efibootmgr" ;;
@@ -330,21 +330,21 @@ upgrade_nfsroot() {
     cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
     cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
     $ROOTCMD apt-get update
-    $ROOTCMD apt-get -fyu install
+    $ROOTCMD apt-get -fyu --force-yes install
     $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
 
     fdivert /sbin/start-stop-daemon /sbin/discover-modprobe
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
-    $ROOTCMD apt-get -y dist-upgrade
+    $ROOTCMD apt-get -y --force-yes dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_packages_nfsroot() {
 
-    $ROOTCMD apt-get -y --fix-missing install $packages </dev/null
+    $ROOTCMD apt-get -y --force-yes --fix-missing install $packages </dev/null
     if [ -n "$NFSROOT_PACKAGES" ] ; then
-        LC_ALL=C $ROOTCMD apt-get -y --fix-missing install $NFSROOT_PACKAGES </dev/null
+        LC_ALL=C $ROOTCMD apt-get -y --force-yes --fix-missing install $NFSROOT_PACKAGES </dev/null
     fi
     $ROOTCMD apt-get clean
 }
