@@ -26,7 +26,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.4, 11-nov-2005"
+version="version 1.4.1, 3-dec-2005"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -71,7 +71,7 @@ do_script() {
 
     # execute scripts and save their output in log files
     # cfengine, shell, perl and expect scripts are known types
-    local shelldebug file filetype
+    local shelldebug file filetype name
 
     file=$1
 
@@ -79,8 +79,10 @@ do_script() {
     case $file in
 	*~) echo "Skipping backup file $file" ; return ;;
     esac
-    case $file in
-	S[0-9][0-9]) echo "Script, matching S[0-9][0-9]* will not be executed any more. Please use names matching [0-9][0-9]*"; return ;;
+
+    name=$(basename $file)
+    case $name in
+	S[0-9][0-9]*) echo -e "WARNING: The script $name does not match [0-9][0-9]*.\nIt's not executed. Please rename it."; return ;;
     esac
 
     filetype=$(file $file)
