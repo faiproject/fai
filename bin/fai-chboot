@@ -27,7 +27,8 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-$version="version 1.5.3, 5-apr-2005";
+# variable needed: $nfsroot
+$version="version 1.6, 4-dec-2005";
 
 use Socket;
 use Net::hostent;
@@ -213,10 +214,15 @@ if ($opt_I) {
   $action="FAI_ACTION=install";
 }
 
+# read the nfsroot variable; a little bit ugly, but it works
+$nfsroot = `. /etc/fai/fai.conf 2>/dev/null; echo \$NFSROOT`;
+chomp $nfsroot;
+$nfsroot = '/usr/lib/fai/nfsroot' unless $nfsroot;
+
 if ($opt_i) {
   # create config so host will boot the install kernel
   $kernelname = 'kernel vmlinuz-install';
-  $rootfs     = '/dev/nfs';
+  $rootfs     = "/dev/nfs nfsroot=$nfsroot,v3,rsize=32768,wsize=32768";
   $bootprot   = "ip=dhcp devfs=nomount $action";
 } elsif ($opt_o) {
   $kernelname = 'localboot 0';
