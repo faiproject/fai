@@ -16,6 +16,7 @@ all:
 
 clean:
 	$(MAKE) -C doc clean
+	find -name svn-commit.tmp | xargs rm
 
 veryclean: clean
 	$(MAKE) -f debian/rules clean
