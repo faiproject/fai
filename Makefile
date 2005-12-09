@@ -32,7 +32,7 @@ install:
 	install bin/fai-start-stop-daemon $(DESTDIR)/sbin
 	install bin/dhclient-script  $(DESTDIR)/etc/dhcp3
 	install -m644 conf/dhclient.conf $(DESTDIR)/etc/dhcp3
-	install -m644 conf/apt.conf $(DESTDIR)/etc/apt.conf.d/90fai
+	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
 	install -m644 conf/fai.conf conf/sources.list conf/menu.lst $(DESTDIR)/etc/fai/
 	install -m644 conf/make-fai-nfsroot.conf $(DESTDIR)/etc/fai/
 	install -m600 conf/fai_modules_off $(DESTDIR)/etc/modutils
