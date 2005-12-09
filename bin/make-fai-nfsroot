@@ -209,7 +209,7 @@ copy_fai_files() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
     
-    echo "Creating nfsroot for $1 using debootstrap"
+    echo "Creating base system for $1 using debootstrap."
     [ "$verbose" ] && echo "Calling debootstrap $1 $NFSROOT $2"
     yes '' | LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
 }
@@ -265,6 +265,7 @@ create_nfsroot() {
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
     [ -f /etc/apt/preferences ] && cp -v /etc/apt/preferences $NFSROOT/etc/apt
     [ -f $cfdir/preferences ] && cp -v $cfdir/preferences $NFSROOT/etc/apt
+    echo 'APT::Get::AllowUnauthenticated "true";' >$NFSROOT/etc/apt/apt.conf.d/10fai
     echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
     echo "Adding additional packages to $NFSROOT:"
@@ -330,21 +331,21 @@ upgrade_nfsroot() {
     cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
     cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
     $ROOTCMD apt-get update
-    $ROOTCMD apt-get -fyu --force-yes install
+    $ROOTCMD apt-get -fyu install
     $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
 
     fdivert /sbin/start-stop-daemon /sbin/discover-modprobe
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
-    $ROOTCMD apt-get -y --force-yes dist-upgrade
+    $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_packages_nfsroot() {
 
-    $ROOTCMD apt-get -y --force-yes --fix-missing install $packages </dev/null
+    $ROOTCMD apt-get -y --fix-missing install $packages </dev/null
     if [ -n "$NFSROOT_PACKAGES" ] ; then
-        LC_ALL=C $ROOTCMD apt-get -y --force-yes --fix-missing install $NFSROOT_PACKAGES </dev/null
+        LC_ALL=C $ROOTCMD apt-get -y --fix-missing install $NFSROOT_PACKAGES </dev/null
     fi
     $ROOTCMD apt-get clean
 }
@@ -458,8 +459,9 @@ fi
     exit
 }
 
-echo Creating FAI nfsroot can take a long time and will
-echo need more than $nfssize disk space in $NFSROOT.
+echo "Creating FAI nfsroot in $NFSROOT."
+echo "It needs more than $nfssize disk space."
+echo "This may take a long time."
 
 # Kill the directory if not in recover mode
 if [ -d $NFSROOT/$FAI -a ! "$recover" ]
