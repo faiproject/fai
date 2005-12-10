@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.18, 6-dec-2005";
+my $version = "Version 2.19, 10-dec-2005";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -319,12 +319,9 @@ sub mkpackagelist {
   # ignore packages ending with - when using -d
   @complete = grep {!/-$/} @complete if $opt_d; 
 
-  foreach (reverse @complete) {
-    my $pack;
-    if ( /^(.*)[_=+-]$/ and $1 and $cache->exists($1)) {
+  foreach my $pack (reverse @complete) {
+    if ( $pack =~ /^(.*)[_=+-]$/ and $1 and $cache->exists($1)) {
       $pack = $1;
-    } else {
-      $pack = $_;
     }
     if (! defined ($complete{$pack})) {
       $complete{$pack} = 1;
