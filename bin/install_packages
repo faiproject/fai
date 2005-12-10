@@ -319,8 +319,9 @@ sub mkpackagelist {
   # ignore packages ending with - when using -d
   @complete = grep {!/-$/} @complete if $opt_d; 
 
-  foreach my $pack (reverse @complete) {
-    if ( $pack =~ /^(.*)[_=+-]$/ and $1 and $cache->exists($1)) {
+  foreach (reverse @complete) {
+    my $pack = $_;
+    if ( /^(.+)[_=+-]$/ and $1 and $cache->exists($1)) {
       $pack = $1;
     }
     if (! defined ($complete{$pack})) {
@@ -360,7 +361,7 @@ sub mkpackagelist {
 
     # simulate APTs and aptitudes understanding of "special" package names
     # suffixed by -, +
-    elsif ( $pack =~ /^(.*)[_=+-]$/ and $cache->exists($1)) {
+    elsif ( $pack =~ /^(.+)[_=+-]$/ and $cache->exists($1)) {
 
       if (defined ($cache->{$1}{VersionList})) {
 	push @known, $pack;
