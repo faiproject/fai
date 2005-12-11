@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 1.2.7"
+version="fai-cd 2.0"
 
 isoversion="$version -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
@@ -39,13 +39,12 @@ aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 grub_config=/etc/fai/menu.lst
 
 burn=0
-bimagesize=2.88 # mkbimage can create greater images, but mkisofs only accepts up to 2.88
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache /media/mirror/.apt-move"
 
 # we need FAI_CONFIGDIR, NFSROOT
 . /etc/fai/fai.conf
 
-trap "unhide_dirs;umount_dirs; mhide -u xfs reiserfs ext3" EXIT ERR
+trap "unhide_dirs;umount_dirs" EXIT ERR
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -70,90 +69,26 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-mhide() {
-
-    local mode m
-
-    mode=$1
-    shift
-    for m in $@; do
-	module-hide $mode $m
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
-module-hide() {
-
-    # hide or unhide a kernel module, so mkinitrd-cd can't see it
-    # therefore we rename the modules to XXX-<modulename.o>
-    # this works for 2.4 and 2.6 kernel (.o and .ko modules)
-
-    local dir module newname nam
-    local kdir=$NFSROOT/lib/modules/$kernelversion
-
-    mode=$1
-    shift
-    module=$1
-
-    case $mode in
-	-h) nam=$module;;
-	-u) nam=XXX-$module;;
-    esac
-
-    found=$(find $kdir -name ${nam}.o -o -name ${nam}.ko)
-    # echo "FOUND: $found"
-    if [ -z "$found" ]; then
-#       echo "$module not found."
-       return
-    fi
-    [ -f $found ] || return
-
-    newname=$(basename $found)
-    newname=${newname/XXX-/}  # substitute XXX- with nothing
-    dir=$(dirname $found)
-
-    set +e
-    case $mode in
-	-h) mv $found $dir/XXX-$newname ;;
-	-u) mv $found $dir/$newname ;;
-    esac
-    set -e
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_initrd_image() {
 
-    local size=min # full is often bigger than 2.88mb
     local kdir=$NFSROOT/lib/modules/$kernelversion
 
     echo "Creating initrd image with kernel $kernelversion"
-
+    mkdir -p $tmp/boot/grub
     sed "s/_VERSION_/$isoversion/" < /etc/mkinitrd-cd/id.txt > $NFSROOT/id.txt
-
-    # mkbimage complains if the image will be too large. So do not include some modules
-    # It would be nice if mkinitrd-cd had a config file!
-
-    mhide -h xfs reiserfs ext3
-
-    mkinitrd-cd $kdir $tmp/initrd.img $size "$isoversion"
-    mhide -u xfs reiserfs ext3
+    mkinitrd-cd $kdir $tmp/boot/initrd.img full "$isoversion"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub_image() {
 
     echo -n "Creating grub boot image ..."
 
-    mkdir -p $tmp/boot/grub
     > $tmp/boot/RUNNING_FROM_FAICD
-    cp /lib/grub/i386-pc/stage{1,2} $tmp/boot/grub
+    cp /lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
     cp $grub_config $tmp/boot/grub/menu.lst
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
-    cp $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot
-    ln -s boot/vmlinuz-$kernelversion $tmp/vmlinuz
-    tar -C $tmp -cf $tmp/make-fai-cd.tar boot vmlinuz initrd.img
-    mkbimage -d $tmp -f $tmp/make-fai-cd.tar -t $bimagesize >/dev/null 2>&1
-    # mkbimage creates the file $tmp/$bimagesize.image
-    rm $tmp/initrd.img $tmp/make-fai-cd.tar
-    mv $tmp/$bimagesize.image $tmp/boot
+    cp $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     echo "done"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -221,9 +156,10 @@ EOF
     mount --bind $tmp1 $NFSROOT/etc/apt/sources.list
     customize_nfsroot
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -RU -b boot/$bimagesize.image -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
+    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-info-table -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
+# -boot-load-size 4
     echo -n "ISO image size and filename: "; du -h $isoname
-    rm $tmp/boot/$bimagesize.image $tmp1
+    rm $tmp1
     unhide_dirs
     umount_dirs
 }
