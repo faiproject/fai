@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 2.0"
+version="fai-cd 2.0.1"
 
 isoversion="$version -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
@@ -156,8 +156,7 @@ EOF
     mount --bind $tmp1 $NFSROOT/etc/apt/sources.list
     customize_nfsroot
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-info-table -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
-# -boot-load-size 4
+    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
     echo -n "ISO image size and filename: "; du -h $isoname
     rm $tmp1
     unhide_dirs
