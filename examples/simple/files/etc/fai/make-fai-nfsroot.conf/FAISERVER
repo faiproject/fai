@@ -1,0 +1,49 @@
+# these variables are only used by make-fai-nfsroot(8)
+# here you can use also variables defined in fai.conf (like $mirrorhost)
+
+# Add a line for mirrorhost and installserver when DNS is not available
+# on the clients. This line(s) will be added to $nfsroot/etc/hosts.
+NFSROOT_ETC_HOSTS="192.168.1.250 $mirrorhost"
+
+FAI_DEBOOTSTRAP="sarge http://$mirrorhost/debian"
+#FAI_DEBOOTSTRAP="sarge file:/files/scratch/debian"
+
+# your extra packages which will be installed into the nfsroot, space separated
+NFSROOT_PACKAGES="cfengine expect"
+
+# this local repository holds your local packages that can be installed to
+# the install clients. Don't forget to create the index file Packages.gz!
+#FAI_LOCAL_REPOSITORY="deb file:/fai/files packages/"
+
+# the encrypted (with md5 or crypt) root password on all install clients during
+# installation process; used when log in via ssh; default pw is: fai
+FAI_ROOTPW='$1$kBnWcO.E$djxB128U7dMkrltJHPf6d1'
+
+# this kernel package will be used when booting the install clients
+#KERNELPACKAGE=/usr/lib/fai/kernel/kernel-image-2.6.14-fai-kernels_1_i386.deb
+KERNELPACKAGE=/usr/lib/fai/kernel/kernel-image-2.6.8-fai_1_i386.deb
+
+# location of a identity.pub file; this user can log to the install
+# clients in as root without a password; only useful with FAI_FLAGS="sshd"
+#SSH_IDENTITY=/home/admin/.ssh/identity.pub
+
+# which of DHCP and/or BOOTP should the server create setups for.
+# Default are to create setups for both
+FAI_BOOT="dhcp bootp"
+
+# export $NFSROOT to this netgroup or this range of IP addresses
+# (eg. FAICLIENTS="192.168.1.0/24") 
+FAICLIENTS=`hostname -i | sed -e 's/\(.*\)\.[0-9]*/\1.0\/24/' | tr -d ' '`
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# following lines should be read only for most of you
+
+FAI_DEBOOTSTRAP_OPTS="--exclude=pcmcia-cs,ppp,pppconfig,pppoe,pppoeconf,dhcp-client,exim4,exim4-base,exim4-config,exim4-daemon-light,mailx,at,fdutils,info,modconf,libident,logrotate,exim"
+
+nfssize="250MB"  # size of the nfsroot. Only informational purpose
+
+# FAI needs these packages that are installed into the nfsroot
+packages="fai-nfsroot module-init-tools dhcp3-client ssh file rdate hwinfo portmap
+bootpc rsync wget rsh-client less dump reiserfsprogs usbutils
+psmisc hdparm smartmontools parted mdadm lvm2
+dnsutils ntpdate dosfstools cvs jove xfsprogs xfsdump
+sysutils dialog discover mdetect libnet-perl netcat libapt-pkg-perl"
