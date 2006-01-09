@@ -327,8 +327,10 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
 
-    cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
-    cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
+    if [ -f /etc/resolv.conf ]; then
+	cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
+	cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
+    fi
     $ROOTCMD apt-get update
     $ROOTCMD apt-get -fyu install
     $ROOTCMD apt-get check
