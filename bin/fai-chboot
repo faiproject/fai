@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 1.6.1, 2-jan-2006";
+$version="version 1.7 21-jan-2006";
 
 use Socket;
 use Net::hostent;
@@ -73,6 +73,8 @@ sub lsdir {
 
   my (@n,$host,$ip,$iaddr,$hex,$kernelname,$append);
 
+  my $pattern = $ARGV[0]; # pattern matching for listing
+
   opendir(DIR, $pxedir) || die "can't opendir $pxedir: $!";
   foreach (readdir(DIR)) {
 #    prtipa if /^[0-9A-F]{2}$/;
@@ -99,7 +101,9 @@ sub lsdir {
 	$host = "unknown host: $ip";
       }
     }
-
+    if ($pattern) {
+      next unless $host =~ /$pattern/;
+    }
     # read pxe config file for a host
     undef $kernelname;
     open (CFG,"$pxedir/$hex") || die "$! $@\n";
@@ -110,8 +114,14 @@ sub lsdir {
     }
     close (CFG);
 
-    $opt_L or undef $append;
-    printf "%-8s %-12s $kernelname $append\n",$hex,$host;
+    if ($opt_l && ! $opt_L) {
+       $append =~ /FAI_ACTION=(\S+)/;
+       $append = $1;
+       printf "%-16.16s $append $kernelname %-8s\n",$host,$hex;
+     } else {
+       printf "%s %s $kernelname $append\n",$host,$hex;
+     }
+
     undef $append;
     undef $kernelname;
   }
