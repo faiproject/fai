@@ -81,9 +81,8 @@ if [ "$FAI_SOURCES_LIST" ]; then
     exit 3
 fi
 
-if [ ! -s "$cfdir/sources.list" -a ! -f /etc/apt/sources.list ]; then
-    echo "Neither $cfdir/sources.list nor /etc/apt/sources.list exists."
-    echo "I think something is wrong. Can't continue."
+if [ ! -s "$cfdir/sources.list" ]; then
+    echo "$cfdir/sources.list does not exists. Can't continue."
     exit 7
 fi
 
@@ -254,16 +253,10 @@ create_nfsroot() {
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
     [ -d $NFSROOT/var/state ] || mkdir $NFSROOT/var/state
-    [ "$verbose" ] && echo "Try to copy $cfdir/sources.list or /etc/apt/sources.list."
-    cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list || \
-	cp -v /etc/apt/sources.list $NFSROOT/etc/apt/sources.list || \
-	{ echo "No sources.list file found."
-	  echo "I think something is wrong. But I'll try to continue."
-        }
+    cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list
 
     echo "127.0.0.1 localhost" >> etc/hosts
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
-    [ -f /etc/apt/preferences ] && cp -v /etc/apt/preferences $NFSROOT/etc/apt
     [ -f $cfdir/preferences ] && cp -v $cfdir/preferences $NFSROOT/etc/apt
     echo 'APT::Get::AllowUnauthenticated "true";' >$NFSROOT/etc/apt/apt.conf.d/10fai
     echo "Upgrading $NFSROOT"
@@ -322,6 +315,7 @@ EOF
 EOF
     chmod a+rx $NFSROOT/etc/rc2.d/S01fai_abort
 
+    # IMO this may be removed, since all information should be included into sources.list
     echo -e "\n$FAI_LOCAL_REPOSITORY" >> etc/apt/sources.list
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
