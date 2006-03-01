@@ -33,7 +33,7 @@ for mod in $kernelmodules; do
 done
 
 # let discover do most of the job
-/etc/init.d/discover start
+[ -x /etc/init.d/discover ] && /etc/init.d/discover start
 
 # now we can mount the usb file system
 mount -t usbfs  usbfs /proc/bus/usb
@@ -44,13 +44,15 @@ echo 6 > /proc/sys/kernel/printk
 
 # try to detect graphics card
 # the variable videodrv may be used to generate the XF86config file
-if discover --version | grep "discover \(version \)*1\." ; then
-    videodrv=$(discover --xdriver video 2> /dev/null)
-else
-    videodrv=$(discover --data-path=xfree86/server/device/driver display)
-fi
-[ -n "$videodrv" ] && echo "videodrv=$videodrv" >> $LOGDIR/additional.var
-echo "Video card detected: $videodrv"
+[ -x "$(which discover)" ] && {
+    if discover --version | grep "discover \(version \)*1\." ; then
+	videodrv=$(discover --xdriver video 2> /dev/null)
+    else
+	videodrv=$(discover --data-path=xfree86/server/device/driver display)
+    fi
+    [ -n "$videodrv" ] && echo "videodrv=$videodrv" >> $LOGDIR/additional.var
+    echo "Video card detected: $videodrv"
+}
 
 set_disk_info  # calculate number of available disks
 save_dmesg     # save new boot messages (from loading modules)
