@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.19.1, 24-dec-2005";
+my $version = "Version 2.20, 24-jan-2006";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -56,6 +56,7 @@ my $maxpl;  # maximum length of package list
 my $cache;  # instance of AptPkg::Cache
 my @unknown; # unknown packages
 my @known;   # list of all known packages
+my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 
@@ -64,7 +65,7 @@ $| = 1;
 
 my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
 
-@commands = qw/hold taskrm taskinst clean aptitude aptitude-r install remove dselect-upgrade/;
+@commands = qw/hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
 	    install => "apt-get $aptopt --fix-missing install",
 	   ninstall => "apt-get $aptopt --fix-missing -s install",
@@ -76,6 +77,8 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
             "clean" => "apt-get clean",
          "aptitude" => "aptitude -R $aptopt install",
        "aptitude-r" => "aptitude -r $aptopt install",
+           "unpack" => "cd $downloaddir; aptitude download",
+  "unpack-internal" => "dpkg --unpack --recursive $downloaddir; rm $downloaddir/*.deb",
           "pending" => "dpkg --configure --pending",
             "dpkgc" => "dpkg -C",
 );
@@ -148,7 +151,7 @@ foreach $atype (@commands) {
     next;
   }
 
-  if ($atype eq "install" || $atype eq "aptitude" || $opt_l || $opt_L) {
+  if ($atype eq "install" || $atype eq "aptitude" || $atype eq "unpack" || $opt_l || $opt_L) {
 
     mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
     if ($opt_l) {
@@ -166,7 +169,8 @@ foreach $atype (@commands) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
       # print "SL $shortlist\n";
       execute("$rootcmd $command{$atype} $shortlist") if $shortlist;
-      execute("$rootcmd $command{clean}"); # XXX do not execute always
+      execute("$rootcmd $command{'clean'}"); # XXX do not execute always
+      execute("$rootcmd $command{'unpack-internal'}") if ($atype eq "unpack"); # unpack and rm deb files
     }
     next;
   }
@@ -398,12 +402,13 @@ undef @commands;
 undef %command;
 
 $maxpl=9999;
-@commands = qw/taskinst aptitude aptitude-r install/;
+@commands = qw/taskinst aptitude aptitude-r install unpack/;
 %command = (
 	    install => "apt-get $qopt -d $ENV{aptoptions} -y --fix-missing install",
          "taskinst" => "aptitude -d $ENV{aptoptions} -y install $devnull",
          "aptitude" => "aptitude -R -d $ENV{aptoptions} -y install $devnull",
        "aptitude-r" => "aptitude -r -d $ENV{aptoptions} -y install $devnull",
+           "unpack" => "cd $downloaddir; aptitude download",
             "clean" => 'true',
           "pending" => 'true',
             "dpkgc" => 'true',
