@@ -6,7 +6,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2005 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2006 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.1, 23-nov-2005";
+my $version = "Version 2.1.1, 5-march-2006";
 
 use strict;
 use File::Copy;
@@ -382,6 +382,7 @@ $nobackup = $opt_B || $ENV{FCOPY_NOBACKUP} || 0;
 $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
 $source  = $opt_s || $ENV{FAI} && "$ENV{FAI}/files" || `pwd`;
+chomp $source; # since pwd contains a newline
 $target  = $opt_t || $ENV{FAI_ROOT} || $ENV{target};
 $target eq "/" or $ENV{'ROOTCMD'}="chroot $target";
 $logfile = $opt_L || $ENV{LOGDIR} && "$ENV{LOGDIR}/fcopy.log" || 0;
@@ -426,7 +427,7 @@ if ($opt_r) {
   foreach (keys %has_subdirs) {
     unless ($has_subdirs{$_}) {
       # remove prefix from all files found
-      s#^$source/##;
+      s#^\Q$source/##;
       push @rlist,$_;
     }
   }
