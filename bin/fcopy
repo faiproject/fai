@@ -90,8 +90,8 @@ sub copy_one {
   foreach (@classes) { $class = $_,last if -f "$ps/$_"; }
   $destfile = "$target/$source";
 
-  my $backupfile = ( $backupdir ? "$backupdir/$source" : "$destfile.pre_fcopy");
-  my $bpath= dirname $backupfile;
+  my $backupfile = $backupdir ? "$backupdir/$source" : "$destfile.pre_fcopy";
+  my $bpath = dirname $backupfile;
 
   unless (defined $class) {
     ewarn("no matching file for any class for $source defined.");
@@ -110,7 +110,7 @@ sub copy_one {
   warn "using class: $class\n" if $debug;
   $tmpfile = $sourcefile = "$ps/$class";
 
-  # do nothing if source and destination files are equal 
+  # do nothing if source and destination files are equal
   if ($opt_update and not -x "$ps/preinst") {
     # compare logically
     if ($lastclass{$source}) {
@@ -119,8 +119,8 @@ sub copy_one {
       if ($lastclass{$source} ne $class) {
         $logcomment = "\t# changed class" if $logfile;
       } else {
-        if ($changed{"$source/$class"} or 
-            $changed{"$source/postinst"} or 
+        if ($changed{"$source/$class"} or
+            $changed{"$source/postinst"} or
             $changed{"$source/file-modes"}) {
           $logcomment = "\t# changed file" if $logfile;
         } else {
@@ -158,7 +158,7 @@ sub copy_one {
   }
 
   print LOGFILE "$source\t$class$logcomment\n" if $logfile;
-  if ($preserve) { 
+  if ($preserve) {
     ewarn("preserving $source \n");
     return;
   }
@@ -188,7 +188,7 @@ sub copy_one {
 sub runscript {
 
   my ($scriptname,$sourcefile,$destfile,$class) = @_;
-  return unless -x "$sourcefile/$scriptname"; 
+  return unless -x "$sourcefile/$scriptname";
   warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
   system "$sourcefile/$scriptname $class $destfile";
 }
@@ -341,7 +341,7 @@ sub usage {
   print << "EOF";
 fcopy, copy files using classes. $version
 
-   Copyright (C) 2001-2003 by Thomas Lange
+   Copyright (C) 2001-2006 by Thomas Lange
 
 Usage: fcopy [OPTION] ... SOURCE ...
 
