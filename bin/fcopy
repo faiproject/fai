@@ -19,7 +19,7 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # A copy of the GNU General Public License is available as
 # '/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
 # or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.1.2, 19-march-2006";
+my $version = "Version 2.2, 20-march-2006";
 
 use strict;
 use File::Copy;
@@ -64,7 +64,7 @@ my @ignoredirs = qw'CVS .svn .arch-ids {arch}';
 # getopts:
 our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_M, $opt_v, $opt_d, $opt_D, $opt_i);
 our ($opt_B, $opt_c, $opt_C, $opt_h, $opt_F, $opt_l, $opt_L, $opt_P, $opt_b);
-our ($opt_I, $opt_U);
+our ($opt_I, $opt_U, $opt_n);
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub copy_one {
@@ -73,7 +73,7 @@ sub copy_one {
   my ($prefix,$source,$target) = @_;
   my ($class,$sourcefile,$destfile);
   # 'normalize' source filenames: very important for updating !
-  $source=~ s/^(\.\/|\/)*//;
+  $source =~ s/^(\.\/|\/)*//;
 
   my $ps = "$prefix/$source";
   $ps =~ s#//#/#;
@@ -82,7 +82,7 @@ sub copy_one {
   my $logcomment = "";
   my ($tmpfh,$tmpfile);
 
-  warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debug;
+  warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debdry;
 
   # $prefix/$source must be a directory
   unless (-d $ps) { ewarn("$ps is not a directory. Not copied.");return }
@@ -99,15 +99,15 @@ sub copy_one {
     if ($opt_d and -f $destfile) {
       print LOGFILE "$source\tNONE\t# removed (no matching class)\n" if $logfile;
       if ($nobackup) {
-        unlink($destfile) || ewarn("Could not remove file $destfile");
+        _unlink($destfile) || ewarn("Could not remove file $destfile");
       } else {
-        mkpath($bpath,$debug,0755) unless -d $bpath;
-	move($destfile,$backupfile) if -d $bpath;;
+        _mkpath($bpath,$debug,0755) unless -d $bpath;
+	_move($destfile,$backupfile) if -d $bpath;;
       }
     }
     return;
   }
-  warn "using class: $class\n" if $debug;
+  warn "using class: $class\n" if $debdry;
   $tmpfile = $sourcefile = "$ps/$class";
 
   # do nothing if source and destination files are equal
@@ -139,7 +139,7 @@ sub copy_one {
       ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
       warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
       ewarn("copying $sourcefile for preinst processing failed !") unless
-        copy($sourcefile,$tmpfh);
+        _copy($sourcefile,$tmpfh);
       runscript("preinst",$ps,$tmpfile,$class);
     };
 
@@ -170,13 +170,13 @@ sub copy_one {
   }
 
   # create subdirectories if they do not exist
-  mkpath($tpath,$debug,0755) unless -d $tpath;
+  _mkpath($tpath,$debug,0755) unless -d $tpath;
 
   # save existing file, add suffix .pre_fcopy
   # what should I do if $destfile is a symlink?
-  $nobackup or (-f $destfile and 
-    (-d $bpath or mkpath($bpath,$debug,0755)) and move($destfile,$backupfile));
-  if (copy($tmpfile,$destfile)) {
+  $nobackup or (-f $destfile and
+    (-d $bpath or _mkpath($bpath,$debug,0755)) and _move($destfile,$backupfile));
+  if (_copy($tmpfile,$destfile)) {
     print "fcopy: copied $sourcefile to $destfile\n" ;
     runscript("postinst",$ps,$destfile,$class);
     set_mode($ps,$destfile,$class);
@@ -185,11 +185,36 @@ sub copy_one {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub _mkpatch {
+
+  return 1 if $opt_n; # do not execute if -n was given
+  mkpatch(@_);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub _unlink {
+
+  return 1 if $opt_n; # do not execute if -n was given
+  unlink(@_);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub _move {
+
+  return 1 if $opt_n; # do not execute if -n was given
+  move(@_);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub _copy {
+
+  return 1 if $opt_n; # do not execute if -n was given
+  copy(@_);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub runscript {
 
   my ($scriptname,$sourcefile,$destfile,$class) = @_;
   return unless -x "$sourcefile/$scriptname";
   warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
+  return if $opt_n; # do not execute if -n was given
   system "$sourcefile/$scriptname $class $destfile";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -232,7 +257,8 @@ sub set_mode {
   }
 
   ($uid,$gid) = name2num($owner,$group);
-  warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug; 
+  warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
+  return if $opt_n; # do not execute if -n was given
   chown ($uid,$gid,     $destfile) || ewarn("chown $owner $group $destfile failed. $!");
   chmod ($mode,         $destfile) || ewarn("chmod $mode $destfile failed. $!");
   utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
@@ -358,6 +384,7 @@ Usage: fcopy [OPTION] ... SOURCE ...
    -L file              Log destination and used class to file
    -m user,group,mode   Set user, group and mode for copied files.
    -M                   Same as -m root,root,0644
+   -n                   Print the commands, but do not execute them.
    -P log,changes       Copy if class or source for class has changed since
                         previous run
    -r                   Copy recursivly but skip ignored directories.
@@ -374,9 +401,11 @@ EOF
 # main program
 
 $|=1;
-getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:U');
+getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:Un');
 $opt_h && usage;
-$opt_M and $opt_m="root,root,0644";  # set default modes
+$opt_n and warn "Dry-run only! Nothing is really executed.\n";
+$debdry = $debug || $opt_n || 0; # is true if $debug or dry-run mode
+$opt_M and $opt_m = "root,root,0644";  # set default modes
 $opt_m && check_mopt();
 $nobackup = $opt_B || $ENV{FCOPY_NOBACKUP} || 0;
 $verbose = $opt_v || $ENV{verbose} || 0;
@@ -401,7 +430,7 @@ $opt_P and $opt_update=$opt_P;
 $opt_update and read_status();
 
 #for postinst scripts
-$ENV{'FAI_ROOT'}=$ENV{'target'}=$target;
+$ENV{'FAI_ROOT'} = $ENV{'target'} = $target;
 
 # last class has highest priority
 $ENV{classes} and @classes = reverse split /\s+/,$ENV{classes};
