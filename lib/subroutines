@@ -6,7 +6,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2005 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2006 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -319,23 +319,35 @@ task_defclass() {
     [ "$debug" ] && echo "cfclasses: $cfclasses"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+_defvar() {
+
+    local showvar=1 # TODO: new FAI_FLAG or always set when verbose is used
+    [ "$showvar" ] && set -vx
+    . $1 </dev/null 
+    [ "$showvar" ] && set +vx
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defvar() {
 
     cd $FAI/class
     for class in $classes ; do
 	if [ -f $class.var ]; then
 	    [ "$verbose" ] && echo "Executing $class.var"
-	    [ "$debug" ] && set -vx
-	    . $class.var </dev/null
-	    [ "$debug" ] && set +vx
+	    # show only lines with ++, we cannot use a pipe, since it would call
+	    # _devfar in a subprocess. Then, variables are not defined 
+	    _defvar $class.var > /tmp/showvar.log 2>&1
+	    grep ^++ /tmp/showvar.log
+	    rm /tmp/showvar.log
 	fi
     done
 
     # /fai/class/S* scripts or hooks can write variable definitions
     # to additonal.var. now source these definitions
-    [ "$debug" ] && set -vx
-    [ -f $LOGDIR/additional.var ] && . $LOGDIR/additional.var
-    [ "$debug" ] && set +vx
+    if [ -f $LOGDIR/additional.var ]; then
+	_defvar $LOGDIR/additional.var > /tmp/showvar.log 2>&1
+	grep ^++ /tmp/showvar.log
+	rm /tmp/showvar.log
+    fi
     unset class
     # now all variables are defined. Dump them to variables.sh
     set | perl -ne 'print if /^\w\w+=/' | egrep -v "^BASH_VERSINFO|^EUID|^PPID|^SHELLOPTS|^UID|^rootpw|^HOME|^PWD" > $LOGDIR/variables.sh
