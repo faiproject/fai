@@ -6,7 +6,7 @@
 # bootinfo -- get boot information via DHCP or BOOTP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2004 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2006 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -41,13 +41,13 @@ timeout=30 # bootpc timeout
 netdevice_info() {
 
     # devices that are running
-    netdevices_up=`ifconfig | perl -anF'\s+' -e 'print "$F[0]\n" if $F[0];' | grep -v "^lo"`
+    netdevices_up=$(ifconfig | perl -anF'\s+' -e 'print "$F[0]\n" if $F[0];' | grep -v "^lo" | sort | uniq)
     # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
 
     # some network driver do not echo eth0,..; they are not detected
-    netdevices_all=`dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/'`
+    netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/')
 
     # another way to determine the first four ethernet devices
     local dev devices
@@ -55,6 +55,9 @@ netdevice_info() {
     for dev in $devices; do
         ifconfig eth$dev up 2>/dev/null && netdevices_all="$netdevices_all eth$dev"
     done
+    netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq)
+
+#    netdevices_all=$(echo $netdevices_all | sort | uniq)
 
     cat > $bootlog <<-EOF
 	netdevices_all="$netdevices_all"
