@@ -136,7 +136,6 @@ task_prepareapt () {
       echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
       echo $HOSTNAME >$FAI_ROOT/etc/hostname
     fi
-    cp -r /etc/apt/* $FAI_ROOT/etc/apt/
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
@@ -145,6 +144,7 @@ task_updatebase() {
     echo "Updating base"
     # try to mount the config space, since it can also contain Debian Packages
     # in /fai/files/packages 
+    cp -r /etc/apt/* $FAI_ROOT/etc/apt/
     [ "$FAI_ROOT" = "/" ] || mount --bind $FAI $FAI_ROOT/$FAI
     if [ "$debug" ]; then
 	updatebase | tee -a $LOGDIR/updatebase.log 2>&1
@@ -224,15 +224,29 @@ sndmon() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkrwsize() {
 
-     mount -o size=$1 -t tmpfs tmpfs $2
+    # save all dirs and files under directory $2
+    # mount tmpfs on top of dir $2
+    # extrace dirs and files into tmpfs
+
+    if [ ! -d "$2" ]; then
+	echo "WARNING: $2 is not a directory. Cannot make it writeable."
+	return
+    fi
+
+    local tmp1=$(mktemp) || exit 12
+    tar -C $2 -cf $tmp1 .
+    mount -o size=$1 -t tmpfs tmpfs $2
+    tar -C $2 -xf $tmp1
+    rm -f $tmp1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkrw() {
 
     # make a list of directories writeable
-    local size=100k # default size
+    local size=10m # default size
 
     for f in "$@"; do
+	echo "XXX mkrw $f"
 	mkrwsize $size $f
     done
 }
