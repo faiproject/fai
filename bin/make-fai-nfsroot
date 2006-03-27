@@ -269,20 +269,14 @@ create_nfsroot() {
 
     # make little changes to nfsroot, because nfsroot is
     # read only for the install clients 
-    rm -rf etc/mtab var/run etc/sysconfig
+    rm etc/mtab
     ln -s /proc/mounts etc/mtab
-    ln -s /tmp/var/run var/run
-    ln -sf /tmp/var/lib/discover var/lib/discover
+    mkdir var/lib/discover etc/sysconfig
     ln -s /tmp/etc/syslogsocket dev/log
     ln -sf /tmp/etc/resolv.conf etc/resolv.conf
-    ln -sf /tmp etc/sysconfig
     ln -s /usr/sbin/fai etc/init.d/rcS
     # for nis
     [ -d var/yp ] && ln -s /tmp/binding var/yp/binding
-
-    # turn off logging of loading kernel modules
-    [ -d var/log/ksymoops/ ] && rmdir var/log/ksymoops/
-    ln -s /dev/null var/log/ksymoops
 
     # definition for loopback device
     echo "iface lo inet loopback" > etc/network/interfaces
