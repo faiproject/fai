@@ -6,7 +6,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2005, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2006, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.20, 24-jan-2006";
+my $version = "Version 3.0, 27-march-2006";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -65,7 +65,7 @@ $| = 1;
 
 my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
 
-@commands = qw/hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
+@commands = qw/urpmi hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
 	    install => "apt-get $aptopt --fix-missing install",
 	   ninstall => "apt-get $aptopt --fix-missing -s install",
@@ -81,6 +81,7 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
   "unpack-internal" => "dpkg --unpack --recursive $downloaddir; rm $downloaddir/*.deb",
           "pending" => "dpkg --configure --pending",
             "dpkgc" => "dpkg -C",
+	      urpmi => "urpmi --auto --foce --allow-force --keep",
 );
 
 $test = 0;
@@ -129,6 +130,12 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
 
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach $atype (@commands) {
+
+  if ($atype eq "urpmi") { # use this so clean is not called
+    execute("$rootcmd $command{urpmi}") unless $listonly;
+    next;
+  }
+
   if ($atype eq "clean") {
     execute("$rootcmd $command{clean}") unless $listonly;
     next;
