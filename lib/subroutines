@@ -374,9 +374,10 @@ task_savelog() {
 
     [ -d $target/var/log/fai ] || mkdir -p $target/var/log/fai
     [ -d $target/var/log/fai ] && fai-savelog -l
-    cd $LOGDIR && cp -p FAI_CLASSES variables.sh $diskvar $target/var/log/fai
+    [ -f $LOGDIR/FAI_CLASSES ] && cp -p $LOGDIR/FAI_CLASSES $target/var/log/fai
+    [ -f $LOGDIR/variables.sh ] && cp -p $LOGDIR/variables.sh $target/var/log/fai
+    [ "$diskvar" != "/var/log/fai/disk_var.sh" ] && cp -p $diskvar $target/var/log/fai
     fai-savelog -r
-    cd /
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
@@ -442,6 +443,7 @@ task_softupdate() {
     local stamp=/var/run/fai/fai_softupdate_is_running
 
     > $stamp
+    diskvar=/var/log/disk_var.sh
 
     save_dmesg
 
