@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 3.0, 27-march-2006";
+my $version = "Version 3.1, 28-march-2006";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -131,11 +131,6 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach $atype (@commands) {
 
-  if ($atype eq "urpmi") { # use this so clean is not called
-    execute("$rootcmd $command{urpmi}") unless $listonly;
-    next;
-  }
-
   if ($atype eq "clean") {
     execute("$rootcmd $command{clean}") unless $listonly;
     next;
@@ -150,6 +145,11 @@ foreach $atype (@commands) {
   }
 
   my $packlist = join(' ',@{$list{$atype}});
+
+  if ($atype eq "urpmi") { # use this so clean is not called
+    execute("$rootcmd $command{urpmi}") if $packlist;
+    next;
+  }
 
   if ($atype eq "hold") {
     my $hold = join " hold\n", @{$list{hold}};
