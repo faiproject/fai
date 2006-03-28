@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# (c) Thomas Lange, 2001-2005, lange@debian.org
+# (c) Thomas Lange, 2001-2006, lange@debian.org
 
 error=0 ; trap "error=$((error|1))" ERR
 
@@ -16,14 +16,6 @@ do
     echo "Disable periodic fsck on $part"
     tune2fs -c 0 -i 0 $part
 done
-
-# assuming that make-fai-nfsroot.conf sets
-# FAI_LOCAL_REPOSITORY="deb file:/fai/files packages/"
-# install additional packags that are located in /fai/files/packages/
-if [ -d /fai/files/packages ] && [ ! -f /fai/files/packages/Packages.gz ]; then
-    # Mm. It seems not to be a simple repository. I assume it's configured in sources.list
-    echo "WARNING! Index file Packages.gz is missing in /fai/files/packages."
-fi
 
 fcopy /etc/hostname || echo $HOSTNAME     > $target/etc/hostname
 echo $time_zone    > $target/etc/timezone
