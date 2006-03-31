@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 2.0.99 30-march-2006";
+$version="version 2.1 31-march-2006";
 
 use Socket;
 use Net::hostent;
@@ -82,6 +82,7 @@ sub readpxedir {
     if (/^default/)    { push @default,  $_ ; next};
     if (/^[0-9A-F]+$/) { push @enabled,  $_ ; next};
     if (/\.disable$/)  { push @disabled, $_ ; next};
+    if (/\.tmpl$/)     { push @templates, $_ ; next};
     push @other, $_;
   }
 }
@@ -90,31 +91,39 @@ sub lsdir {
 
 # -lr list only disabled hosts
 # -le list only enabled hosts
-# -ls list alphabeticaly sorted
-# -l <pattern> list default first, then enabled, then disabled, all must match pattern
-# -g list by goups (enabled, disabled, others)
+# -lt list only templates
+# -lo list only "other", i.e that does not match templates or hosts 
+# -lg list by goups (enabled, disabled, templates, others)
+# -l[retog] <pattern> list matching pattern
 
-  my (@n,$host,$ip,$iaddr,$hex);
+  my (@n,$host,$ip,$iaddr,$hex,$type);
 
   @patterns = @_; # a global variable
 
   readpxedir();
 
   # create list which entries we want to list
-  @allfiles = (@default,@enabled,@disabled,@other);
+  @allfiles = (@default,@enabled,@disabled,@templates,@other);
   $opt_r and @allfiles = @disabled;
   $opt_e and @allfiles = @enabled;
+  $opt_t and @allfiles = @templates;
+  $opt_o and @allfiles = @other;
+  $opt_g and @allfiles = (@default,@enabled,@disabled,@templates,@other);
 
   # map all entries (in HEX) to hostname or IP
   foreach $hex (@allfiles) {
-
+    undef $type;
     # hex to ip address
     @n = $hex =~ m/[0-9A-F][0-9A-F]/g;
     $ip = join ('.', map {$_ = hex $_} @n);
 
-    if ($hex =~ /^default/) {
-      $host = ' [DEFAULT]';
-    } elsif ($#n < 3) {
+    if ($hex =~ /^default$/) {
+      $host = $hex;
+      $type = '[DEFAULT]';
+    } elsif ($hex =~ /\.tmpl$/) {
+      $host = "$hex";
+      $type = '[Template]';
+    } elsif ($#n > 0 && $#n < 3) {
       # Don't fail if not a complete IP
       $host = "Subnet: $ip";
     } else {
@@ -124,17 +133,20 @@ sub lsdir {
 	$host = $h->name;
 	$host =~ s/^([^.]+).*/$1/; # strip domain from FQDN so we have short hostnames
       } else {
-	$host = $ip;
+        $host = $hex;
+        $type = '[Other]';
       }
     }
     $hexname{$host} = $hex;
     $hname{$hex}= $host;
+    $type{$hex} = $type if $type;
   }
 
   if ($opt_g) { # print in group, sorted inside each group
     prtsorted(@default);
     prtsorted(@enabled);
     prtsorted(@disabled);
+    prtsorted(@templates);
     prtsorted(@other);
     exit 0;
   }
@@ -149,13 +161,13 @@ sub prtsorted {
 
   @list = sort map {$hname{$_}} @list;
   foreach (@list) {
-    printpxe ($_,$hexname{$_});
+    printpxe ($_,$hexname{$_}, $type{$_});
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub printpxe {
 
-  my ($host,$hex) = @_;
+  my ($host,$hex, $type) = @_;
   my ($kernelname,$append);
 
   $match = (@patterns) ? 0: 1; # set match to 1 if no pattern is given
@@ -168,16 +180,17 @@ sub printpxe {
   undef $kernelname;
   open (CFG,"$pxedir/$hex") || die "$! $@\n";
   while (<CFG>) {
-    /^kernel (\S+)/ and $kernelname = $1;
-    /^(localboot.+)/ and $kernelname = $1;
-    /^append (.+)/ and $append = $1;
+    /\bkernel\s+(\S+)/ and $kernelname = $1;
+    /\b(localboot.+)/ and $kernelname = $1;
+    /\bappend\s+(.+)/ and $append = $1;
   }
   close (CFG);
 
   if ($opt_l && ! $opt_L) {
     $append =~ /FAI_ACTION=(\S+)/;
     $append = $1;
-    printf "%-16.16s $append $kernelname %-8s\n",$host,$hex;
+#    printf "%-16.16s $append $kernelname %-8s\n",$host,$hex;
+    printf "%-16.16s  %-20.20s $append $kernelname\n",$type?$type:$host,$hex;
   } else {
     printf "%s %s $kernelname $append\n",$host,$hex;
   }
@@ -240,7 +253,7 @@ sub disable {
   my ($ipadr,$hex) = host2hex($host);
   print "disable pxe config for $host in hex $hex\n" if $verbose;
   return if $opt_n;
-  rename "$pxedir/$hex","$pxedir/$hex.disable" or $error .= "\nRename for $hex failed.$! $@";
+  rename "$pxedir/$hex","$pxedir/$hex.disable" or $error .= "\nRename for $hex failed. $! $@";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub enable {
@@ -250,7 +263,7 @@ sub enable {
   my ($ipadr,$hex) = host2hex($host);
 
   -e $pxedir/$hex and print "$host ($hex) is already enabled\n" and return;
-  if (! -e $pxedir/$hex.disable) {
+  if (! -e "$pxedir/$hex.disable") {
     print "$host ($hex) is not disabled\n";
     return;
   }
@@ -274,28 +287,41 @@ sub tcopy {
       $srcfile = "$pxedir/$srchex.disable";
     } elsif (-e "$pxedir/$srchost" ) {
       $srcfile = "$pxedir/$srchost";
+    } elsif (-e "$pxedir/$srchost.tmpl" ) {
+      $srcfile = "$pxedir/$srchost";
     } else {
       warn "Source file for $srchost ($srchex) not available\n";
       return;
     }
   } elsif ( -e "$pxedir/$srchost") {
       $srcfile = "$pxedir/$srchost";
+  } elsif ( -e "$pxedir/$srchost.tmpl") {
+      $srcfile = "$pxedir/$srchost";
   } else {
       warn "Source file for $srchost not available\n";
       return;
   }
-
-  ($ipadr,$desthex) = host2hex($desthost);
-  if (-e "$pxedir/$desthex.disable") {
-    warn "Config for $desthost is currently disabled. Copying aborted.\n";
-    return;
+  if ($desthost =~ /\.tmpl$/) {
+    if (-e "$pxedir/$desthost") {
+      warn "Template $desthost already exist. Copying aborted.\n";
+      return;
+    }
+    print "copy pxe config from $srchost to template $desthost\n" if $verbose;
+    copy("$srcfile","$pxedir/$desthost") or $error .= 
+        "\nCopy of $srchost ($srchex) to template $desthost failed.$! $@";
+  } else {
+    ($ipadr,$desthex) = host2hex($desthost);
+    if (-e "$pxedir/$desthex.disable") {
+       warn "Config for $desthost is currently disabled. Copying aborted.\n";
+       return;
+    }
+    print "copy pxe config from $srchost to $desthost ($desthex)\n" if $verbose;
+    copy("$srcfile","$pxedir/$desthex") or $error .= 
+        "\nCopy of $srchost ($srchex) to $desthost ($desthex) failed.$! $@";
   }
-
-  print "copy pxe config from $srchost to $desthost ($desthex)\n" if $verbose;
-  copy("$srcfile","$pxedir/$desthex") or $error .= "\nCopy of $srchost ($srchex) to $desthost ($desthex) failed.$! $@";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:d:ehnvlLiIp:f:Frk:So');
+getopts('gBc:d:ehnvlLiIp:f:Frk:Sto');
 $opt_h and usage;
 defined @ARGV or usage;
 
