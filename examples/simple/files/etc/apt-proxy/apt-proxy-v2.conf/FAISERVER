@@ -1,0 +1,150 @@
+[DEFAULT]
+;; All times are in seconds, but you can add a suffix
+;; for minutes(m), hours(h) or days(d)
+
+;; Server IP to listen on
+;address = 192.168.0.254
+
+;; Server port to listen on
+port = 9999
+
+;; Control files (Packages/Sources/Contents) refresh rate
+;;
+;; Minimum time between attempts to refresh a file
+min_refresh_delay = 1h
+
+;; Minimum age of a file before attempting an update (NOT YET IMPLEMENTED)
+;min_age = 23h
+
+;; Uncomment to make apt-proxy continue downloading even if all
+;; clients disconnect.  This is probably not a good idea on a
+;; dial up line.
+;; complete_clientless_downloads = 1
+
+;; Debugging settings.
+;; for all debug information use this:
+;; debug = all:9
+debug = all:4 db:0
+
+;; Debugging remote python console
+;; Do not enable in an untrusted environment
+;telnet_port = 9998
+;telnet_user = apt-proxy
+;telnet_password = secret
+
+;; Network timeout when retrieving from backend servers
+timeout = 15
+
+;; Cache directory for apt-proxy
+cache_dir = /var/cache/apt-proxy
+
+;; Use passive FTP? (default=on)
+;passive_ftp = on
+
+;; Use HTTP proxy?
+;http_proxy = host:port
+
+;; Enable HTTP pipelining within apt-proxy (for test purposes)
+;disable_pipelining=0
+
+;;--------------------------------------------------------------
+;; Cache housekeeping
+
+;; Time to perform periodic housekeeping:
+;;  - delete files that have not been accessed in max_age
+;;  - scan cache directories and update internal tables
+cleanup_freq = 1d
+
+;; Maximum age of files before deletion from the cache (seconds)
+max_age = 120d
+
+;; Maximum number of versions of a .deb to keep per distribution
+max_versions = 3
+
+;; Add HTTP backends dynamicaly if not already defined? (default=on)
+;dynamic_backends = on
+
+;;---------------------------------------------------------------
+;;---------------------------------------------------------------
+;; Backend servers
+;;
+;; Place each server in its own [section]
+
+[debian]
+;; The main Debian archive
+;; You can override the default timeout like this:
+;timeout = 30
+
+;; Rsync server used to rsync the Packages file (NOT YET IMPLEMENTED)
+;;rsyncpackages = rsync://ftp.de.debian.org/debian
+
+;; Backend servers, in order of preference
+backends = 
+	http://ftp.us.debian.org/debian
+	http://ftp.de.debian.org/debian
+	http://ftp2.de.debian.org/debian
+	ftp://ftp.uk.debian.org/debian
+
+[debian-amd64]
+	http://ftp.de.debian.org/debian-amd64/debian
+	http://debian.csail.mit.edu/debian-amd64/debian
+	http://ftp2.de.debian.org/debian-amd64/debian
+	http://mirror.pacific.net.au/linux/debian-amd64/debian
+
+[debian-non-US]
+;; Debian debian-non-US archive
+;timeout will be the global value
+backends =
+	http://ftp.uk.debian.org/debian-non-US
+	http://ftp.de.debian.org/debian-non-US
+	ftp://ftp.uk.debian.org/debian
+	
+[security]
+;; Debian security archive
+backends = 
+	http://security.debian.org/debian-security
+	http://ftp2.de.debian.org/debian-security
+
+[ubuntu]
+;; Ubuntu archive
+backends = http://archive.ubuntu.com/ubuntu
+
+[ubuntu-security]
+;; Ubuntu security updates
+backends = http://security.ubuntu.com/ubuntu
+
+;[openoffice]
+;; OpenOffice.org packages
+;backends =
+;	http://ftp.freenet.de/pub/debian-openoffice
+;	http://ftp.sh.cvut.cz/MIRRORS/OpenOffice.deb
+;	http://borft.student.utwente.nl/debian
+	
+;[apt-proxy]
+;; Apt-proxy new versions
+;backends = http://apt-proxy.sourceforge.net/apt-proxy
+
+;[backports.org]
+;; backports.org
+;backends = http://backports.org/debian
+
+;[blackdown]
+;; Blackdown Java
+;backends = http://ftp.gwdg.de/pub/languages/java/linux/debian
+
+
+;[debian-people]
+;; people.debian.org
+;backends = http://people.debian.org
+
+;[emdebian]
+;; The Emdebian project
+;backends = http://emdebian.sourceforge.net/emdebian
+
+;[rsync]
+;; An example using an rsync server.  This is not recommended
+;; unless http is not available, becuause rsync is only more
+;; efficient for transferring uncompressed files and puts much
+;; more overhead on the server.  See the rsyncpacakges parameter 
+;; for a way of rsyncing just the Packages files.
+;backends = rsync://ftp.uk.debian.org/debian
