@@ -5,7 +5,7 @@
 # subroutine definitions for linux
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2005 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2005-2006 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set_disk_info() {
@@ -136,6 +136,7 @@ task_prepareapt () {
       echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
       echo $HOSTNAME >$FAI_ROOT/etc/hostname
     fi
+    [ -d /etc/apt ] && cp -r /etc/apt/* $FAI_ROOT/etc/apt/
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
@@ -144,7 +145,6 @@ task_updatebase() {
     echo "Updating base"
     # try to mount the config space, since it can also contain Debian Packages
     # in /fai/files/packages 
-    cp -r /etc/apt/* $FAI_ROOT/etc/apt/
     [ "$FAI_ROOT" = "/" ] || mount --bind $FAI $FAI_ROOT/$FAI
     if [ "$debug" ]; then
 	updatebase | tee -a $LOGDIR/updatebase.log 2>&1
