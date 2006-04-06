@@ -56,7 +56,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
-    local sub osname
+    local sub osname ostype
     set -a # now export all variables
 
     umask 022
@@ -77,10 +77,11 @@ fai_init() {
     # some variables from are not needed any more
     unset NFSROOT FAI_CONFIGDIR installserver
 
+    ostype=$(uname -s | tr A-Z a-z)
     # read subroutine definitions
     sub=/usr/lib/fai/subroutines
     [ -f $sub ] && . $sub
-    [ -f $sub-$oclass ] && . $sub-oclass
+    [ -f $sub-$ostype ] && . $sub-ostype
 
     [ -f "$stamp" ] && {
        echo "$0 already running, aborting"
@@ -142,7 +143,7 @@ fai_init() {
     fi
     export HOSTNAME
 
-    if [ X$oclass = Xlinux ]; then
+    if [ X$oclass = XLINUX ]; then
 	osname='Debian GNU/Linux'
 	if [ $DO_INIT_TASKS -eq 1 ]; then
 	    grep -q '[[:space:]]sysfs' /proc/filesystems && mount -t sysfs sysfs /sys
@@ -155,7 +156,7 @@ fai_init() {
 	    cat /proc/kmsg >/dev/tty4 &
 	fi
     fi
-    if [ X$oclass = Xsunos ]; then
+    if [ X$oclass = XSUNOS ]; then
 	osname='Sun Solaris'
     fi
     unset oclass
@@ -271,10 +272,11 @@ sleep 1 # wait for tee to complete. One second should be ok
 
 # override FAI_ACTION if a command line argument is given
 [ "$1" ] && FAI_ACTION=$1
+[ "$2" ] && targetdir=$2 # only used for dirinst
 
 task action 2>&1 | tee -a $rcslog
 
-# not quiet happy with it
+# not happy with this at all!
 [ "$FAI_CVSROOT" ] && rm -rf $FAI
 rm -rf $LOGDIR
 
