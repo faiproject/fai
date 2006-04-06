@@ -56,11 +56,10 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
-    local sub osname OS_TYPE
+    local sub osname
     set -a # now export all variables
 
     umask 022
-    OS_TYPE=$(uname -s | tr A-Z a-z)
     # read fai.conf
     # linux dir
     [ -f /etc/fai/fai.conf ] && . /etc/fai/fai.conf
@@ -81,7 +80,7 @@ fai_init() {
     # read subroutine definitions
     sub=/usr/lib/fai/subroutines
     [ -f $sub ] && . $sub
-    [ -f $sub-$OS_TYPE ] && . $sub-$OS_TYPE
+    [ -f $sub-$oclass ] && . $sub-oclass
 
     [ -f "$stamp" ] && {
        echo "$0 already running, aborting"
@@ -108,7 +107,6 @@ fai_init() {
 
     # Solaris has already a writable /tmp directory
     [ "$oclass" = LINUX -a $DO_INIT_TASKS -eq 1 ] && create_ramdisk
-    unset oclass
 
     # directory where temporary log files are stored
     # set default value if nothing is set in fai.conf
@@ -144,7 +142,7 @@ fai_init() {
     fi
     export HOSTNAME
 
-    if [ X$OS_TYPE = Xlinux ]; then
+    if [ X$oclass = Xlinux ]; then
 	osname='Debian GNU/Linux'
 	if [ $DO_INIT_TASKS -eq 1 ]; then
 	    grep -q '[[:space:]]sysfs' /proc/filesystems && mount -t sysfs sysfs /sys
@@ -157,9 +155,10 @@ fai_init() {
 	    cat /proc/kmsg >/dev/tty4 &
 	fi
     fi
-    if [ X$OS_TYPE = Xsunos ]; then
+    if [ X$oclass = Xsunos ]; then
 	osname='Sun Solaris'
     fi
+    unset oclass
 
     # set red color, but not on some archs
     [ -e /.nocolorlogo ] && COLOR_FAI_LOGO=0
