@@ -94,9 +94,11 @@ task_partition() {
 task_extrbase() {
 
     local fs=$FAI_ROOT/etc/$fstab
+    local basefile=/var/tmp/base.tgz
+    [ $DO_INIT_TASKS -eq 0 ] && basefile=$NFSROOT/var/tmp/base.tgz
     # extract the tar file which was the result of debootstrap
     echo "Unpacking Debian base archive"
-    gzip -dc /var/tmp/base.tgz | tar -C $FAI_ROOT -xpf -
+    gzip -dc $basefile | tar -C $FAI_ROOT -xpf -
     # now we can copy fstab
     [ -f $fs ] && mv $fs $fs.old
     cp -p $LOGDIR/$fstab $fs
