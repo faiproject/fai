@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 3.2, 29-march-2006";
+my $version = "Version 3.3, 8-april-2006";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -65,7 +65,7 @@ $| = 1;
 
 my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
 
-@commands = qw/urpmi urpme yumgroup yumi yumr hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
+@commands = qw/y2i y2r yast rpmr urpmi urpme yumgroup yumi yumr hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
 	    install => "apt-get $aptopt --fix-missing install",
 	   ninstall => "apt-get $aptopt --fix-missing -s install",
@@ -85,7 +85,11 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 	      urpme => "urpme --auto --foce --allow-force --keep",
 	      yumi  => "yum -y install",
 	      yumr  => "yum -y remove",
-         yumgroup   => "yum -y groupinstall",
+	 yumgroup   => "yum -y groupinstall",
+	      y2i   => "y2pmsh isc",
+	      y2r   => "y2pmsh remove",
+	      yast  => "yast -i",
+	       rpmr => "rpm -e",
 );
 
 $test = 0;
@@ -150,7 +154,7 @@ foreach $atype (@commands) {
 
   my $packlist = join(' ',@{$list{$atype}});
 
-  if ($atype =~ /rpm|yum/) {
+  if ($atype =~ /rpm|yum|y2?|yum|rpmr/) {
     $command{clean} = "true"; # do not cal apt-get lcean for rpm and yum packages
     execute("$rootcmd $command{$atype}") if $packlist;
     next;
