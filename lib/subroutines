@@ -221,16 +221,15 @@ task_setup() {
 
     # source user specific subroutines
     [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
-    if [ $DO_INIT_TASKS -eq 1 ]; then
-        # set the system time and date using rdate or/and ntpdate
-        [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
-        [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
-    fi
 
     define_fai_flags
     DNSDOMAIN=$DOMAIN     # cfengine 1.5.3 can't use $DOMAIN
 
+    # this may be moved to an external script
     if [ $DO_INIT_TASKS -eq 1 ] ; then
+        # set the system time and date using rdate or/and ntpdate
+        [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
+        [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
         [ "$createvt" ] && {
 	    # create two virtual terminals; acces via alt-F2 and alt-F3
 	    echo "Press ctrl-c to interrupt FAI and to get a shell"
