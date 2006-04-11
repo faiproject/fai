@@ -25,15 +25,14 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.5, 11-april-2006"
+version="Version 1.6, 11-april-2006"
 
 # variables: NFSROOT, FAI_CONFIGDIR
 # NFSROOT_PACKAGES, packages from make-fai-nfsroot.conf
 
-debdist=sarge
-set -a 
-. /etc/fai/fai.conf
-. /etc/fai/make-fai-nfsroot.conf
+debdist=sarge # maybe use this $(echo "$FAI_DEBOOTSTRAP" | awk '{print $1}')
+set -a
+
 FAI_ROOT=/ # do not execute in chroot
 set +a
 
@@ -228,9 +227,10 @@ preserve=0
 verbose=0
 add=0
 qflag=-qq
-while getopts "avhx:pc:" opt ; do
+while getopts "avhx:pc:C:" opt ; do
     case "$opt" in
 	a) add=1 ;;
+	C) cfdir=$OPTARG ;;
 	h) usage ;;
 	x) exclasses="$OPTARG";;
 	c) cclasses="$OPTARG";;
@@ -240,6 +240,15 @@ while getopts "avhx:pc:" opt ; do
     esac
 done
 shift $(($OPTIND - 1))
+
+[ -z "$cfdir" ] && cfdir=/etc/fai
+if [ ! -d "$cfdir" ]; then
+    echo "$cfdir is not a directory"
+    exit 6
+fi
+[ "$verbose" ] && echo "Using configuration files from directory $cfdir"
+. $cfdir/fai.conf
+. $cfdir/make-fai-nfsroot.conf
 
 [ -n "$exclasses" -a -n "$cclasses" ] && die 3 "Options -x and -c not allowed at the same time."
 debug=0
