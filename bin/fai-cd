@@ -30,19 +30,16 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 2.1"
+version="fai-cd 2.2"
 
 isoversion="$version -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
-grub_config=/etc/fai/menu.lst
-
 burn=0
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache /media/mirror/.apt-move"
 
 # we need FAI_CONFIGDIR, NFSROOT
-. /etc/fai/fai.conf
 
 trap "unhide_dirs;umount_dirs" EXIT ERR
 
@@ -50,7 +47,7 @@ trap "unhide_dirs;umount_dirs" EXIT ERR
 usage() {
 
     cat <<-EOF
-	$version. Copyright (C) 2004-2005 Thomas Lange
+	$version. Copyright (C) 2004-2006 Thomas Lange
 	Report bugs to <fai@informatik.uni-koeln.de>.
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
@@ -180,8 +177,9 @@ case `dpkg --print-installation-architecture` in
 esac
 
 # Parse commandline options
-while getopts "hg:bm:" opt ; do
+while getopts "hg:bm:C:" opt ; do
     case "$opt" in
+        C) cfdir=$OPTARG ;;
 	h)  usage ;;
 	g)  grub_config="$OPTARG" ;;
 	m)  mirrordir="$OPTARG" ;;
@@ -196,12 +194,23 @@ isoname=$1
 [ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
 [ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
 [ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it."
-[ -f "$grub_config" ] || die 6 "Grub menu file $grub_config not found."
 [ `id -u` -ne 0 ]     && die 9 "Run this program as root."
 
 [ -x "$(which mkinitrd-cd)" ] || die 7 "mkinitrd-cd not found. Please install package."
 [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
+
+[ -z "$cfdir" ] && cfdir=/etc/fai
+[ ! -d "$cfdir" ] && die 17 "$cfdir is not a directory."
+[ "$verbose" ] && echo "Using configuration files from directory $cfdir"
+. $cfdir/fai.conf
+
+if [ -z "$grub_config" ]; then
+    grub_config="$cfdir/menu.lst"
+else
+    grub_config="$cfdir/$grub_config"
+fi
+[ -f "$grub_config" ] || die 6 "Grub menu file $grub_config not found."
 
 [ -z "$FAI_CONFIGDIR" ]  && die 14 "Variable \$FAI_CONFIG not set."
 [ -d $FAI_CONFIGDIR ] || die 15 "Can't find config space $FAI_CONFIGDIR."
