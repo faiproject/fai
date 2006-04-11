@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.4.4, 27-march-2006"
+version="Version 1.5, 8-april-2006"
 
 # variables: NFSROOT, FAI_CONFIGDIR
 # NFSROOT_PACKAGES, packages from make-fai-nfsroot.conf
@@ -178,16 +178,8 @@ add_base_packages() {
     local plist
     # add packages from base.tgz and additional packages in nfsroot
 
-    echo "Adding packages from base.tgz and packages defined in make-fai-nfsroot.conf."
-    if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
-	plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
-	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
-    else
-	echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists."
-	echo "Can't add those packages. Maybe the nfsroot is not yet created."
-    fi
-
     # arch dependent packages defined in make-fai-nfsroot
+    echo "Adding packages defined in make-fai-nfsroot.conf."
     if [ -f $NFSROOT/var/tmp/packages.arch ]; then
 	plist=$(< $NFSROOT/var/tmp/packages.arch)
 	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
@@ -198,6 +190,17 @@ add_base_packages() {
 
     # also add packages defined in make-fai-nfsroot.conf
     apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $packages $NFSROOT_PACKAGES
+
+    # now use sources.list for debootstrap packages
+    echo "$FAI_DEBOOTSTRAP" | awk '{printf "deb %s %s main\n",$2,$1}' | perl -p -e 's/file:/copy:/' > $aptcache/etc/apt/sources.list
+    echo "Adding packages from base.tgz."
+    if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
+	plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
+	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+    else
+	echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists."
+	echo "Can't add those packages. Maybe the nfsroot is not yet created."
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set-classes() {
