@@ -42,21 +42,9 @@ oclass=$(uname -s | tr a-z A-Z)
 classes="DEFAULT $oclass $HOSTNAME LAST"
 faimond=0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-prcopyleft() {
-
-    cat <<-EOF
-             -----------------------------------------------------
-               Fully Automatic Installation for $osname
-               $FAI_VERSION    Copyright (c) 1999-2006
-
-               Thomas Lange      <lange@informatik.uni-koeln.de>
-             -----------------------------------------------------
-EOF
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
-    local sub osname ostype
+    local sub ostype
     set -a # now export all variables
 
     umask 022
@@ -93,9 +81,6 @@ fai_init() {
     [ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
     [ $DO_INIT_TASKS -eq 1 ] && renewclass=1 # always renew class list when installing
 
-    # color logo only if initial install
-    COLOR_FAI_LOGO=$DO_INIT_TASKS
-
     DEBIAN_FRONTEND=noninteractive
     # local disks are mounted to $FAI_ROOT
     if [ -z "$FAI_ROOT" ] ; then
@@ -120,7 +105,6 @@ fai_init() {
 
     # several log files
     diskvar=$LOGDIR/disk_var.sh
-    moduleslog=$LOGDIR/modules.log
     rcslog=$LOGDIR/fai.log
 
     # variables for cfengine
@@ -144,7 +128,6 @@ fai_init() {
     export HOSTNAME
 
     if [ X$oclass = XLINUX ]; then
-	osname='Debian GNU/Linux'
 	if [ $DO_INIT_TASKS -eq 1 ]; then
 	    grep -q '[[:space:]]sysfs' /proc/filesystems && mount -t sysfs sysfs /sys
 	    ifup lo
@@ -156,26 +139,10 @@ fai_init() {
 	    cat /proc/kmsg >/dev/tty4 &
 	fi
     fi
-    if [ X$oclass = XSUNOS ]; then
-	osname='Sun Solaris'
-    fi
+
+    prcopyleft
     unset oclass
 
-    # set red color, but not on some archs
-    [ -e /.nocolorlogo ] && COLOR_FAI_LOGO=0
-    [ -n "$console" ] && COLOR_FAI_LOGO=0  # no red logo if console was defined on the command line
-    case $HOSTTYPE in
-	sparc*|powerpc*) COLOR_FAI_LOGO=0 ;;
-    esac
-
-    [ $COLOR_FAI_LOGO -eq 1 ] && echo -ne "\ec\e[1;31m"
-
-    prcopyleft | tee -a $rcslog
-
-    if [ $COLOR_FAI_LOGO -eq 1 ]; then
-	echo -ne "\e[7;0r"
-	echo -ne "\e[9B\e[1;m"
-    fi
     save_dmesg
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

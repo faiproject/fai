@@ -1,0 +1,49 @@
+#! /bin/bash
+
+#*********************************************************************
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2003-2006 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+
+# variables needed: FAI_VERSION, DO_INIT_TASK
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+_prcopyleft() {
+
+    cat <<-EOF
+             -----------------------------------------------------
+               Fully Automatic Installation for $osname
+               $FAI_VERSION    Copyright (c) 1999-2006
+
+               Thomas Lange      <lange@informatik.uni-koeln.de>
+             -----------------------------------------------------
+EOF
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# color logo only if initial install
+COLOR_FAI_LOGO=$DO_INIT_TASKS
+
+# set red color, but not on some archs
+[ -e /.nocolorlogo ] && COLOR_FAI_LOGO=0
+[ -n "$console" ] && COLOR_FAI_LOGO=0  # no red logo if console was defined on the command line
+case $HOSTTYPE in
+    sparc*|powerpc*) COLOR_FAI_LOGO=0 ;;
+esac
+
+[ $COLOR_FAI_LOGO -eq 1 ] && echo -ne "\ec\e[1;31m"
+
+osname='Debian GNU/Linux'
+if [ X$oclass = XSUNOS ]; then
+    osname='Sun Solaris'
+fi
+
+_prcopyleft | tee -a $rcslog
+
+if [ $COLOR_FAI_LOGO -eq 1 ]; then
+	echo -ne "\e[7;0r"
+	echo -ne "\e[9B\e[1;m"
+fi
