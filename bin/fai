@@ -76,11 +76,6 @@ fai_init() {
        exit 1
     }
 
-    # HG: are we called as an init substitute ?
-    DO_INIT_TASKS=0
-    [ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
-    [ $DO_INIT_TASKS -eq 1 ] && renewclass=1 # always renew class list when installing
-
     DEBIAN_FRONTEND=noninteractive
     # local disks are mounted to $FAI_ROOT
     if [ -z "$FAI_ROOT" ] ; then
@@ -90,18 +85,6 @@ fai_init() {
     ROOTCMD="chroot $FAI_ROOT"
     # no chroot needed
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
-
-    # Solaris has already a writable /tmp directory
-    [ "$oclass" = LINUX -a $DO_INIT_TASKS -eq 1 ] && create_ramdisk
-
-    # directory where temporary log files are stored
-    # set default value if nothing is set in fai.conf
-    if [ -z "$LOGDIR" -a $DO_INIT_TASKS -eq 1 ]; then
-	LOGDIR=/tmp/fai
-	mkdir -p $LOGDIR
-    fi
-    [ $DO_INIT_TASKS -eq 0 ] && LOGDIR=$(mktemp -t -d fai.XXXXXX)
-    ln -s $LOGDIR $rundir/current_log
 
     # several log files
     diskvar=$LOGDIR/disk_var.sh
@@ -214,6 +197,23 @@ if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
     echo "Please give more parameters if not run from the nfsroot."
     exit 2
 fi
+
+    # HG: are we called as an init substitute ?
+    export DO_INIT_TASKS=0
+    [ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
+    [ $DO_INIT_TASKS -eq 1 ] && renewclass=1 # always renew class list when installing
+
+    # Solaris has already a writable /tmp directory
+    [ "$oclass" = LINUX -a $DO_INIT_TASKS -eq 1 ] && create_ramdisk
+
+    # directory where temporary log files are stored
+    # set default value if nothing is set in fai.conf
+    if [ -z "$LOGDIR" -a $DO_INIT_TASKS -eq 1 ]; then
+	export LOGDIR=/var/log/fai/current-log
+	mkdir -p $LOGDIR
+    fi
+    [ $DO_INIT_TASKS -eq 0 ] && LOGDIR=$(mktemp -t -d fai.XXXXXX)
+    ln -s $LOGDIR $rundir/current_log
 
 fai_init
 
