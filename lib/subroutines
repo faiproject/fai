@@ -330,24 +330,25 @@ _defvar() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_defvar() {
 
+    local svar=/var/log/fai/current-log/showvar.log
     cd $FAI/class
     for class in $classes ; do
 	if [ -f $class.var ]; then
 	    [ "$verbose" ] && echo "Executing $class.var"
 	    # show only lines with ++, we cannot use a pipe, since it would call
 	    # _devfar in a subprocess. Then, variables are not defined 
-	    _defvar $class.var > /tmp/showvar.log 2>&1
-	    grep ^++ /tmp/showvar.log
-	    rm /tmp/showvar.log
+	    _defvar $class.var > $svar 2>&1
+	    grep ^++ $svar
+	    rm $svar
 	fi
     done
 
     # /fai/class/S* scripts or hooks can write variable definitions
     # to additonal.var. now source these definitions
     if [ -f $LOGDIR/additional.var ]; then
-	_defvar $LOGDIR/additional.var > /tmp/showvar.log 2>&1
-	grep ^++ /tmp/showvar.log
-	rm /tmp/showvar.log
+	_defvar $LOGDIR/additional.var > $svar 2>&1
+	grep ^++ $svar
+	rm $svar
     fi
     unset class
     # now all variables are defined. Dump them to variables.sh
