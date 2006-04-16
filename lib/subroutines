@@ -98,7 +98,7 @@ task() {
 
     if [ -f $LOGDIR/skip.$taskname ]; then
         # skip task
-	rm $LOGDIR/skip.$taskname
+	rm $LOGDIR/skip.$taskname # TODO: remove skip files at the very end
 	[ "$verbose" ] && echo "Skiping task_$taskname"
 	sndmon "TASKSKIP $taskname"
     else
@@ -148,10 +148,9 @@ call_hook() {
 skiptask() {
 
     # mark all given tasks, so they will be skipped
-    local tasklist="$@"
     local task
 
-    for task in $tasklist; do
+    for task in "$@"; do
 	> $LOGDIR/skip.$task
     done
 }
