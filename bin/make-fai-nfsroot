@@ -250,7 +250,12 @@ create_nfsroot() {
     echo "127.0.0.1 localhost" >> etc/hosts
     echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
     [ -f $cfdir/preferences ] && cp -v $cfdir/preferences $NFSROOT/etc/apt
-    echo 'APT::Get::AllowUnauthenticated "true";' >$NFSROOT/etc/apt/apt.conf.d/10fai
+    # we need these option before installing the first package. So we
+    # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
+    cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
+APT::Get::AllowUnauthenticated "true";
+Aptitude::CmdLine::Ignore-Trust-Violations yes;
+EOF
     echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
     echo "Adding additional packages to $NFSROOT:"
