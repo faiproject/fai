@@ -206,14 +206,11 @@ fi
     # Solaris has already a writable /tmp directory
     [ "$oclass" = LINUX -a $DO_INIT_TASKS -eq 1 ] && create_ramdisk
 
-    # directory where temporary log files are stored
-    # set default value if nothing is set in fai.conf
-    if [ -z "$LOGDIR" -a $DO_INIT_TASKS -eq 1 ]; then
-	export LOGDIR=/var/log/fai/current-log
-	mkdir -p $LOGDIR
-    fi
-    [ $DO_INIT_TASKS -eq 0 ] && LOGDIR=$(mktemp -t -d fai.XXXXXX)
-    ln -s $LOGDIR $rundir/current_log
+    export LOGDIR=/var/log/fai/current-log
+    mkdir -p $LOGDIR
+    # for compability, can be removed later
+    mkdir /tmp/fai
+    mount --bind /var/log/fai/current-log /tmp/fai 
 
 fai_init
 
@@ -245,7 +242,6 @@ task action 2>&1 | tee -a $rcslog
 
 # not happy with this at all!
 [ "$FAI_CVSROOT" ] && rm -rf $FAI
-rm -rf $LOGDIR
 
 [ -L "$rundir/current_log" ] && rm -f "$rundir/current_log"
 [ -L "$rundir/current_config" ] && rm -f "$rundir/current_config"
