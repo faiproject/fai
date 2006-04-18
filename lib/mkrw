@@ -1,0 +1,42 @@
+#! /bin/bash
+
+#*********************************************************************
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2003-2006 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkrwsize() {
+
+    # save all dirs and files under directory $2
+    # mount tmpfs on top of dir $2
+    # extrace dirs and files into tmpfs
+
+    if [ ! -d "$2" ]; then
+	echo "WARNING: $2 is not a directory. Cannot make it writeable."
+	return
+    fi
+
+    local tmp1=$(mktemp) || exit 12
+    tar -C $2 -cf $tmp1 .
+    mount -o size=$1 -t tmpfs tmpfs $2
+    tar -C $2 -xf $tmp1
+    rm -f $tmp1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+size=10m # default size
+
+while getopts s: opt ; do
+    case "$opt" in
+        s) size="$OPTARG" ;;
+        esac
+done
+shift $(($OPTIND - 1))
+
+for f in "$@"; do
+    mkrwsize $size $f
+done
