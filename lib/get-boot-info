@@ -48,16 +48,9 @@ netdevice_info() {
 
     # some network driver do not echo eth0,..; they are not detected
     netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/')
-
-    # another way to determine the first four ethernet devices
-    local dev devices
-    devices=$(seq 0 1 4)
-    for dev in $devices; do
-        ifconfig eth$dev up 2>/dev/null && netdevices_all="$netdevices_all eth$dev"
-    done
+    tmp=$(ifconfig -a | grep ^eth | awk '{ print $1 }')
+    netdevices_all="$netdevices_all $tmp"
     netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq)
-
-#    netdevices_all=$(echo $netdevices_all | sort | uniq)
 
     cat > $bootlog <<-EOF
 	netdevices_all="$netdevices_all"
