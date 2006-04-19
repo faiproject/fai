@@ -30,11 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 2.2"
-
-isoversion="$version -- build $(date '+%c')"
-vname="Fully Automatic Installation CD"
-aname="Fully Automatic Installation by Thomas Lange, $isoversion"
+version="fai-cd 2.3"
 
 burn=0
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache /media/mirror/.apt-move"
@@ -218,6 +214,11 @@ fi
 
 tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
+
+faiversion=$(dpkg --root=$NFSROOT -l fai-client|grep fai-client|awk '{print $3}')
+isoversion="FAI $faiversion -- build $(date '+%c')"
+vname="Fully Automatic Installation CD"
+aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
 create_initrd_image
 create_grub_image
