@@ -176,8 +176,8 @@ task_chboot() {
     local frsh
     local doexit=0
     local hostname=$(hostname)
+    local ipaddr=$(cat $LOGDIR/boot.log | grep IPADDR | cut -d\' -f2)
     frsh="$FAI_REMOTESH -l $LOGUSER ${SERVER}"
-
 
     if [ -z "$SERVER" ] ; then
 	echo "SERVER not defined. Can't change network boot configuration"
@@ -199,7 +199,7 @@ task_chboot() {
 	    echo "WARNING: $frsh failed. Can't call fai-chboot on the install server."
 	else
 	    # remove pxe config, so host will use default and boot from local disk
-	    $frsh /usr/sbin/fai-chboot -r $hostname
+	    $frsh /usr/sbin/fai-chboot -r $ipaddr
 	fi
     fi
 }
