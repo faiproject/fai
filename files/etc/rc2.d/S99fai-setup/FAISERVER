@@ -11,7 +11,14 @@ if [ ! -d "$FAI_CONFIGDIR/class" ]; then
     cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR
 fi
 
-fai-setup 2>&1 | tee /var/log/fai-setup.log
+# setup network
+dhclient eth0  # connection to the outside world (hopefully)
+ifconfig eth0:1 192.168.1.250 # (fixed address of faiserver)
+/etc/init.d/nscd restart
+/etc/init.d/apache2 restart
+/etc/init.d/apt-proxy restart
+
+fai-setup -v 2>&1 | tee /var/log/fai-setup.log
 
 # create default pxelinux boot configuration (boot from local disk)
 fai-chboot -o default
