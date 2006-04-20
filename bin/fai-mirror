@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.7, 19-april-2006"
+version="Version 1.7.1, 20-april-2006"
 
 # variables: NFSROOT, FAI_CONFIGDIR
 # NFSROOT_PACKAGES, packages from make-fai-nfsroot.conf
@@ -304,15 +304,19 @@ CONTENTS=no
 PKGCOMP='none gzip'
 EOF
 apt-move $quiet -c $aptmovefile update
-# since Packages.gz from  apt-move do not include packages from my
+# since Packages.gz from apt-move does not include packages from my
 # repository, let's use apt-ftparchive for generiating correct index
 # files
-find $mirrordir/dists -name Packages|xargs rm
-pfile=$(find $mirrordir/dists -name Packages.gz)
+pfilegz=$(find $mirrordir/dists -name Packages.gz)
+pfile=$(find $mirrordir/dists -name Packages)
 pdist=$(cd $mirrordir/dists ; ls)
 cd $mirrordir
-mv $mirrordir/dists/$pdist/Release $mirrordir/tmpfile
-apt-ftparchive packages pool | gzip > $pfile
+# md5sums of apt-move are not valid, when we recreate Packages.gz using
+# apt-ftparchive, but we can use the header of the Release file
+grep -B99 MD5Sum:  $mirrordir/dists/$pdist/Release | grep -v MD5Sum: > $mirrordir/tmpfile
+rm $mirrordir/dists/$pdist/Release
+apt-ftparchive packages pool > $pfile
+gzip -c $pfile > $pfilegz
 apt-ftparchive release dists/$pdist >> tmpfile
 mv tmpfile dists/$pdist/Release
 
