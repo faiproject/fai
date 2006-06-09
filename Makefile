@@ -30,8 +30,8 @@ install:
 	cd bin ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd bin ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
 	install bin/fai-start-stop-daemon $(DESTDIR)/sbin
-	install bin/dhclient-script  $(DESTDIR)/etc/dhcp3
-	install -m644 conf/dhclient.conf $(DESTDIR)/etc/dhcp3
+	install bin/dhclient-fai-script  $(DESTDIR)/etc/dhcp3
+	install -m644 conf/dhclient-fai.conf $(DESTDIR)/etc/dhcp3
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
 	install -m644 conf/fai.conf conf/sources.list conf/menu.lst $(DESTDIR)/etc/fai/
 	install -m644 conf/make-fai-nfsroot.conf $(DESTDIR)/etc/fai/
