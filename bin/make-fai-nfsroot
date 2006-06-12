@@ -247,8 +247,8 @@ create_nfsroot() {
     [ -d $NFSROOT/var/state ] || mkdir $NFSROOT/var/state
     cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list
 
-    echo "127.0.0.1 localhost" >> etc/hosts
-    echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
+    egrep -q "127.0.0.1" etc/hosts 2>/dev/null || echo "127.0.0.1 localhost" >> etc/hosts
+    egrep -q "$NFSROOT_ETC_HOSTS" etc/hosts 2>/dev/null || echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
     [ -f $cfdir/preferences ] && cp -v $cfdir/preferences $NFSROOT/etc/apt
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
