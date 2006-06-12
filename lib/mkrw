@@ -15,14 +15,26 @@ mkrwsize() {
     # mount tmpfs on top of dir $2
     # extract dirs and files into tmpfs
 
+    local n=
+
     if [ ! -d "$2" ]; then
 	echo "WARNING: $2 is not a directory. Cannot make it writeable."
 	return
     fi
 
+    # test for already writable
+    temp=$(mktemp -q -p $2)
+    if [ $? -eq 0 ]; then
+	echo "mkrw: $2 is already writable."
+	rm $temp
+	return
+    fi
+
+    [ -n "$3" ] && n="-n"
+
     local tmp1=$(mktemp) || exit 12
     tar -C $2 -cf $tmp1 .
-    mount -o size=$1 -t tmpfs tmpfs $2
+    mount $n -o size=$1 -t tmpfs tmpfs $2
     tar -C $2 -xf $tmp1
     rm -f $tmp1
 }
@@ -30,13 +42,14 @@ mkrwsize() {
 
 size=10m # default size
 
-while getopts s: opt ; do
+while getopts s:n opt ; do
     case "$opt" in
         s) size="$OPTARG" ;;
+        n) no_mount=1 ;;
         esac
 done
 shift $(($OPTIND - 1))
 
 for d in "$@"; do
-    [ -d "$d ] && mkrwsize $size $d
+    [ -d "$d ] && mkrwsize $size $d $no_mount
 done
