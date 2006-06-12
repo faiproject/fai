@@ -128,8 +128,10 @@ task_prepareapt () {
     [ -f /etc/hosts ] && cp /etc/hosts $FAI_ROOT/etc
     # set hostname in $FAI_ROOT
     if [ -f /var/run/fai//FAI_INSTALLATION_IN_PROGRESS ]; then
-      echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
       echo $HOSTNAME >$FAI_ROOT/etc/hostname
+      if [ -n "$IPADDR" ]; then
+	  grep -q  $IPADDR $FAI_ROOT/etc/hosts 2>/dev/null || echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
+      fi
     fi
     [ -d /etc/apt ] && cp -r /etc/apt/* $FAI_ROOT/etc/apt/
 }
