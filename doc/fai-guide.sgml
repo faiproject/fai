@@ -521,7 +521,7 @@ for saving log files. The log
 files of all install clients are saved to the home directory of this
 account. If you boot from network card, you should change the primary
 group of this account, so this account has write permissions to
-<file>/boot/fai</file> in order to change the symbolic links to the kernel
+<file>/srv/tftp/fai</file> in order to change the symbolic links to the kernel
 image which is booted by a client.
 
 
@@ -592,7 +592,7 @@ choose <tt>TCP/IP</tt> and set the protocol to <tt>BOOTP</tt>.
 
 When using BOOTP, you have to make a
 symbolic link from the hostname of your client to the appropriate
-kernel image in <file>/boot/fai</file>. You can also use the utility
+kernel image in <file>/srv/tftp/fai</file>. You can also use the utility
 <prgn>tlink</prgn> (<file>/usr/share/doc/fai/examples/utils/tlink</file>) to create
 this link. The file
 <file>installimage_3com</file> is created by <prgn>imggen</prgn> and
@@ -624,12 +624,12 @@ this file to <file>/etc/dhcp3/dhcpd.conf</file>.
 Then enable the special tftp daemon
 using this line in file <file>/etc/inetd.conf</file>: 
 <example>
-tftp dgram udp wait root /usr/sbin/in.tftpd in.tftpd -s /boot/fai
+tftp dgram udp wait root /usr/sbin/in.tftpd in.tftpd -s /srv/tftp/fai
 </example>
 
 The install client then loads the pxelinux boot loader which receives
 its configuration via TFTP from a file in the directory
-<file>/boot/fai/pxelinux.cfg</file>. Using the command <manref
+<file>/srv/tftp/pxelinux.cfg</file>. Using the command <manref
 name="fai-chboot" section="8"> you can 
 define which kernel will be loaded by the PXE Linux loader and
 which additional parameters are passed to this kernel. You should
@@ -639,7 +639,7 @@ See <file>/usr/share/doc/syslinux/pxelinux.doc</file> for more
 information about how to boot such an environment. The PXE
 environment uses the original kernel image (not the netboot image made
 by mknbi-linux) which is copied to
-<file>/boot/fai/vmlinuz-install</file>.
+<file>/srv/tftp/fai/vmlinuz-install</file>.
 
 
 <sect id="bootfloppy">Creating a boot floppy
@@ -736,7 +736,7 @@ An example configuration for the BOOTP daemon can be found in
 
 .faiglobal:\
  :ms=1024:\
- :hd=/boot/fai:\
+ :hd=/srv/tftp/fai:\
  :hn:bs=auto:\
  :rp=/usr/lib/fai/nfsroot:
 
@@ -2395,7 +2395,7 @@ The user <var>tom</var> should have permission to create the
 symlinks for booting via network card, so change the group and add
 some utilities.
 
-<example># chgrp -R linuxadmin /boot/fai; chmod -R g+rwx /boot/fai
+<example># chgrp -R linuxadmin /srv/tftp/fai; chmod -R g+rwx /srv/tftp/fai
 # cp /usr/share/doc/fai/examples/utils/* /usr/local/bin
 </example>
 
