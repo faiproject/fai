@@ -1,576 +1,327 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
+# $Id$
+#*********************************************************************
+#
+# setup_harddisks -- create partitions and filesystems on harddisk
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (c) 1999, 2000 by ScALE Workgroup, Universitaet zu Koeln
+# Copyright (c) 2000-2006 by Thomas Lange, Uni Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING. If not, write to the
+# Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+# MA 02111-1307, USA.
+#*********************************************************************
+#
+# This program first read the configfiles, partitions and formats the harddisks,
+# produces fstab and FAI-variables-file.  It uses sfdisk, mke2fs, mkswap
+#
+# Parameters:
+# [-X]                     no test, your harddisks will be formated
+#                          default: only test, no real formating
+# [-f<config-filename>]    default: parse classes
+# [-c<class-path>]         default: $FAI/disk_config/
+# [-d]                     default: no DOS alignment
+#
+#---------------------------------------------------
+# Last changes:  see svn log
+# Last changes:  31.3.2005 by Thomas Lange add sub mapdisk{}
+# Last changes:  8.11.2004 by Thomas Lange add $devdisklist when calling sfdisk
+# Last changes:   3.2.2004 by Thomas Lange typos
+# Last changes: 14.07.2003 by Thomas Lange add xfs filesystem support
+# Last changes: 23.01.2003 by Thomas Lange print info data to stdout
+# Last changes: 03.12.2002 by Thomas Lange remove ida, cciss stuff. Just match everything
+# Last changes: 27.11.2002 by Thomas Lange allow more that 3 primary partitions
+# Last changes: 14.05.2002 by Thomas Lange use strict
+# Last changes: 04.05.2002 by Thomas Lange use strict
+# Last changes: 29.04.2002 by Thomas Lange add swaplist
+# Last changes: 12.01.2002 by Thomas Lange
+# /dev/ida/ patch 12.01.2002 by Marc Martinez <lastxit+fai@technogeeks.org>
+# Last changes: 9.11.2001 by Thomas Lange
+# reiserfs patch 8.11.2001 by Diane Trout <diane@caltech.edu>
+# Last changes: 25.10.2001 by Thomas Lange
+# Last changes: 09.07.2001 by Thomas Lange
+# Last changes: 04.07.2001 by Thomas Lange
+# Last changes: 06.05.2001 by Thomas Lange
+# Last changes: 09.03.2001 by Thomas Lange
+# Last changes: 05.12.2000 by Thomas Lange
+# Last changes: 03.05.2000 by Thomas Lange
+# Last changes: 03.04.2000 by Mattias Gaertner
+#---------------------------------------------------
+#
+# config-file format:
+#   lines beginning with # are comments
+#
+# "disk_config <device>|<diskN>|end"
+#   The disk_config command starts the parsing.
+#   It has to be the first command.
+#    <device> is the harddisk to format in short form like "hda" or "sdc".
+#    <diskN>  if first is used, the N-th disk of $disklist is used
+#    "end"    = end parsing here
+#   Example: "disk_config hdb"
+#   Example: "disk_config disk3"
+#
+# Defining one partition:
+# "primary|logical mountpoint|swap|- <size in mb>|preserve<No> [fstab-options][;extraordinary options]"
+#    "primary|logical":
+#      "primary": this are the bootable partitions like the
+#         root directory "/" or the DOS "C:" disk.
+#      "logical": this are all other partitions like a linux
+#         "/var" or a swap partition or a DOS disk.
+#
+#    "mountpoint|swap|-":
+#      "mountpoint": 
+#         This is the mount-point for fstab.
+#         For example "/","/var","/usr". There must not
+#         be a space in the mountpoint.
+#      "swap":
+#         swap-partitions
+#      "-":
+#         do not mount this partition.
+#
+#    "<size in mb>|preserve<No>":
+#      "<size in mb>":
+#        The size of the partition in megabyte
+#         Examples:
+#          "30"     = 30 mb
+#          "10-100" = 10 to 100 mb
+#          "20-"    = minimum of 20 mb
+#          "-500"   = 1 to 500 mb
+#          The megabytes will be rounded up to cylinders.
+#      "preserve<No>":
+#         This is the alternative for the size attribute.
+#         <No> is the partition number. For example
+#         preserve3 for the third partition. If the
+#         <device> was hda then this results in hda3.
+#         The partition will be left unchanged. This
+#         is useful if you have partitions that do not
+#         need re-installation or if you want to have
+#         other operation systems on the device together
+#         with Linux. Extended Partitions can not be preserved.
+#         The bootable flag will not be preserved.
+#         Preserved partitions are mounted readonly during
+#         installation.
+#
+#    "fstab-options":
+#         These options are copied to the fstab-file. The
+#         default is "default"
+#
+#   After the semicolon there could be extra options like:
+#     -i <bytes>   : Bytes per inodes
+#                    (only ext2/3 filesystem)
+#     -m <blocks>% : reserved blocks percentage for superuser
+#                    (only ext2/3 filesystem)
+#     -j	   : format in ext3
+#     -c           : check for bad blocks
+#     format       : Always format this partition even if preserve
+#     lazyformat   : Do not format if partition has not moved
+#                    (useful for testing the installation)
+#     boot         : make this partition the boot-partition (the
+#                    linux root filesystem is the default)
+#     ext2         : Extended 2 filesystem (this is the default)
+#     swap         : swap partition
+#     dosfat16     : DOS 16bit FAT file system
+#     winfat32     : Win95 FAT32 file system
+#     writable     : mounts a preserved partition writable
+#     xfs          : xfs
+#     reiser       : reiserfs
+#       -h <hash>  : set reiserfs hash
+#       -v <ver>   : set reiserfs version
+#
 use strict;
-
-=head1 NAME
-
-setup_harddisks - create partitions and filesystems on local disks
-
-=head1 SYNOPSIS
-
- setup_harddisks [ options ]
-
-=head1 DESCRIPTION
-
-This program sets up local hard disks during the FAI installation process.
-
-The basic operation of the program is as follows:
-
-=over
-
-=item 1. B<Scan system>
-
-L<sfdisk(8)> is used to query the disks in the system.  Internal lists
-are built of the discovered disks for later use.  Note that there is
-no real indication about which disks are on which controllers without
-devfs.
-
-=item 2. B<Parse the config files>
-
-The config file format is detailed below in L<CONFIGURATION FILE
-FORMAT>.
-
-=item 3. B<Calculate Partition Tables>
-
-Based on the configuration file and discovered disks.
-
-=item 4. B<Write Partition Tables>
-
-L<sfdisk(8)> is used again to write tables to each disk.
-
-=item 5. B<Format Filesystems>
-
-Using any or all of:
-
-=over
-
-=item L<mke2fs(8)>, L<mkreiserfs(8)>
-
-To create filesystems on partitions
-
-=item L<mkswap(8)>
-
-To setup swap space for Linux
-
-=item L<pvcreate(8)>, L<vgcreate(8)>
-
-To set up LVM managed areas
-
-=item L<mkraid(8)>
-
-To set up Linux md-utils managed spaces.
-
-=back
-
-=item 6. B<Prepare F</etc/fstab>>
-
-The B<f>ile B<s>ystem B<tab>le is written out to F</tmp/fai> for the
-installation process to read.
-
-=item 7. B<Write out FAI variables>
-
-So that later FAI installation decisions can be made based on the
-results of this step.
-
-=back
-
-Each step is detailed more fully later in the man page.
-
-=head1 COMMAND LINE OPTIONS
-
-=over
-
-=item B<-X>
-
-With this option your hard disks will really be formatted.  The
-default is to fake it.
-
-=item B<-f> I<config-filename>
-
-Specify the configuration file.  The default is to parse all files
-found in the environment variable C<classes>.
-
-=item B<-c> I<class-path>
-
-Specify where configuration files live.  The default is
-F<$FAI/disk_config/>.
-
-=item B<-d>
-
-Specify DOS alignment of partitions.  The default is B<not> to align
-so as to suit DOS.
-
-=back
-
-=head1 CONFIGURATION FILE FORMAT
-
-Lines beginning with C<#> are comments.
-
-Here is an example to give you a hint;
-
-   # Configure a system with a single IDE hard disk
-   disk_config hda
-       primary   /       256    rw,errors=remount-ro    ;-j
-       primary   swap    1024
-       logical   /usr    2048
-       logical   /var    600
-       logical   /home   0-
-
-Each disk in the system to be set up should have a B<disk_config>
-section for it.  Then, each wanted partition is listed along with the
-desired size, and any options.
-
-=over
-
-=item B<disk_config> [ I<device> | B<end> ]
-
-The disk_config command must precede each disk's partitioning
-information.
-
-I<device> is the harddisk to format, with "/dev" removed.  For
-instance, "hda" or "sdc".
-
-If the special keyword B<end> is used, parsing of the configration
-file halts.
-
-=item B<primary> | B<logical> ...
-
-B<primary> and B<logical> define partitions.
-
-The syntax is:
-
-   type     mountpoint  size  fstab-options  ; extra options
-
-=over
-
-=item B<type>
-
-This may be C<primary> or C<logical>.
-
-B<primary> paritions are those created within a normal DOS-style
-partition table (eg, F</dev/hda1> through F</dev/hda4>).
-
-B<logical> partitions are created inside the last (by convention)
-primary partition (eg, F</dev/hda5> and above).
-
-Only primary partitions are bootable by boot loaders like GRUB and
-LILO.
-
-=item B<mountpoint>
-
-This is the name of the entity that this partition is allocated to.
-
-B<Normal partitions> are defined with the name of the mount point,
-such as C</>, C</usr>, C</var>, C</home>, etc.
-
-To use a partition as a B<swap device>, use the special value C<swap>.
-
-If it is set to C<->, to the partition will be B<unused>.
-
-=item B<size>
-
-The size of the partition.
-
-To specify an B<exact size>, list a number in mebibytes (MiB, 1024 *
-1024 bytes), such as C<30> for 30MiB.
-
-To specify a B<range>, use the hyphen (C<->), such as:
-
-=over
-
-=item 10-100
-
-10 to 100MiB
-
-=item 20-
-
-At least 20 mebibytes
-
-=item -500
-
-up to 500 mebibytes.
-
-=back
-
-Partition sizes will be rounded up to the next cylinder boundary.
-
-=back
-
-To specify a partition should B<remain untouched>, use the syntax
-C<preserve>I<num>.  For example, C<preserve3> for the existing third
-partition on the disk.
-
-If the I<device> was C<hda> then this results in C<hda3>.  The
-partition will be left unchanged. This is useful if you have
-partitions that do not need re-installation or if you want to have
-other operation systems on the device together with Linux.  Logical
-Partitions can not currently be preserved.  The I<bootable> flag will
-not be preserved.  Preserved partitions are mounted read-only during
-installation.
-
-=item B<fstab-options>
-
-These options are copied to the fourth column of the F</etc/fstab>,
-and specifies I<mount options>.  See L<fstab(5)> for more information
-on mount options.  The default is C<defaults>.
-
-=item B<extra options>
-
-Extra options are specified after the semicolon, should be seperated
-by a comma, and include:
-
-=over
-
-=item B<format>
-
-Always format this partition, even if C<preserve>I<N> was specified.
-
-=item B<ext2>
-
-Format the filesystem as ext2 (this is the default)
-
-=item B<-j> or B<ext3>
-
-Format the filesystem as ext3
-
-=item B<-i> I<bytes>
-
-Bytes per inode (only ext2/3 filesystem)
-
-=item B<-m> I<blocks>
-
-Reserved block percentage for super-user (only ext2/3 filesystem)
-
-=item B<reiser>
-
-Format the filesystem as ReiserFS, using L<mkreiserfs(8)>.
-
-=item B<-h> I<hash>
-
-If formatting a ReiserFS filesystem, set the `hash' algorithm.
-
-=item B<-v> I<ver>
-
-If formatting a ReiserFS filesystem, set the reiserfs version.
-
-=item B<dosfat16>
-
-Format the filesystem using FAT16 (baby's first filesystem), as used
-by DOS 2.0 and above.
-
-=item B<winfat32>
-
-Format the filesystem using FAT32 (bloated baby's first filesystem),
-as used by Windows 95 and above.
-
-=item B<lazyformat>
-
-Do not format if partition has not moved (useful for testing the
-installation)
-
-=item B<boot>
-
-Make this (primary) partition as bootable (by default, only the linux
-root filesystem is marked as bootable).
-
-=item B<writable>
-
-Mounts a preserved partition in read-write mode
-
-=item B<raid(>I<X>, B<md>I<N>[I<a>][, I<F>]B<)>
-
-Set up the partition as part of a RAID set.
-
-I<X> specifies the RAID level - 0 means striping, 1 mirroring and 5
-cursing.
-
-I<N> specifies the number of the RAID set - ie, C</dev/mdI<N>>.
-
-I<a> specifies which half of a mirror a volume in a RAID 10 set is.
-This may be a letter from C<a> to C<e>, allowing up to 5 halves to
-your mirror.
-
-I<F> specifies the chunk factor.  This is the same as you would
-specify it to the kernel on the command line and represents
-log(chunk_size_in_KB)/log(2) - 12.  See L<BASIC MATH> for more.  The
-default is 8.
-
-=item B<lvm>[(I<VGname>)]
-
-Set up the partition as a physical volume in a volume group.
-
-=back
-
-=back
-
-=head1 EXAMPLES
-
-For examples, see F</usr/share/doc/fai/examples>.
-
-=cut
-
+# getopts variables:
+our ($opt_X, $opt_f, $opt_c, $opt_d);
 my $test;
-my $verbose;
 
 $| = 1;                     # flush always
 
 #****************************************************
-# Global Variables
+# Variables
 #****************************************************
 
-use constant PROGNAME => "setup_harddisks";
-
-my $Version = "0.16fai-sv";
+my $Version = "version 0.38fai";
 
 my $megabyte = 1024 * 1024;    # guess
-my $MegOfNulls = "\0" x (2**20);
 # $gigabyte = 1024 * $megabyte;
 my $sectorsize = 512;
 
 # used programs
-my $g_sfdisk_options = "-q";     # be quiet
-my $g_mke2fs_options = "-q";     # be quiet
-my $g_mkreiserfs_options = "";
-my $g_mkswap_options = "";
+my $sfdisk_options = "-q $ENV{sfdisk}";     # be quiet
+my $mke2fs_options = "-q";     # be quiet
+my $mkreiserfs_options = "";
+my $mkxfs_options = "-f";
+my $mkswap_options = "";
 
 # FAI input variables
-my $g_ClassPath = "$ENV{FAI}/disk_config";# this directory contains the classes
-my $g_ConfigFileName = "";   # alternative classfile, only for tests
-my $g_DOS_Alignment = "";    # align partitions for tracks
+my $ClassPath = "$ENV{FAI}/disk_config";# this directory contains the classes
+my $ConfigFileName = "";   # alternative classfile, only for tests
+my $DOS_Alignment = "";    # align partitions for tracks
 
 # FAI output variables
-my $g_BootPartition = "";    # the boot partition like "hda1"
-my $g_BOOT_DEVICE = "";      # the root device like "hda" or "sdb"
-my $g_FAIOutputFile = $ENV{diskvar}; # write output variables to this file
+my $BootPartition = "";    # the boot partition like "hda1"
+my $BOOT_DEVICE = "";      # the root device like "hda" or "sdb"
+my $FAIOutputFile = $ENV{diskvar}; # write output variables to this file
 
 # old partition tables
-my %g_DiskUnits = ();        # unit size of each disk in sectors
-my %g_DiskSize = ();         # size of every disk in units
-my %g_SectorsAlignment = ();  # tracksize in sectors
-my %g_PartOldBoot = ();      # partition was bootable. "yes"=yes
-my %g_PartOldStart = ();     # old startunit of partition
-my %g_PartOldEnd = ();       # old endunit of partition
-my %g_PartOldStartSec = ();  # old startsector of partition
-my %g_PartOldEndSec = ();    # old endsector of partition
-my %g_PartOldID = ();        # old ID of partition
-my %g_OldNotAligned = (); # "yes" if old partition boundaries are not DOS aligned
+my %DiskUnits = ();        # unit size of each disk in sectors
+my %DiskSize = ();         # size of every disk in units
+my %SectorsAlignment = ();  # tracksize in sectors
+my %PartOldBoot = ();      # partition was bootable. "yes"=yes
+my %PartOldStart = ();     # old startunit of partition
+my %PartOldEnd = ();       # old endunit of partition
+my %PartOldStartSec = ();  # old startsector of partition
+my %PartOldEndSec = ();    # old endsector of partition
+my %PartOldID = ();        # old ID of partition
+my %OldNotAligned = (); # "yes" if old partition boundaries are not DOS aligned
 
 # mountpoints  ("/<path>" or "swap<No>" or "no<No>" or "extended<disk>")
-my $g_NofSwapPart = 0;       # number of swap partitions
-my $g_NofNotMoPart = 0;      # number of not mountet partitions
-my %g_DiskMountpoints = ();  # mountpoints of every disk. separated by spaces
-my %g_MountpointPart = ();   # partition of every mountpoint. e.g. "hda2"
-my %g_PartMountpoint = ();   # mountpoint of every partition.
+my $NofSwapPart = 0;       # number of swap partitions
+my $NofNotMoPart = 0;      # number of not mountet partitions
+my %DiskMountpoints = ();  # mountpoints of every disk. separated by spaces
+my %MountpointPart = ();   # partition of every mountpoint. e.g. "hda2"
+my %PartMountpoint = ();   # mountpoint of every partition.
+my @swaplist;              # list of all swpa devices
 
 # size of partition/mountpoint
-my %g_MPMinSize = ();        # minimum size of mountpoint in units
-my %g_MPMaxSize = ();        # maximum size of mountpoint in units
-my %g_MPPreserve = ();       # preserve partition: "yes"=yes
-my %g_MPPrimary = ();        # primary partition: "yes"=yes
-my %g_MPStart = ();          # start of partition in units
-my %g_MPSize = ();           # size of partition in units
-my %g_MPID = ();             # id of partition
+my %MPMinSize = ();        # minimum size of mountpoint in units
+my %MPMaxSize = ();        # maximum size of mountpoint in units
+my %MPPreserve = ();       # preserve partition: "yes"=yes
+my %MPPrimary = ();        # primary partition: "yes"=yes
+my %MPStart = ();          # start of partition in units
+my %MPSize = ();           # size of partition in units
+my %MPID = ();             # id of partition
 
 # options
-my %g_MPfstaboptions = ();   # fstab options for every mountpoint
-my %g_MPOptions = ();        # extra options for every mountpoint
+my %MPfstaboptions = ();   # fstab options for every mountpoint
+my %MPOptions = ();        # extra options for every mountpoint
 
 # sfdisk partition tables
-my %g_sfdiskTables = ();     # partition tables for sfdisk
+my %sfdiskTables = ();     # partition tables for sfdisk
 
-# RAID & LVM options
-my $g_hostname = `uname -n`;
-chomp($g_hostname);
-my %g_md = ();
-my %g_lvm = ();
+my $verbose = 0;
+$verbose = $ENV{verbose} if $ENV{verbose};
 
-sub say    { print PROGNAME.": @_\n"; }
-sub mutter { print PROGNAME.": @_\n" if ($test or $verbose) }
-sub barf   { print STDERR PROGNAME.": error: @_\n"; exit(1); }
-sub moan   { print STDERR PROGNAME.": warning: @_\n"; }
-open CONSOLE, ">/dev/console";
-sub shout  { print CONSOLE PROGNAME.": @_\n"; }
-
-#=====================================================================
-#  MAIN SECTION STARTS HERE
-#=====================================================================
 # Parse command line
+
 use Getopt::Std;
-use vars qw($opt_X $opt_f $opt_c $opt_d $opt_v);
-&getopts('Xf:c:dv') || die "
-USAGE: [-X]                     no test, your harddisks will be formatted
-                                default: only test, no real formatting
+&getopts('Xf:c:d') || die "
+USAGE: [-X]                     no test, your harddisks will be formated
+                                default: only test, no real formating
        [-f<config-filename>]    default: parse classes
        [-c<class-path>]         default: \$FAI/disk_config/
        [-d]                     default: no DOS alignment
 ";
 
-$verbose = $opt_v;
-
-say "Version V$Version starting";
+print "setup_harddisks $Version\n";
 if (defined $opt_X){
-    $test = 0;
+    $test = 2;
 } else {
-    say "dummy mode - no real formatting";
+    print "TEST ONLY - no real formating\n\n";
     $test = 1;
 }
-$g_ConfigFileName = $opt_f if $opt_f;# alternative config file
-$g_ClassPath      = $opt_c if $opt_c;# search classes here
-$g_DOS_Alignment  = "yes" if $opt_d; # track alignment
+$ConfigFileName = $opt_f if $opt_f;# alternative config file
+$ClassPath      = $opt_c if $opt_c;# search classes here
+$DOS_Alignment  = "yes" if $opt_d; # track alignment
 
 # main part
 &GetAllDisks;
 &ParseAllConfigFiles;
 &BuildNewPartTables;
-shout "stopping existing RAID and LVM devices";
-&StopAllRaid;
-shout "partitioning disks with sfdisk";
 &PartitionPersfdisk;
-shout "setting up MD and LVM devices";
-&DoDeepRAIDnLVMmagic;
-shout "making filesystems";
 &FormatDisks;
 &WriteFSTab;
 &WriteFAIVariables;
-shout "all done";
 exit 0;
+#****************************************************
 
-
-#---------------------------------------------------------------------
-# PartName($disk, $partno)
-#
-#  Returns the device name for partition number $partno inside block
-#  device $disk
-#---------------------------------------------------------------------
+#****************************************************
+# get a partition pathname
+#****************************************************
 sub PartName {
     my ($disk, $partno) = @_;
     my $ppath;
     for ($disk) {
-	/^[a-z]+$/ and $ppath = "${disk}${partno}";
-	/\d$/ and $ppath = "${disk}p${partno}";
+      /^(i2o\/)?[a-z]+$/ and $ppath = "${disk}${partno}";
+      /\d$/ and $ppath = "${disk}p${partno}";
     }
     return $ppath;
 }
 
-=head1 INTERNAL OPERATION
-
-This section of the man page details how the internals of the script
-operates.  These sections correspond exactly with the steps of the
-script as detailed in the introduction.
-
-=over
-
-=item B<1. GetAllDisks>
-
-Read all partition tables of this machine using L<sfdisk(8)>.
-
-The status of existing partition sizes, locations, partition types,
-status of the bootable flag, and whether or not disks are aligned on
-cylinder boundaries (DOS alignment) are recorded.
-
-=cut
-
+#****************************************************
+# Read all partition tables of this machine
+#****************************************************
 sub GetAllDisks{
-
     my $line=""; my $disk=""; my $device=""; my $rest; my $result; my $divi;
+    my $devdisklist="";
 
-    my @disks;
-
-    # FIXME - hardcoded list required because util-linux is lame
-    $result = `sh -c "LC_ALL=C sfdisk /dev/sd[a-z] /dev/hd[a-z] -g -q" 2>&1`;
-
-    foreach my $line(split(/\n/,$result)){
-
-	if (($disk, my ($cylinders, $heads, $sectors)) =
-	    ($line =~ m{^/dev/(.+?):\s+
-			(\d+)\s+cylinders,\s+
-			(\d+)\s+heads,\s+
-			(\d+)\s+sectors }ix)) {
-
-	    $g_DiskUnits{$disk} = $heads * $sectors;  # cylinder size
-	    $g_DiskSize{$disk} = $cylinders;          # num. cylinders
-
-	    ($g_DOS_Alignment eq "yes")
-		? ($g_SectorsAlignment{$disk} = $4)
-		: ($g_SectorsAlignment{$disk} = 1);
-
-	    push @disks, $disk;
-	}
-
+    foreach my $device(split(/\s/,$ENV{disklist})){
+      $devdisklist = "$devdisklist /dev/$device";
     }
-
-    say "Disks found: @disks";
-
-    $result = `sh -c "LC_ALL=C sfdisk -d -q /dev/sd[a-z] /dev/hd[a-z] " 2>&1`;
-
-    my %parts;
-
+    print "Probing disks: $devdisklist\n";
+    print "Disks found:";
+    $result = `sh -c "LC_ALL=C sfdisk -g -q $devdisklist"`;
     foreach my $line(split(/\n/,$result)){
-
-	if ($line =~ m{\043\s partition \s table \s of \s
-		       /dev/(    cciss/c\dd\d   # new COMPAQ arrays
-		            |    ida/c\dd\d     # older COMPAQ arrays
-                            |    rd/c\dd\d      # ?
-                            |    [a-z]+         # everything else
-		           )}ix){
+	if($line =~ m'^/dev/(.+?):\s+(\d+)\s+cylinders,\s+(\d+)\s+heads,\s+(\d+)\s+sectors'i){
+	    $disk = $1;
+	    $DiskUnits{$disk} = $3 * $4;# heads * sectors = cylinder size in sectors
+	    $DiskSize{$disk} = $2;      # cylinders
+	    ($DOS_Alignment eq "yes") ? ($SectorsAlignment{$disk} = $4) : ($SectorsAlignment{$disk} = 1);
+	    print " $disk";
+	}
+    }
+    $result = `sh -c "LC_ALL=C sfdisk -d -q $devdisklist"`;
+    foreach my $line(split(/\n/,$result)){
+#	if($line =~ m'# partition table of /dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|[a-z]+)'i){
+# now just match all devices
+	if($line =~ m'# partition table of /dev/(\S+)$'i){
 	   $disk = $1;
-	   $parts{$disk} = [ ];
         }
-
-	if (($device, my ($start, $size, $Id, $rest)) =
-	    ($line =~ m{^/dev/(.+?)\s*:\s+
-			start=\s*(\d+),\s+
-			size=\s*(\d+),\s+
-			Id=\s*([a-z0-9]+)\b(.*)$}xi)){
-
-	    push @{ $parts{$disk} }, $device if $size;
-
+	if($line =~ m#^/dev/(.+?)\s*:\s+start=\s*(\d+),\s+size=\s*(\d+),\s+Id=\s*([a-z0-9]+)\b(.*)$#i){
+	    $device = $1;
             # Sectors
-            $g_PartOldStartSec{$device} = $start;
-            my $endsec = $g_PartOldEndSec{$device} = $start + $size - 1;
-
+            $PartOldStartSec{$device} = $2;
+            $PartOldEndSec{$device} = $2 + $3 - 1;
             # DiskUnits
-	    $g_PartOldStart{$device} = int ($start / $g_DiskUnits{$disk});
-	    $g_PartOldEnd{$device} = int ($endsec / $g_DiskUnits{$disk});
-
-	    # Was it aligned properly?
-	    for ( $start, $size ) {
-		my $x = ( $_ / $g_SectorsAlignment{$disk} );
-		if ( abs($x - int($x)) > 1e-9 ) {
-		    $g_OldNotAligned{$device} = "yes";
-		}
-	    }
-
-	    # Other options
-	    $g_PartOldID{$device} = $Id;
-	    $g_PartOldBoot{$device} = ($rest =~ /bootable/) ? "yes" : "";
+	    $PartOldStart{$device} = int ($2 / $DiskUnits{$disk});
+	    $PartOldEnd{$device} = int (($2 + $3 - 1) / $DiskUnits{$disk});
+	    $divi = $2 / $SectorsAlignment{$disk};
+	    ($divi != int ($divi)) && ($OldNotAligned{$device} = "yes");
+	    $divi = $3 / $SectorsAlignment{$disk};
+	    ($divi != int ($divi)) && ($OldNotAligned{$device} = "yes");
+	    $PartOldID{$device} = $4;
+	    $rest = $5;
+	    $PartOldBoot{$device} = ($rest =~ /bootable/) ? "yes" : "";
 	}
-
     }
-
-    for my $disk (sort keys %parts) {
-	say("$disk: @{$parts{$disk}}");
-    }
-
+    print "\n\n";
 }
 
-=item B<2. ParseAllConfigFiles>
-
-Parse the specified configuration file, or one filename for each
-class.
-
-=cut
-
+#****************************************************
+# parse config file or all class files
+#****************************************************
 sub ParseAllConfigFiles{
     my $ConfigFileExists = 0;  # no config file parsed yet
-    if ($g_ConfigFileName){
+    if ($ConfigFileName){
 	# Read config filename
-	&ParseConfigFile($g_ConfigFileName);
+	&ParseConfigFile($ConfigFileName);
 	$ConfigFileExists = 1;
     } else {
 	# Read classes
 	foreach my $classfile (reverse split(/\s+/,$ENV{"classes"})){
-	    my $filename = "$g_ClassPath/$classfile";
+	    my $filename = "$ClassPath/$classfile";
 	    if (($classfile) && (-r $filename)) {
                &ParseConfigFile($filename);
                $ConfigFileExists = 1;
@@ -578,1381 +329,626 @@ sub ParseAllConfigFiles{
 	    ($ConfigFileExists) && last;
 	}
     }
-    $ConfigFileExists or barf "no config file found";
+    ($ConfigFileExists == 0) && die "ERROR: no config file for setup_harddisk found. Please check you classes and files in disk_config.\n";
 }
 
-#-------------------------------------------------------------------------------------------------------------------------
-#  ParseConfigFile($filename)
-#
-# Parses the passed configuration file and stacks up the globals.
-#-------------------------------------------------------------------------------------------------------------------------
+#****************************************************
+# map "disk_config first" to real disk device
+#****************************************************
+sub mapdisk {
+
+  my ($disk) = @_;
+  my @dlist = split /\s+/,$ENV{disklist};
+  unshift @dlist, "nodisk"; # add dummy element, so disk1 will be mapped to dlist[1]
+
+  if ($disk =~ /disk(\d+)/) {
+    my $n = $1;
+    print "Mapping disk name disk$n to $dlist[$n]\n";
+    $disk = $dlist[$n];
+  }
+  return $disk;
+}
+
+#****************************************************
+# parse config-file
+#****************************************************
 sub ParseConfigFile{
-
-    my $config_file = shift;
-
-    open (FILE, "$config_file") or die "error opening config file: $config_file; $!\n";
-
-    say "parsing config file: $config_file";
-
-    my $line_no = 0;
-    my $disk = "";
-    my $device = "";
-    my $vg = "";
-
-    my $disk_state;
-
-    # counts of partitions
-    my $unmounted_part_c = 0;
-    my $swap_part_c = 0;
-
- LINE:
-    while (my $line = <FILE>) {
-
+    my $size=""; my $mountpoint=""; my $device ="";
+    my $fstaboptions=""; my $options=""; my $disk=""; my $command = "";
+    my $LogPartNo; my $PrimPartNo; my $NoMoreLogicals;
+    my $LastPresPart; my $extmp; my $Min; my $Max;
+    my $filename = shift;
+    open (FILE,"$filename")
+      || die "config file not found: $filename\n";
+    (print "Using config file: $filename\n");
+    $disk = "";
+    my $a = 1, my $paras ="", my $number=0;
+    while (my $line = <FILE>){
 	chomp($line);
-	$line_no++;
-	next if ( $line =~ /^\s*(#.*)?$/ );
+	$a++;
+	next if( $line =~ /^#|^\s*$/ );
 
 	# disk_config - command
-	my ($is_lvm, $paras);
-	if (($is_lvm, $paras) = ($line =~ /^\s*(?:(vg)|disk)_config\s*(.*)/i)){
-
-	    last LINE if $paras =~ /^end$/i;
-
-	    if ( $is_lvm ) {
-
-		my ($vg_name) = ($paras =~ m{^(?:/dev/)?(\S+)});
-		$vg_name ||= "default";
-
-		# special names - DEFAULT, HOST
-		$vg_name =~ s{\$HOSTNAME}{$g_hostname};
-		if ($vg_name =~ m/^default$/i) {
-		    ($vg_name) = (keys %g_lvm)
-			or barf("${config_file}"."[$line_no]: partitions must be "
-				."defined for a VG before they are used");
-		}
-		barf("${config_file}"."[$line_no]: unknown VG $vg_name") unless exists $g_lvm{$vg_name};
-
-		$vg = $vg_name;
+	if ($line =~ /^disk_config(.*)/i){
+	    $paras = $1;
+	    if ($paras =~ / end/i){
 		$disk = "";
-		$disk_state = undef;
-		$g_lvm{$vg_name}->{lvs} = { };
-
-		$g_DiskUnits{$vg_name} = (4096 << 10) / $sectorsize;
-		$g_DiskMountpoints{$vg_name} = "";
-
-		$g_DiskSize{$vg_name} = $g_lvm{$vg_name}->{MaxSize};
-
-	    } elsif ( ($disk) = ($paras =~ m{^(?:/dev/)?
-					(      cciss/c\dd\d
-					|      ida/c\dd\d
-					|      rd/c\dd\d
-					|      [a-z]+
-				        )}ix )){
-		$vg = "";
-
-		barf("more than one configuration of disk $disk in $config_file") if exists $g_DiskMountpoints{$disk};
-		barf "unknown disk /dev/$disk specified in $config_file" unless $g_DiskSize{$disk};
-
-		mutter "config: $disk";
-
-		$g_DiskMountpoints{$disk} = "";
-		$g_MPPrimary{"extended$disk"} = "";
-
-		$disk_state = { logical => 4,
-				primary => 0,
-				no_more_logicals => 0,
-				last_pres_part => "",
-				extmp => "extended$disk" },
-
 	    } else {
-		barf("${config_file}"."[$line_no]: disk unrecognised or invalid: '$paras'");
+#		if($paras =~ m# (/dev/)?(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|[a-z]+)#i){
+# now match all devives
+		if($paras =~ m# (/dev/)?(\S+)#i){
+		    $disk = mapdisk($2);
+		    ($DiskMountpoints{$disk})
+		      && die "ERROR: there are more than one configuration of disk $disk.\n";
+		    ($DiskSize{$disk}) || die "ERROR: could not read device /dev/$disk\n";
+		    ($test != 1) || (print "config: $disk\n");
+		    $DiskMountpoints{$disk} = "";
+		    $MPPrimary{"extended$disk"} = "";
+		    $LogPartNo = 4;
+		    $PrimPartNo = 0;
+		    $NoMoreLogicals = 0;
+		    $LastPresPart = "";
+		    $extmp = "extended$disk";
+		} else {
+		    die "SYNTAX ERROR: in config file line $a, unknown disk_config parameter $paras\n$line\n";
+		}
 	    }
 	}
 
-	if ($disk or $vg) {
-
+	if ($disk){
 	    # primary|partition - command
-	    if (my ($command, $lv_name, $mountpoint, $size, $mntop, $options)
-		= ($line =~ m{^(primary|logical|lv)
-			      (?:\s*\(\s*(\S+)\s*\))?  # (lvname)
-			      (?: \s+ (\S+) \s*      # mount point
-			          (?: (\S+) \s*          # size
-			            ( [^;]+? \s* )?  # mount options
-			          )?
-			      )?
-			      (?: ; \s*
-			          (.*?)              # misc options
-			      \s* )?$}ix)){
-
-		$mntop||="";
-		$options||="";
-
-		barf("${config_file}"."[$line_no]: invalid mount point `$mountpoint'")
-		    unless ( ($mountpoint =~ m{^/.*|^swap$|^-$}i or
-			      $mountpoint =~ m{^\w+} && ($command eq "lv") ) );
-
-		barf("${config_file}"."[$line_no]: duplicate definition of `$mountpoint'")
-		    if (exists $g_MountpointPart{$mountpoint} and $options !~ m{raid\s*\(\s*1\s*,});
-
-		if ($mountpoint eq "/") {
-		    barf("${config_file}"."[$line_no]: root cannot be on an LVM partition")
-			if $command eq "lv";
-		    ($g_BootPartition) || ($g_BOOT_DEVICE = $disk);
+	    if($line =~ /^\s*(primary|logical)\s+(.*)$/i){
+		$command = $1;
+		# split variables
+		$paras = $2;
+		$options = "";
+		if($paras =~ /(.*?)\s*;\s*(.*)$/){
+		    $paras = $1;
+		    $options = $2;
 		}
-
-		if ($mountpoint eq "-") {
-		    $unmounted_part_c++;
-		    $mountpoint = "no$unmounted_part_c";
+		$size="";
+		$mountpoint ="";
+		$fstaboptions = "";
+		($mountpoint,$size,$fstaboptions)=split(/\s+/,$paras);
+		# mountpoint
+		($mountpoint =~ m#^/.*|^swap$|^-$#i)
+		  || die "SYNTAX ERROR in config file line $a, mountpoint: $mountpoint\n$line\n";
+		($MountpointPart{$mountpoint})
+		  && die "SYNTAX ERROR in config file line $a. Mountpoint $mountpoint redefined.\n$line\n";
+		if($mountpoint eq "/"){
+		    ($BootPartition) || ($BOOT_DEVICE = $disk);
 		}
-
-		if ($mountpoint eq "swap") {
-		    $swap_part_c++;
-		    $mountpoint = "swap$swap_part_c";
-
-		    # ?
+		if($mountpoint eq "-"){
+		    $NofNotMoPart++;
+		    $mountpoint = "no$NofNotMoPart";
+		}
+		if($mountpoint eq "swap"){
+		    $NofSwapPart++;
+		    $mountpoint = "swap$NofSwapPart";
 		    ($options !~ /\bswap\b/i) && ($options .= " swap");
-		    $mntop ||= "sw";
+		    ($fstaboptions) || ($fstaboptions = "sw");
 		}
-
-		$mntop ||= "defaults" if $mountpoint =~ m{^/};
-
-		my $devname;
-
+		if($mountpoint =~ m#^/#){
+		    ($fstaboptions) || ($fstaboptions = "defaults");
+		}
 		if ($command eq "primary") {
-
-		    ($g_MPPrimary{$disk_state->{extmp}} eq "yes") && ($disk_state->{NoMoreLogicals} = 1);
-		    $g_MPPrimary{$mountpoint} = "yes";
-
-		    my $p = \$disk_state->{primary};
-
-		    $$p++;
-
-		    # wtf ?
-		    #($$p == 3) && ($disk =~ /^sd/) && ($$p++);
-
-		    barf("${config_file}"."[$line_no]: too many primary partitions defined on $disk") if ($$p > 4);
-
-		    $devname = $g_MountpointPart{$mountpoint} = PartName($disk, $$p);
-
-		    if ($options =~ /\bboot\b/i) {
-
-			barf("${config_file}"."[$line_no]: only one partition can be bootable at a time, and "
-			     ."$g_BootPartition is already bootable") if $g_BootPartition;
-
-			$g_BOOT_DEVICE = $disk;
-			$g_BootPartition = $g_MountpointPart{$mountpoint};
+		    ($MPPrimary{$extmp} eq "yes") && ($NoMoreLogicals = 1);
+		    $MPPrimary{$mountpoint} = "yes";
+		    $PrimPartNo++;
+#		    ($PrimPartNo == 3) && ($disk =~ /^sd/) && ($PrimPartNo++);
+                    ($PrimPartNo >4 ) && die "ERROR: Too much primary partitions (max 4).".
+                                " All logicals together need one primary too.\n";
+		    $MountpointPart{$mountpoint} = PartName($disk,$PrimPartNo);
+		    if($options =~ /\bboot\b/i){
+		        ($BootPartition) && die "ERROR: only one partition can be bootable at a time.";
+			$BootPartition = $MountpointPart{$mountpoint};
+			$BOOT_DEVICE = $disk;
 		    }
-
-		} elsif ($command eq "logical") {
-
-		    barf("${config_file}"."[$line_no]: all logical partitions must be together")
-			if $disk_state->{no_more_logicals};
-
-		    $g_MPPrimary{$mountpoint} = "";
-		    my $l = \$disk_state->{logical};
-		    $$l++;
-
-		    $devname = $g_MountpointPart{$mountpoint} = PartName($disk, $$l);
-
-		    my $extmp = $disk_state->{extmp};
-		    if (!$g_MPPrimary{$extmp}){
-
-		        $g_MPPreserve{$extmp} = "";
-		        $g_MPPrimary{$extmp} = "yes";
-			$g_MPMinSize{$extmp} = 0;
-			$g_MPMaxSize{$extmp} = 0;
-			$g_MPID{$extmp} = 5;
-
-			my $p = \$disk_state->{primary};
-
-			# ??
-			# ($$p == 3) && ($disk =~ /^sd/) && ($$p++);
-
-			barf("${config_file}"."[$line_no]: too many primary partitions defined on $disk")
-			    if ($$p > 4);
-
-			$g_MountpointPart{$extmp} = PartName($disk, $disk_state->{primary});
-			$g_DiskMountpoints{$disk} .= " $extmp";
+		} else {
+		    ($NoMoreLogicals != 0) && die "ERROR: the logical partitions must be together.\n";
+		    $MPPrimary{$mountpoint} = "";
+		    $LogPartNo++;
+		    $MountpointPart{$mountpoint} = PartName($disk,$LogPartNo);
+		    if (!$MPPrimary{$extmp}){
+		        $MPPreserve{$extmp} = "";
+		        $MPPrimary{$extmp} = "yes";
+			$MPMinSize{$extmp} = 0;
+			$MPMaxSize{$extmp} = 0;
+			$MPID{$extmp} = 5;
+			$PrimPartNo++;
+			($PrimPartNo == 3) && ($disk =~ /^sd/) && ($PrimPartNo++);
+                        ($PrimPartNo >4 ) 
+			  && die "ERROR: too much primary partitions (max 4).".
+                               " All logicals together need one primary too.\n";
+			$MountpointPart{$extmp} = PartName($disk,$PrimPartNo);
+			$DiskMountpoints{$disk} .= " $extmp";
 		    }
-
-		    barf("${config_file}"."[$line_no]: only primary partitions can be bootable")
-			if ($options =~ /\bboot\b/i);
-
-		} elsif ($command eq "lv") {
-
-		    $lv_name ||= do {
-			(my $x = $mountpoint) =~ s{.*/}{};
-			if (exists $g_lvm{$vg}->{$x}) {
-			    my $n = 0;
-			    while (exists $g_lvm{$vg}->{$x.chr(ord("a")+$n)}) {
-				$n++
-			    }
-			    barf "fer fick's sake, wouldja name yer friken LVs or what?  Too many ${x}'s"
-				if $n > 25;
-			    $x .= chr(ord("a")+$n);
-			}
-			$x;
-		    };
-
-		    $g_MountpointPart{$mountpoint} = "$vg/$lv_name";
-		    $g_lvm{$vg}->{lvs}->{$lv_name} = $mountpoint;
+#		    ($options =~ /\bboot\b/i) && die "ERROR: line $a, only primary partitions can be bootable.\n";
 		}
-
-		barf("${config_file}"."[$line_no]: $mountpoint redefined ($g_DiskMountpoints{$disk||$vg})")
-		    if $g_DiskMountpoints{$disk||$vg} =~ /\b$mountpoint\b/;
-		$g_DiskMountpoints{$disk||$vg} .= " $mountpoint";
-
+		$DiskMountpoints{$disk} .= " $mountpoint";
 		# size
-		my ($number, $Min, $Max);
-		if ( ($number, $Min, $Max) = ($size =~ /^preserve(\d+)$|^(\d*)\-?(\d*)$/i)) {
-
-		    if ($number) {
-			barf("LVs cannot currently be preserved.") if $vg;
-
-			$device = PartName($disk, $number);
-
-			my $error = ( $g_OldNotAligned{$device} eq "yes"
-				      ? "partition not DOS aligned"
-				      : ( ($command eq "logical") &&
-					  ($number != $disk_state->{logical})
-					  ? "logical partition number mismatch"
-					  : ( ($command eq "primary") &&
-					      ($number!=$disk_state->{primary})
-					      ? "primary partition number mismatch"
-					      : "" ) ) );
-
-			$error ||= ( !$g_PartOldEnd{$device}
-				     ? "partition not found"
-				     : ( ($g_PartOldID{$device} == 5)
-					 || ($g_PartOldID{$device} == 85)
-					 ? "extended partitions cannot be preserved"
-					 : "" )
-				   );
-
-			barf("cannot preserve /dev/$device; $error") if $error;
-
-			$g_MPPreserve{$mountpoint} = "yes";
-
-			$g_MPMaxSize{$mountpoint} = $g_MPMinSize{$mountpoint} =
-				($g_PartOldEnd{$device} - $g_PartOldStart{$device} + 1);
-
-			$g_MPStart{$mountpoint} = $g_PartOldStart{$device};
-			$g_MPSize{$mountpoint}  = $g_MPMinSize{$mountpoint};
-
-			$g_MPID{$mountpoint} = $g_PartOldID{$device};
-
-			if ($disk_state->{last_pres_part} and
-			    ($g_PartOldStart{$device} < $g_PartOldStart{$disk_state->{last_pres_part}})) {
-			    barf("cannot preserve /dev/$device; partitions out of order");
-			}
-
-			$disk_state->{last_pres_part} = $device;
-
-			barf("cowardly refusing to preserve zero length partition $device")
-			    if $g_MPMinSize{$mountpoint} < 1;
-
+		($size =~ /^preserve\d+$|^\d+\-?\d*$|^-\d+$/i)
+		    || die "SYNTAX ERROR in config file line $a, size: $size\n$line\n";
+		if($size =~ /^preserve(\d+)$/i){
+		    my $number = $1;
+		    $device = PartName($disk,$number);
+		    ($OldNotAligned{$device} eq "yes")
+		      && die "ERROR: unable to preserve partition /dev/$device. Partition is not DOS aligned.";
+		    ($command eq "primary") && ($number != $PrimPartNo)
+                       && die "NUMERATION ERROR in line $a, the number of the partition can not be preserved:\n$line\n";
+		    ($command eq "logical") && ($number != $LogPartNo)
+                       && die "NUMERATION ERROR in line $a, the number of the partition can not be preserved:\n$line\n";
+		    if ($PartOldEnd{$device}){
+		        (($PartOldID{$device} == 5) || ($PartOldID{$device} == 85)) &&
+			  die "ERROR in config file line $a.".
+                              " Extended partitions can not be preserved. /dev/$device\n$line\n";
+			$MPPreserve{$mountpoint}="yes";
+			$MPMinSize{$mountpoint} = $PartOldEnd{$device}-$PartOldStart{$device}+1;
+			$MPMaxSize{$mountpoint} = $MPMinSize{$mountpoint}; # Max=Min
+			$MPStart{$mountpoint} = $PartOldStart{$device};
+			$MPSize{$mountpoint} = $MPMinSize{$mountpoint};
+			$MPID{$mountpoint} = $PartOldID{$device};
 		    } else {
-
-			$g_MPPreserve{$mountpoint} = "";
-			if ($mountpoint =~ m{^/}) {
-			    # If not preserve we must know the filesystemtype (why?)
-			    ($options !~ m{\b(ext2|ext3|auto|swap|dosfat16|winfat32|reiser)\b}i )
-				&& ($options .= " auto");
+			die "ERROR: cannot preserve partition $device. partition not found.$PartOldEnd{$device}\n";
+		    }
+		    if ($LastPresPart) {
+		        ($PartOldStart{$device} < $PartOldStart{$LastPresPart}) &&
+			  die "ERROR: misordered partitions: cannot preserve partitions $LastPresPart and $device\n".
+                              "       in this order because of their positions on disk.";
+		    }
+		    $LastPresPart = $device;
+		    ($MPMinSize{$mountpoint} < 1)
+		      && die "ERROR: unable to preserve partitions of size 0.\n$line\n ";
+		  } else {
+		    # If not preserve we must know the filesystemtype
+	            ($options !~ /\b(ext2|ext3|auto|swap|dosfat16|winfat32|reiser|xfs)\b/i ) && ($options .= " auto");
+		  }
+		if($size =~ /^(\d*)(\-?)(\d*)$/){
+		    $Min = $1;
+		    $Min||= 1;
+		    $Max = $3;
+		    $MPMinSize{$mountpoint} = int (($Min * $megabyte - 1) / ($DiskUnits{$disk} * $sectorsize)) + 1;
+		    if ($2 eq "-"){
+			if($Max =~ /\d+/){
+			    $MPMaxSize{$mountpoint} = int (($Max * $megabyte - 1) / ($DiskUnits{$disk} * $sectorsize)) + 1;
+			} else {
+			    $MPMaxSize{$mountpoint} = $DiskSize{$disk};
 			}
+		    } else {
+			$MPMaxSize{$mountpoint} = $MPMinSize{$mountpoint}; # Max=Min
 		    }
+		    ($MPMinSize{$mountpoint} > $DiskSize{$disk})
+		      && die "ERROR in config file line $a: Minsize larger than disk.\n$line\n";
+		    ($MPMinSize{$mountpoint} > $MPMaxSize{$mountpoint}) 
+                       && die "SYNTAX ERROR in config file line $a, MIN-MAX-size: $MPMinSize{$mountpoint}-$MPMaxSize{$mountpoint}\n$line\n";
+		    ($MPMinSize{$mountpoint} < 1)
+		      && die "SYNTAX ERROR in config file line $a. Minsize must be greater than 1.\n$line\n";
+		    $MPPreserve{$mountpoint} = "";
 		}
-
-		my $chunk = $g_DiskUnits{$disk || $vg} * $sectorsize;
-
-		my $disk_max = ($g_DiskSize{$disk || $vg} * $chunk);
-		say (($disk||$vg).": Disk size is $g_DiskSize{$disk || $vg} (chunks are $chunk) - total $disk_max");
-		$Max ||= ( $Min || ($disk_max / $megabyte) );
-		say (($disk||$vg).": Max is $Max");
-		$Min ||= 1;
-
-		$g_MPMinSize{$mountpoint} = int( ( $Min * $megabyte + $chunk - 1 ) / $chunk );
-		$g_MPMaxSize{$mountpoint} = int( ( $Max * $megabyte + $chunk - 1) / $chunk )
-		    || $g_DiskSize{$disk || $vg};
-
-		if ($disk) {
-		    my $error = ( ($g_MPMinSize{$mountpoint} > $g_DiskSize{$disk})
-				  ? "minsize larger than disk"
-				  : ( ($g_MPMinSize{$mountpoint} > $g_MPMaxSize{$mountpoint})
-				      ? "minsize larger than maxsize"
-				      : ( ($g_MPMinSize{$mountpoint} < 1)
-					  ? "minsize too small"
-				      : "" ) ) );
-
-		    barf("${config_file}"."[$line_no]: invalid size `$size'; $error") if $error;
-		}
-
-		# mntop
-		$g_MPfstaboptions{$mountpoint} = $mntop;
-
+		# fstaboptions
+		$MPfstaboptions{$mountpoint} = $fstaboptions;
 		# extra options
-		($options =~ /\b(ext[23]|auto)\b/i) && ($g_MPID{$mountpoint} = 83); # Linux native
-		($options =~ /\bswap\b/i)           && ($g_MPID{$mountpoint} = 82); # Linux swap
-		($options =~ /\bdosfat16\b/i)       && ($g_MPID{$mountpoint} = 6);  # DOS FAT 16bit (>=32MB, see later)
-		($options =~ /\bwinfat32\b/i)       && ($g_MPID{$mountpoint} = "b");# Win 95 FAT 32
-		($options =~ /\blvm\b/i)            && ($g_MPID{$mountpoint} ="8e");# LVM managed partition
-		($options =~ /\braid\b/i)           && ($g_MPID{$mountpoint} ="fd");# Linux RAID autodetect
-		($options =~ /\bid\s*\(\s*([0-9a-f]+)\s*\)\b/i)
-                                                    && ($g_MPID{$mountpoint} = lc($1)); # other
-
-		my ($raidlevel, $md_num, $chunk_factor);
-
-		if ($options =~ /\braid\b/) {
-
-		    my $side;
-		    ($raidlevel, $md_num, $side, $chunk_factor) =
-			($options =~ m/\braid\s*\(\s*(\d+)\s*,\s*md(\d+)([a-z])?\s*(?:,\s*(\d+)\s*)?\)/) or
-			    barf("${config_file}"."[$line_no]: invalid raid spec in options `$options'");
-
-		    $g_md{$md_num} ||= { level => $raidlevel,
-					 chunk_factor => $chunk_factor,
-					 members => [ ],
-					 mountpoint => $mountpoint,
-				       };
-
-		    push @{ $g_md{$md_num}->{members} }, $devname;
-
-		    if ($side) {
-			push @{ $g_md{$md_num}->{"side$side"} ||= [] }, $devname;
-		    }
-
+		($options =~ /\b(ext[23]|auto)\b/i) && ($MPID{$mountpoint} = 83); # Linux native
+		($options =~ /\bswap\b/i) && ($MPID{$mountpoint} = 82); # Linux swap
+		($options =~ /\bdosfat16\b/i) && ($MPID{$mountpoint} = 6); # DOS FAT 16bit (>=32MB, will be changed later)
+		($options =~ /\bwinfat32\b/i) && ($MPID{$mountpoint} = "b"); # Win 95 FAT 32
+		$MPOptions{$mountpoint} = $options;
+		if($test == 1){
+		    print "$mountpoint,$MPMinSize{$mountpoint}-$MPMaxSize{$mountpoint},";
+		    print "$fstaboptions,$options";
+		    ($MPPreserve{$mountpoint} eq "yes") && (print " Preserve: $MountpointPart{$mountpoint}");
+		    print "\n";
 		}
-
-		if ($options =~ /\blvm\b(\s*\(\s*\S+\s*\))?/) {
-
-		    my $lvm_name = $1 || ( $g_hostname . "_" . ($raidlevel || "0") );
-		    $g_lvm{$lvm_name} ||= {
-					   devices => [ ],
-					   lvs => { },
-					   MinSize => 0,
-					   MaxSize => 0,
-					  };
-
-		    my ($a_min, $a_max);
-		    $g_lvm{$lvm_name}->{MinSize} +=
-			$a_min=( ($g_MPMinSize{$mountpoint} * $chunk) >> 22);
-		    $g_lvm{$lvm_name}->{MaxSize} +=
-			$a_max=( ($g_MPMaxSize{$mountpoint} * $chunk) >> 22);
-		    say("$mountpoint: added $a_min - $a_max to $lvm_name");
-
-		    push @{ $g_lvm{$lvm_name}->{devices} },
-			(defined($raidlevel) ? "/dev/md$md_num" : "/dev/$devname");
-
-		}
-
-		$g_MPOptions{$mountpoint} = $options;
-
-		($mntop||="")=~s/^\s+|\s+$//g;
-		($options||="")=~s/^\s+|\s+$//g;
-		{
-		    no warnings 'void';
-		mutter("$mountpoint: size: $g_MPMinSize{$mountpoint}-$g_MPMaxSize{$mountpoint}  mntop: $mntop,  "
-		       ."options: $options"
-		       .($g_MPPreserve{$mountpoint} ? " preserved: $g_MountpointPart{$mountpoint}" : "") );
-		}
-
-	    } elsif ($line =~ m{^\s*vg_extent_size\s*(\d+)\s*$}) {
-
-		barf("${config_file}"."[$line_no]: command vg_extent_size only valid in a VG definition")
-		    unless $vg;
-
-		barf("${config_file}"."[$line_no]: command vg_extent_size only valid in a VG definition")
-		    if scalar(keys(%{$g_lvm{$vg}->{lvs}}));
-
-		$g_DiskSize{$vg} = $g_DiskSize{$vg} << (10 - $1);
-		$g_DiskUnits{$vg} = (4096 << $1) / $sectorsize;
-
 	    }
 	}
     }
     close(FILE);
-
-    my $x = 0;
-    for my $md (sort keys %g_md) {
-	say ("RAID CONFIG:") unless $x++;
-	say ("md$md: RAID ".$g_md{$md}->{level}." "
-	     .($g_md{$md}->{chunk_factor} ? " (".(4<<$g_md{$md}->{chunk_factor})."K chunk size) "
-	       : "")
-	     ."of @{$g_md{$md}->{members}}");
-	for my $side ("a".."z") {
-	    my $theside = "side$side";
-	    say("md$md side $side members: @{$g_md{$md}->{$theside}}")
-		if ($g_md{$md}->{$theside});
-	}
-    }
-    $x = 0;
-    use Data::Dumper;
-    for my $vg (sort keys %g_lvm) {
-	say ("LVM CONFIG:") unless $x++;
-	#say ("$vg: @{$g_lvm{$vg}->{devices}}");
-	print Dumper \%g_lvm;
-    }
-
 }
 
-
-=item B<3. BuildNewPartTables>
-
-Calculates the sizes of each partition.
-
-=cut
-
-#-------------------------------------------------------------------------------------------------------------------------
+#****************************************************
+# Build all partition tables
+#****************************************************
 sub BuildNewPartTables{
-
     my ($disk, $mountpoint, $part, $PrimaryMP, $LogicalMP);
-
-    mutter "building partition tables";
-
+    ($test != 1) || (print "\nBuilding partition tables:\n");
     # Build PartMountpoint array
-    foreach $disk (keys %g_DiskMountpoints) {
-
-	next if exists $g_lvm{$disk};
-	$g_DiskMountpoints{$disk} =~ s/\s(\s)/$1/g;
-	$g_DiskMountpoints{$disk} =~ s/^\s//;
-	$g_DiskMountpoints{$disk} =~ s/\s$//;
-
-	foreach $mountpoint(split(/\s/,$g_DiskMountpoints{$disk})) {
-	    $g_PartMountpoint{$g_MountpointPart{$mountpoint}} = $mountpoint;
+    foreach $disk(keys %DiskMountpoints) {
+	$DiskMountpoints{$disk} =~ s/\s(\s)/$1/g;
+	$DiskMountpoints{$disk} =~ s/^\s//;
+	$DiskMountpoints{$disk} =~ s/\s$//;
+	foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+	    $PartMountpoint{$MountpointPart{$mountpoint}} = $mountpoint;
 	}
     }
-
-    foreach $disk (keys %g_DiskMountpoints) {
-
-	next if exists $g_lvm{$disk};
+    foreach $disk(keys %DiskMountpoints) {
 	&SetPartitionPositions($disk);
-
         # change units to sectors
-        foreach $mountpoint (split(/\s/,$g_DiskMountpoints{$disk})) {
-
-            if($g_MPPreserve{$mountpoint}){
-
-	        $g_MPStart{$mountpoint} = $g_PartOldStartSec{$g_MountpointPart{$mountpoint}};
-	        $g_MPSize{$mountpoint} = ($g_PartOldEndSec{$g_MountpointPart{$mountpoint}}
-					  - $g_MPStart{$mountpoint} + 1);
-
+        foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+            if($MPPreserve{$mountpoint} eq "yes"){
+	        $MPStart{$mountpoint} = $PartOldStartSec{$MountpointPart{$mountpoint}};
+	        $MPSize{$mountpoint} = $PartOldEndSec{$MountpointPart{$mountpoint}} - $MPStart{$mountpoint} + 1;
 	    } else {
-
-	        $g_MPStart{$mountpoint} *= $g_DiskUnits{$disk};
-	        $g_MPSize{$mountpoint} *= $g_DiskUnits{$disk};
-
+	        $MPStart{$mountpoint} *= $DiskUnits{$disk};
+	        $MPSize{$mountpoint} *= $DiskUnits{$disk};
 	        # align first partition for mbr
-	        if ($g_MPStart{$mountpoint} == 0){
-	            $g_MPStart{$mountpoint} += $g_SectorsAlignment{$disk};
-		    $g_MPSize{$mountpoint} -= $g_SectorsAlignment{$disk};
+	        if($MPStart{$mountpoint} == 0){
+	            $MPStart{$mountpoint} += $SectorsAlignment{$disk};
+		    $MPSize{$mountpoint} -= $SectorsAlignment{$disk};
 	        }
 	    }
 	}
-
 	# align all logical partitions
-        foreach $mountpoint (split(/\s/, $g_DiskMountpoints{$disk})) {
-
-            next if ($g_MPPrimary{$mountpoint} eq "yes");
-	    if ($g_MountpointPart{$mountpoint} eq "${disk}5") {
+        foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+            next if ($MPPrimary{$mountpoint} eq "yes");
+	    if ($MountpointPart{$mountpoint} eq "${disk}5") {
 	        # partition with number 5 is first logical partition and start of extended partition
-  	        $g_MPStart{"extended$disk"} = $g_MPStart{$mountpoint};
-                ($g_MPPreserve{$mountpoint} eq "yes") && ($g_MPStart{"extended$disk"} -= $g_SectorsAlignment{$disk});
+  	        $MPStart{"extended$disk"} = $MPStart{$mountpoint};
+                ($MPPreserve{$mountpoint} eq "yes") && ($MPStart{"extended$disk"} -= $SectorsAlignment{$disk});
 	    }
-            if ($g_MPPreserve{$mountpoint} ne "yes") {
-  	        $g_MPStart{$mountpoint} += $g_SectorsAlignment{$disk};
-	        $g_MPSize{$mountpoint} -= $g_SectorsAlignment{$disk};
+            if ($MPPreserve{$mountpoint} ne "yes") {
+  	        $MPStart{$mountpoint} += $SectorsAlignment{$disk};
+	        $MPSize{$mountpoint} -= $SectorsAlignment{$disk};
 	    }
 	}
-
         &CalculateExtPartSize($disk);
-
         # sort mountpoints of partition number
         $PrimaryMP = "";
         $LogicalMP = "";
-
-        foreach $mountpoint (split(/\s/, $g_DiskMountpoints{$disk})) {
-	  ($g_MPPrimary{$mountpoint} eq "yes") ? ($PrimaryMP .= " $mountpoint") : ($LogicalMP .= " $mountpoint");
+        foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+	  ($MPPrimary{$mountpoint} eq "yes") ? ($PrimaryMP .= " $mountpoint") : ($LogicalMP .= " $mountpoint");
 	}
-	$g_DiskMountpoints{$disk} = "$PrimaryMP$LogicalMP";
-	$g_DiskMountpoints{$disk} =~ s/^\s//;
-
+	$DiskMountpoints{$disk} = "$PrimaryMP$LogicalMP";
+	$DiskMountpoints{$disk} =~ s/^\s//;
 	# print partition table
-        PrintPartitionTable($disk) if $test;
-
+        ($test != 1) || (PrintPartitionTable($disk));
     }
-
-    $g_BootPartition ||= $g_MountpointPart{"/"};
+    if (!$BootPartition){
+        $BootPartition = $MountpointPart{"/"};
+    }
 }
 
-#---------------------------------------------------------------------
-#  SetPartitionPositions($disk)
-#
-# set position for every partition, and updates the globals (sigh)
-#---------------------------------------------------------------------
+#****************************************************
+# set position for every partition
+#****************************************************
 sub SetPartitionPositions{
-
     my $disk = shift;
-    my ($DynGroup, $mountpoint, $StartPos, $EndPos) = ("") x 2;
-
+    my $mountpoint; my $DynGroup =""; my $StartPos; my $EndPos;
     # Build groups of unpreserved partitions between
     # preserved partitions
     $StartPos = 0;
-    foreach $mountpoint(split(/\s/,$g_DiskMountpoints{$disk})) {
-
-        if ($g_MPPreserve{$mountpoint}) {
-
-	    $EndPos =($g_PartOldStart{$g_MountpointPart{$mountpoint}}
-		      - 1);
-
+    foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+        if ($MPPreserve{$mountpoint} eq "yes") {
+	    $EndPos = $PartOldStart{$MountpointPart{$mountpoint}} - 1;
             &SetGroupPos($DynGroup,$StartPos,$EndPos);
 	    $DynGroup = "";
-	    $StartPos =($g_PartOldEnd{$g_MountpointPart{$mountpoint}}
-			+ 1);
-
+	    $StartPos = $PartOldEnd{$MountpointPart{$mountpoint}} + 1;
         } else {
 	    $DynGroup .= " $mountpoint";
 	}
     }
-
-    $EndPos = $g_DiskSize{$disk} - 1;
-
+    $EndPos = $DiskSize{$disk} - 1;
     &SetGroupPos($DynGroup,$StartPos,$EndPos);
-
-    # set FAT12 for really small DOS partitions
-    foreach $mountpoint (split(/\s/, $g_DiskMountpoints{$disk})) {
-
-	($g_MPOptions{$mountpoint} =~ /\bdosfat16\b/i)
-	    && (($g_MPSize{$mountpoint} * $g_DiskUnits{$disk}
-		 * $sectorsize) < 32 * $megabyte)
-		&& ($g_MPID{$mountpoint} = 4); # DOS 16-bit FAT <32MB
+    foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+	($MPOptions{$mountpoint} =~ /\bdosfat16\b/i)
+	    && (($MPSize{$mountpoint} * $DiskUnits{$disk} * $sectorsize) < 32 * $megabyte)
+		&& ($MPID{$mountpoint} = 4); # DOS 16-bit FAT <32MB
     }
 }
 
-#---------------------------------------------------------------------
-#  SetGroupPos($PartGroup, $Start, $End)
-#
+#****************************************************
 # set position for a group of unpreserved partitions
-# between $Start and $End
-#---------------------------------------------------------------------
+# between start and end
+#****************************************************
 sub SetGroupPos{
-    my ($PartGroup, $Start, $End) = @_;
-
+    my ($PartGroup,$Start,$End) = @_;
     $PartGroup =~ s/^ //;
     ($PartGroup) || return;
-
     my $totalsize = $End - $Start + 1;
     ($totalsize <= 0) && return;
-
-    my ($mountpoint, $mintotal, $maxmintotal, $rest, $EndUnit)
-	= (undef, 0, 0, 0, 0);
-
+    my $mountpoint; my $mintotal = 0; my $maxmintotal = 0; my $rest = 0; my $EndUnit = 0;
     # compute total of MinSizes and difference to MaxSizes
-    foreach $mountpoint (split(/\s/, $PartGroup)) {
-
-        $mintotal +=
-	    $g_MPMinSize{$mountpoint};
-        $maxmintotal +=
-	    ($g_MPMaxSize{$mountpoint} - $g_MPMinSize{$mountpoint});
-
-        $g_MPSize{$mountpoint} = $g_MPMinSize{$mountpoint};
+    foreach $mountpoint (split(/\s/,$PartGroup)) {
+        $mintotal += $MPMinSize{$mountpoint};
+        $maxmintotal += ($MPMaxSize{$mountpoint} - $MPMinSize{$mountpoint});
+        $MPSize{$mountpoint} = $MPMinSize{$mountpoint};
     }
-
     # Test if partitions fit
-    barf "mountpoints $PartGroup do not fit"
-	if $mintotal > $totalsize;
-
+    ($mintotal > $totalsize)
+      && die "ERROR: Mountpoints $PartGroup do not fit.\n";
     # Maximize partitions
     $rest = $totalsize - $mintotal;
     ($rest > $maxmintotal) && ($rest = $maxmintotal);
-
     if ($rest > 0) {
-        foreach $mountpoint (split(/\s/, $PartGroup)) {
-            $g_MPSize{$mountpoint} +=
-		int( ( ($g_MPMaxSize{$mountpoint} -
-			$g_MPMinSize{$mountpoint}   )*$rest )
-		     / $maxmintotal                           );
+        foreach $mountpoint (split(/\s/,$PartGroup)) {
+            $MPSize{$mountpoint} += int ((($MPMaxSize{$mountpoint} - $MPMinSize{$mountpoint}) * $rest) / $maxmintotal);
         }
     }
-
     # compute rest
     $rest = $totalsize;
-    foreach $mountpoint (split(/\s/, $PartGroup)) {
-        $rest -= $g_MPSize{$mountpoint};
+    foreach $mountpoint (split(/\s/,$PartGroup)) {
+        $rest -= $MPSize{$mountpoint};
     }
-
     # Minimize rest
-    foreach $mountpoint (split(/\s/, $PartGroup)) {
-        if (($rest >0) &&
-	    ($g_MPSize{$mountpoint} < $g_MPMaxSize{$mountpoint})){
-
-            $g_MPSize{$mountpoint}++;
+    foreach $mountpoint (split(/\s/,$PartGroup)) {
+        if (($rest >0) && ($MPSize{$mountpoint} < $MPMaxSize{$mountpoint})){
+            $MPSize{$mountpoint}++;
 	    $rest--;
 	}
     }
-
     # Set start for every partition
-    foreach $mountpoint (split(/\s/, $PartGroup)) {
-        $g_MPStart{$mountpoint} = $Start;
-	$Start += $g_MPSize{$mountpoint};
-	$EndUnit = ($g_MPStart{$mountpoint} +
-		    $g_MPSize{$mountpoint} - 1);
+    foreach $mountpoint (split(/\s/,$PartGroup)) {
+        $MPStart{$mountpoint} = $Start;
+	$Start += $MPSize{$mountpoint};
+	$EndUnit = $MPStart{$mountpoint} + $MPSize{$mountpoint} - 1;
     }
 }
 
-#---------------------------------------------------------------------
-#  CalculateExtPartSize($disk)
-# calculate extended partition size for $disk
-#---------------------------------------------------------------------
+#****************************************************
+# calculate extended partition size
+#****************************************************
 sub CalculateExtPartSize{
     my ($disk) = @_;
     my $extmp = "extended$disk";
-    my ($mountpoint, $ExtEnd, $NewEnd);
-
-    ($g_MPPrimary{$extmp}) || return;
-    $ExtEnd = $g_MPStart{$extmp};
-
-    foreach $mountpoint (split(/\s/, $g_DiskMountpoints{$disk})) {
-        next if ($g_MPPrimary{$mountpoint} eq "yes");
-
-	$NewEnd = ($g_MPStart{$mountpoint} +
-		   $g_MPSize{$mountpoint} - 1);
+    my $mountpoint; my $ExtEnd; my $NewEnd;
+    ($MPPrimary{$extmp}) || return;
+    $ExtEnd = $MPStart{$extmp};
+    foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+        next if ($MPPrimary{$mountpoint} eq "yes");
+	$NewEnd = $MPStart{$mountpoint} + $MPSize{$mountpoint} - 1;
 	($NewEnd > $ExtEnd) && ($ExtEnd = $NewEnd);
     }
-
-    $g_MPSize{$extmp} = ($ExtEnd - $g_MPStart{$extmp} + 1);
-
+    $MPSize{$extmp} = ($ExtEnd - $MPStart{$extmp} + 1);
 }
 
-#---------------------------------------------------------------------
-#  PrintPartitionTable($disk)
+#****************************************************
 # Print partition "number - mountpoint" table
-#---------------------------------------------------------------------
+#****************************************************
 sub PrintPartitionTable{
-
     my ($disk) = @_;
-    my ($part, $mountpoint, $mountpointname, $end);
-
-    foreach $part (sort keys %g_MountpointPart) {
-
-        next if ($part !~ /^$disk/);
-	$mountpoint = $g_PartMountpoint{$part};
-
+    my $part; my $mountpoint; my $mountpointname; my $end;
+    foreach $part (sort %MountpointPart) {
+        next if($part !~ /^$disk/);
+	$mountpoint = $PartMountpoint{$part};
         if ($mountpoint =~ /^no(.*)/){
             $mountpointname = "no mountpoint ($1)";
 	} else {
 	    $mountpointname = $mountpoint;
 	}
-
-	$end = $g_MPStart{$mountpoint} + $g_MPSize{$mountpoint} - 1;
+	$end = $MPStart{$mountpoint} + $MPSize{$mountpoint} - 1;
 	print <<"EOM";
-/dev/$part $mountpointname start=$g_MPStart{$mountpoint} size=$g_MPSize{$mountpoint} end=$end id=$g_MPID{$mountpoint}
+/dev/$part $mountpointname start=$MPStart{$mountpoint} size=$MPSize{$mountpoint} end=$end id=$MPID{$mountpoint}
 EOM
       }
 }
 
-=item B<4. PartitionPersfdisk>
-
-build all partition tables for sfdisk
-
-=cut
-
-sub PartitionPersfdisk {
-
+#****************************************************
+# build all partition tables for sfdisk
+#****************************************************
+sub PartitionPersfdisk{
     my ($disk, $mountpoint, $line, $part, $PrimaryNo);
     my ($command, $result, $filename, $number);
-
-    say "partitioning with sfdisk";
-
-    foreach $disk (keys %g_DiskMountpoints) {
-
-	next if exists $g_lvm{$disk};
-        $g_sfdiskTables{$disk}
-	    = ("# partition table of device: /dev/$disk\nunit: "
-	       ."sectors\n\n");
+    print "Creating partition table: ";
+    foreach $disk(keys %DiskMountpoints) {
+        $sfdiskTables{$disk} = "# partition table of device: /dev/$disk\nunit: sectors\n\n";
 	$PrimaryNo = 1;
-
-	my $needs_change = 0;
-
-        foreach $mountpoint (split(/\s/, $g_DiskMountpoints{$disk})) {
-
-	    $part = $g_MountpointPart{$mountpoint};
+        foreach $mountpoint(split(/\s/,$DiskMountpoints{$disk})) {
+	    $part = $MountpointPart{$mountpoint};
 	    $part =~ /(\d+)$/;
-
 	    ($1 < 5) && ($PrimaryNo++);
-
 	    if ( ($1 == 5) && ($PrimaryNo < 5) ){
-
 	        for my $number($PrimaryNo..4) {
-
-		    my $device = PartName($disk, $number);
-
-		    $g_sfdiskTables{$disk} .=
-			(BuildsfdiskDumpLine($device,0,0,0)
-			 ."\n");
-		    {
-			no warnings;
-			$needs_change = 1
-			    if ($g_PartOldStart{$device} or
-				$g_PartOldEnd{$device} or
-				$g_PartOldID{$device});
-		    }
+		    $sfdiskTables{$disk} .= BuildsfdiskDumpLine(PartName($disk,$number),0,0,0)."\n";
 	        }
 	    }
-
-	    $line = BuildsfdiskDumpLine
-		($g_MountpointPart{$mountpoint},
-		 $g_MPStart{$mountpoint}, $g_MPSize{$mountpoint},
-		 $g_MPID{$mountpoint});
-	    {
-		no warnings;
-		my $device = $g_MountpointPart{$mountpoint};
-		my $old_start = ($g_PartOldStart{$device})*$g_DiskUnits{$disk}+1;
-		my $old_size = ($g_PartOldEnd{$device} - $g_PartOldStart{$device} + 1)*$g_DiskUnits{$disk} - 1;
-		say("partition table changed; applying changes"),
-		    ($needs_change = 1)
-		    if (abs($old_start - $g_MPStart{$mountpoint})>1 or
-			abs($old_size - $g_MPSize{$mountpoint})>1 or
-			$g_PartOldID{$device} != $g_MPID{$mountpoint});
-	    }
-
-            ($part eq $g_BootPartition) && ($line .= ", bootable");
-            $g_sfdiskTables{$disk} .= "$line\n";
-
+	    $line = BuildsfdiskDumpLine($MountpointPart{$mountpoint},$MPStart{$mountpoint},$MPSize{$mountpoint},$MPID{$mountpoint});
+            ($part eq $BootPartition) && ($line .= ", bootable");
+            $sfdiskTables{$disk} .= "$line\n";
 	}
-
-	print $g_sfdiskTables{$disk} if $needs_change;
-
-	my $tmp_dir = $ENV{LOGDIR} || "/tmp";
-	$filename = ( "$tmp_dir/"
-		      . ( ($disk=~ m{/})
-			  ? join('_', split('/', $disk))
-			  : $disk)
-		      . ".sfdisk" );
-
-	if (($test != 1) && ($filename)) {
-
-	    open(FILE, ">$filename")
-		or die "unable to write temporary file $filename\n";
-
-	    print FILE $g_sfdiskTables{$disk};
+#	print $sfdiskTables{$disk};
+	$filename = "$ENV{LOGDIR}/partition." . (($disk=~ m#/#) ? join('_', split('/', $disk)) : $disk);
+	if(($test != 1) && ($filename)){
+	    open(FILE, ">$filename") || die "unable to write temporary file $filename\n";
+	    print FILE $sfdiskTables{$disk};
 	    close(FILE);
         }
-
-	$command = ("LC_ALL=C sfdisk $g_sfdisk_options /dev/$disk < "
-		    ."$filename");
-
-=pod aii
-
-	    push @{ $parts{$disk} }, $device if $size;
-
-            # Sectors
-            $g_PartOldStartSec{$device} = $start;
-            my $endsec = $g_PartOldEndSec{$device} = $start + $size - 1;
-
-            # DiskUnits
-	    $g_PartOldStart{$device} = int ($start / $g_DiskUnits{$disk});
-	    $g_PartOldEnd{$device} = int ($endsec / $g_DiskUnits{$disk});
-
-	    # Was it aligned properly?
-	    for ( $start, $size ) {
-		my $x = ( $_ / $g_SectorsAlignment{$disk} );
-		if ( abs($x - int($x)) > 1e-9 ) {
-		    $g_OldNotAligned{$device} = "yes";
-		}
-	    }
-
-	    # Other options
-	    $g_PartOldID{$device} = $Id;
-	    $g_PartOldBoot{$device} = ($rest =~ /bootable/) ? "yes" : "";
-
-=cut
-
-
-	if ($test != 1) {
-	    if ($needs_change) {
-		mutter "running: $command";
-		$result = `sh -c "$command"`;
-		barf "sfdisk failed; output:\n$result" if $?;
-	    } else {
-		say "partition table for $disk unchanged";
-	    }
+	$command = "LC_ALL=C sfdisk $sfdisk_options /dev/$disk < $filename";
+	if($test != 1){
+            print "$command\n";
+	    $result = `sh -c "$command"`;
+	    (($? >> 8) == 0) || (die "\nSFDISK ERROR:\n $result\n");
+	    -f "/etc/init.d/udev" && sleep 10; # when using udev, it takes some time until the device entries for each partition are available
 	}
     }
 }
 
-#---------------------------------------------------------------------
-# BuildsfdiskDumpLine($device, $start, $size, $id)
+#****************************************************
 # build a sfdisk dump line
-#---------------------------------------------------------------------
+#****************************************************
 sub BuildsfdiskDumpLine{
 
   sprintf "/dev/%-5s: start=%10s, size=%10s, Id=%3s",@_;
 }
 
-=item B<4b. DoDeepRAIDnLVMmagic>
-
-Sets up RAID devices and LVM partitions :->
-
-FIXME - where is ODS support ?  :-)
-
-=cut
-
-my %new_md;
-
-sub run {
-    my $cmd = shift;
-    my $err_ok = shift;
-
-    say("running: `$cmd`") if ($test or $verbose);
-
-    unless ($test) {
-	my $output = `$cmd`;
-	if ($? and !$err_ok) {
-	    barf("command `$cmd` "
-		 .($? & 255 ? "killed by signal $?"
-		   : "exited with error code".($?>>8)));
-	}
-	if ($err_ok) {
-	    return !$?;
-	}
-    }
-}
-
-sub StopAllRaid {
-
-    # stop any LVM partitions first
-    run("vgchange -an", "yes yes yes");
-
-    my @devices = ( map { /^(md\d+)/ }
-		    grep /\bactive\b/,
-		    `cat /proc/mdstat`);
-
-    say("Stopping running RAID arrays @devices");
-    s{^}{/dev/} foreach @devices;
-
-    my ($count, @failed) = (0, @devices);
-
-    while (@failed and $count != @failed) {
-	(@devices, @failed) = @failed;
-	$count = @devices;
-	foreach (@devices) {
-	    say("stopping $_");
-	    if (!run("raidstop $_",1)) {
-		say("defering $_ (rc=$?)");
-		push @failed, $_;
-	    }
-	}
-    }
-    barf("Could not stop raid devices: @failed")
-	if @failed;
-
-    
-
-}
-
-use IO::Handle;
-use Fcntl 'SEEK_END', 'O_RDWR';
-
-sub zapDev {
-    my $device = shift;
-
-    say("Zapping $device");
-    return if $test;
-    my $size = `blockdev --getsize $device`;
-
-    $size > 0 or die "No size ($size) ?";
-    #say ("size of device is $size blocks (".($size*1024)." bytes)");
-
-    sysopen BLOCKDEV, $device, O_RDWR or die "sysopen $device; $!";
-    syswrite(BLOCKDEV, $MegOfNulls);
-
-    my $seek = ($size - 8 * 1024) * 512;
-    #say ("Seeking to $seek");
-    sysseek(BLOCKDEV, $seek, 0) or die $!;
-    #sysseek(BLOCKDEV, -1024*1024*4, 2) or die $!;
-
-    while (syswrite(BLOCKDEV, $MegOfNulls, 2**20)) {
-	#say("Wrote a meg to $device, pos = ".sysseek(BLOCKDEV,0,1));
-    }
-    close BLOCKDEV;
-}
-
-sub DoDeepRAIDnLVMmagic {
-
-    my $raid10_start;
-    if (my @md = sort { $a <=> $b } keys %g_md) {
-
-	open RAIDTAB, ">$ENV{LOGDIR}/raidtab" or die $!;
-	print RAIDTAB RaidTabEntry($_) foreach @md;
-
-	$raid10_start = pop (@md) + 1;
-
-	if (my (@raid10) = (sort { $a <=> $b }
-			    grep { $_ >= $raid10_start }
-			    keys %g_md)) {
-	    print RAIDTAB RaidTabEntry($_) foreach @raid10;
-
-	} else {
-	    $raid10_start = undef;
-	}
-	close RAIDTAB;
-
-    }
-
-    if ($test) {
-	say ("raid tab:");
-	#system("cat $ENV{LOGDIR}/raidtab");
-    }
-
-    my $n;
-    if ($raid10_start) {
-	$n = $raid10_start;
-	while (exists $g_md{$n}) {
-	    if (!$test) {
-		say("Zap'ing partitions: @{$g_md{$n}->{members}}");
-		zapDev("/dev/$_") foreach @{$g_md{$n}->{members}};
-	    }
-	    run("mkraid --configfile $ENV{LOGDIR}/raidtab "
-		."/dev/md$n");
-	    $n++;
-	}
-    }
-
-    $n = 0;
-    while (exists $g_md{$n} and ( defined $raid10_start ?
-				  ( $n < $raid10_start ) : 1 ) ) {
-	if (!$test) {
-	    say("Zap'ing partitions: @{$g_md{$n}->{members}}");
-	    zapDev("/dev/$_") foreach @{$g_md{$n}->{members}};
-	}
-	run("mkraid --configfile $ENV{LOGDIR}/raidtab "
-	    ."/dev/md$n");
-
-	# re-configure the device, etc
-	if (my $mountpoint = $g_md{$n}->{mountpoint}) {
-	    $g_MountpointPart{$mountpoint} = "md$n";
-	}
-
-	$n++
-    }
-
-    my $vgs = [];
-    while (my $vg = each %g_DiskMountpoints) {
-	my $vg_entry;
-	next unless $vg_entry = $g_lvm{$vg};
-
-	# first, blat all the PVs
-	say ("blatting existing PVs ( got backups? :-> )");
-	$vg_entry->{name} = $vg;
-	$vg_entry->{pvs} = [keys %{{ map { $_ => 1 }
-					 @{$vg_entry->{devices}}}}];
-	for my $pv (@{$vg_entry->{pvs}}) {
-	    say("zero'ing first block of $pv");
-	    zapDev($pv);
-	}
-	push @$vgs, $vg_entry;
-    }
-
-    if (@$vgs) {
-
-	say("Setting up LVM fake /etc & /dev...");
-	( ! -d "/tmp/fake" ) && do {
-	    mkdir("/tmp/fake") or die $!;
-	    run("cp -ax /etc /dev /tmp/fake");
-	    run("mount --bind /tmp/fake/etc /etc");
-	    run("mount --bind /tmp/fake/dev /dev");
-	};
-	run("rm -rf /etc/lvm*");
-	foreach my $vg_entry (@$vgs) {
-	    if ( -e "/dev/$vg_entry->{name}" ) {
-		run("rm -rf /dev/$vg_entry->{name}");
-	    }
-	}
-
-	# vgscan, should return nothing
-	run("vgscan");
-
-	foreach my $vg_entry (@$vgs) {
-	    my $vg_name = $vg_entry->{name};
-	    for my $pv (@{$vg_entry->{pvs}}) {
-		zapDev($pv);
-		say("Creating PV $pv");
-		run("yes | pvcreate $pv");
-	    }
-	    say("Creating Volume Group $vg_name");
-	    run("vgcreate /dev/$vg_name @{$vg_entry->{pvs}}");
-
-	    say("$vg_name created, now to set up: "
-		.join(", ", keys %{$vg_entry->{lvs}}));
-
-	    while (my ($lvname, $mountpoint)
-		   = each %{$vg_entry->{lvs}}) {
-
-		# you generally don't care about automagically setting
-		# the size with LVM...
-		my $size = $g_MPMinSize{$mountpoint};
-		my $roundedsize = ((($size) * $g_DiskUnits{$vg_name} * $sectorsize)>>20)."M";
-
-		my $which_pv = "";
-		if ($g_MPOptions{$mountpoint} =~ m{\bpv\s*\(\s*(\S+)\s*\)}) {
-		    $which_pv = " $1";
-		}
-		run("lvcreate -n $lvname -L $roundedsize /dev/$vg_name");
-
-		FormatMountPoint($mountpoint);
-		$g_PartMountpoint{$mountpoint} = "$vg_name/$lvname";
-		$g_MountpointPart{"$vg_name/$lvname"} = $mountpoint;
-		
-	    }
-	}
-    }
-}
-
-sub RaidTabEntry {
-    my $dev = shift;
-    my $x = $g_md{$dev};
-
-    my $entry = "raiddev /dev/md$dev\n";
-    my $aii = sub { $entry .= sprintf "    %-24s %s\n", @_ };
-
-    $aii->("raid-level", $x->{level});
-    $aii->("chunk-size", (4<<($x->{chunk_factor}||=8)));
-    $aii->("persistent-superblock", "1");
-
-    # RAID 10 is a special case
-    if ($x->{sidea}) {
-
-	my @sides = map { $x->{"side$_"} || () } ("a".."z");
-
-	my $top_md = ((sort {$b <=> $a} keys %g_md)[0]);
-
-	my @new_members;
-
-	while (my $side = shift @sides) {
-
-	    $g_md{++$top_md} = {
-				level => "0",
-				members => $side,
-				chunk_factor => $x->{chunk_factor}
-			       };
-
-	    push @new_members, "md$top_md";
-	}
-
-	$x->{members} = \@new_members;
-
-    }
-
-    $aii->("nr-raid-disks", scalar(@{$x->{members}}));
-
-    my $num = 0;
-    for my $device (sort @{$x->{members}}) {
-	$aii->("device", "/dev/$device");
-	$aii->("raid-disk", $num++);
-    }
-
-    return $entry;
-}
-
-
-=item B<5. FormatDisks>
-
-Formats all disks
-
-=cut
-
+#****************************************************
+# Format all disks
+#****************************************************
 sub FormatDisks{
-
-    my ($disk, $device, $mountpoint, $mountpointname, $command,
-	$result);
-
-    say "formatting disks";
-
-    foreach $disk (keys %g_DiskMountpoints) {
-	next if exists $g_lvm{$disk};
-        foreach $mountpoint (split(/\s/, $g_DiskMountpoints{$disk})) {
-	    say("formatting $mountpoint");
-	    FormatMountPoint($mountpoint);
+    my ($disk, $device, $mountpoint, $mountpointname, $command, $result);
+    print "Creating file systems:\n";
+    foreach $disk(keys %DiskMountpoints) {
+        foreach $mountpoint (split(/\s/,$DiskMountpoints{$disk})) {
+	    $device = $MountpointPart{$mountpoint};
+            if ($mountpoint =~ /^no/){
+                $mountpointname = "no mountpoint";
+            } else {
+	        $mountpointname = $mountpoint;
+	    }
+	    # preserved partition
+	    if ( ($MPPreserve{$mountpoint} eq "yes") && ($MPOptions{$mountpoint} !~ /\bformat\b/i)){
+  	        print "Preserve partition $device";
+                if ($mountpoint =~ /^no$1/){
+                    print " with no mountpoint\n";
+                } else {
+	            print " with mountpoint $mountpoint\n";
+	        }
+		next;
+	    }
+	    # lazy format
+	    if ( ( $MPOptions{$mountpoint} =~ /\blazyformat\b/i )
+              && ($MPStart{$mountpoint} == $PartOldStartSec{$device})
+              && (($MPStart{$mountpoint} + $MPSize{$mountpoint} - 1) == $PartOldEndSec{$device}) ){
+	        print "Lazy format: $device";
+                if ($mountpoint =~ /^no$1/){
+                    print " with no mountpoint";
+                } else {
+	            print " with mountpoint $mountpoint";
+	        }
+                print " was neither moved nor formated.\n";
+		next;
+	    }
+	    # swap
+	    if ($mountpoint =~ /^swap/i) {
+#	        print "Make swap partition:\n";
+	        $command = "mkswap $mkswap_options";
+		($MPOptions{$mountpoint} =~ /(\-c)\b/i) && ($command .= " $1");
+		push @swaplist, "/dev/$device";
+		$command .= " /dev/$device";
+	        print "  $command\n";
+	        if($test != 1){
+	            $result = `$command`;
+		    (($? >> 8) == 0) || (die "\nMKSWAP ERROR:\n $result\n");
+		}
+		next;
+	    }
+	    # Linux Reiser file system
+	    if ($MPOptions{$mountpoint} =~ /\breiser\b/i) {
+#	        print "Make Reiser Filesystem:\n";
+	        $command = "echo y | mkreiserfs $mkreiserfs_options";
+		($MPOptions{$mountpoint} =~ /(\-h\s*\w+)\b/) && ($command .= " $1");
+		($MPOptions{$mountpoint} =~ /(\-v\s*\d+)\b/) && ($command .= " $1");
+		$command .= " /dev/$device";
+		print "  $command\n";
+		if ($test != 1){
+		    $result = `$command`;
+		    (($? >> 8) == 0) || die "\nMKREISERFS ERROR:\n $result\n";
+		}
+		next;
+	    }
+	    # Linux XFS file system
+	    if ($MPOptions{$mountpoint} =~ /\bxfs\b/i) {
+#	        print "Make XFS Filesystem:\n";
+	        $command = "mkfs.xfs $mkxfs_options";
+		$command .= " /dev/$device";
+		print "  $command\n";
+		if ($test != 1){
+		    $result = `$command`;
+		    (($? >> 8) == 0) || die "\nMKFS.XFS ERROR:\n $result\n";
+		}
+		next;
+	    }
+	    # Linux Extended 2 file system
+	    if ($MPOptions{$mountpoint} =~ /\b(ext[23]|auto)\b/i) {
+#	        print "Make Extended 2/3 Filesystem:\n";
+	        $command = "mke2fs $mke2fs_options";
+		($MPOptions{$mountpoint} =~ /(\-c)\b/i) && ($command .= " $1");
+		($MPOptions{$mountpoint} =~ /(\-i\s*\d+)\b/) && ($command .= " $1");
+		($MPOptions{$mountpoint} =~ /(\-m\s*\d+)\b/) && ($command .= " $1");
+		($MPOptions{$mountpoint} =~ /(\-j)\b/) && ($command .= " $1");
+		$command .= " /dev/$device";
+		print "  $command\n";
+		if ($test != 1){
+		    $result = `$command`;
+		    (($? >> 8) == 0) || die "\nMKE2FS ERROR:\n $result\n";
+		}
+		next;
+	    }
+	    # DOS 16bit FAT / Win95 FAT 32
+	    if ($MPOptions{$mountpoint} =~ /\b(dosfat16|winfat32)\b/i) {
+	        print "Clear first sector for DOS/Windows\n";
+	        $command = "dd if=/dev/zero of=/dev/$MountpointPart{$mountpoint} bs=512 count=1";
+		print "  $command\n";
+		if ($test != 1){
+		    $result = `$command`;
+		    (($? >> 8) == 0) || die "\nDD ERROR:\n $result\n";
+		}
+		next;
+	    }
         }
     }
 }
 
-sub FormatMountPoint{
-    my $mountpoint = shift;
-
-    my $device = $g_MountpointPart{$mountpoint};
-    my ($mountpointname, $command, $result);
-
-    if ($mountpoint =~ /^no/){
-	$mountpointname = "no mountpoint";
-    } else {
-	$mountpointname = $mountpoint;
-    }
-
-    say("considering format for $mountpoint, options are : ".$g_MPOptions{$mountpoint});
-
-    # preserved partition
-    if ( $g_MPPreserve{$mountpoint} &&
-	 ($g_MPOptions{$mountpoint} !~ /\bformat\b/i)){
-
-	say("preserving partition $device".
-	    ($mountpoint =~ /^no/
-	     ? " with no mountpoint\n"
-	     : " with mountpoint $mountpoint\n"));
-
-    }
-
-    # lazy format
-    elsif ( ( $g_MPOptions{$mountpoint} =~ /\blazyformat\b/i ) &&
-	 ( $g_MPStart{$mountpoint}
-	   == $g_PartOldStartSec{$device} ) &&
-	 ( ($g_MPStart{$mountpoint} +
-	    $g_MPSize{$mountpoint} - 1)
-	   == $g_PartOldEndSec{$device}) ) {
-
-	say("preserving partition (lazy) $device "
-	    . ($mountpoint =~ /^no$1/
-	       ? "with no mountpoint"
-	       : "with mountpoint $mountpoint"));
-    }
-
-    # swap
-    elsif ($mountpoint =~ /^swap/i) {
-
-	say "making swap partition on $device";
-
-	$command = "mkswap $g_mkswap_options";
-
-	($g_MPOptions{$mountpoint} =~ /(\-c)\b/i)
-	    && ($command .= " $1");
-
-	$command .= " /dev/$device";
-
-	mutter("running: $command");
-	if($test != 1){
-	    $result = `$command`;
-	    barf "`$command' failed; output:\n$result" if $?;
-	}
-    }
-
-    # just wants to be cleared
-    elsif ( $g_MPOptions{$mountpoint}
-	 =~ /\b(?:zap|(dosfat16|winfat32))\b/i ) {
-
-	say("ZAP'ing first sector of $device"
-	    .($1 ? " for a $1 filesystem" : ""));
-
-	$command = ("dd if=/dev/zero "
-		    ."of=/dev/$g_MountpointPart{$mountpoint}"
-		    ." bs=512 count=1");
-
-	mutter "running: $command";
-
-	if ($test != 1){
-	    $result = `$command`;
-	    barf "`$command' failed; output:\n$result" if $?;
-	}
-    }
-
-    # Linux Reiser file system
-    elsif ($g_MPOptions{$mountpoint} =~ /\breiser\b/i) {
-
-	say "making ReiserFS filesystem on $device";
-
-	$command = "echo y | mkreiserfs $g_mkreiserfs_options";
-
-	($g_MPOptions{$mountpoint} =~ /(\-h\s*\w+)\b/)
-	    && ($command .= " $1");
-	($g_MPOptions{$mountpoint} =~ /(\-v\s*\d+)\b/)
-	    && ($command .= " $1");
-
-	$command .= " /dev/$device";
-
-	mutter "running: $command\n";
-	if ($test != 1){
-	    $result = `$command`;
-	    barf "`$command' failed; output:\n$result" if $?;
-	}
-    }
-
-    # Linux Extended 2 file system
-    elsif ($g_MPOptions{$mountpoint} =~ /\b(ext[23]|auto)\b/i) {
-
-	say "making Extended 2/3 filesystem on $device";
-
-	my $opt = "";
-	if ($1 ne "ext2") {
-	    $opt = " -j";
-	}
-
-	$command = "mke2fs $opt $g_mke2fs_options";
-
-	($g_MPOptions{$mountpoint} =~ /(\-c)\b/i)
-	    && ($command .= " $1");
-	($g_MPOptions{$mountpoint} =~ /(\-i\s*\d+)\b/)
-	    && ($command .= " $1");
-	($g_MPOptions{$mountpoint} =~ /(\-m\s*\d+)\b/)
-	    && ($command .= " $1");
-	($g_MPOptions{$mountpoint} =~ /(\-j)\b/)
-	    && ($command .= " $1");
-
-	$command .= " /dev/$device";
-
-	mutter "running: $command\n";
-	if ($test != 1){
-	    $result = `$command`;
-	    barf "`$command' failed; output:\n$result" if $?;
-	}
-    }
-}
-
-=item B<6. WriteFSTab>
-
-Build fstab and write it to <root>/etc/fstab
-
-=cut
-
-sub BuildfstabLine{
-    sprintf "%-23s %-15s   %-6s  %-8s  %-4s %-4s\n", @_;
-}
-
+#****************************************************
+# Build fstab and write it to <root>/etc/fstab
+#****************************************************
 sub WriteFSTab{
-
     my ($FileSystemTab, $device, $type, $filename);
-
-    say "writing fstab";
-
     $FileSystemTab  = << "EOM";
 # /etc/fstab: static file system information.
 #
-#<file sys>             <mount point>     <type>   <options>   <dump>   <pass>
+#<file sys>          <mount point>     <type>   <options>   <dump>   <pass>
 EOM
-
     # 1. /
-    $type = "auto";
-    ($g_MPOptions{'/'} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
-    ($g_MPOptions{'/'} =~ /\b(ext3)\b/i) && ($type = "ext3");
-    ($g_MPOptions{'/'} =~ /\b(ext2)\b/i) && ($type = "ext2");
-
-    $FileSystemTab .=
-	BuildfstabLine("/dev/$g_MountpointPart{'/'}", "/", $type,
-		       $g_MPfstaboptions{'/'}, 0, 1);
-
+    $type = "ext2";
+    ($MPOptions{'/'} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
+    ($MPOptions{'/'} =~ /\b(xfs)\b/i) && ($type = "xfs");
+    ($MPOptions{'/'} =~ /\b(ext3)\b/i) && ($type = "ext3");
+    ($MPOptions{'/'} =~ /\b(ext2)\b/i) && ($type = "ext2");
+    $FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{'/'}","/",$type,$MPfstaboptions{'/'},0,1);
     # 2. swap partitions
-    foreach my $mountpoint (%g_PartMountpoint){
+    foreach my $mountpoint (%PartMountpoint){
 	next if( $mountpoint !~ /^swap/i);
-	$FileSystemTab .=
-	    BuildfstabLine("/dev/$g_MountpointPart{$mountpoint}",
-                           "none", "swap",
-			   $g_MPfstaboptions{$mountpoint}, 0, 0);
+	$FileSystemTab .= BuildfstabLine("/dev/$MountpointPart{$mountpoint}",
+                           "none","swap",$MPfstaboptions{$mountpoint},0,0);
     }
-    # 2.5. /tmp
-    $FileSystemTab .=
-            BuildfstabLine("swap", "/tmp", "tmpfs",
-                           "defaults", 0, 0);
-
     # 3. /proc
-    $FileSystemTab .=
-	BuildfstabLine("none", "/proc", "proc", "rw,nosuid,noexec", 0, 0);
-
+    $FileSystemTab .= BuildfstabLine("none","/proc","proc","defaults",0,0);
     # 4. sorted others
-    foreach my $mountpoint (sort keys %g_PartMountpoint){
-
-	next unless $mountpoint =~ m{^/.+};
-
-	$device = $g_MountpointPart{$mountpoint};
-	$type = "auto";
-	($g_MPOptions{$mountpoint} =~ /\b(dosfat16|winfat32)\b/i)
-	    && ($type = "vfat");
-	($g_MPOptions{$mountpoint} =~ /\b(reiser)\b/i)
-	    && ($type = "reiserfs");
-	($g_MPOptions{$mountpoint} =~ /\b(ext3)\b/i)
-	    && ($type = "ext3");
-	($g_MPOptions{$mountpoint} =~ /\b(ext2)\b/i)
-	    && ($type = "ext2");
-
-	$FileSystemTab .=
-	    BuildfstabLine("/dev/$device", $mountpoint, $type,
-			   $g_MPfstaboptions{$mountpoint}, 0, 2);
+    foreach my $mountpoint (sort %PartMountpoint){
+	next if ( ($mountpoint !~ m#^/#) || ($mountpoint eq "/"));
+	$device = $MountpointPart{$mountpoint};
+	$type = "ext2";
+	($MPOptions{$mountpoint} =~ /\b(dosfat16|winfat32)\b/i) && ($type = "vfat");
+	($MPOptions{$mountpoint} =~ /\b(reiser)\b/i) && ($type = "reiserfs");
+	($MPOptions{$mountpoint} =~ /\b(xfs)\b/i) && ($type = "xfs");
+	($MPOptions{$mountpoint} =~ /\b(ext3)\b/i) && ($type = "ext3");
+	($MPOptions{$mountpoint} =~ /\b(ext2)\b/i) && ($type = "ext2");
+	$FileSystemTab .= BuildfstabLine("/dev/$device",$mountpoint,$type,$MPfstaboptions{$mountpoint},0,2);
     }
-
-    # write it!
-    my ($tmp_dir) = $ENV{LOGDIR} || "/tmp";
-    $filename = "$tmp_dir/fstab";
-
-    print $FileSystemTab;
-
+    # write it
+    $filename = "$ENV{LOGDIR}/fstab";
+#    print $FileSystemTab;
+    print "Write fstab to $filename\n" if $verbose;
     if($test != 1){
-	open(FILE, ">$filename")
-	    or barf "unable to write to $filename; $!";
+	open(FILE, ">$filename") || die "unable to write fstab $filename\n";
 	print FILE $FileSystemTab;
 	close(FILE);
     }
 }
 
-=item B<7. WriteFAIVariables>
+#****************************************************
+# Build fstab line
+#****************************************************
+sub BuildfstabLine{
 
-Write all relevant FAI variables of this program to file.
-
-This includes:
-
-  BOOT_DEVICE
-  ROOT_PARTITION
-  BOOT_PARTITION
-
-=cut
-
-sub WriteFAIVariables{
-
-    say "writing FAI variables to file $g_FAIOutputFile";
-    return if $test;
-
-    open(FILE, ">$g_FAIOutputFile")
-	or barf "unable to write to $g_FAIOutputFile; $!";
-
-    print FILE << "EOM";
-BOOT_DEVICE=/dev/$g_BOOT_DEVICE
-ROOT_PARTITION=/dev/$g_MountpointPart{'/'}
-BOOT_PARTITION=/dev/$g_BootPartition
-EOM
-
-    close(FILE);
+    sprintf "%-10s   %-15s   %-6s  %-8s  %-4s %-4s\n",@_;
 }
 
-__END__
+#****************************************************
+# Write all FAI variables of this program to file
+#****************************************************
+sub WriteFAIVariables{
 
-=head1 BASIC MATH
+  my $swaps;
 
-Fish, anyone?
-
-  chunk factor    resultant chunk size
-       0                  4k
-       4                 64k
-       8                  1M
-
-=head1 CREDITS
-
- This script is part of FAI (Fully Automatic Installation)
- Copyright (c) 1999, 2000 by ScALE Workgroup, Universitaet zu Koeln
- Copyright (c) 2000-2002 by Thomas Lange, Uni Koeln
-
- Code refactoring, LVM/RAID support and POD manual page:
- Copyright (c) 2003, Sam Vilain
-
-=head1 LICENSE
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; see the file COPYING. If not, write to the
-Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-MA 02111-1307, USA.
-
-=cut
+  print "Write FAI variables to file $FAIOutputFile\n" if $verbose;
+    return if ($test == 1);
+  $swaps = join ' ',@swaplist;
+    open(FILE, ">$FAIOutputFile") || die "Unable to write file $FAIOutputFile\n";
+    print FILE << "EOM";
+BOOT_DEVICE=/dev/$BOOT_DEVICE
+ROOT_PARTITION=/dev/$MountpointPart{'/'}
+BOOT_PARTITION=/dev/$BootPartition
+SWAPLIST="$swaps"
+EOM
+    close(FILE);
+}
