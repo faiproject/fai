@@ -48,7 +48,7 @@ netdevice_info() {
 
     # some network driver do not echo eth0,..; they are not detected
     netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/')
-    tmp=$(ifconfig -a | grep ^eth | awk '{ print $1 }')
+    tmp=$(ifconfig -a | awk '/^eth/ { print $1 }')
     netdevices_all="$netdevices_all $tmp"
     netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq)
 
@@ -100,13 +100,13 @@ setnet() {
     NETMASK=${ips%%:*}
     BROADCAST=${IPADDR%\.*}.255
 
-    cat >> $bootlog <<EOF
-IPADDR=$IPADDR
-SERVER=$SERVER
-NETMASK=$NETMASK
-GATEWAYS=$GATEWAYS
-BROADCAST=$BROADCAST
-EOF
+    cat >> $bootlog <<-EOF
+	IPADDR=$IPADDR
+	SERVER=$SERVER
+	NETMASK=$NETMASK
+	GATEWAYS=$GATEWAYS
+	BROADCAST=$BROADCAST
+    EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_fixed_info() {
