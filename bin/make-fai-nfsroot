@@ -77,8 +77,8 @@ if [ "$FAI_SOURCES_LIST" ]; then
     exit 3
 fi
 
-if [ ! -s "$cfdir/sources.list" ]; then
-    echo "$cfdir/sources.list does not exists. Can't continue."
+if [ ! -d "$cfdir/apt" ]; then
+    echo "$cfdir/apt/ does not exists. Can't continue."
     exit 7
 fi
 
@@ -246,11 +246,10 @@ create_nfsroot() {
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
     [ -d $NFSROOT/var/state ] || mkdir $NFSROOT/var/state
-    cp -v $cfdir/sources.list $NFSROOT/etc/apt/sources.list
+    cp -a $cfdir/apt $NFSROOT/etc
 
     egrep -q "127.0.0.1" etc/hosts 2>/dev/null || echo "127.0.0.1 localhost" >> etc/hosts
     egrep -q "$NFSROOT_ETC_HOSTS" etc/hosts 2>/dev/null || echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
-    [ -f $cfdir/preferences ] && cp -v $cfdir/preferences $NFSROOT/etc/apt
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
     cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
