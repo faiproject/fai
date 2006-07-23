@@ -26,7 +26,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.1, 27-mar-2006"
+version="version 1.2, 23-july-2006"
 
 # variables needed: $classes, $ROOTCMD, $LOGDIR, $target
     
@@ -62,12 +62,18 @@ reconfigure_packages() {
      local packages p
 
      [ -s $LOGDIR/debconf.data ] || return # nothing to do if is size 0 or missing
+     if [ -x /usr/bin/diff -a -r $LOGDIR/debconf.old ] ; then
+       $ROOTCMD debconf-get-selections > $LOGDIR/debconf.new
+       diff --changed-group-format="%>" --unchanged-line-format="" \
+         $LOGDIR/debconf.old $LOGDIR/debconf.new > $LOGDIR/debconf.data
+     fi
      packages=$(awk '{print $1}' $LOGDIR/debconf.data | sort | uniq)
      for p in $packages; do
 	 # test if package is installed
 	 if [ -f $target/var/lib/dpkg/info/$p.list ]; then
 	     echo "Reconfiguring package $p"
-	     DEBCONF_FRONTEND=noninteractive $ROOTCMD dpkg-reconfigure $p
+       $ROOTCMD /usr/bin/fai-debconf-pipe $p &
+       DEBCONF_PIPE=/var/run/fai/debconf.pipe DEBIAN_FRONTEND=passthrough $ROOTCMD dpkg-reconfigure $p
 	 else
 	     :
 	     # for debugging only
@@ -91,11 +97,13 @@ EOF
 # main program
 
 reconf=1 # call dpkg-reconfigure by default
-while getopts "hvs" opt ; do
+forcereconf=0 # don't call dpkg-reconfigure for unchanged packages
+while getopts "hvsf" opt ; do
     case "$opt" in
 	h) usage 0 ;;
 	s) reconf=0 ;;
 	v) verbose=1 ;;
+	f) forcereconf=1 ;;
     esac
 done
 shift $(($OPTIND - 1))
@@ -107,5 +115,6 @@ if [ "x$classes" = "x" ]; then
     exit 9
 fi
 
+[ $forcereconf -eq 0 ] && $ROOTCMD debconf-get-selections > $LOGDIR/debconf.old
 call_conf # add data to debconf database
 [ $reconf -eq 1 ] && reconfigure_packages

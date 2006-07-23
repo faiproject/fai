@@ -1,0 +1,102 @@
+#!/usr/bin/perl -w
+
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#*********************************************************************
+
+
+use strict;
+use IO::Socket;
+
+my $debug = $ENV{"debug"};
+
+my $PIPEFILE="/var/run/fai/debconf.pipe";
+
+die "No package name given!\n" unless $ARGV[0];
+my $packagename = shift @ARGV;
+
+my %answers;
+
+select STDERR;
+
+open(DH, $ENV{"LOGDIR"}."/debconf.data") or die "Cannot open ".$ENV{"LOGDIR"}."/debconf.data\n" ;
+
+print "Reading from <". $ENV{"LOGDIR"}."/debconf.data ... " if $debug;
+
+while(<DH>) {
+  print "read: $_";
+  chomp;
+  next unless /^([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]*(.*)$/;
+  print "extracted: PN: $1, Q: $2, T: $3, A: $4\n" if $debug;
+  next unless ( $1 eq $packagename );
+  $answers{ "$2" } = "$4";
+
+  print "Got answer for $2: " . $answers{ "$2" } . "\n" if $debug;
+}
+close DH;
+
+print "done.\n" if $debug;
+
+my $thepipe = IO::Socket::UNIX->new(
+  Type => SOCK_STREAM,
+  Local => $PIPEFILE, Listen => 1 ) || die "Cannot create socket!\n";
+
+
+my $client = $thepipe->accept();
+while(<$client>) {
+  chomp;
+  print "Read: $_\n" if $debug;
+  if( /^CAPB backup$/ ) {
+    print $client "0 backup\n";
+    print "Sent: 0 backup\n" if $debug;
+  }
+  elsif( /^STOP$/ ) {
+    print $client "0 OK\n";
+    print "Sent: 0 OK\n" if $debug;
+    last;
+  }
+  elsif( /^GET ([^[:space:]]*)$/ ) {
+    if( defined $answers{ "$1" } ) {
+      print $client "0 " . $answers{ "$1" } . "\n";
+      print "Sent: 0 " . $answers{ "$1" }. "\n" if $debug;
+    }
+    else {
+      print $client "0 \n";
+      print "Sent: 0 \n" if $debug;
+    }
+  }
+  elsif( /^SET ([^[:space:]]*)[[:space:]]+(.*)$/ ) {
+    if( defined $answers{ "$1" } ) {
+      print $client "0 OK\n";
+      print "Sent: 0 OK (known answer)\n" if $debug;
+    }
+    else {
+      $answers{ "$1" } = "$2";
+      print $client "0 OK \n";
+      print "Sent: 0 OK (unknown answer)\n" if $debug;
+    }
+  }
+  else {
+    #elsif( /^(TITLE|SETTITLE|INPUT|CLEAR|GO|BEGINBLOCK|ENDBLOCK|DATA|GO|CAPB|PURGE).*$/ ) {
+    print $client "0 OK\n";
+    print "Sent: 0 OK\n" if $debug;
+    #}
+    #warn "No match found for $_\n";
+  }
+}
+
+unlink "$PIPEFILE";
