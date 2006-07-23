@@ -1,9 +1,8 @@
-#! /usr/bin/cfengine
+#! /usr/bin/cfagent -f
 
 control:
    any::
-   OutputPrefix = ( "cfengine" )
-   actionsequence = ( files directories editfiles )
+   actionsequence = ( files editfiles )
    EditFileSize = ( 30000 )
 
 files:
@@ -13,11 +12,9 @@ files:
         ${target}/dev include=fd* mode=666   action=fixall r=1
         ${target}/dev include=sr* mode=444   action=fixall r=1
 
-directories:
-
 editfiles:
    any::
 
 	{ ${target}/etc/init.d/sysklogd
-	  ReplaceAll "^SYSLOGD=.*" With "SYSLOGD=${dblquote}-m 360${dblquote}"
+	  ReplaceAll "^SYSLOGD=.*" With 'SYSLOGD="-m 360"'
 	}
