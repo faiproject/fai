@@ -15,7 +15,7 @@
 # `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
 # or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
 # can also obtain it by writing to the Free Software Foundation, Inc.,
-# 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
 
@@ -24,7 +24,7 @@ use IO::Socket;
 
 my $debug = $ENV{"debug"};
 
-my $PIPEFILE="/var/run/fai/debconf.pipe";
+my $PIPEFILE = $ENV{"target"}."/var/run/fai/debconf.pipe";
 
 die "No package name given!\n" unless $ARGV[0];
 my $packagename = shift @ARGV;
@@ -38,7 +38,7 @@ open(DH, $ENV{"LOGDIR"}."/debconf.data") or die "Cannot open ".$ENV{"LOGDIR"}."/
 print "Reading from <". $ENV{"LOGDIR"}."/debconf.data ... " if $debug;
 
 while(<DH>) {
-  print "read: $_";
+  print "read: $_" if $debug;
   chomp;
   next unless /^([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]*(.*)$/;
   print "extracted: PN: $1, Q: $2, T: $3, A: $4\n" if $debug;
