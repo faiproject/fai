@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.2.5, 3-april-2006";
+my $version = "Version 2.2.6, 23-july-2006";
 
 use strict;
 use File::Copy;
@@ -50,7 +50,7 @@ my $target;
 my $source;
 my $logfile;
 my @classes;
-my $debdry;
+my $dryrun;
 
 my @opt_modes;
 my @rlist;
@@ -83,7 +83,7 @@ sub copy_one {
   my $logcomment = "";
   my ($tmpfh,$tmpfile);
 
-  warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debdry;
+  warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debug;
 
   # $prefix/$source must be a directory
   if (-f $ps) { ewarn("$ps is a file, but must be a directory containing templates.");return };
@@ -109,7 +109,7 @@ sub copy_one {
     }
     return;
   }
-  warn "using class: $class\n" if $debdry;
+  warn "using class: $class\n" if $debug;
   $tmpfile = $sourcefile = "$ps/$class";
 
   # do nothing if source and destination files are equal
@@ -189,25 +189,25 @@ sub copy_one {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _mkpath {
 
-  return 1 if $opt_n; # do not execute if -n was given
+  return 1 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   mkpath(@_);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _unlink {
 
-  return 1 if $opt_n; # do not execute if -n was given
+  return 1 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   unlink(@_);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _move {
 
-  return 1 if $opt_n; # do not execute if -n was given
+  return 1 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   move(@_);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _copy {
 
-  return 1 if $opt_n; # do not execute if -n was given
+  return 1 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   copy(@_);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -216,7 +216,7 @@ sub runscript {
   my ($scriptname,$sourcefile,$destfile,$class) = @_;
   return unless -x "$sourcefile/$scriptname";
   warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
-  return if $opt_n; # do not execute if -n was given
+  return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   system "$sourcefile/$scriptname $class $destfile";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -260,7 +260,7 @@ sub set_mode {
 
   ($uid,$gid) = name2num($owner,$group);
   warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
-  return if $opt_n; # do not execute if -n was given
+  return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   chown ($uid,$gid,     $destfile) || ewarn("chown $owner $group $destfile failed. $!");
   chmod ($mode,         $destfile) || ewarn("chmod $mode $destfile failed. $!");
   utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
@@ -405,8 +405,8 @@ EOF
 $|=1;
 getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:Un');
 $opt_h && usage;
-$opt_n || $ENV{FCOPY_DRYRUN} and warn "Dry-run only! Nothing is really executed.\n";
-$debdry = $debug || $opt_n || 0; # is true if $debug or dry-run mode
+$dryrun = $ENV{FCOPY_DRYRUN} || $opt_n || 0; # is true if in dry-run mode
+$dryrun and warn "Dry-run only! Nothing is really executed.\n";
 $opt_M and $opt_m = "root,root,0644";  # set default modes
 $opt_m && check_mopt();
 $nobackup = $opt_B || $ENV{FCOPY_NOBACKUP} || 0;
