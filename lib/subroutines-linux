@@ -220,13 +220,14 @@ task_chboot() {
     local doexit=0
     local hostname=$(hostname)
     local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d\' -f2)
+    local remotesh
 
     case "$FAI_LOGPROTO" in
-	ftp) export FAI_REMOTESH=ssh ;;
-	ssh) export FAI_REMOTESH=ssh ;;
-	rsh) export FAI_REMOTESH=rsh ;;
+	ftp) remotesh=ssh ;;
+	ssh) remotesh=ssh ;;
+	rsh) remotesh=rsh ;;
     esac
-    frsh="$FAI_REMOTESH -l $LOGUSER ${SERVER}"
+    frsh="$remotesh -l $LOGUSER ${SERVER}"
 
     if [ -z "$SERVER" ] ; then
 	echo "SERVER not defined. Can't change network boot configuration"
