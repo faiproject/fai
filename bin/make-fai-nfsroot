@@ -192,6 +192,9 @@ copy_fai_files() {
     echo "root:$FAI_ROOTPW" | $ROOTCMD chpasswd --encrypted
     cd $NFSROOT
     cp -Rpv $cfdir/* $NFSROOT/etc/fai
+    # append additional variables to fai.conf for the install clients
+    [ -z "$FAI_LOCATION" ] && echo "\$FAI_LOCATION=`hostname`:$FAI_CONFIGDIR" >> $NFSROOT/etc/fai/fai.conf
+
     # remove some files that should not be copied
     rm -f $NFSROOT/etc/fai/make-fai-nfsroot.conf
     [ -f $cfdir/.cvspass ] && cp -p $v $cfdir/.cvspass $NFSROOT/.cvspass
@@ -250,6 +253,8 @@ create_nfsroot() {
 
     egrep -q "127.0.0.1" etc/hosts 2>/dev/null || echo "127.0.0.1 localhost" >> etc/hosts
     egrep -q "$NFSROOT_ETC_HOSTS" etc/hosts 2>/dev/null || echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
+
+    getent hosts `hostname` >> /etc/hosts
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
     cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
