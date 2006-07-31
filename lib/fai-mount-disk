@@ -1,9 +1,8 @@
 #! /bin/sh
 
 # $Id$
-# Copyright (c) 2002 by Thomas Lange
+# Copyright (c) 2002-2006 by Thomas Lange
 
-fstab=fstab  # Solaris uses vfstab
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fstab_mount() {
 
@@ -11,11 +10,11 @@ fstab_mount() {
         # mount the root partition; then mount the rest according to fstab found
 	umount_local_disks
 	mount -o ro /dev/$fstabpart $FAI_ROOT
-	mount2dir $FAI_ROOT $FAI_ROOT/etc/$fstab 0 ro
+	mount2dir $FAI_ROOT $FAI_ROOT/etc/fstab 0 ro
 	df
     fi
-    [ $fstabcount -eq 0 ] && echo "No /etc/$fstab found"
-    [ $fstabcount -ge 2 ] && echo -n "Found multiple /etc/$fstab files in : $fstablist.\nUse mount2dir for mounting."
+    [ $fstabcount -eq 0 ] && echo "No /etc/fstab found"
+    [ $fstabcount -ge 2 ] && echo -n "Found multiple /etc/fstab files in : $fstablist.\nUse mount2dir for mounting."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mount_local_disks() {
@@ -34,8 +33,8 @@ mount_local_disks() {
 	    mkdir -p $FAI_ROOT/$partition
 	    mount -o $mountoption /dev/$partition $FAI_ROOT/$partition
 	    # \ && echo $partition mounted successfully
-	    if [ -f $FAI_ROOT/$partition/etc/$fstab ]; then
-		echo "/etc/$fstab found in $partition"
+	    if [ -f $FAI_ROOT/$partition/etc/fstab ]; then
+		echo "/etc/fstab found in $partition"
 		fstabpart=$partition   # used in fstab_mount
 		fstablist="$fstablist $partition"
 		(( fstabcount += 1 ))
