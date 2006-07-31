@@ -37,14 +37,11 @@ romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 
 # the type of operating system (linux, sunos)
 oclass=$(uname -s | tr a-z A-Z)
-# $classes is now set so we can call hooks before fai-class defines the classes
-classes="DEFAULT $oclass $HOSTNAME LAST"
 unset oclass
 faimond=0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
-    local sub ostype
     set -a # now export all variables
 
     umask 022
@@ -65,11 +62,10 @@ fai_init() {
     # some variables from are not needed any more
     unset FAI_CONFIGDIR
 
-    ostype=$(uname -s | tr A-Z a-z)
     # read subroutine definitions
-    sub=/usr/lib/fai/subroutines
+    local sub=/usr/lib/fai/subroutines
     [ -f $sub ] && . $sub
-    [ -f $sub-$ostype ] && . $sub-$ostype
+    [ -f $sub-linux ] && . $sub-linux
 
     [ -f "$stamp" ] && {
        echo "$0 already running, aborting"
@@ -105,6 +101,8 @@ fai_init() {
 	hostname $HOST
 	echo "Hostname set to $HOST" | tee -a $LOGDIR/fai.log
     fi
+    # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
+    [ -z "$classes" ] && classes="DEFAULT $oclass $HOSTNAME LAST"
 
     if [ $DO_INIT_TASKS -eq 1 ]; then
 	mount -t sysfs sysfs /sys
