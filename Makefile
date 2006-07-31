@@ -22,8 +22,8 @@ veryclean: clean
 	$(MAKE) -f debian/rules clean
 
 install: 
-	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{fai,modutils,dhcp3,apt/apt.conf.d}
-	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai
+	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,dhcp3,apt/apt.conf.d}
+	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
 	install man/* $(DESTDIR)/man
 	$(MAKE) -C doc install
 	-install $(libfiles) $(LIBDIR)
