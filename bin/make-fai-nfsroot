@@ -209,6 +209,14 @@ call_debootstrap() {
     yes '' | LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_all_host_entries() {
+
+    local ips=$(ifconfig | grep -w inet | cut -d : -f 2 | cut -d ' ' -f 1 | grep -v 127.0.0.1)
+    for eth in $ips; do
+	getent hosts $eth >> etc/hosts
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
     if [ "$FAI_DEBOOTSTRAP" ]; then
@@ -253,8 +261,8 @@ create_nfsroot() {
 
     egrep -q "127.0.0.1" etc/hosts 2>/dev/null || echo "127.0.0.1 localhost" >> etc/hosts
     egrep -q "$NFSROOT_ETC_HOSTS" etc/hosts 2>/dev/null || echo "$NFSROOT_ETC_HOSTS" >> etc/hosts
+    add_all_host_entries
 
-    getent hosts `hostname` >> etc/hosts
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
     cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
