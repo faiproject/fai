@@ -33,10 +33,10 @@ install:
 	install bin/dhclient-fai-script  $(DESTDIR)/etc/dhcp3
 	install -m644 conf/dhclient-fai.conf $(DESTDIR)/etc/dhcp3
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
-	install -m644 conf/sources.list conf/menu.lst $(DESTDIR)/etc/fai/
-	install -m644 conf/fai.conf $(DESTDIR)/etc/fai/apt/
+	install -m644 conf/fai.conf conf/menu.lst $(DESTDIR)/etc/fai/
 	install -m644 conf/make-fai-nfsroot.conf $(DESTDIR)/etc/fai/
-	install -m600 conf/fai_modules_off $(DESTDIR)/etc/modutils
+	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
+	install -m644 conf/fai_modules_off $(DESTDIR)/etc/modutils
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
