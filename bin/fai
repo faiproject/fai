@@ -39,6 +39,7 @@ romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 oclass=$(uname -s | tr a-z A-Z)
 # $classes is now set so we can call hooks before fai-class defines the classes
 classes="DEFAULT $oclass $HOSTNAME LAST"
+unset oclass
 faimond=0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
@@ -100,28 +101,24 @@ fai_init() {
     # if HOST was specified on the commandline, set hostname to it
     [ $DO_INIT_TASKS -eq 1 ] && eval_cmdline
     if [ -n "$HOST" ]; then
-	HOSTNAME=$HOST
+	export HOSTNAME=$HOST
 	hostname $HOST
 	echo "Hostname set to $HOST" | tee -a $LOGDIR/fai.log
-	sleep 3
     fi
-    export HOSTNAME
 
-    if [ X$oclass = XLINUX ]; then
-	if [ $DO_INIT_TASKS -eq 1 ]; then
-	    grep -q '[[:space:]]sysfs' /proc/filesystems && mount -t sysfs sysfs /sys
-	    ifup lo
-	    [ -x /etc/init.d/udev ] && /etc/init.d/udev start
-	    [ -x /sbin/portmap ] && /sbin/portmap
-	    mount -t devpts devpts /dev/pts
+    if [ $DO_INIT_TASKS -eq 1 ]; then
+	mount -t sysfs sysfs /sys
+	ifup lo
+	    # we really need to start udev
+	[ -x /etc/init.d/udev ] && /etc/init.d/udev start
+	[ -x /sbin/portmap ] && /sbin/portmap
+	mount -t devpts devpts /dev/pts
 	    # add other options for nfs mount of /dev/root to root-path in dhcpd.conf
-	    mount -o remount,noatime,ro /dev/root /
-	    cat /proc/kmsg >/dev/tty4 &
-	fi
+	mount -o remount,noatime,ro /dev/root /
+	cat /proc/kmsg >/dev/tty4 &
     fi
 
     prcopyleft
-    unset oclass
 
     save_dmesg
 }
@@ -184,7 +181,8 @@ while true ; do
     esac
 done
 
-if [ `id -u` -ne 0 ]; then
+
+if [ $(id -u) != "0" ]; then
     echo "Run this program as root."
     exit 1
 fi
@@ -198,10 +196,10 @@ fi
     # HG: are we called as an init substitute ?
     export DO_INIT_TASKS=0
     [ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
-    [ $DO_INIT_TASKS -eq 1 ] && renewclass=1 # always renew class list when installing
-
-    # Solaris has already a writable /tmp directory
-    [ "$oclass" = LINUX -a $DO_INIT_TASKS -eq 1 ] && create_ramdisk
+    if [ $DO_INIT_TASKS -eq 1 ];
+	renewclass=1 # always renew class list when installing
+	create_ramdisk
+    fi
 
     export LOGDIR=/var/log/fai/current
     mkdir -p $LOGDIR
