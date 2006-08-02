@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # (c) 2006 Henning Glawe <glaweh@physik.fu-berlin.de>
 
 ### BEGIN SUBROUTINE INFO
@@ -21,20 +22,20 @@ if [ -z "$FAI_CONFIG_SRC" ]; then
 	die "Error: Provide the URL to obtain the fai config storage in \$FAI_CONFIG_SRC"
 fi
 
-# HG: extract method to get the config dir
+# extract method to get the config dir
 # matched string: "cvs[+ssh]://user@host/path/to/cvsroot module[=tag]"
 #                  ^^^
 #                 "nfs://host/path/to/exported/config"
 #                  ^^^
 # the "major" protocol name is the one up to the first "+", if it exists
-FAI_CONFIG_METHOD=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://.*')
+method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://.*')
 
-# HG: run get-fai-$method script if it exists
-if which get-config-dir-$FAI_CONFIG_METHOD &>/dev/null ; then
-	get-config-dir-$FAI_CONFIG_METHOD
+# run get-config-dir-$method script if it exists
+if which get-config-dir-$method &>/dev/null ; then
+	get-config-dir-$method
 else
 	sndmon "TASKERROR get_fai_dir 22"
-	die "Error: get-config-dir-$FAI_CONFIG_METHOD not found"
+	die "Error: get-config-dir-$fai_config_method not found"
 fi
 
 ln -s $FAI $rundir/current_config
