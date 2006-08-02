@@ -68,13 +68,13 @@ add_fai_account() {
     # get the home dir of a user in a variable; do not exit when set -e is used
     # loguserhome is unset if $LOGUSER does not exists
     # this is not a evil hack, it's a very clever piece of code
-    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+    loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
     touch $loguserhome/.account_created_by_fai_package
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_fai_account() {
 
-    loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+    loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
     sshdir=$loguserhome/.ssh
     if [ -z "$loguserhome" ]; then
 	echo "Can't determine home directory for user $LOGUSER."
@@ -101,11 +101,11 @@ setup_fai_account() {
 	#So that installed clients can ssh $LOGUSER@$HOSTNAME without password
 	if [ ! -f $sshdir/known_hosts ]; then
 	    echo "Using interface $SERVERINTERFACE to determine local hostname."
-	    SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/inet addr:([0-9\.]+)/ && print $1'`
-	    HOSTNAME=`getent hosts $SERVERIP | perl -p -e 's/[\d.\s]*([\w-]*).*// && print $1'`
+	    SERVERIP=$(LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/addr:([\d.]+)/ && print "$1\n"')
+	    HOSTNAME=$(getent hosts $SERVERIP | perl -p -e 's/[\d.\s]*([\w-]*).*// && print $1')
 	    echo "Adding $HOSTNAME to known_hosts."
-	    [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=` cat /etc/ssh/ssh_host_dsa_key.pub | sed -e "s/= .*$/=/"`
-	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=` cat /etc/ssh/ssh_host_rsa_key.pub | sed -e "s/= .*$/=/"`
+	    [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=$( cat /etc/ssh/ssh_host_dsa_key.pub | sed -e "s/= .*$/=/")
+	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$( cat /etc/ssh/ssh_host_rsa_key.pub | sed -e "s/= .*$/=/")
 	
 	    [ -z "$DSASERVER" ] || echo "$HOSTNAME,$SERVERIP $DSASERVER" >> $sshdir/known_hosts
 	    [ -z "$RSASERVER" ] || echo "$HOSTNAME,$SERVERIP $RSASERVER" >> $sshdir/known_hosts
