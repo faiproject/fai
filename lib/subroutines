@@ -173,62 +173,6 @@ skiptask() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_fai_dir() {
-
-    # get /fai directory; mount it or get it from a cvs repository
-
-    [ -f /boot/RUNNING_FROM_FAICD ] && mkrw -s 100m $FAI
-    # now you have enough time to make changes to the config space
-    if [ -n "$fl_wait" ]; then
-	echo "Sleeping. Now you may change the config space in $FAI."
-	echo "Continue after killall sleep."
-	sleep 50000
-    fi
-
-    if [ -z "$FAI_LOCATION" ]; then
-       get_fai_cvs
-    else
-        mount $romountopt $FAI_LOCATION $FAI &&
-	    echo "Configuration space $FAI mounted from $FAI_LOCATION"
-    fi
-    ln -s $FAI $rundir/current_config
-    if [ ! -d $FAI/class ]; then
-	echo "WARNING: directory $FAI/class not found."
-    fi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_fai_cvs() {
-
-    # subroutine which gets $FAI (/fai) configuration directory from
-    # a cvs repository. You can redefine this subroutine if you need
-    # access via ftp, http, or from a database
-
-    if [ "$FAI_CVSROOT" ] ; then
-        local TAG=""
-	[ -n "$FAI_CVSTAG" ] && TAG="-r $FAI_CVSTAG"
-        export FAI_CONFIG_AREA=$FAI_ROOT$FAI
-        export FAI=$(mktemp -t -d fai-config.XXXXXX)
-        
-	[ "$debug" ] && echo "\$FAI now points to $FAI"
-        
-	if [ -d "$FAI_CONFIG_AREA/CVS" -a -z "$FORCE" ] ; then
-	   echo "Config found at $FAI_CONFIG_AREA: Copying"
-	   cp -a $FAI_CONFIG_AREA/. $FAI
-	   echo "Updating CVS"
-	   cd $FAI
-           cvs -q -d"$FAI_CVSROOT" up -P $TAG -d -C > $LOGDIR/cvs.log
-	else 
-	   echo "Checking out CVS"
-	   cd /tmp
-	   cvs -q -d"$FAI_CVSROOT" co -P -d $(basename "$FAI") \
-	     $TAG $FAI_CVSMODULE > $LOGDIR/cvs.log
-	fi
-    else
-	echo "Warning $0: Neither \$FAI_LOCATION nor \$FAI_CVSROOT are defined."
-    fi
-    cd /
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 define_fai_flags() {
 
     local flag
