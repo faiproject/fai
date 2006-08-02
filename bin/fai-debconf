@@ -59,10 +59,10 @@ add_data() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 reconfigure_packages() {
 
-     local packages p
+     local packages p pipe
 
      [ -s $LOGDIR/debconf.data ] || return # nothing to do if is size 0 or missing
-     if [ -x $target/usr/bin/debconf-get-selections -a -r $LOGDIR/debconf.old ] ; then
+     if [ -r $LOGDIR/debconf.old ] ; then
        $ROOTCMD debconf-get-selections > $LOGDIR/debconf.new
        diff --changed-group-format="%>" --unchanged-line-format="" \
          $LOGDIR/debconf.old $LOGDIR/debconf.new > $LOGDIR/debconf.data
@@ -73,7 +73,12 @@ reconfigure_packages() {
 	 if [ -f $target/var/lib/dpkg/info/$p.list ]; then
 	     echo "Reconfiguring package $p"
        /usr/lib/fai/fai-debconf-pipe $p &
-       DEBCONF_PIPE=/var/run/fai/debconf.pipe DEBIAN_FRONTEND=passthrough $ROOTCMD dpkg-reconfigure $p
+       if [ -d $target/var/run/fai/ ]; then
+	   pipe=/tmp/debconf.pipe
+       else
+	   pipe=$target/var/run/fai/debconf.pipe
+       fi
+       DEBCONF_PIPE=$pipe DEBIAN_FRONTEND=passthrough $ROOTCMD dpkg-reconfigure $p
 	 else
 	     :
 	     # for debugging only
@@ -86,7 +91,7 @@ usage() {
 
     local ex=$1
     cat <<-EOF
-    fai-debconf $version. Copyright (C) 2005 Thomas Lange
+    fai-debconf $version. Copyright (C) 2005-2006 Thomas Lange
     Report bugs to <fai@informatik.uni-koeln.de>.
 
     Usage: fai-debconf [OPTION] DIRECTORY
@@ -115,6 +120,6 @@ if [ "x$classes" = "x" ]; then
     exit 9
 fi
 
-[ $forcereconf -eq 0 ] && $ROOTCMD debconf-get-selections > $LOGDIR/debconf.old
+[ $forcereconf -eq 0 -a -x $target/usr/bin/debconf-get-selections ] && $ROOTCMD debconf-get-selections > $LOGDIR/debconf.old
 call_conf # add data to debconf database
 [ $reconf -eq 1 ] && reconfigure_packages
