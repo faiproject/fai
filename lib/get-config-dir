@@ -1,0 +1,43 @@
+#!/bin/bash
+# (c) 2006 Henning Glawe <glaweh@physik.fu-berlin.de>
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_CONFIG_SRC $DO_INIT_TASKS $FAI $rundir
+# Suggests-Var:
+# Short-Description: get $FAI directory from $FAI_CONFIG_SRC
+### END SUBROUTINE INFO
+
+[ $DO_INIT_TASKS -eq 1 ] && mkrw -s 100m $FAI
+# now you have enough time to make changes to the config space
+if [ -n "$fl_wait" ]; then
+	echo "Sleeping. Now you may change the config space in $FAI."
+	echo "Continue after killall sleep."
+	sleep 50000
+fi
+
+if [ -z "$FAI_CONFIG_SRC" ]; then
+	sndmon "TASKERROR get_fai_dir 21"
+	die "Error: Provide the URL to obtain the fai config storage in \$FAI_CONFIG_SRC"
+fi
+
+# HG: extract method to get the config dir
+# matched string: "cvs[+ssh]://user@host/path/to/cvsroot module[=tag]"
+#                  ^^^
+#                 "nfs://host/path/to/exported/config"
+#                  ^^^
+# the "major" protocol name is the one up to the first "+", if it exists
+FAI_CONFIG_METHOD=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://.*')
+
+# HG: run get-fai-$method script if it exists
+if which get-config-dir-$FAI_CONFIG_METHOD &>/dev/null ; then
+	get-config-dir-$FAI_CONFIG_METHOD
+else
+	sndmon "TASKERROR get_fai_dir 22"
+	die "Error: get-config-dir-$FAI_CONFIG_METHOD not found"
+fi
+
+ln -s $FAI $rundir/current_config
+if [ ! -d $FAI/class ]; then
+	echo "WARNING: directory $FAI/class not found."
+fi
