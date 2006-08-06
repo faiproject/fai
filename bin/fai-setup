@@ -100,15 +100,17 @@ setup_fai_account() {
 	#Adding servers keys to known_hosts list of LOGUSER. 
 	#So that installed clients can ssh $LOGUSER@$HOSTNAME without password
 	if [ ! -f $sshdir/known_hosts ]; then
-	    echo "Using interface $SERVERINTERFACE to determine local hostname."
-	    SERVERIP=$(LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/addr:([\d.]+)/ && print "$1\n"')
-	    HOSTNAME=$(getent hosts $SERVERIP | perl -p -e 's/[\d.\s]*([\w-]*).*// && print $1')
-	    echo "Adding $HOSTNAME to known_hosts."
-	    [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=$( cat /etc/ssh/ssh_host_dsa_key.pub | sed -e "s/= .*$/=/")
-	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$( cat /etc/ssh/ssh_host_rsa_key.pub | sed -e "s/= .*$/=/")
-	
-	    [ -z "$DSASERVER" ] || echo "$HOSTNAME,$SERVERIP $DSASERVER" >> $sshdir/known_hosts
-	    [ -z "$RSASERVER" ] || echo "$HOSTNAME,$SERVERIP $RSASERVER" >> $sshdir/known_hosts
+	    [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_dsa_key.pub)
+	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_rsa_key.pub )
+	    # determine all IP addresses, and their host names
+	    ips=$(LC_ALL=C ifconfig| perl -ne '/addr:([\d.]+)/ && print"$1\n"'|grep -v 127.0.0.1)
+	    for ip in $ips; do
+		hname=$(getent hosts $ip| tr -s ' ' ',')
+		[ -z "$hname" ] && hname=$ip
+		echo "Adding $hname to known_hosts."
+		[ -z "$DSASERVER" ] || echo "$hname $DSASERVER" >> $sshdir/known_hosts
+		[ -z "$RSASERVER" ] || echo "$hname $RSASERVER" >> $sshdir/known_hosts
+	    done
 	    echo "$sshdir/known_hosts created."
 	else
 	    echo "$sshdir/known_hosts remained unchanged."
@@ -154,8 +156,10 @@ if [ -z "$expert" ]; then
     test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
     test -f /etc/init.d/nfs-user-server && nfsserver=nfs-user-server
 
-    add_export_line $FAI_CONFIGDIR  "$FAICLIENTS(async,ro)"
-    add_export_line $NFSROOT  "$FAICLIENTS(async,ro,no_root_squash)"
+    addr=$(LC_ALL=C ifconfig $SERVERINTERFACE | grep -v 127.0.0.1 | perl -ne '/addr:([\d.]+)/ && print"$1\n"')
+    mask=$(LC_ALL=C ifconfig $SERVERINTERFACE | grep -v 127.0.0.1 | perl -ne '/Mask:([\d.]+)/ && print"$1\n"')
+    add_export_line $FAI_CONFIGDIR  "$addr/$mask(async,ro)"
+    add_export_line $NFSROOT  "$addr/$mask(async,ro,no_root_squash)"
     if [ -z "$nfsserver" ]; then
 	echo "Could not find the type of your nfs server. Maybe"
 	echo "no nfs server is installed. I can't restart it."
