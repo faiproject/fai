@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.7.2, 2-august-2006"
+version="Version 2.7.3, 7-august-2006"
 set -e
 timeout=15
 mkimage=0
@@ -106,7 +106,7 @@ determine_network_parameters() {
 
     local dev ndevices devices 
     ndevices=0
-    devices=`egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: 'ORS=" " {print $1}'`
+    devices=$(egrep -v "lo:|^Inter-|^ face" /proc/net/dev | awk -F: 'ORS=" " {print $1}')
     for dev in $devices; do
 	ndevices=$(($ndevices+1))
     done
@@ -129,22 +129,22 @@ determine_network_parameters() {
 	esac
     fi
 
-    SERVERIP=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/addr:([\d.]+)/ && print $1'`
+    SERVERIP=$(LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/addr:([\d.]+)/ && print $1')
     [ -z "$SERVERIP" ] && echo "WARNING: Can't determine IP-address for $SERVERINTERFACE"
 
     if [ -n "${TARGETHOST}" ] ; then
         # if targethost only contains digits and dots, it's an ip address
-	chars=`echo $TARGETHOST | tr -d /0-9./`
+	chars=$(echo $TARGETHOST | tr -d /0-9./)
 	if [ -z "$chars" ] ; then
 	    TARGETIP=$TARGETHOST
 	else
-	    TARGETIP=`perl -e 'use Socket; use Net::hostent; printf "%s\n", inet_ntoa((gethost($ARGV[0]))->addr);' "${TARGETHOST}"`
+	    TARGETIP=$(perl -e 'use Socket; use Net::hostent; printf "%s\n", inet_ntoa((gethost($ARGV[0]))->addr);' "${TARGETHOST}")
 	fi
 
-	TARGETHOST=`perl -e 'use Socket; print gethostbyaddr(inet_aton($ARGV[0]), AF_INET)."\n";' ${TARGETHOST}`
-	BROADCAST=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([0-9\.]+)/ && print $1'`
-	NETMASK=`LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([0-9\.]+)/ && print $1'`
-	GATEWAY=`LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }'`
+	TARGETHOST=$(perl -e 'use Socket; print gethostbyaddr(inet_aton($ARGV[0]), AF_INET)."\n";' ${TARGETHOST})
+	BROADCAST=$(LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Bcast:([\d\.]+)/ && print $1')
+	NETMASK=$(LC_ALL=C ifconfig $SERVERINTERFACE | perl -ne '/Mask:([\d\.]+)/ && print $1')
+	GATEWAY=$(LC_ALL=C route -n | grep '^0\.0\.0\.0' | awk '{ print $2 }')
 	fixedparams="ip=${TARGETIP}:${SERVERIP}:${GATEWAY}:${NETMASK}:${TARGETHOST}:${CLIENTINTERFACE}:off" 
     fi
 }
@@ -264,7 +264,7 @@ cd_image() {
 	exit 5
     }
     echo "Creating the iso9660 cd image in $cddev from floppy image $floppydev."
-    TMPDIR=`mktemp -d` || exit 7
+    TMPDIR=$(mktemp -d) || exit 7
     mkdir $TMPDIR/boot
     cp $floppydev $TMPDIR/boot/boot.img
     cd $TMPDIR
@@ -310,7 +310,7 @@ esac
 [ $lilo ] && [ $grub ] && die "Specify only one of -l or -g"
 [ $lilo ] || [ $grub ] || grub=1
 [ $mkcd ] && [ $mkimage -eq 0 ] && die "You must use -f with -i"
-[ `id -u` -eq 0 ] || die "You must be root! Or try $0 -h"
+[ $(id -u) != "0" ] || die "You must be root! Or try $0 -h"
 
 trap "umount_dirs" EXIT
 # additional kernel parameter
@@ -322,7 +322,8 @@ if [ ! -d "$cfdir" ]; then
     exit 6
 fi
 [ "$verbose" ] && echo "Using configuration files from directory $cfdir."
-. $cfdir/fai.conf
+#. $cfdir/fai.conf
+. $cfdir/make-fai-nfssroot.conf
 
 # use newest kernel if several are installed
 KERNELVERSION=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
