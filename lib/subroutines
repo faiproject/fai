@@ -362,11 +362,11 @@ task_configure() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_savelog() {
 
-    [ -d $target/var/log/fai ] || mkdir -p $target/var/log/fai
-    [ -d $target/var/log/fai ] && fai-savelog -l
-    [ -f $LOGDIR/FAI_CLASSES ] && cp -p $LOGDIR/FAI_CLASSES $target/var/log/fai
-    [ -f $LOGDIR/variables.sh ] && cp -p $LOGDIR/variables.sh $target/var/log/fai
-    [ "$diskvar" != "/var/log/fai/disk_var.sh" ] && cp -p $diskvar $target/var/log/fai
+    [ -d $FAI_ROOT/var/log/fai ] || mkdir -p $FAI_ROOT/var/log/fai
+    [ -d $FAI_ROOT/var/log/fai ] && fai-savelog -l
+    [ -f $LOGDIR/FAI_CLASSES ] && cp -p $LOGDIR/FAI_CLASSES $FAI_ROOT/var/log/fai
+    [ -f $LOGDIR/variables.sh ] && cp -p $LOGDIR/variables.sh $FAI_ROOT/var/log/fai
+    [ "$diskvar" != "/var/log/fai/disk_var.sh" ] && cp -p $diskvar $FAI_ROOT/var/log/fai
     fai-savelog -r
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -385,7 +385,7 @@ task_faiend() {
     case $(uname -s) in
 	Linux)
 	    killall -q sshd
-	    umount $target/proc
+	    umount $FAI_ROOT/proc
 	    umount -ar
 	    exec reboot -dfi
 	    ;;
