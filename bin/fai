@@ -37,8 +37,8 @@ romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 
 # the type of operating system (linux, sunos)
 oclass=$(uname -s | tr a-z A-Z)
-unset oclass
 faimond=0
+export renewclass=0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
@@ -120,7 +120,7 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
     cat <<-EOF
-	fai $FAI_VERSION. Copyright (C) 1999-2005 Thomas Lange
+	fai $FAI_VERSION. Copyright (C) 1999-2006 Thomas Lange
 	Usage: $0 [options] [action]
        
 	Options:
@@ -144,7 +144,6 @@ fstart() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
 
-export renewclass=0
 # Parse commandline options
 TEMP=$(getopt -o Nhv --long new,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -159,7 +158,7 @@ while true ; do
             ;;
 	-v|--verbose)
 	    shift
-	    verbose=1
+	    export verbose=1
 	    ;;
 	-N|--new)
 	    shift
@@ -230,9 +229,6 @@ sleep 1 # wait for tee to complete. One second should be ok
 [ "$2" ] && targetdir=$2 # only used for dirinst
 
 task action 2>&1 | tee -a $LOGDIR/fai.log
-
-# not happy with this at all!
-[ "$FAI_CVSROOT" ] && rm -rf $FAI
 
 [ -L "$rundir/current_config" ] && rm -f "$rundir/current_config"
 
