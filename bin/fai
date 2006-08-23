@@ -79,12 +79,10 @@ fai_init() {
     ROOTCMD="chroot $FAI_ROOT"
     # no chroot needed
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
+    target=$FAI_ROOT
 
     # several log files
     diskvar=$LOGDIR/disk_var.sh
-
-    # variables for cfengine
-    target=$FAI_ROOT
 
     if [ $DO_INIT_TASKS -eq 1 ]; then
         trap 'echo "Now rebooting";faireboot' INT QUIT ;
@@ -92,28 +90,28 @@ fai_init() {
         trap "echo 'Aborted';rm -f $stamp" INT QUIT ;
     fi
 
-    # if HOST was specified on the commandline, set hostname to it
-    [ $DO_INIT_TASKS -eq 1 ] && eval_cmdline
-    if [ -n "$HOST" ]; then
-	HOSTNAME=$HOST
-	hostname $HOST
-	echo "Hostname set to $HOST" | tee -a $LOGDIR/fai.log
-    fi
-    export HOSTNAME
-    # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
-    [ -z "$classes" ] && classes="DEFAULT $oclass $HOSTNAME LAST"
-
     if [ $DO_INIT_TASKS -eq 1 ]; then
+	eval_cmdline
+	# if HOST was specified on the commandline, set hostname to it
+	if [ -n "$HOST" ]; then
+	    HOSTNAME=$HOST
+	    hostname $HOST
+	    echo "Hostname set to $HOST" | tee -a $LOGDIR/fai.log
+	fi
+
 	mount -t sysfs sysfs /sys
 	ifup lo
 	    # we really need to start udev
 	[ -x /etc/init.d/udev ] && /etc/init.d/udev start
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -t devpts devpts /dev/pts
-	    # add other options for nfs mount of /dev/root to root-path in dhcpd.conf
+	# add other options for nfs mount of /dev/root to root-path in dhcpd.conf
 	mount -o remount,noatime,ro /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
     fi
+
+    # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
+    [ -z "$classes" ] && classes="DEFAULT $oclass $HOSTNAME LAST"
 
     prcopyleft
 
