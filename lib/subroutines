@@ -249,6 +249,10 @@ task_action() {
 	    task install
 	    task faiend
 	    ;;
+	dirinst)
+	    echo "Installing into directory $FAI_ROOT"
+	    task dirinst
+	    ;;
 	softupdate)
 	    echo Performing FAI system update. All data may be overwritten!
 	    task softupdate
@@ -414,6 +418,34 @@ task_install() {
     # save again, because new messages could be created
     save_dmesg
     task savelog
+
+    if [ -f $stamp ]; then
+	echo "Error while executing commands in subshell."
+	echo "$stamp was not removed."
+	sndmon "TASKERROR install 21"
+	die "Please look at the log files in $LOGDIR for errors."
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_dirinst() {
+
+    > $stamp
+
+    save_dmesg
+
+    mkdir -p $target
+    task extrbase
+    task mirror
+    task debconf
+    task prepareapt
+    task updatebase
+    task instsoft
+    task configure
+
+    rm -f $stamp
+    # save again, because new messages could be created
+    save_dmesg
+#    task savelog
 
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
