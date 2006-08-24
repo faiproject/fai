@@ -297,13 +297,15 @@ task_defclass() {
 	# reevaluate new list of classes
 	fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
 	classes=$(< $LOGDIR/FAI_CLASSES)
-    else
+    elif [ -n "$cmdlineclasses" ]; then
+	classes=$cmdlineclasses
+    elif [ ! -f /var/log/fai/FAI_CLASSES ]; then
 	# use classes defined at installation time
-	if [ ! -f /var/log/fai/FAI_CLASSES ]; then
 	    die "Try to read classes from /var/log/fai/FAI_CLASSES. Failed. Aborting."
-	fi
+    else
 	classes=$(< /var/log/fai/FAI_CLASSES)
     fi
+    echo "List of all classes: $classes"
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
