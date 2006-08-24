@@ -386,14 +386,10 @@ task_faiend() {
     cd /
     sync
 
-    case $(uname -s) in
-	Linux)
-	    killall -q sshd
-	    umount $FAI_ROOT/proc
-	    umount -ar
-	    exec reboot -dfi
-	    ;;
-    esac
+    killall -q sshd
+    umount $FAI_ROOT/proc
+    umount -ar
+    exec reboot -dfi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_install() {
@@ -433,7 +429,7 @@ task_dirinst() {
 
     save_dmesg
 
-    mkdir -p $target
+    mkdir -p $FAI_ROOT
     task extrbase
     task mirror
     task debconf
@@ -453,6 +449,8 @@ task_dirinst() {
 	sndmon "TASKERROR install 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
+    umount $FAI_ROOT/proc
+    umount $FAI_ROOT/sys
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_softupdate() {
