@@ -58,7 +58,7 @@ fai_init() {
     fi
 
     # some variables from are not needed any more
-    unset FAI_CONFIGDIR
+    #unset FAI_CONFIGDIR
 
     # read subroutine definitions
     local sub=/usr/lib/fai/subroutines
@@ -127,6 +127,8 @@ usage() {
 	   -v|--verbose      display more information during the update
 	   -h|--help         display this help message
 	   -N|--new          renew list of classes
+	   -c|--class        comma separated list of classes
+
 EOF
     exit 0
 }
@@ -137,7 +139,7 @@ fstart() {
     task confdir
     task setup
     task defclass
-    set_disk_info
+    [ $DO_INIT_TASKS -eq 1 ] && set_disk_info
     task defvar
     [ $DO_INIT_TASKS -eq 1 ] && load_keymap_consolechars
 }
@@ -145,7 +147,7 @@ fstart() {
 # Main routine
 
 # Parse commandline options
-TEMP=$(getopt -o Nhv --long new,help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o Nhvc: --long new,help,verbose,classes: -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -164,6 +166,12 @@ while true ; do
 	    shift
 	    renewclass=1
 	    ;;
+	-c|--classes)
+	    shift
+	    export classes=$1
+	    shift
+	    classes=${classes//,/ }
+	    ;;
         --) 
             shift
             break
@@ -175,6 +183,15 @@ while true ; do
     esac
 done
 
+# override FAI_ACTION later if a command line argument is given
+[ "$1" ] && action=$1
+[ "$2" ] && targetdir=$2 # only used for dirinst
+
+if [ X$action = Xdirinst ]; then
+    eval `grep NFSROOT= /etc/fai/make-fai-nfsroot.conf`
+    export NFSROOT
+    export FAI_ROOT=$targetdir
+fi
 
 if [ $(id -u) != "0" ]; then
     echo "Run this program as root."
@@ -205,6 +222,10 @@ fi
     fi
 
 fai_init
+if [ X$action = Xdirinst ]; then
+    skiptask confdir defclass
+    export FAI=$FAI_CONFIGDIR
+fi
 
 mkfifo $LOGDIR/logfifo
 tee -a $LOGDIR/fai.log < $LOGDIR/logfifo &
@@ -224,10 +245,7 @@ sleep 1 # wait for tee to complete. One second should be ok
 # set_disk_info
 # } > >( tee -a $LOGDIR/fai.log )  2>&1
 
-# override FAI_ACTION if a command line argument is given
-[ "$1" ] && FAI_ACTION=$1
-[ "$2" ] && targetdir=$2 # only used for dirinst
-
+[ "$action" ] && FAI_ACTION=$action
 task action 2>&1 | tee -a $LOGDIR/fai.log
 
 [ -L "$rundir/current_config" ] && rm -f "$rundir/current_config"
