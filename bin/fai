@@ -167,10 +167,15 @@ while true ; do
 	    renewclass=1
 	    ;;
 	-c|--classes)
+
+	    if [ $renewclass -eq 1 ]; then
+		echo "You can't use -c|--classes and -N|--new at the same time."
+		exit 9
+	    fi
 	    shift
-	    export classes=$1
+	    export cmdlineclasses=$1
 	    shift
-	    classes=${classes//,/ }
+	    cmdlineclasses=${cmdlineclasses//,/ }
 	    ;;
         --) 
             shift
@@ -224,7 +229,7 @@ fi
 
 fai_init
 if [ X$action = Xdirinst ]; then
-    skiptask confdir defclass
+    skiptask confdir
     export FAI=$FAI_CONFIGDIR
 fi
 
