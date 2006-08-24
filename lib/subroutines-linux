@@ -199,15 +199,17 @@ task_instsoft() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
 
-    # show some local information
-    ifconfig; df
-    # umount swap space
-    swapoff -a
+    if [ $DO_INIT_TASKS -eq 1 ] ; then
+	# show some local information
+	ifconfig; df
+	# umount swap space
+	swapoff -a
+    fi
     # undo fake of all programs made by fai
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/10fai $FAI_ROOT/etc/apt/apt.conf.d/90fai
     date
-    echo "The installation took $(cut -d . -f 1 /proc/uptime) seconds."
+    echo "The $FAI_ACTION took $[$(cut -d . -f 1 /proc/uptime)-$start_seconds] seconds."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
