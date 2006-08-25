@@ -118,11 +118,11 @@ task_extrbase() {
     echo "Unpacking Debian base archive"
     # copy the base file class based if it exists
     ftar -1v -s $FAI/basefiles /
-if [ $? -ne 0 ]; then
-    [ $DO_INIT_TASKS -eq 0 ] && basefile=$NFSROOT/var/tmp/base.tgz
-    # extract the tar file which was the result of debootstrap
-    gzip -dc $basefile | tar -C $FAI_ROOT -xpf -
-fi
+    if [ $? -ne 0 ]; then
+	[ $DO_INIT_TASKS -eq 0 ] && basefile=$NFSROOT/var/tmp/base.tgz
+	# extract the tar file which was the result of debootstrap
+	gzip -dc $basefile | tar -C $FAI_ROOT -xpf -
+    fi
     # now we can copy fstab
     [ -f $fs ] && mv $fs $fs.old
     [ -f $LOGDIR/fstab ] && cp -p $LOGDIR/fstab $fs
