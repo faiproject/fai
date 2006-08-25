@@ -429,8 +429,6 @@ task_dirinst() {
 
     > $stamp
 
-    save_dmesg
-
     mkdir -p $FAI_ROOT
     task extrbase
     task mirror
@@ -442,9 +440,8 @@ task_dirinst() {
     task finish
 
     rm -f $stamp
-    # save again, because new messages could be created
-    save_dmesg
-#    task savelog
+    unset LOGUSER # so logfile are not saved to remote
+    task savelog
 
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
