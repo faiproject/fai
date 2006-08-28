@@ -155,6 +155,7 @@ TEMP=$(getopt -o Nhvc:C: --long new,help,verbose,class:,cfdir: -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
+unset TEMP
 
 while true ; do
     case "$1" in
@@ -266,6 +267,7 @@ sleep 1 # wait for tee to complete. One second should be ok
 # } > >( tee -a $LOGDIR/fai.log )  2>&1
 
 [ "$action" ] && FAI_ACTION=$action
+unset action
 task action 2>&1 | tee -a $LOGDIR/fai.log
 
 [ -L "$rundir/current_config" ] && rm -f "$rundir/current_config"
