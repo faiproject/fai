@@ -39,15 +39,18 @@ romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 oclass=$(uname -s | tr a-z A-Z)
 faimond=0
 export renewclass=0
+cfdir=/etc/fai
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
     set -a # now export all variables
 
     umask 022
-    # read fai.conf
-    # linux dir
-    [ -f /etc/fai/fai.conf ] && . /etc/fai/fai.conf
+    if [ ! -d "$cfdir" ]; then
+	echo "$cfdir is not a directory"
+	exit 6
+    fi
+    [ -f $cfdir/fai.conf ] && . $cfdir/fai.conf
 
     if [ -f /boot/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
 	umount /initrd
@@ -127,7 +130,8 @@ usage() {
 	   -v|--verbose      display more information during the update
 	   -h|--help         display this help message
 	   -N|--new          renew list of classes
-	   -c|--class        comma separated list of classes
+	   -C|--class        comma separated list of classes
+	   -c|--cfdir CFDIR  Use CFDIR for  reading the config files
 
 EOF
     exit 0
@@ -147,7 +151,7 @@ fstart() {
 # Main routine
 
 # Parse commandline options
-TEMP=$(getopt -o Nhvc: --long new,help,verbose,classes: -n "$0" -- "$@")
+TEMP=$(getopt -o Nhvc:C: --long new,help,verbose,class:,cfdir: -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -166,7 +170,12 @@ while true ; do
 	    shift
 	    renewclass=1
 	    ;;
-	-c|--classes)
+	-c|--cfdir)
+	    shift
+	    cfdir=$1
+	    shift
+	    ;;
+	-C|--class)
 
 	    if [ $renewclass -eq 1 ]; then
 		echo "You can't use -c|--classes and -N|--new at the same time."
@@ -198,7 +207,7 @@ if [ X$action = Xdirinst ]; then
 	exit 3
     fi
 
-    eval `grep NFSROOT= /etc/fai/make-fai-nfsroot.conf`
+    eval `grep NFSROOT= $cfdir/make-fai-nfsroot.conf`
     export NFSROOT
     export FAI_ROOT=$targetdir
 fi
