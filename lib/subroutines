@@ -178,17 +178,19 @@ define_fai_flags() {
     local flag
     # FAI_FLAGS are comma separated, define all flags
     FAI_FLAGS=${FAI_FLAGS//,/ }
-	[ "$verbose" ] && echo "FAI_FLAGS: $FAI_FLAGS"
+    echo "FAI_FLAGS: $FAI_FLAGS"
     for flag in $FAI_FLAGS; do
 	# define this flag as 1
-	eval "$flag=1"
+	eval "\$flag_$flag=1"
     done
+    [ "$flag_verbose" ] && verbose=1 # for backward compability
+    [ "$flag_debug" ]   && debug=1   # for backward compability
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $FAI_RUNDATE
 # Requires-Var:    $DOMAIN $DO_INIT_TASKS
-# Suggests-Var:    $createvt $sshd
+# Suggests-Var:    $flag_createvt $flag_sshd
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
 
@@ -204,7 +206,7 @@ task_setup() {
         # set the system time and date using rdate or/and ntpdate
         [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
         [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
-        [ "$createvt" ] && {
+        [ "$flag_createvt" ] && {
 	    # create two virtual terminals; acces via alt-F2 and alt-F3
 	    echo "Press ctrl-c to interrupt FAI and to get a shell"
 	    openvt -c2 /bin/bash ; openvt -c3 /bin/bash
@@ -212,8 +214,9 @@ task_setup() {
         }
     
         # start secure shell daemon for remote access
-	[ "$sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+	[ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
     fi
+    unset flag_createvt flag_sshd
 
     # when did FAI start, using localtime
     FAI_RUNDATE=$(date +'%Y%m%d_%H%M%S')
@@ -381,7 +384,7 @@ task_faiend() {
     wait_for_jobs
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
     # reboot without prompting if FAI_FLAG reboot is set
-    [ -z $reboot ] && read
+    [ -z $flag_reboot ] && read
     echo "Rebooting $HOSTNAME now"
     sndmon REBOOT
     cd /
