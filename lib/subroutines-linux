@@ -46,7 +46,7 @@ eval_cmdline() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $faimond $sndhostname
-# Requires-Var:    $LOGDIR
+# Requires-Var:    $LOGDIR $FAI
 # Suggests-Var:    $monserver
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
@@ -67,9 +67,16 @@ task_confdir() {
 	klogd -c7 -f $LOGDIR/kernel.log
 	syslogd -m 0
         create_resolv_conf
+	mkrw -s 100m $FAI
     fi
     define_fai_flags
     get-config-dir
+    # now you have enough time to make changes to the config space
+    if [ -n "$fl_wait" ]; then
+	echo "Sleeping. Now you may change the config space in $FAI."
+	echo "Continue after killall sleep."
+	sleep 50000
+    fi
 
     # check if monitor server is available
     [ -z "$monserver" ] && monserver=$SERVER
