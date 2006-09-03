@@ -46,17 +46,17 @@ save_log_local() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote_shell() {
 
-    echo "Save log files via $FAI_REMOTESH to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE"
+    echo "Save log files via $remotesh to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE"
     local thislog=$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
     find $LOGDIR -size 0 -type f -exec rm {} \;
-    $FAI_REMOTESH -l $LOGUSER $LOGSERVER " \
+    $remotesh -l $LOGUSER $LOGSERVER " \
        mkdir -p $thislog ;\
        cd $HOSTNAME ;\
        rm -f last-$FAI_ACTION ;\
        ln -snf $FAI_ACTION-$FAI_RUNDATE last-$FAI_ACTION ;\
        ln -snf $FAI_ACTION-$FAI_RUNDATE last"
 
-    $FAI_REMOTECP -pr $LOGDIR/* $LOGUSER@$LOGSERVER:$thislog
+    $remotecp -pr $LOGDIR/* $LOGUSER@$LOGSERVER:$thislog
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote() {
@@ -77,12 +77,12 @@ save_log_remote() {
         none)
             echo "Don't save logs with remote method, only local storage." ;;
         ssh)
-	    export FAI_REMOTESH=ssh
-	    export FAI_REMOTECP=scp
+	    export remotesh=ssh
+	    export remotecp=scp
 	    save_log_remote_shell ;;
         rsh)
-	    export FAI_REMOTESH=rsh
-	    export FAI_REMOTECP=rcp
+	    export remotesh=rsh
+	    export remotecp=rcp
 	    save_log_remote_shell ;;
     esac
 }
@@ -92,7 +92,7 @@ usage() {
     cat <<EOF
 fai-savelog, save log files from fai to a local or remote location
 
-   Copyright (C) 2002-2005 by Thomas Lange
+   Copyright (C) 2002-2006 by Thomas Lange
 
 Usage: fai-savelog [OPTION]
 
