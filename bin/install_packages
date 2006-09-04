@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 3.3, 8-april-2006";
+my $version = "Version 3.4, 4-sep-2006";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -37,7 +37,7 @@ use AptPkg::System '$_system';
 use AptPkg::Cache;
 
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m,$opt_p);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our @commands;
 our %command;
@@ -93,7 +93,7 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 );
 
 $test = 0;
-getopts('dthvlLm:');
+getopts('dthvlLm:p:');
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
@@ -108,7 +108,7 @@ my $qopt="-qq" unless $verbose;
 my $devnull=">/dev/null" unless $verbose;
 
 $FAI_ROOT = $ENV{FAI_ROOT};
-$classpath = "$ENV{FAI}/package_config";
+$classpath = $opt_p || "$ENV{FAI}/package_config";
 $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
 @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 foreach (@classes) { $classisdef{$_}=1;}
