@@ -27,6 +27,14 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    echo "$@"
+    exit 99
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 if [ $(id -u) != "0" ]; then
@@ -67,6 +75,9 @@ else
     exit 8
 fi
 
+[ -n "$packages" ] && die "WARNING: The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$NFSROOT_PACKAGES" ] && die "WARNING: The use of \$NFSROOT_PACKAGES in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+
 if [ -z "$NFSROOT" ]; then
     echo "\$NFSROOT is not set. Please check your settings in $cfdir/fai.conf."
     exit 4
@@ -83,30 +94,7 @@ if [ ! -d "$cfdir/apt" ]; then
 fi
 
 kfile="vmlinuz"
-case `dpkg --print-installation-architecture` in
-    i386)
-	arch_packages="grub lilo dmidecode hwtools read-edid" ;;
 
-    amd64)
-	arch_packages="grub lilo dmidecode" ;;
-
-    ia64)
-	arch_packages="elilo gnu-efi efibootmgr dmidecode" ;;
-
-    sparc)
-	arch_packages="silo sparc-utils" ;;
-
-    powerpc)
-	arch_packages="" ;;
-
-    alpha)
-	arch_packages="aboot" ;;
-
-    *)  arch_packages="" ;;
-esac
-packages="$packages
-$arch_packages"
- 
 ROOTCMD="chroot $NFSROOT"
 
 RUNDIR=/var/run/fai/make-fai-nfsroot
@@ -122,12 +110,6 @@ bad_exit() {
     merror="with errors"
     echo "An error occured during make-fai-nfsroot."
     echo "Please fix the error or try make-fai-nfsroot -v"
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-die() {
-
-    echo "$@"
-    exit 99
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_with_stamp() {
@@ -239,7 +221,6 @@ create_nfsroot() {
     call_with_stamp create_base
     # save the list of all packages in the base.tgz
     $ROOTCMD dpkg --get-selections | egrep 'install$' | awk '{print $1}' > var/tmp/base-pkgs.lis
-    echo $arch_packages > $NFSROOT/var/tmp/packages.arch
 
     if [ "$FAI_DEBMIRROR" ]; then
 	[ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
@@ -271,9 +252,7 @@ Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
     echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
-    echo "Adding additional packages to $NFSROOT:"
-    echo "$packages"
-    LC_ALL=C call_verbose call_with_stamp add_packages_nfsroot
+    LC_ALL=C call_with_stamp add_packages_nfsroot
     call_with_stamp copy_fai_files
 
     # set timezone in nfsroot
@@ -343,8 +322,13 @@ upgrade_nfsroot() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_packages_nfsroot() {
 
-    $ROOTCMD apt-get -y --fix-missing install $packages $NFSROOT_PACKAGES </dev/null
-    $ROOTCMD apt-get clean
+    local iarch=$(dpkg --print-installation-architecture|tr /a-z/ /A-Z/)
+    export FAI_ROOT=$NFSROOT
+    export classes="NFSROOT $iarch"
+    install_packages -l -p/etc/fai > $NFSROOT/var/tmp/packages.nfsroot
+    echo "Adding additional packages to $NFSROOT:"
+    cat $NFSROOT/var/tmp/packages.nfsroot
+    install_packages $v -p/etc/fai
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
