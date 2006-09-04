@@ -226,24 +226,24 @@ if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
     exit 2
 fi
 
-    # HG: are we called as an init substitute ?
-    export DO_INIT_TASKS=0
-    [ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
-    if [ $DO_INIT_TASKS -eq 1 ]; then
-	renewclass=1 # always renew class list when installing
-	create_ramdisk
-    fi
-    export start_seconds=$(cut -d . -f 1 /proc/uptime)
+# are we called as an init substitute ?
+export DO_INIT_TASKS=0
+[ "$0" = "/etc/init.d/rcS" ] && DO_INIT_TASKS=1
+if [ $DO_INIT_TASKS -eq 1 ]; then
+    renewclass=1 # always renew class list when installing
+    create_ramdisk
+fi
+export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
-    export LOGDIR=/var/log/fai/current
-    [ -d $LOGDIR ] && rm -rf $LOGDIR
-    mkdir -p $LOGDIR
+export LOGDIR=/var/log/fai/current
+[ -d $LOGDIR ] && rm -rf $LOGDIR
+mkdir -p $LOGDIR
 
-    # for compability, can be removed later
-    if [ $DO_INIT_TASKS -eq 1 ]; then
-	mkdir /tmp/fai
-	mount --bind $LOGDIR /tmp/fai 
-    fi
+# for compability, can be removed later
+if [ $DO_INIT_TASKS -eq 1 ]; then
+    mkdir /tmp/fai
+    mount --bind $LOGDIR /tmp/fai 
+fi
 
 fai_init
 if [ X$action = Xdirinst ]; then
