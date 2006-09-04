@@ -189,7 +189,7 @@ define_fai_flags() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $FAI_RUNDATE
-# Requires-Var:    $DOMAIN $DO_INIT_TASKS
+# Requires-Var:    $DOMAIN $do_init_tasks
 # Suggests-Var:    $flag_createvt $flag_sshd
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
@@ -202,7 +202,7 @@ task_setup() {
     define_fai_flags
 
     # this may be moved to an external script
-    if [ $DO_INIT_TASKS -eq 1 ] ; then
+    if [ $do_init_tasks -eq 1 ] ; then
         # set the system time and date using rdate or/and ntpdate
         [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
         [ "$NTPSRVS_1" ]  && ntpdate -b -v $NTPSRVS
@@ -240,7 +240,7 @@ task_action() {
     case $FAI_ACTION in
 
 	install)
-	    if [ $DO_INIT_TASKS -eq 0 ]; then
+	    if [ $do_init_tasks -eq 0 ]; then
 		echo "Cowardly refusing to run a FAI installation on a running system."
 		return
 	    fi
@@ -380,7 +380,7 @@ task_savelog() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
 
-    [ $DO_INIT_TASKS -eq 0 ] && exit 0
+    [ $do_init_tasks -eq 0 ] && exit 0
     wait_for_jobs
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
     # reboot without prompting if FAI_FLAG reboot is set
