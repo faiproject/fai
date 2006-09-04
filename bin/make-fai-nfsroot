@@ -42,12 +42,15 @@ if [ $(id -u) != "0" ]; then
     exit 9
 fi
 
+kfile="vmlinuz" # some architectures use different names
+kernelname="$kfile-install"
 merror="properly"
 # option e currently does nothing
-while getopts ervc:f:kK opt ; do
+while getopts ervc:f:kKV: opt ; do
     case "$opt" in
         c) cfdir=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
+        V) kernelname=$OPTARG ;;
         r) recover=1 ;;
         f) die "Option -f is not supported any more. Use option -c instead" ;;
         k) kinstall=1 ;;
@@ -92,8 +95,6 @@ if [ ! -d "$cfdir/apt" ]; then
     echo "$cfdir/apt/ does not exists. Can't continue."
     exit 7
 fi
-
-kfile="vmlinuz"
 
 ROOTCMD="chroot $NFSROOT"
 
@@ -377,7 +378,8 @@ setup_dhcp(){
 
     # pxe and dhcp environment
     local pxebin=/usr/lib/syslinux/pxelinux.0
-    cp -p $NFSROOT/boot/$kfile-$KERNELVERSION /srv/tftp/fai/$kfile-install
+    cp -p $NFSROOT/boot/$kfile-$KERNELVERSION /srv/tftp/fai/$kernelname
+    echo "Kernel $KERNELVERSION copied to /srv/tftp/fai/$kernelname"
     [ -f $pxebin ] && cp $pxebin /srv/tftp/fai
     [ -d /srv/tftp/fai/pxelinux.cfg ] || mkdir -p /srv/tftp/fai/pxelinux.cfg
     echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
