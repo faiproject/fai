@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 2.2.3 3-august-2006";
+$version="version 3.0 5-sep-2006";
 
 use Socket;
 use Net::hostent;
@@ -104,7 +104,7 @@ sub lsdir {
 
   # create list which entries we want to list
   @allfiles = (@default,@enabled,@disabled,@templates,@other);
-  $opt_r and @allfiles = @disabled;
+  $opt_d and @allfiles = @disabled;
   $opt_e and @allfiles = @enabled;
   $opt_t and @allfiles = @templates;
   $opt_o and @allfiles = @other;
@@ -336,20 +336,20 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:d:ehnvlLiIp:f:Frk:Sto');
+getopts('gBc:D:edhnvlLiIp:f:Fk:Sto');
 $opt_h and usage;
 defined @ARGV or usage;
 
 $opt_n and $opt_v = 1;
 $opt_v and $verbose = 1;
-$pxedir = $opt_d || '/srv/tftp/fai/pxelinux.cfg';
+$pxedir = $opt_D || '/srv/tftp/fai/pxelinux.cfg';
 $opt_L and $opt_l = 1;
 $opt_l and lsdir(@ARGV);
 ($opt_B and $opt_F) && die "ERROR: use only one option out of -B and -F\n";
 ($opt_S and $opt_I) && die "ERROR: use only one option out of -I and -S\n";
 #TODO: also -e, -r and -c can't be used together
 
-if ($opt_r) {
+if ($opt_d) {
   die "Missing host name(s). Can't disable network booting.\n" unless @ARGV;
   foreach (@ARGV) {
     disable("$_");
