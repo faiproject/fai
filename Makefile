@@ -5,7 +5,8 @@ export DOCDIR = $(shell pwd)/debian/fai-doc/usr/share/doc/fai-doc
 LIBDIR = $(DESTDIR)/usr/lib/fai
 USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai setup_harddisks faireboot fai-statoverride
 
-USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub
+USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai 
+
 libfiles=$(wildcard lib/[a-z]*)  # do not include CVS dir
 
 # files with variable KERNLEVERSION in it; this string will be substituted
