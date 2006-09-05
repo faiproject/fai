@@ -37,7 +37,6 @@ romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 
 faimond=0
 export renewclass=0
-cfdir=/etc/fai
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
@@ -49,6 +48,7 @@ fai_init() {
 	exit 6
     fi
     [ -f $cfdir/fai.conf ] && . $cfdir/fai.conf
+    unset cfdir
 
     if [ -f /boot/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
 	umount /initrd
@@ -150,6 +150,7 @@ fstart() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
 
+cfdir=/etc/fai
 # Parse commandline options
 TEMP=$(getopt -o Nhvc:C: --long new,help,verbose,class:,cfdir: -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
