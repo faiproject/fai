@@ -30,7 +30,7 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
-    echo "$@"
+    echo "ERROR: $@"
     exit 99
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -78,23 +78,14 @@ else
     exit 8
 fi
 
-[ -n "$packages" ] && die "WARNING: The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
-[ -n "$NFSROOT_PACKAGES" ] && die "WARNING: The use of \$NFSROOT_PACKAGES in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+# IMO this may be removed, since all information should be included into sources.list
+[ -n "$FAI_LOCAL_REPOSITORY" ] && die "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list." 
+[ -n "$packages" ] && die "The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$NFSROOT_PACKAGES" ] && die "The use of \$NFSROOT_PACKAGES in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$FAI_SOURCES_LIST" ] && die "The use of \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
 
-if [ -z "$NFSROOT" ]; then
-    echo "\$NFSROOT is not set. Please check your settings in $cfdir/fai.conf."
-    exit 4
-fi
-
-if [ "$FAI_SOURCES_LIST" ]; then
-    echo "The usage of the variable \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
-    exit 3
-fi
-
-if [ ! -d "$cfdir/apt" ]; then
-    echo "$cfdir/apt/ does not exists. Can't continue."
-    exit 7
-fi
+[ -z "$NFSROOT" ] && die "\$NFSROOT is not set. Please check your settings in $cfdir/fai.conf."
+[ ! -d "$cfdir/apt" ] && die "$cfdir/apt/ does not exists. Can't continue."
 
 ROOTCMD="chroot $NFSROOT"
 
@@ -217,7 +208,7 @@ create_base() {
 create_nfsroot() {
 
     mkdir -p $NFSROOT/$FAI
-    cd $NFSROOT || die "Error: Can't cd to $NFSROOT"
+    cd $NFSROOT || die "Can't cd to $NFSROOT"
 
     call_with_stamp create_base
     # save the list of all packages in the base.tgz
@@ -300,8 +291,6 @@ EOF
 EOF
     chmod a+rx $NFSROOT/etc/rc2.d/S01fai_abort
 
-    # IMO this may be removed, since all information should be included into sources.list
-    [ -n "$FAI_LOCAL_REPOSITORY" ] && echo "WARNING: The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list." || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
