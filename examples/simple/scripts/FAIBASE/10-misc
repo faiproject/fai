@@ -6,7 +6,7 @@ error=0 ; trap "error=$((error|1))" ERR
 
 # a list of modules which are loaded at boot time
 fcopy -i /etc/modules
-for module in $moduleslist; do
+for module in $MODULESLIST; do
     egrep -q "^$module\$" $target/etc/modules || echo $module >> $target/etc/modules
 done
 
@@ -24,7 +24,7 @@ ln -fs /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
 fcopy -iM /etc/hosts /etc/motd
 
 # set root password
-echo "root:$rootpw" | $ROOTCMD chpasswd --encrypted
+echo "root:$ROOTPW" | $ROOTCMD chpasswd --encrypted
 # make /root accessible only by root
 chmod 0700 $target/root
 chown root:root $target/root
@@ -32,8 +32,8 @@ chown root:root $target/root
 fcopy -ir /root
 
 # create keyboard layout table
-$ROOTCMD bash -c "echo 'console-data console-data/keymap/full select $FAI_KEYMAP' | debconf-set-selections"
-$ROOTCMD install-keymap $FAI_KEYMAP || true
+$ROOTCMD bash -c "echo 'console-data console-data/keymap/full select $KEYMAP' | debconf-set-selections"
+$ROOTCMD install-keymap KEYMAP || true
 # dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
 
 exit $error
