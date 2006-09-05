@@ -35,26 +35,26 @@ save_log_local() {
     # save log files on local disk
 
     local logbase=$FAI_ROOT/var/log/fai
-    local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
+    local thislog=$logbase/$HOSTNAME/$FAI_ACTION-$fai_rundate
     find $LOGDIR -xdev -size 0 -type f -exec rm {} \;
     mkdir -p $thislog
     cp -a $LOGDIR/* $thislog
     ln -snf $HOSTNAME $logbase/localhost
-    ln -snf $FAI_ACTION-$FAI_RUNDATE $logbase/$HOSTNAME/last-$FAI_ACTION
-    ln -snf $FAI_ACTION-$FAI_RUNDATE $logbase/$HOSTNAME/last
+    ln -snf $FAI_ACTION-$fai_rundate $logbase/$HOSTNAME/last-$FAI_ACTION
+    ln -snf $FAI_ACTION-$fai_rundate $logbase/$HOSTNAME/last
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote_shell() {
 
-    echo "Save log files via $remotesh to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE"
-    local thislog=$HOSTNAME/$FAI_ACTION-$FAI_RUNDATE
+    echo "Save log files via $remotesh to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$fai_rundate"
+    local thislog=$HOSTNAME/$FAI_ACTION-$fai_rundate
     find $LOGDIR -size 0 -type f -exec rm {} \;
     $remotesh -l $LOGUSER $LOGSERVER " \
        mkdir -p $thislog ;\
        cd $HOSTNAME ;\
        rm -f last-$FAI_ACTION ;\
-       ln -snf $FAI_ACTION-$FAI_RUNDATE last-$FAI_ACTION ;\
-       ln -snf $FAI_ACTION-$FAI_RUNDATE last"
+       ln -snf $FAI_ACTION-$fai_rundate last-$FAI_ACTION ;\
+       ln -snf $FAI_ACTION-$fai_rundate last"
 
     $remotecp -pr $LOGDIR/* $LOGUSER@$LOGSERVER:$thislog
 }
