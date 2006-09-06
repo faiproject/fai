@@ -12,9 +12,15 @@ if [ "$FAI_ACTION" = "install" -o "$FAI_ACTION" = "dirinst" ]; then
     # then init will eat up much cpu time
     fai-divert -a /sbin/init /usr/sbin/liloconfig /usr/sbin/invoke-rc.d
     # fake some more programs
-    fai-divert -a /etc/init.d/nis /sbin/start-stop-daemon
+    fai-divert -a /etc/init.d/nis /sbin/start-stop-daemon /usr/sbin/policy-rc.d
     # this will not work during dirinst
     cp /sbin/start-stop-daemon $FAI_ROOT/sbin/start-stop-daemon
+    # never start any daemons inside chroot during installtion
+    cat > $FAI_ROOT/usr/sbin/policy-rc.d <<EOF
+#!/bin/sh
+exit 101
+EOF
+    chmod a+rx $FAI_ROOT/usr/sbin/policy-rc.d
 fi
 
 # update the apt-get information inside the nfsroot 
