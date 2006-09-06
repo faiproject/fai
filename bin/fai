@@ -43,12 +43,11 @@ fai_init() {
     set -a # now export all variables
 
     umask 022
-    if [ ! -d "$cfdir" ]; then
-	echo "$cfdir is not a directory"
+    if [ ! -d "$FAI_ETC_DIR" ]; then
+	echo "$FAI_ETC_DIR is not a directory"
 	exit 6
     fi
-    [ -f $cfdir/fai.conf ] && . $cfdir/fai.conf
-    unset cfdir
+    [ -f $FAI_ETC_DIR/fai.conf ] && . $FAI_ETC_DIR/fai.conf
 
     if [ -f /boot/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
 	umount /initrd
@@ -150,7 +149,7 @@ fstart() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
 
-cfdir=/etc/fai
+FAI_ETC_DIR=/etc/fai
 # Parse commandline options
 TEMP=$(getopt -o Nhvc:C: --long new,help,verbose,class:,cfdir: -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
@@ -174,7 +173,7 @@ while true ; do
 	    ;;
 	-c|--cfdir)
 	    shift
-	    cfdir=$1
+	    FAI_ETC_DIR=$1
 	    shift
 	    ;;
 	-C|--class)
@@ -209,7 +208,7 @@ if [ X$action = Xdirinst ]; then
 	exit 3
     fi
 
-    eval $(grep NFSROOT= $cfdir/make-fai-nfsroot.conf)
+    eval $(grep NFSROOT= $FAI_ETC_DIR/make-fai-nfsroot.conf)
     export NFSROOT
     export FAI_ROOT=$targetdir
 fi
