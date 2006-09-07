@@ -72,12 +72,12 @@ reconfigure_packages() {
 	 # test if package is installed
 	 if [ -f $target/var/lib/dpkg/info/$p.list ]; then
 	     echo "Reconfiguring package $p"
-       /usr/lib/fai/fai-debconf-pipe $p &
        if [ ! -d $target/var/run/fai/ ]; then
 	   pipe=/tmp/debconf.pipe
        else
-	   pipe=$target/var/run/fai/debconf.pipe
+	   pipe=/var/run/fai/debconf.pipe
        fi
+       DEBCONF_PIPE=$pipe /usr/lib/fai/fai-debconf-pipe $p &
        DEBCONF_PIPE=$pipe DEBIAN_FRONTEND=passthrough $ROOTCMD dpkg-reconfigure $p
 	 else
 	     :
