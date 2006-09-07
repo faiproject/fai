@@ -187,7 +187,7 @@ add_all_host_entries() {
 
     local ips=$(ifconfig | grep -w inet | cut -d : -f 2 | cut -d ' ' -f 1 | grep -v 127.0.0.1)
     for eth in $ips; do
-	getent hosts $eth >> etc/hosts
+	getent hosts $eth >> etc/hosts || true
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -326,7 +326,6 @@ umount_dirs() {
     [ -f $NFSROOT/usr/sbin/dpkg-divert ] && 
        LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /sbin/discover-modprobe
     cd /
-    sleep 2
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/dev/pts
     if [ "$FAI_DEBMIRROR" ]; then
