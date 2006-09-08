@@ -92,22 +92,22 @@ task_confdir() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $BOOT_DEVICE $ROOT_PARTITION $BOOT_PARTITION $SWAPLIST
-# Requires-Var:    $LOGDIR $diskvar
+# Requires-Var:    $LOGDIR $LOGDIR/disk_var.sh
 # Short-Description: partition local hard disk
 ### END SUBROUTINE INFO
 
 task_partition() {
 
     echo "Partitioning local harddisks"
-    [ ! -s $diskvar ] && setup_harddisks -d -X | tee $LOGDIR/format.log 2>&1
-    # setup_harddisks must create $diskvar file
-    if [ ! -s $diskvar ]; then
+    [ ! -s $LOGDIR/disk_var.sh ] && setup_harddisks -d -X | tee $LOGDIR/format.log 2>&1
+    # setup_harddisks must create $LOGDIR/disk_var.sh file
+    if [ ! -s $LOGDIR/disk_var.sh ]; then
 	cat $LOGDIR/format.log
 	sndmon "TASKERROR partition 21"
-	die "setup_harddisks did not create $diskvar file."
+	die "setup_harddisks did not create $LOGDIR/disk_var.sh file."
     fi
     # now define variable for root and boot partition and boot device
-    . $diskvar
+    . $LOGDIR/disk_var.sh
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
