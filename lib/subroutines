@@ -373,8 +373,8 @@ task_savelog() {
     [ -d $FAI_ROOT/var/lib/fai ] || mkdir -p $FAI_ROOT/var/lib/fai
     [ -d $FAI_ROOT/var/log/fai ] || mkdir -p $FAI_ROOT/var/log/fai
     fai-savelog -l
-    [ -f $LOGDIR/FAI_CLASSES ] && cp -p $LOGDIR/FAI_CLASSES $FAI_ROOT/var/lib/fai
-    [ "$diskvar" != "/var/log/fai/disk_var.sh" ] && cp -p $diskvar $FAI_ROOT/var/lib/fai
+    [ -f $LOGDIR/FAI_CLASSES ] && cp -pu $LOGDIR/FAI_CLASSES $FAI_ROOT/var/lib/fai
+    [ -f $LOGDIR/disk_var.sh ] && cp -pu $LOGDIR/disk_var.sh $FAI_ROOT/var/lib/fai
     fai-savelog -r
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -460,7 +460,7 @@ task_softupdate() {
     local stamp=/var/run/fai/fai_softupdate_is_running
 
     > $stamp
-    diskvar=/var/log/fai/disk_var.sh
+    cp -p /var/lib/fai/disk_var.sh $LOGDIR # use the last disk_var during update
 
     save_dmesg
 
