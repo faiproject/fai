@@ -116,7 +116,7 @@ umount_dirs() {
 
     set +e
     local d
-    local dirs="boot $FAI media/mirror etc/apt/sources.list"
+    local dirs="boot $FAI media/mirror etc/fai/apt/sources.list"
     for d in $dirs; do
 	umount $NFSROOT/$d 2>/dev/null
     done
@@ -150,7 +150,7 @@ EOF
 	echo "deb file:/media/mirror $i $comp" >> $tmp1
     done
 
-    mount --bind $tmp1 $NFSROOT/etc/apt/sources.list
+    mount --bind $tmp1 $NFSROOT/etc/fai/apt/sources.list
     customize_nfsroot
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
     mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
