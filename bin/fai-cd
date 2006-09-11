@@ -116,7 +116,7 @@ umount_dirs() {
 
     set +e
     local d
-    local dirs="boot fai media/mirror etc/apt/sources.list"
+    local dirs="boot $FAI media/mirror etc/apt/sources.list"
     for d in $dirs; do
 	umount $NFSROOT/$d 2>/dev/null
     done
@@ -131,7 +131,7 @@ create_iso() {
 
     mkdir -p $NFSROOT/media/mirror
     mount --bind $tmp/boot $NFSROOT/boot
-    mount --bind $FAI_CONFIGDIR $NFSROOT/fai && echo "Config space $FAI_CONFIGDIR mounted"
+    mount --bind $FAI_CONFIGDIR $NFSROOT/$FAI && echo "Config space $FAI_CONFIGDIR mounted"
     mount --bind $mirrordir $NFSROOT/media/mirror && echo "Mirror $mirrordir mounted"
 # TODO: customize /etc/apt, copy apt preferences etc.
 
@@ -194,12 +194,14 @@ isoname=$1
 
 [ -x "$(which mkinitrd-cd)" ] || die 7 "mkinitrd-cd not found. Please install package."
 [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
-[ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
 
 [ -z "$cfdir" ] && cfdir=/etc/fai
 [ ! -d "$cfdir" ] && die 17 "$cfdir is not a directory."
 [ "$verbose" ] && echo "Using configuration files from directory $cfdir"
 . $cfdir/fai.conf
+export NFSROOT=$(source $cfdir/make-fai-nfsroot.conf; echo $NFSROOT)
+[ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
+
 
 if [ -z "$grub_config" ]; then
     grub_config="$cfdir/menu.lst"
