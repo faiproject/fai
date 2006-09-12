@@ -1,6 +1,7 @@
-fai (3~beta14) unstable; urgency=medium
+fai (3~beta18) unstable; urgency=medium
 
-  * make pathes conform to FHS : (closes: #340608, #311524, #336650, #309554, #340609)
+  * make pathes conform to FHS:
+    (closes: #340608, #311524, #336650, #309554, #340609)
   * use /srv/tftp/fai    instead of /boot/fai
   * use /srv/tftp/fai/pxelinux.cfg instead of /boot/fai/pxelinux.cfg
   * use /srv/fai/config  instead of /usr/local/share/fai
@@ -14,10 +15,12 @@ fai (3~beta14) unstable; urgency=medium
     add headline when copying from template, change in options: -d is now
     -D, -r is now -d, -r is not used any more
   * subroutines-linux: task_updatebase does not use updatebase.log any
-    more (closes: #366823), try ftar $FAI/basefiles before extracting base.tgz,
-    create policy-rc.d in the chroot, copy sources.list from $FAI_ETC_DIR
+    more (closes: #366823), try ftar $FAI/basefiles before extracting
+    base.tgz, create policy-rc.d in the chroot, copy sources.list from
+    $FAI_ETC_DIR, replace $FAI_REMOTESH with local variable $remotesh
   * move /etc/fai/sources.list to /etc/fai/apt/sources.list  
-  * fix lintian error: build-depends-indep-should-be-build-depends debhelper
+  * fix lintian error: build-depends-indep-should-be-build-depends
+    debhelper
   * complies with policy 3.7.2
   * added a linda override for fai-quickstart (ignore /usr/doc-symlink
     warning)
@@ -25,13 +28,14 @@ fai (3~beta14) unstable; urgency=medium
   * conf/make-fai-nfsroot.conf: remove variables: $nfssize,
     $NFSROOT_PACKAGES, $package
   * new config file /etc/fai/NFSROOT which contains the package list
-  * fai.conf: remove FAI_REMOTESH and FAI_REMOTECP, use FAI_LOGPROTO instead,
-    LOGSERVER, LOGREMOTEDIR, LOGPASSWD removed
-    installserver removed (closes: #332837)
-  * lib/subruotines-linux: replace $FAI_REMOTESH with local variable $remotesh
-  * lib/subruotines: remove get_fai_cvs(), get_fai_dir(), now separate scripts
-  * fai: replace $rclog with $LOGIDR/fai.log, add option -C,--class,
-    -c,--cfdir, add support for dirinst, cleanup LOGDIR before using it
+  * fai.conf: remove FAI_REMOTESH and FAI_REMOTECP, use FAI_LOGPROTO
+    instead, LOGSERVER, LOGREMOTEDIR, LOGPASSWD removed installserver
+    removed (closes: #332837)
+  * lib/subroutines: remove get_fai_cvs(), get_fai_dir(), now separate
+    scripts, print warning if CD-ROM does not use DMA mode, eject fai-cd
+    at the end of the installation
+  * fai: replace $rclog with $LOGIDR/fai.log, add option -c,--class,
+    -C,--cfdir, add support for dirinst, cleanup LOGDIR before using it
     again (closes: #369534), remove variable rundir, mkdir /var/run/fai if
     not existing, add trap for dirisnt
   * fai-setup: use getent for getting IP address, make it a bash script,
@@ -42,14 +46,15 @@ fai (3~beta14) unstable; urgency=medium
   * make-fai-nfsroot: new subroutine all_host_entries(), use
     install_packages and /etc/fai/NFSROOT for installing packages into the
     nfsroot, install fai-nfsroot before other packages are installed, do
-    not exit if getent returns no information,
-  * varaible $fstab replaced with fstab (no more Solaris support using vfstab)
+    not exit if getent returns no information, rename -c to -C
+  * varaible $fstab replaced with fstab (no more Solaris support using
+    vfstab)
   * savelog.LAST: set reboot=1 if no errors are found
   * fcopy: fix bug (closes: #374415)
   * control: update to Standards-Version: 3.7.2, fai-quickstart depends on
     tftpd-hpa
   * make-fai-bootfloppy: read make-fai-nfsroot.conf instead of fai.conf,
-    replace backticks with $(), fix test (closes: #384624)
+    replace backticks with $(), fix test (closes: #384624), rename -c to -C
   * lib/get-boot-info: get network info via DHCP if ip=dhcp was set
   * prcopyleft: remove osname from copyright logo
   * subroutines: add task dirinst (closes: #322634), do not execute task
@@ -65,8 +70,14 @@ fai (3~beta14) unstable; urgency=medium
   * add policy-rc.d support instead of diverting start-stop-daemon
   * remove varaible diskvar, use $LOGDIR/disk_var.sh instead
   * fai-debconf: use read-only temp file during reconfigure
+  * get-config-dir-file: access config space via local path, used by
+    fai-cd
+  * fai-cd: use $FAI instead of /fai
+  * fai-mirror: generate distrib name from FAI_DEBOOTSTRAP
+  * move some -c to -C, so now all scripts use -C for cfdir
+
   
- -- Thomas Lange <lange@debian.org>  Fri,  8 Sep 2006 14:17:01 +0200
+ -- Thomas Lange <lange@debian.org>  Tue, 12 Sep 2006 12:16:20 +0200
 
 fai (2.10.5) unstable; urgency=high
 
@@ -142,7 +153,8 @@ fai (2.10.1) unstable; urgency=low
   * make-fai-nfsroot.conf: new names packages in fai-kernel, add
     console-tools to nfsroot (closes: #363480)
   * get-boot-info: do not try to activate the first four ethernet devices
-  * conf/apt.conf: add aptitude option so untrusted repositories will also be used
+  * conf/apt.conf: add aptitude option so untrusted repositories will also
+    be used
   * instsoft.FAIBASE: use fcopy for kernel-img.conf
   * subroutines-linux: use IP address when calling fai-chboot in
     task_chboot, this helps when the install client has two network cards
