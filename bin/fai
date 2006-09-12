@@ -81,9 +81,9 @@ fai_init() {
     target=$FAI_ROOT
 
     if [ $do_init_tasks -eq 1 ]; then
-        trap 'echo "Now rebooting";faireboot' INT QUIT ;
+        trap 'echo "Now rebooting";faireboot' INT QUIT
     else
-        trap "echo 'Aborted';rm -f $stamp" INT QUIT ;
+        trap "echo 'Aborted';rm -f $stamp" INT QUIT
     fi
 
     if [ $do_init_tasks -eq 1 ]; then
@@ -245,7 +245,15 @@ fai_init
 if [ X$action = Xdirinst ]; then
     skiptask confdir
     export FAI=$FAI_CONFIGDIR
-    trap 'rm -f $stamp; [ -d $targetdir/proc/self ] && umount $targetdir/proc $targetdir/sys' EXIT ;
+    set -a
+    clean_exit() {
+	rm -f $stamp
+	[ -z "$targetdir" ] && return
+	[ -d $targetdir/proc/self ] && umount $targetdir/proc $targetdir/sys
+	[ -f /etc/init.d/udev ] && umount $targetdir/dev
+    }
+    set +a
+    trap 'clean_exit' EXIT
 fi
 
 mkfifo $LOGDIR/logfifo
