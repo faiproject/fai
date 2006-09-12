@@ -65,6 +65,7 @@ done
 set -e
 
 [ -z "$cfdir" ] && cfdir=/etc/fai
+cfdir=$(readlink -f $cfdir) # canonicalize path
 if [ ! -d "$cfdir" ]; then
     echo "$cfdir is not a directory"
     exit 6
@@ -166,7 +167,6 @@ copy_fai_files() {
 
     # copy to nfsroot
     echo "root:$FAI_ROOTPW" | $ROOTCMD chpasswd --encrypted
-    cd $NFSROOT
     cp -Rpv $cfdir/* $NFSROOT/etc/fai
     # append additional variables to fai.conf for the install clients
     [ -z "$FAI_CONFIG_SRC" ] && echo "FAI_CONFIG_SRC=nfs://`hostname`$FAI_CONFIGDIR" >> $NFSROOT/etc/fai/fai.conf
