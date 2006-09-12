@@ -199,6 +199,14 @@ task_setup() {
     # source user specific subroutines
     [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
 
+    if [ -f /boot/RUNNING_FROM_FAICD ]; then
+	local cdrom=$(mount| awk '/dev.+on \/ /{print $1}')
+	hdparm -d $cdrom | grep -q off 2>/dev/null
+	if [ $? -eq 0 ]; then
+	    echo "WARNING: CD-ROM does not use DMA mode. The installation will be sloooow."
+	fi
+    fi
+
     define_fai_flags
 
     # this may be moved to an external script
@@ -380,6 +388,7 @@ task_savelog() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_faiend() {
 
+    local dir cdromdevice
     [ $do_init_tasks -eq 0 ] && exit 0
     wait_for_jobs
     echo "Press <RETURN> to reboot or ctrl-c to execute a shell"
@@ -391,6 +400,25 @@ task_faiend() {
     sync
 
     killall -q sshd
+    if [ -f /boot/RUNNING_FROM_FAICD ]; then
+	cat > $target/tmp/rebootCD <<'EOF'
+#! /bin/bash
+device=$1
+eject -m /dev/$device 2>/dev/null >/dev/null
+echo "Remove CDROM and press <RETURN> to continue reboot"
+read
+eject -t /dev/$device 2>/dev/null >/dev/null
+exec reboot -df
+EOF
+	chmod +x $target/tmp/rebootCD
+	sync
+	for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
+	    mount -o remount,ro $dir
+	done
+	cdromdevice=$(perl -ane 'print $F[2] if / name:/' /proc/sys/dev/cdrom/info)
+	chroot $target /tmp/rebootCD $cdromdevice
+	# never reached
+    fi
     umount $FAI_ROOT/proc
     umount -ar
     exec reboot -dfi
