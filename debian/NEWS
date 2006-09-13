@@ -1,561 +1,626 @@
-WARNING
-- the fai-guide does not yet reflect the changes from FAI 2 to FAI 3
-- this release is NOT yet tested with etch. It works out of the
+fai (3~beta20) unstable; urgency=medium
+
+  WARNING
+  - the fai-guide does not yet reflect the changes from FAI 2 to FAI 3
+  - this release is NOT yet tested with etch. It works out of the
   box with sarge. The next release will run with etch.
 
-New in FAI 3~beta
-
-    - rename NEWS to NEWS.Debian
-    - /etc/fai/sources.list moved to /etc/fai/apt/sources.list
-    - a lot of new pathes:
-      use /srv/tftp/fai instead of /boot/fai
-      use /srv/tftp/fai/pxelinux.cfg instead of /boot/fai/pxelinux.cfg
-      use /srv/fai/config  instead of /usr/local/share/fai
-      use /srv/fai/nfsroot instead of /usr/lib/fai/nfsroot
-      use /var/lib/fai/config instead of /fai
-      use /var/lib/fai/mirror instead of /mnt
-    - new file names
-      variables.sh is now variables.log
-    - changes in variables
-      remove FAI_REMOTESH and FAI_REMOTECP from fai.conf, use FAI_LOGPROTO instead
-      remove $installserver and $mirrorhost in fai.conf
-      replace FAI_LOCATION by FAI_CONFIG_SRC, default if undefined:
-        "nfs://`hostname`$FAI_CONFIGDIR"
-      LOGSERVER, LOGREMOTEDIR, LOGPASSWD removed from fai.conf, set
-        them in the config space
-      MNTPOINT now set to /media/mirror
-      SERVERINTERFACE not needed by default in make-fai-nfsroot.conf
-      NFSROOT moved to make-fai-nfsroot.conf
-      FAICLIENTS, NFSROOT_PACKAGES, packages removed from make-fai-nfsroot.conf
-      terror renamed to task_error
-      all flags from FAI_FLAGS are now defined as flag_xxx
-      $time_zone renamed to $TIMEZONE
-      $videodrv renamed to $VIDEODRIVER
-      $FAI_CONSOLEFONT renamed to $CONSOLEFONT
-      $FAI_KEYMAP renamed to $KEYMAP
-      $rootpw renamed to $ROOTPW
-      $moduleslist renamed to $MODULESLIST
-    - new config file /etc/fai/NFSROOT which contains the package list
-      for the nfsroot
-    - task_updatebase does not use updatebase.log any more
-    - all IP addresses of the install server are added to $NFSROOT/etc/hosts
-    - automatic reboot if no errors are found (if error.log is empty)
-    - uses discover1 for hardware detection (discover version 2 is not
-      maintained any more
-    - add task dirinst
-    - try ftar $FAI/basefiles before extracting base.tgz
-    - install_packages: new option -p (see man install_packages)
-    - make-fai-nfsroot: add option -V (see man make-fai-nfsroot)
-    - fai-chboot: change in options, -d is now -D, -r is now -d, -r is
-      not used any more
-    - add policy-rc.d support
-    - move some -c to -C, so now all scripts use -C for cfdir, seting
-      $FAI_ETC_DIR does the same
-    - fai-cd can now eject the CD after installation
-    - fai-mirror remove option -a (now default), add -B
-
-New in FAI 2.10.5
-
-    - only minor changes
-
-New in FAI 2.10.2
-
-    - only bug fixes
-
-New in FAI 2.10.1
-
-    - minor fix in fai-chboot
-    - packages in /files/packages are not supported any more
-    - fai-mirror: add option -C
-    - fai-cd: add option -C, grub menu now shows FAI version
-    - after the installation you can leave the FAI-CD in the drive,
-      since it now boot from local disk by default
-    - FAI_FLAG syslogd was removed, syslogd is now started by default
-
-New in FAI 2.10
-
-    - add option -n to fcopy
-    - several new listing options for fai-chboot, add option -c for
-      copying PXE configurations
-    - verbose output when defining variables
-    - add urpmi and yum support to install_packages
-    - add new subroutine mkrw(), which makes read-only directories
-      writeable. Very cool and usefull thing until we can use unionfs
-    - When booting from fai-cd the config space /fai is now writeable
-    - class FAISERVER sets up an apt-proxy
-
-New in FAI 2.9.1
-
-    - new class FAISERVER can install the fai install server from CD
-    - new command fai-statoverride
-    - some bug fixes
-
-New in FAI 2.9
-
-    - lots of bug fixes
-    - splitting the FAI package into more packages:
-      fai-server, fai-client, fai-nfsroot, fai-doc, fai-quickstart
-    - use a 2.6 kernel by default
-    - Config scripts named S[0-9][0-9]* are not executed any
-      more. Rename them to match [0-9][0-9]*.
-    - fcopy now supports a preinst script, add option -U, ignore .svn
-      directories
-    - new option -I for make-fai-bootfloppy can specify default
-      interface, new option -B creates 2.88M floppy
-    - use md5 hash for passwords
-    - backticks and variables can't be used in package_config any more
-    - root-path does not need to be defined in dhcpd.conf any more
-      (fai-chboot does it for you)
-    - fai-cd's El Torito boot image is not limited to 2.88M any more
+  - rename NEWS to NEWS.Debian
+  - /etc/fai/sources.list moved to /etc/fai/apt/sources.list
+  - a lot of new pathes:
+    use /srv/tftp/fai instead of /boot/fai
+    use /srv/tftp/fai/pxelinux.cfg instead of /boot/fai/pxelinux.cfg
+    use /srv/fai/config  instead of /usr/local/share/fai
+    use /srv/fai/nfsroot instead of /usr/lib/fai/nfsroot
+    use /var/lib/fai/config instead of /fai
+    use /var/lib/fai/mirror instead of /mnt
+  - new file names
+    variables.sh is now variables.log
+  - changes in variables
+    remove FAI_REMOTESH and FAI_REMOTECP from fai.conf, use FAI_LOGPROTO instead
+    remove $installserver and $mirrorhost in fai.conf
+    replace FAI_LOCATION by FAI_CONFIG_SRC, default if undefined:
+      "nfs://`hostname`$FAI_CONFIGDIR"
+    LOGSERVER, LOGREMOTEDIR, LOGPASSWD removed from fai.conf, set
+      them in the config space
+    MNTPOINT now set to /media/mirror
+    SERVERINTERFACE not needed by default in make-fai-nfsroot.conf
+    NFSROOT moved to make-fai-nfsroot.conf
+    FAICLIENTS, NFSROOT_PACKAGES, packages removed from make-fai-nfsroot.conf
+    terror renamed to task_error
+    all flags from FAI_FLAGS are now defined as flag_xxx
+    $time_zone renamed to $TIMEZONE
+    $videodrv renamed to $VIDEODRIVER
+    $FAI_CONSOLEFONT renamed to $CONSOLEFONT
+    $FAI_KEYMAP renamed to $KEYMAP
+    $rootpw renamed to $ROOTPW
+    $moduleslist renamed to $MODULESLIST
+  - new config file /etc/fai/NFSROOT which contains the package list
+    for the nfsroot
+  - task_updatebase does not use updatebase.log any more
+  - all IP addresses of the install server are added to $NFSROOT/etc/hosts
+  - automatic reboot if no errors are found (if error.log is empty)
+  - uses discover1 for hardware detection (discover version 2 is not
+    maintained any more
+  - add task dirinst
+  - try ftar $FAI/basefiles before extracting base.tgz
+  - install_packages: new option -p (see man install_packages)
+  - make-fai-nfsroot: add option -V (see man make-fai-nfsroot)
+  - fai-chboot: change in options, -d is now -D, -r is now -d, -r is
+    not used any more
+  - add policy-rc.d support
+  - move some -c to -C, so now all scripts use -C for cfdir, seting
+    $FAI_ETC_DIR does the same
+  - fai-cd can now eject the CD after installation
+  - fai-mirror remove option -a (now default), add -B
+
+ -- Thomas Lange <lange@debian.org>  Tue, 12 Sep 2006 21:47:24 +0200
+
+fai (2.10.1) unstable; urgency=low
+
+  - minor fix in fai-chboot
+  - packages in /files/packages are not supported any more
+  - fai-mirror: add option -C
+  - fai-cd: add option -C, grub menu now shows FAI version
+  - after the installation you can leave the FAI-CD in the drive,
+    since it now boot from local disk by default
+  - FAI_FLAG syslogd was removed, syslogd is now started by default
+
+ -- Thomas Lange <lange@debian.org>  Thu, 20 Apr 2006 11:46:12 +0200
+
+fai (2.10) unstable; urgency=low
+
+  - add option -n to fcopy
+  - several new listing options for fai-chboot, add option -c for
+    copying PXE configurations
+  - verbose output when defining variables
+  - add urpmi and yum support to install_packages
+  - add new subroutine mkrw(), which makes read-only directories
+    writeable. Very cool and usefull thing until we can use unionfs
+  - When booting from fai-cd the config space /fai is now writeable
+  - class FAISERVER sets up an apt-proxy
+
+ -- Thomas Lange <lange@debian.org>  Mon,  3 Apr 2006 15:11:30 +0200
+
+fai (2.9.1) unstable; urgency=low
+
+  - new class FAISERVER can install the fai install server from CD
+  - new command fai-statoverride
+  - some bug fixes
+
+ -- Thomas Lange <lange@debian.org>  Sun,  5 Mar 2006 22:37:31 +0100
+
+fai (2.9) unstable; urgency=low
+
+  - lots of bug fixes
+  - splitting the FAI package into more packages:
+    fai-server, fai-client, fai-nfsroot, fai-doc, fai-quickstart
+  - use a 2.6 kernel by default
+  - Config scripts named S[0-9][0-9]* are not executed any
+    more. Rename them to match [0-9][0-9]*.
+  - fcopy now supports a preinst script, add option -U, ignore .svn
+    directories
+  - new option -I for make-fai-bootfloppy can specify default
+    interface, new option -B creates 2.88M floppy
+  - use md5 hash for passwords
+  - backticks and variables can't be used in package_config any more
+  - root-path does not need to be defined in dhcpd.conf any more
+    (fai-chboot does it for you)
+  - fai-cd's El Torito boot image is not limited to 2.88M any more
 
-New in FAI 2.8.4
-
-    - small but important bug fix: remove non-US entry
-
-New in FAI 2.8.3
-
-    - remove debconf support for package itself, debconf support for
-      the installation was not removed
-
-New in FAI 2.8.2
-
-    - close some bugs, which occured when using softupdates
-
-New in FAI 2.8.1
-
-    - minor bug fixes
-    - added $COLOR_FAI_LOGO which is off unless doing initial
-      installations
-    - added german and french translation of the debconf templates
-    - task sysinfo mounts the local partitions read only
-    - move some classes from 10-base-classes to the new script
-      50-host-classes  
-    - fixed a lot of typos in the fai guide
-
-New in FAI 2.8
-
-    - rename rcS_fai to fai, add manual page fai.8
-    - new simple examples using class FAIBASE
-    - add debconf support for the package itself
-    - new action softupdates, update a system without reinstallation
-    - fai-do-scripts now executes scripts matching [0-9][0-9]*
-    - rcS.log is now fai.log
-    - major updates in fai-guide (softupdate, fai on other archs)
-    - add task prepareapt
-    - variable $addpackages removed from examples scripts
-
-New in FAI 2.7
-
-    - closes grave and important bugs
-    - add fai-cd(8) script for creating a bootable FAI CD image
-    - add option -a to fai-mirror
-    - add option -d to install_packages
-
-New in FAI 2.6.7
-
-    - add task debconf and new script fai-debconf for preseeding
-    - minor updates in the fai guide
-
-New in FAI 2.6.6
-
-    - new command fai-mirror(1) to create a partitial Debian mirror
-    - setup_harddisks: bug fix: error redefined mountpoint is wrongly
-      reported, allow space before keywords primary and logical
-    - install_packages: add option -f
-    - task_sysinfo calls hwinfo if available (very nice hardware info)
-    - 06hwdetect.source: SCSI detect code for 2.6 kernel
-    - new variable FAICLIENTS in make-fai-nfsroot.conf. Used by
-      fai-setup for exporting the nfsroot and the config space via NFS
-    - create a list of all packages in base.tgz (for fai CD)
-    - ftar: test if directory is / before removing files recursively
-    - enable shadow passwords for passwd and group in examples
-    - save files FAI_CLASSES, variables.sh and disk_var.sh to
-      /var/log/fai not to /etc/fai
-    - add supprt for booting from CD
-    - other bug fixes
-
-New in FAI 2.6.5
-
-    - fcopy now handles svn and arch subdirectories, added option -I
-    - install_packages does not remove unknown package names when
-      using aptitude, so aptitude's search patterns can be used
-
-New in FAI 2.6.4
-
-    - bug fixes
-    - install_packages and files in package_config/ have now support
-      for aptitude
-
-New in FAI 2.6.3
-
-    - make $rootpw not readable for users
-    - use default kernel 2.4.27
-    - fai-setup: add option -e
-    - make-fai-nfsroot: add option -K
-    - add xfs support into the nfsroot
-    - define kernel parameters using $kappend 
-
-New in FAI 2.6.2
-
-    - Workaround to support new tasksel behaviour
-    - fix broken grub entry when using class FAI_BOOTPART
-    - fai-chboot: add option -e
-
-New in FAI 2.6.1
-
-    - new option -k for make-fai-nfroot only installs a new kernel
-    - catnc() greps now through multiple files
-    - when logging in with ssh all variables for FAI are defined by
-      sourcing /tmp/fai/variables.sh
-    - faireboot sends message to fai monitor daemon
-    - install_packages now supports taskrm (which calls tasksel
-      remove), default number of packages that are install with one
-      command is set to 99
-    - better support for installing a client with a different hostname
-      than during installaion
-
-New in FAI 2.6
-
-    - make FAI ready-to-use for sarge
-    - make the examples much easier, remove a lot of unused stuff
-    - fai.conf is split into two files, make-fai-nfsroot specific
-      variables are moved to /etc/fai/make-fai-nfsroot.conf
-    - make-fai-nfsroot: more packages for hardware detection included,
-      write a warning if $FAI_SOURCES_LIST is used
-    - rcS_fai: if a file /.nocolorlogo exists, do not enable colored
-      logo and let scroll region unchanged
-    - 06hwdetect.source: better hardware detection uses discover2,
-      load all pci IDE drivers, enables DMA mode for disks, include
-      code of 11modules.source
-    - task_sysinfo: show serial numbers of hard disks, show usb
-      information
-    - tasks can set return code ($terror) so faimond receives it
-    - faimond receives more messages
-    - fai-chboot: new options -d, can use localboot, so we need not
-      copy the kernel image and initrd to the install server
-    - grub-install does not probe floppy drive (which can hang the system
-      for a long time)
-    - install_packages: add option -L, new code for detecting unknown
-      package names which uses perl module AptPkg
-    - mkdebmirror: mirrors now woody and sarge in one directory
-
-New in FAI 2.5.4
-
-    - fix bug in make-fai-bootfloppy when using -f
-    - make-fai-bootfloppy: added option -i that creates a bootable
-      ISO9960 cdrom image 
-    - some sparc and PowerPC adjustments
-
-New in FAI 2.5.3
-
-    - default kernel is 2.4.24
-    - add option -c to make-fai-{nfsroot,bootfloppy} to define a
-      different configuration directory than /etc/fai
-    - make-fai-bootfloppy: add option -c and -F, now DHCP is the
-      default protocol when -d is not used
-    - fai.conf: exclude more packages from debootstrap
-      adjust KERNELPACKAGE to new name (since fai-kernels_1.6)
-      put important variables to the top
-      remove some comments
-    - fai-chboot: new option -S sets FAI_ACTION=sysinfo
-    - The variable FAI_SOURCES_LIST is now obsolete,
-      use /etc/fai/sources.list or /etc/apt/sources.list instead
-    - new examples for sources.list in
-      /usr/share/doc/fai/examples/etc/sources.list
-    - remove some packages that are not needed and not available in
-      sarge
-    - utility chkdebnames mostly rewritten
-    - package recommends mknbi, and does not work with netboot package
-      when using BOOTP
-
-New in FAI 2.5.2
-
-    - fai monitor daemon added, see faimond(8)
-    - colored copyright message on console
-    - variable hdparm included again; can be used if the kernel does
-      not enables DMA for brand new IDE controllers by default
-    - package names can contain pinning information
-    - preferences file is copied from /etc/fai if it exists
-    - default kernel version is 2.4.22
-    - bug fixes
-
-New in FAI 2.5.1
-
-    - minor bug fixes
-    - added chapter to the fai guide how to receive the configuration
-      space using CVS 
-    - initrd support when booting new kernel via network
-
-New in FAI 2.5
-
-    - a new section in the manual which describes a simple
-      installation example. Read the chapter 'For the impatient user'
-    - old templates now split into simple and advanced examples. They
-      are located in /usr/share/doc/fai/examples/{simple,advanced}
-    - added script fai-chboot which manages the network boot
-      configuration files for PXE boot
-    - the installation time is printed in seconds
-    - menu entries for grub now works also if /boot is a separate
-      partition
-    - number of packages installed at a time can be limited (use
-      $MAXPACKAGES)
-    - log files can be saved using FTP protocol
-    - the files in /fai/class that are list of classes can contain
-      comment lines. All lines starting with a hash are ignored
-    - syslogd now works during installation
-    - add an grub entry for memtest86 if installed
-    - do not fsck ext3 partitions
-    - add -M option to fcopy
-    - make-fai-nfsroot: new option -f; print error message if it fails
-    - a new example configuration for a demo host using GNOME, DHCP
-    - added XFS support to setup_harddisks
-    - files class/*.mod and modules.log removed, use 11modules.source
-      instead
-    - packages for xfree server now in file/class XFREE
-    - added SunOS support; you can install Solaris using FAI
-    - bug fixes as always
-
-New in FAI 2.4.1
-
-    - use dhcp3, dhcp support was broken in FAI 2.4
-    - disk_config examples are using ext3 file systems
-    - add SERVERINTERFACE to fai.conf
-    - add FAI_BOOT to fai.conf; the list of boot protocols to set
-      up (boot or dhcp or both)
-    - DHCP install kernel file /boot/fai/installkernel renamed to
-      vmlinuz-install 
-    - new script fai-do-scripts; include the functions from do_script
-      and task_configure, this makes the Solaris port easier
-    - some bug fixes
-
-New in FAI 2.4
-
-    - Era Erikson did some great work on proofreading all manuals and
-      script comments. Great work Era!
-    - lots of updates in the fai guide
-    - use the script fai-class for defining classes; scripts in class/
-      must not have prefix S; the following command renames your
-      existing scripts so they will work with the new command:
-      rename 's/S(\d\d.+)(\.sh|\.pl)/$1/' S*
-      the order of scripts executed has slightly changed; all classes
-      from the file $HOSTNAME are defined after the scripts in class/
-      are executed; the suffix .sh or .pl is not needed any more,
-      fai-class has a manual page
-    - kernel 2.4.20 is the default kernel during installation
-    - USB keyboard support during installation
-    - make-fai-bootfloppy creates a more generic boot floppy which
-      uses grub or lilo as boot loader, it supports more than one boot
-      protocol, more disk space is available on the floppy
-    - the exit status of every hook and script is written to
-      status.log
-    - the hook faiend.LAST parses all log files for warnings and
-      errors and writes them to error.log
-    - variable.sh lists all variables defined after task defvar has finished
-    - FAI_LOCATION is now defined in fai.conf, FAI_ACTION is defined
-      in LAST.var, do not use T170 and T171 via a BOOTP or DHCP server
-      (but it is still possible)
-    - hooks can make their tasks to be skipped (as in fai 2.2)
-    - templates scripts and config files has been rewritten and added
-      (eg. WWWKIOSK, a notebook with Windows and Linux)
-    - a new default location for the Debian mirror (in mkdebmirror and
-      fai.conf)
-    - much of reorganizing the code, but this does not change the user
-      visible behavior
-    - some functions that were defined as shell subroutines are now
-      separate scripts in /usr/lib/fai (fai-class, create_ramdisk,
-      prepare_apt, fai-divert, fai-savelog, task_sysinfo, ...), they
-      are not standalone script, most of them only work in the fai
-      environment, this should solve the problems with a too big
-      environment (when using xargs)
-    - PATH always starts with /usr/local/{sbin,bin}
-    - new FAI_FLAG syslogd starts log daemons (syslogd and klogd) only
-      on demand
-    - save log files to host $LOGSERVER if defined, otherwise use
-      $SERVER
-    - make-fai-nfsroot always does setup for dhcp and bootp, and uses
-      following sources to create the file sources.list for the
-      nfsroot: the variable $FAI_SOURCES_LIST or the files
-      /etc/fai/sources.list or /etc/apt/sources.list
-    - you can add a list of classes after the PACKAGE command in files
-      in package_config, so the following packages will only be
-      installed for this class (Please only use this in the file
-      package_config/DEFAULT)
-    - fcopy has new option -i and -B
-    - the variable addpackages can contain a list of packages without
-      their version number, therefore /fai/files/packages should be a
-      simple repository
-    - a lot of bug fixes
-
-New in FAI 2.3.4
-
-    - the default name for fai kernel-image package has changed to
-      kernel-image-2.2.20_fai1_i386.deb, since the package fai-kernel
-      >=1.4 contains install kernels which support both the BOOTP and
-      DHCP protocol
-
-New in FAI 2.3.3
-
-    - important bug fix (wrong symlink for rcS_fai)
-    - copy id_dsa* and id_rsa* files in make-fai-nfsroot
-    - use strict enabled in perl scripts
-    - add "append ip=dhcp" in pxelinux.cfg/default
-    - minor changes in package_config files
-    - setup_harddisks default fs type changed from auto to ext2
-
-New in FAI 2.3.2
-
-    - minor bug fixes
-    - minor changes in package_config files
-    - use discover command for hardware detection and loading of scsi
-      kernel modules in class/S03hwdetect.source
-    - use swap partitions during installation if available
-
-New in FAI 2.3.1
-
-    - some minor bug fixes
-    - add variable $addpackages to DEFAULT.var
-    - $FAI_SUBDIR renamed to $FAI_SHAREDIR (fai.conf)
-    - changes in package_config files
-    - additional method to determine all ethernet devices
-    - manual updates for woody
-    - added a lot of comments into shell script
-    - add option -m to make-fai-bootfloppy
-
-New in FAI 2.3
-
-    - all default configurations are for Debian 3.0 aka woody
-    - /etc/fai.conf moved to /etc/fai/fai.conf
-    - moved some variables from fai.conf to class/*.var
-    - add FAI_DEBOOTSTRAP_OPTS to fai.conf
-    - temporary files are stored to $LOGDIR (default to /tmp/fai/),
-      can be set in fai.conf using mktemp if desired
-    - log files for every new run are stored in a separate directory,
-      last-$FAI_ACTION is pointing to the last log directory 
-    - if a task is skipped, also all its hooks are skipped
-    - uname -s in uppercase is also a default class
-    - all class/S[0-9]*.source scripts are sourced
-    - hooks that end in .source are sourced (formerly .sh), so they
-      can define variables
-    - new adddivert routine; make a diversion for a file and add it to
-      the list of all diversions; you need not care about removing the
-      diversion; the finish task will do this for you
-    - class/*.mod files can now define variables
-    - new examples class/S30menu.source (was hook/install.MENU)
-    - /fai can be a different location using $FAI in fai.conf
-    - /fai can be retrieved from a CVS repository: (see variables
-      FAI_LOCATION, FAI_CVSROOT, FAI_CVSMODULE) and create a
-      /etc/fai/.cvspass
-    - /etc/apt/preferences will be copied to nfsroot
-    - additional manual pages for fai-setup, make-fai-nfsroot,
-      make-fai-bootfloppy, install_packages
-    - setup_harddisks: called with option -d (DOS alignment)
-      support for ext3 and disk controllers using /dev/ida/, /dev/rd/
-      and /dev/cciss (Compaq SMART2 raid array and Mylex DAC960 PCI
-      RAID controller)
-    - make-fai-bootfloppy can write to a file, creates environment for
-      DHCP using pxelinux, does not copy System.map to floppy (now
-      more space left for the kernel image), new option -s
-    - bootpc and dhcp request will use only active network devices
-      ($netdevices_up determined by netdevice_info()) by default,
-      which can be overwritten with $netdevices 
-    - add a hint how to set up the kernel automounter for scratch
-      partitions
-    - fcopy skips CVS directories, executes postinst script if file
-      was copied, new options -L and -P
-    - added prtnetgr script which prints a flat list of all hosts
-      belonging to a netgroup
-    - execute all /fai/scripts/$class/S[0-9]* scripts if this
-      directory exists, so it's possible to execute multiple scripts
-      for one class; see examples in scripts/NETWORK/ and scripts/DEFAULT/
-    - use shm (was tmpfs) for ramdisk if available
-    - mkdebmirror uses passive ftp mode
-    - task sysinfo calls kudzu
-    - added THANKS file
-
-New in FAI 2.2.3
-
-    - woody support improved, but the default configuration is still
-      for potato
-    - added disk configuration for Beowulf nodes
-    - Wake on LAN section added to FAI guide
-    - reiserfs support in setup_harddisks (thanks to Diane Trout)
-    - make-fai-nfsroot -v output can be redirected to a file
-    - sysinfo also uses detect and discover to probe for hardware
-    - utilities moved to /usr/share/fai/utils
-    - install_packages checks all package names. If a package name is
-      misspelled, it will be removed from the installation list
-    - added class NOGETTY
-    - package_config: new action "hold", PRELOAD can use a file: url
-
-New in FAI 2.2.2
-
-    - bug fix: getting dhcp information
-    - added jmon to BEOWULF
-
-New in FAI 2.2.1
-
-    - FAI_FLAGS can be space or comma separated. They must be space
-      separated in bootptab. Use a comma to separate them as
-      additional kernel parameters.
-    - bootp requests on multiple ethernet devices show device name
-      (Thanks to Geert Stappers)
-    - script all_hosts doesn't use hardcoded list of hosts any more;
-      now it uses the netgroup allhosts
-
-New in FAI 2.2
-
-    - the fai guide has a new chapter about building a Beowulf cluster
-    - new utilities for Beowulf cluster: all_hosts and rshall
-    - new utility softupdate for updating packages on a running system
-    - improved example for diskless hook
-    - major reorganization of the rcS_fai code; most parts are moved
-      to the subroutines file
-    - source /fai/hooks/subroutines if file exists; here you can define
-      your own subroutines or redefine FAIs subroutines
-    - most tasks are now executed via task() and the name of the task
-      as option. This subroutine looks for a hook with the given name
-      and executes it. Hooks can skip the default task of FAI (called
-      task_<name>) by using skiptask(). So, hooks can replace the
-      default behavior, and not only add functions to the
-      installation process
-    - hooks can define classes by writing class names to
-      /tmp/additional-classes and variable by writing line to
-      /tmp/additional.var 
-    - new hooks/tasks added
-    - classes and variables are now defined in the very beginning
-      before task_action is called and $FAI_ACTION is evaluated
-    - FAI_ACTION can be any user defined value. FAI is looking for a
-      command in /fai/hooks/$FAI_ACTION and executes it.
-    - log file prepare-apt.log renamed to updatebase.log
-    - debian-non-US in local mirror script (mkdebmirror) has new location
-    - new type "PACKAGE taskinst" in package_config can install new
-      task packages (for Debian 3.0 and later releases)
-    - get_bootp_inf() and get_dhcp_info() support multiple ethernet
-      devices via $netdevices
-    - $netdevices can be set or automaticly determined to the list of
-      ethernet devices
-    - make-fai-bootfloppy: handle symlinks of lilo 21.5 and newer
-    - tlink can show symlink of a host or all file in /boot/fai
-    - new classes NOSECURETTY, BEOWULF, NOTCPD
-
-New in FAI 2.1
-    - NEWS file added (you found it already ;-), which contains the
-      user visible changes; changelog file is for developers
-    - woody support
-    - define $FAI_DEBOOTSTRAP for using debootstrap
-    - you can add your own functions using hooks (read the manual)
-    - /fai/fai_config not used anymore, replaced by a hook
-    - setup_harddisk does not complain when root partition is not in
-      the first 8GB, do not complain if not a primary partition
-    - no more problems when using other locales
-    - support for diskless clients
-    - grub support, new class LILO and GRUB
-    - new flag createvt; add this to FAI_FLAGS to get two additional
-      terminals and ctrl-c will interrupt the installation
-      process. Otherwise ctrl-c will reboot and no terminals are
-      available. In the past, this function was enabled by default.
-      Add createvt to FAI_FLAGS to get the old behavior.
-    - before any classes are defined using the scripts in /fai/class,
-      the classes DEFAULT, $HOSTNAME and LAST are defined
-    - new utility chkdebnames can check package names for a certain
-      distribution
+ -- Thomas Lange <lange@debian.org>  Tue, 13 Dec 2005 15:53:00 +0100
+
+fai (2.8.4) unstable; urgency=high
+
+  - small but important bug fix: remove non-US entry
+
+ -- Thomas Lange <lange@debian.org>  Wed, 25 May 2005 13:59:39 +0200
+
+fai (2.8.3) unstable; urgency=high
+
+  - remove debconf support for package itself, debconf support for
+    the installation was not removed
+
+ -- Thomas Lange <lange@debian.org>  Thu, 19 May 2005 15:54:18 +0200
+
+fai (2.8.2) unstable; urgency=high
+
+  - close some bugs, which occured when using softupdates
+
+ -- Thomas Lange <lange@debian.org>  Fri,  6 May 2005 09:23:34 +0200
+
+fai (2.8.1) unstable; urgency=low
+
+  - minor bug fixes
+  - added $COLOR_FAI_LOGO which is off unless doing initial
+    installations
+  - added german and french translation of the debconf templates
+  - task sysinfo mounts the local partitions read only
+  - move some classes from 10-base-classes to the new script
+    50-host-classes  
+  - fixed a lot of typos in the fai guide
+
+ -- Thomas Lange <lange@debian.org>  Sat, 30 Apr 2005 21:20:53 +0200
+
+fai (2.8) unstable; urgency=high
+
+  - rename rcS_fai to fai, add manual page fai.8
+  - new simple examples using class FAIBASE
+  - add debconf support for the package itself
+  - new action softupdates, update a system without reinstallation
+  - fai-do-scripts now executes scripts matching [0-9][0-9]*
+  - rcS.log is now fai.log
+  - major updates in fai-guide (softupdate, fai on other archs)
+  - add task prepareapt
+  - variable $addpackages removed from examples scripts
+
+ -- Thomas Lange <lange@debian.org>  Sat,  9 Apr 2005 23:43:27 +0200
+
+fai (2.7) unstable; urgency=high
+
+  - closes grave and important bugs
+  - add fai-cd(8) script for creating a bootable FAI CD image
+  - add option -a to fai-mirror
+  - add option -d to install_packages
+
+ -- Thomas Lange <lange@debian.org>  Fri, 25 Mar 2005 23:51:34 +0100
+
+fai (2.6.7) unstable; urgency=low
+
+  - add task debconf and new script fai-debconf for preseeding
+  - minor updates in the fai guide
+
+ -- Thomas Lange <lange@debian.org>  Thu, 10 Mar 2005 11:00:05 +0100
+
+fai (2.6.6) unstable; urgency=medium
+
+  - new command fai-mirror(1) to create a partitial Debian mirror
+  - setup_harddisks: bug fix: error redefined mountpoint is wrongly
+    reported, allow space before keywords primary and logical
+  - install_packages: add option -f
+  - task_sysinfo calls hwinfo if available (very nice hardware info)
+  - 06hwdetect.source: SCSI detect code for 2.6 kernel
+  - new variable FAICLIENTS in make-fai-nfsroot.conf. Used by
+    fai-setup for exporting the nfsroot and the config space via NFS
+  - create a list of all packages in base.tgz (for fai CD)
+  - ftar: test if directory is / before removing files recursively
+  - enable shadow passwords for passwd and group in examples
+  - save files FAI_CLASSES, variables.sh and disk_var.sh to
+    /var/log/fai not to /etc/fai
+  - add supprt for booting from CD
+  - other bug fixes
+
+ -- Thomas Lange <lange@debian.org>  Fri, 21 Jan 2005 04:24:26 +0100
+
+fai (2.6.5) unstable; urgency=medium
+
+  - fcopy now handles svn and arch subdirectories, added option -I
+  - install_packages does not remove unknown package names when
+    using aptitude, so aptitude's search patterns can be used
+
+ -- Thomas Lange <lange@debian.org>  Thu, 11 Nov 2004 15:14:08 +0100
+
+fai (2.6.4) unstable; urgency=medium
+
+  - bug fixes
+  - install_packages and files in package_config/ have now support
+    for aptitude
+
+ -- Thomas Lange <lange@debian.org>  Mon,  8 Nov 2004 14:38:58 +0100
+
+fai (2.6.3) unstable; urgency=high
+
+  - make $rootpw not readable for users
+  - use default kernel 2.4.27
+  - fai-setup: add option -e
+  - make-fai-nfsroot: add option -K
+  - add xfs support into the nfsroot
+  - define kernel parameters using $kappend 
+
+ -- Thomas Lange <lange@debian.org>  Mon, 13 Sep 2004 18:40:36 +0200
+
+fai (2.6.2) unstable; urgency=high
+
+  - Workaround to support new tasksel behaviour
+  - fix broken grub entry when using class FAI_BOOTPART
+  - fai-chboot: add option -e
+
+ -- Thomas Lange <lange@debian.org>  Thu, 26 Aug 2004 20:09:15 +0200
+
+fai (2.6.1) unstable; urgency=medium
+
+  - new option -k for make-fai-nfroot only installs a new kernel
+  - catnc() greps now through multiple files
+  - when logging in with ssh all variables for FAI are defined by
+    sourcing /tmp/fai/variables.sh
+  - faireboot sends message to fai monitor daemon
+  - install_packages now supports taskrm (which calls tasksel
+    remove), default number of packages that are install with one
+    command is set to 99
+  - better support for installing a client with a different hostname
+    than during installaion
+
+ -- Thomas Lange <lange@debian.org>  Mon,  9 Aug 2004 14:02:13 +0200
+
+fai (2.6) unstable; urgency=low
+
+  - make FAI ready-to-use for sarge
+  - make the examples much easier, remove a lot of unused stuff
+  - fai.conf is split into two files, make-fai-nfsroot specific
+    variables are moved to /etc/fai/make-fai-nfsroot.conf
+  - make-fai-nfsroot: more packages for hardware detection included,
+    write a warning if $FAI_SOURCES_LIST is used
+  - rcS_fai: if a file /.nocolorlogo exists, do not enable colored
+    logo and let scroll region unchanged
+  - 06hwdetect.source: better hardware detection uses discover2,
+    load all pci IDE drivers, enables DMA mode for disks, include
+    code of 11modules.source
+  - task_sysinfo: show serial numbers of hard disks, show usb
+    information
+  - tasks can set return code ($terror) so faimond receives it
+  - faimond receives more messages
+  - fai-chboot: new options -d, can use localboot, so we need not
+    copy the kernel image and initrd to the install server
+  - grub-install does not probe floppy drive (which can hang the system
+    for a long time)
+  - install_packages: add option -L, new code for detecting unknown
+    package names which uses perl module AptPkg
+  - mkdebmirror: mirrors now woody and sarge in one directory
+
+ -- Thomas Lange <lange@debian.org>  Mon, 26 Jul 2004 17:22:44 +0200
+
+fai (2.5.4) unstable; urgency=low
+
+  - fix bug in make-fai-bootfloppy when using -f
+  - make-fai-bootfloppy: added option -i that creates a bootable
+    ISO9960 cdrom image 
+  - some sparc and PowerPC adjustments
+
+ -- Thomas Lange <lange@debian.org>  Thu, 26 Feb 2004 17:07:31 +0100
+
+fai (2.5.3) unstable; urgency=low
+
+  - default kernel is 2.4.24
+  - add option -c to make-fai-{nfsroot,bootfloppy} to define a
+    different configuration directory than /etc/fai
+  - make-fai-bootfloppy: add option -c and -F, now DHCP is the
+    default protocol when -d is not used
+  - fai.conf: exclude more packages from debootstrap
+    adjust KERNELPACKAGE to new name (since fai-kernels_1.6)
+    put important variables to the top
+    remove some comments
+  - fai-chboot: new option -S sets FAI_ACTION=sysinfo
+  - The variable FAI_SOURCES_LIST is now obsolete,
+    use /etc/fai/sources.list or /etc/apt/sources.list instead
+  - new examples for sources.list in
+    /usr/share/doc/fai/examples/etc/sources.list
+  - remove some packages that are not needed and not available in
+    sarge
+  - utility chkdebnames mostly rewritten
+  - package recommends mknbi, and does not work with netboot package
+    when using BOOTP
+
+ -- Thomas Lange <lange@debian.org>  Wed,  4 Feb 2004 14:42:40 +0100
+
+fai (2.5.2) unstable; urgency=low
+
+  - fai monitor daemon added, see faimond(8)
+  - colored copyright message on console
+  - variable hdparm included again; can be used if the kernel does
+    not enables DMA for brand new IDE controllers by default
+  - package names can contain pinning information
+  - preferences file is copied from /etc/fai if it exists
+  - default kernel version is 2.4.22
+  - bug fixes
+
+ -- Thomas Lange <lange@debian.org>  Tue,  6 Jan 2004 15:20:10 +0100
+
+fai (2.5.1) unstable; urgency=low
+
+  - minor bug fixes
+  - added chapter to the fai guide how to receive the configuration
+    space using CVS 
+  - initrd support when booting new kernel via network
+
+ -- Thomas Lange <lange@debian.org>  Fri, 10 Oct 2003 14:58:16 +0200
+
+fai (2.5) unstable; urgency=low
+
+  - a new section in the manual which describes a simple
+    installation example. Read the chapter 'For the impatient user'
+  - old templates now split into simple and advanced examples. They
+    are located in /usr/share/doc/fai/examples/{simple,advanced}
+  - added script fai-chboot which manages the network boot
+    configuration files for PXE boot
+  - the installation time is printed in seconds
+  - menu entries for grub now works also if /boot is a separate
+    partition
+  - number of packages installed at a time can be limited (use
+    $MAXPACKAGES)
+  - log files can be saved using FTP protocol
+  - the files in /fai/class that are list of classes can contain
+    comment lines. All lines starting with a hash are ignored
+  - syslogd now works during installation
+  - add an grub entry for memtest86 if installed
+  - do not fsck ext3 partitions
+  - add -M option to fcopy
+  - make-fai-nfsroot: new option -f; print error message if it fails
+  - a new example configuration for a demo host using GNOME, DHCP
+  - added XFS support to setup_harddisks
+  - files class/*.mod and modules.log removed, use 11modules.source
+    instead
+  - packages for xfree server now in file/class XFREE
+  - added SunOS support; you can install Solaris using FAI
+  - bug fixes as always
+
+ -- Thomas Lange <lange@debian.org>  Wed,  6 Aug 2003 16:02:26 +0200
+
+fai (2.4.1) unstable; urgency=low
+
+  - use dhcp3, dhcp support was broken in FAI 2.4
+  - disk_config examples are using ext3 file systems
+  - add SERVERINTERFACE to fai.conf
+  - add FAI_BOOT to fai.conf; the list of boot protocols to set
+    up (boot or dhcp or both)
+  - DHCP install kernel file /boot/fai/installkernel renamed to
+    vmlinuz-install 
+  - new script fai-do-scripts; include the functions from do_script
+    and task_configure, this makes the Solaris port easier
+  - some bug fixes
+
+ -- Thomas Lange <lange@debian.org>  Thu,  3 Apr 2003 16:57:12 +0200
+
+fai (2.4) unstable; urgency=low
+
+  - Era Erikson did some great work on proofreading all manuals and
+    script comments. Great work Era!
+  - lots of updates in the fai guide
+  - use the script fai-class for defining classes; scripts in class/
+    must not have prefix S; the following command renames your
+    existing scripts so they will work with the new command:
+    rename 's/S(\d\d.+)(\.sh|\.pl)/$1/' S*
+    the order of scripts executed has slightly changed; all classes
+    from the file $HOSTNAME are defined after the scripts in class/
+    are executed; the suffix .sh or .pl is not needed any more,
+    fai-class has a manual page
+  - kernel 2.4.20 is the default kernel during installation
+  - USB keyboard support during installation
+  - make-fai-bootfloppy creates a more generic boot floppy which
+    uses grub or lilo as boot loader, it supports more than one boot
+    protocol, more disk space is available on the floppy
+  - the exit status of every hook and script is written to
+    status.log
+  - the hook faiend.LAST parses all log files for warnings and
+    errors and writes them to error.log
+  - variable.sh lists all variables defined after task defvar has finished
+  - FAI_LOCATION is now defined in fai.conf, FAI_ACTION is defined
+    in LAST.var, do not use T170 and T171 via a BOOTP or DHCP server
+    (but it is still possible)
+  - hooks can make their tasks to be skipped (as in fai 2.2)
+  - templates scripts and config files has been rewritten and added
+    (eg. WWWKIOSK, a notebook with Windows and Linux)
+  - a new default location for the Debian mirror (in mkdebmirror and
+    fai.conf)
+  - much of reorganizing the code, but this does not change the user
+    visible behavior
+  - some functions that were defined as shell subroutines are now
+    separate scripts in /usr/lib/fai (fai-class, create_ramdisk,
+    prepare_apt, fai-divert, fai-savelog, task_sysinfo, ...), they
+    are not standalone script, most of them only work in the fai
+    environment, this should solve the problems with a too big
+    environment (when using xargs)
+  - PATH always starts with /usr/local/{sbin,bin}
+  - new FAI_FLAG syslogd starts log daemons (syslogd and klogd) only
+    on demand
+  - save log files to host $LOGSERVER if defined, otherwise use
+    $SERVER
+  - make-fai-nfsroot always does setup for dhcp and bootp, and uses
+    following sources to create the file sources.list for the
+    nfsroot: the variable $FAI_SOURCES_LIST or the files
+    /etc/fai/sources.list or /etc/apt/sources.list
+  - you can add a list of classes after the PACKAGE command in files
+    in package_config, so the following packages will only be
+    installed for this class (Please only use this in the file
+    package_config/DEFAULT)
+  - fcopy has new option -i and -B
+  - the variable addpackages can contain a list of packages without
+    their version number, therefore /fai/files/packages should be a
+    simple repository
+  - a lot of bug fixes
+
+ -- Thomas Lange <lange@debian.org>  Thu, 13 Feb 2003 11:45:29 +0100
+
+fai (2.3.4) unstable; urgency=low
+
+  - the default name for fai kernel-image package has changed to
+    kernel-image-2.2.20_fai1_i386.deb, since the package fai-kernel
+    >=1.4 contains install kernels which support both the BOOTP and
+    DHCP protocol
+
+ -- Thomas Lange <lange@debian.org>  Thu, 16 May 2002 14:42:00 +0200
+
+fai (2.3.3) unstable; urgency=medium
+
+  - important bug fix (wrong symlink for rcS_fai)
+  - copy id_dsa* and id_rsa* files in make-fai-nfsroot
+  - use strict enabled in perl scripts
+  - add "append ip=dhcp" in pxelinux.cfg/default
+  - minor changes in package_config files
+  - setup_harddisks default fs type changed from auto to ext2
+
+ -- Thomas Lange <lange@debian.org>  Thu, 16 May 2002 09:27:15 +0200
+
+fai (2.3.2) unstable; urgency=low
+
+  - minor bug fixes
+  - minor changes in package_config files
+  - use discover command for hardware detection and loading of scsi
+    kernel modules in class/S03hwdetect.source
+  - use swap partitions during installation if available
+
+ -- Thomas Lange <lange@debian.org>  Mon, 29 Apr 2002 19:47:39 +0200
+
+fai (2.3.1) unstable; urgency=low
+
+  - some minor bug fixes
+  - add variable $addpackages to DEFAULT.var
+  - $FAI_SUBDIR renamed to $FAI_SHAREDIR (fai.conf)
+  - changes in package_config files
+  - additional method to determine all ethernet devices
+  - manual updates for woody
+  - added a lot of comments into shell script
+  - add option -m to make-fai-bootfloppy
+
+ -- Thomas Lange <lange@debian.org>  Tue, 16 Apr 2002 13:30:04 +0200
+
+fai (2.3) unstable; urgency=low
+
+  - all default configurations are for Debian 3.0 aka woody
+  - /etc/fai.conf moved to /etc/fai/fai.conf
+  - moved some variables from fai.conf to class/*.var
+  - add FAI_DEBOOTSTRAP_OPTS to fai.conf
+  - temporary files are stored to $LOGDIR (default to /tmp/fai/),
+    can be set in fai.conf using mktemp if desired
+  - log files for every new run are stored in a separate directory,
+    last-$FAI_ACTION is pointing to the last log directory 
+  - if a task is skipped, also all its hooks are skipped
+  - uname -s in uppercase is also a default class
+  - all class/S[0-9]*.source scripts are sourced
+  - hooks that end in .source are sourced (formerly .sh), so they
+    can define variables
+  - new adddivert routine; make a diversion for a file and add it to
+    the list of all diversions; you need not care about removing the
+    diversion; the finish task will do this for you
+  - class/*.mod files can now define variables
+  - new examples class/S30menu.source (was hook/install.MENU)
+  - /fai can be a different location using $FAI in fai.conf
+  - /fai can be retrieved from a CVS repository: (see variables
+    FAI_LOCATION, FAI_CVSROOT, FAI_CVSMODULE) and create a
+    /etc/fai/.cvspass
+  - /etc/apt/preferences will be copied to nfsroot
+  - additional manual pages for fai-setup, make-fai-nfsroot,
+    make-fai-bootfloppy, install_packages
+  - setup_harddisks: called with option -d (DOS alignment)
+    support for ext3 and disk controllers using /dev/ida/, /dev/rd/
+    and /dev/cciss (Compaq SMART2 raid array and Mylex DAC960 PCI
+    RAID controller)
+  - make-fai-bootfloppy can write to a file, creates environment for
+    DHCP using pxelinux, does not copy System.map to floppy (now
+    more space left for the kernel image), new option -s
+  - bootpc and dhcp request will use only active network devices
+    ($netdevices_up determined by netdevice_info()) by default,
+    which can be overwritten with $netdevices 
+  - add a hint how to set up the kernel automounter for scratch
+    partitions
+  - fcopy skips CVS directories, executes postinst script if file
+    was copied, new options -L and -P
+  - added prtnetgr script which prints a flat list of all hosts
+    belonging to a netgroup
+  - execute all /fai/scripts/$class/S[0-9]* scripts if this
+    directory exists, so it's possible to execute multiple scripts
+    for one class; see examples in scripts/NETWORK/ and scripts/DEFAULT/
+  - use shm (was tmpfs) for ramdisk if available
+  - mkdebmirror uses passive ftp mode
+  - task sysinfo calls kudzu
+  - added THANKS file
+
+ -- Thomas Lange <lange@debian.org>  Tue,  9 Apr 2002 18:29:15 +0200
+
+fai (2.2.3) unstable; urgency=low
+
+  - woody support improved, but the default configuration is still
+    for potato
+  - added disk configuration for Beowulf nodes
+  - Wake on LAN section added to FAI guide
+  - reiserfs support in setup_harddisks (thanks to Diane Trout)
+  - make-fai-nfsroot -v output can be redirected to a file
+  - sysinfo also uses detect and discover to probe for hardware
+  - utilities moved to /usr/share/fai/utils
+  - install_packages checks all package names. If a package name is
+    misspelled, it will be removed from the installation list
+  - added class NOGETTY
+  - package_config: new action "hold", PRELOAD can use a file: url
+
+ -- Thomas Lange <lange@debian.org>  Thu,  8 Nov 2001 17:01:02 +0100
+
+fai (2.2.2) unstable; urgency=low
+
+  - bug fix: getting dhcp information
+  - added jmon to BEOWULF
+
+ -- Thomas Lange <lange@debian.org>  Wed, 10 Oct 2001 10:52:35 +0200
+
+fai (2.2.1) unstable; urgency=low
+
+  - FAI_FLAGS can be space or comma separated. They must be space
+    separated in bootptab. Use a comma to separate them as
+    additional kernel parameters.
+  - bootp requests on multiple ethernet devices show device name
+    (Thanks to Geert Stappers)
+  - script all_hosts doesn't use hardcoded list of hosts any more;
+    now it uses the netgroup allhosts
+
+ -- Thomas Lange <lange@debian.org>  Fri,  5 Oct 2001 17:19:14 +0200
+
+fai (2.2) unstable; urgency=low
+
+  - the fai guide has a new chapter about building a Beowulf cluster
+  - new utilities for Beowulf cluster: all_hosts and rshall
+  - new utility softupdate for updating packages on a running system
+  - improved example for diskless hook
+  - major reorganization of the rcS_fai code; most parts are moved
+    to the subroutines file
+  - source /fai/hooks/subroutines if file exists; here you can define
+    your own subroutines or redefine FAIs subroutines
+  - most tasks are now executed via task() and the name of the task
+    as option. This subroutine looks for a hook with the given name
+    and executes it. Hooks can skip the default task of FAI (called
+    task_<name>) by using skiptask(). So, hooks can replace the
+    default behavior, and not only add functions to the
+    installation process
+  - hooks can define classes by writing class names to
+    /tmp/additional-classes and variable by writing line to
+    /tmp/additional.var 
+  - new hooks/tasks added
+  - classes and variables are now defined in the very beginning
+    before task_action is called and $FAI_ACTION is evaluated
+  - FAI_ACTION can be any user defined value. FAI is looking for a
+    command in /fai/hooks/$FAI_ACTION and executes it.
+  - log file prepare-apt.log renamed to updatebase.log
+  - debian-non-US in local mirror script (mkdebmirror) has new location
+  - new type "PACKAGE taskinst" in package_config can install new
+    task packages (for Debian 3.0 and later releases)
+  - get_bootp_inf() and get_dhcp_info() support multiple ethernet
+    devices via $netdevices
+  - $netdevices can be set or automaticly determined to the list of
+    ethernet devices
+  - make-fai-bootfloppy: handle symlinks of lilo 21.5 and newer
+  - tlink can show symlink of a host or all file in /boot/fai
+  - new classes NOSECURETTY, BEOWULF, NOTCPD
+
+ -- Thomas Lange <lange@debian.org>  Fri, 14 Sep 2001 14:35:49 +0200
+
+fai (2.1) unstable; urgency=low
+
+  - NEWS file added (you found it already ;-), which contains the
+    user visible changes; changelog file is for developers
+  - woody support
+  - define $FAI_DEBOOTSTRAP for using debootstrap
+  - you can add your own functions using hooks (read the manual)
+  - /fai/fai_config not used anymore, replaced by a hook
+  - setup_harddisk does not complain when root partition is not in
+    the first 8GB, do not complain if not a primary partition
+  - no more problems when using other locales
+  - support for diskless clients
+  - grub support, new class LILO and GRUB
+  - new flag createvt; add this to FAI_FLAGS to get two additional
+    terminals and ctrl-c will interrupt the installation
+    process. Otherwise ctrl-c will reboot and no terminals are
+    available. In the past, this function was enabled by default.
+    Add createvt to FAI_FLAGS to get the old behavior.
+  - before any classes are defined using the scripts in /fai/class,
+    the classes DEFAULT, $HOSTNAME and LAST are defined
+  - new utility chkdebnames can check package names for a certain
+    distribution
+
+ -- Thomas Lange <lange@debian.org>  Fri, 20 Jul 2001 11:55:29 +0200
