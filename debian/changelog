@@ -1,4 +1,4 @@
-fai (3~beta19) unstable; urgency=medium
+fai (3~beta20) unstable; urgency=medium
 
   * make pathes conform to FHS:
     (closes: #340608, #311524, #336650, #309554, #340609)
@@ -13,7 +13,8 @@ fai (3~beta19) unstable; urgency=medium
   * fai-chboot: use tcp as default for nfs, nfs v3 can will become default
     with etch, existent .disable pxe file will be removed automatically,
     add headline when copying from template, change in options: -d is now
-    -D, -r is now -d, -r is not used any more
+    -D, -r is now -d, -r is not used any more, abort if $pxedir does not
+    exist (closes: #373596)
   * subroutines-linux: task_updatebase does not use updatebase.log any
     more (closes: #366823), try ftar $FAI/basefiles before extracting
     base.tgz, create policy-rc.d in the chroot, copy sources.list from
@@ -34,20 +35,22 @@ fai (3~beta19) unstable; urgency=medium
   * lib/subroutines: remove get_fai_cvs(), get_fai_dir(), now separate
     scripts, print warning if CD-ROM does not use DMA mode, eject fai-cd
     at the end of the installation
-  * fai: replace $rclog with $LOGIDR/fai.log, add option -c,--class,
-    -C,--cfdir, add support for dirinst, cleanup LOGDIR before using it
-    again (closes: #369534), remove variable rundir, mkdir /var/run/fai if
-    not existing, trap uses subroutine clean_exit() for dirinst
+  * fai: replace $rclog with $LOGIDR/fai.log, add option -C,--cfdir,
+    -c,--class (closes: #353535), add support for dirinst, cleanup LOGDIR
+    before using it again (closes: #369534), remove variable rundir, mkdir
+    /var/run/fai if not existing, trap uses subroutine clean_exit() for
+    dirinst  
   * fai-setup: use getent for getting IP address, make it a bash script,
     change $HOME of LOGUSER (closes: #290449), do not use SERVERINTERFACE
     for getting hostname, add all IP addresses and host names to
-    ssh_known_hosts, remove variable FAICLIENTS, use IP address and
-    netmask for exportfs line (closes: #381261)
+    ssh_known_hosts (closes: #286692), remove variable FAICLIENTS, use IP
+    address and netmask for exportfs line (closes: #381261)
   * make-fai-nfsroot: new subroutine all_host_entries(), use
     install_packages and /etc/fai/NFSROOT for installing packages into the
     nfsroot, install fai-nfsroot before other packages are installed, do
-    not exit if getent returns no information, rename -c to -C
-  * varaible $fstab replaced with fstab (no more Solaris support using
+    not exit if getent returns no information, rename -c to -C, use
+    readlink to determine $cfdir (closes: #358765)
+  * variable $fstab replaced with fstab (no more Solaris support using
     vfstab)
   * savelog.LAST: set reboot=1 if no errors are found
   * fcopy: fix bug (closes: #374415)
@@ -76,8 +79,9 @@ fai (3~beta19) unstable; urgency=medium
   * fai-mirror: generate distrib name from FAI_DEBOOTSTRAP
   * move some -c to -C, so now all scripts use -C for cfdir, setting
     $FAI_ETC_DIR is the same as specifying -C cfdir
+  * move NEWS to NEWS.Debian
   
- -- Thomas Lange <lange@debian.org>  Tue, 12 Sep 2006 17:12:46 +0200
+ -- Thomas Lange <lange@debian.org>  Tue, 12 Sep 2006 21:47:24 +0200
 
 fai (2.10.5) unstable; urgency=high
 
