@@ -415,7 +415,7 @@ EOF
 	for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
 	    mount -o remount,ro $dir
 	done
-	cdromdevice=$(perl -ane 'print $F[2] if / name:/' /proc/sys/dev/cdrom/info)
+	cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
 	chroot $target /tmp/rebootCD $cdromdevice
 	# never reached
     fi
