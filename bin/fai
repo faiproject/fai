@@ -134,6 +134,8 @@ EOF
 fstart() {
 
     # these tasks can define variables, that are needed later
+    echo $etc_message
+    unset etc_message
     task confdir
     task setup
     task defclass
@@ -144,10 +146,6 @@ fstart() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
-
-# use FAI_ETC_DIR from environment variable
-[ -z "$FAI_ETC_DIR" ] && FAI_ETC_DIR=/etc/fai
-export FAI_ETC_DIR
 
 # Parse commandline options
 TEMP=$(getopt -o Nhvc:C: --long new,help,verbose,class:,cfdir: -n "$0" -- "$@")
@@ -172,7 +170,7 @@ while true ; do
 	    ;;
 	-C|--cfdir)
 	    shift
-	    FAI_ETC_DIR=$1
+	    cfdir=$1
 	    shift
 	    ;;
 	-c|--class)
@@ -196,6 +194,16 @@ while true ; do
             ;;
     esac
 done
+
+# use FAI_ETC_DIR from environment variable
+if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+    # print this message later so it gets into the log files
+    etc_message="Using $FAI_ETC_DIR as FAI_ETC_DIR."
+fi
+[ -n "$cfdir" ] && FAI_ETC_DIR=$cfdir
+unset cfdir
+: ${FAI_ETC_DIR:=/etc/fai}
+export FAI_ETC_DIR
 
 # override FAI_ACTION later if a command line argument is given
 [ "$1" ] && action=$1
@@ -262,7 +270,6 @@ tee -a $LOGDIR/fai.log < $LOGDIR/logfifo &
 fstart &> $LOGDIR/logfifo
 rm $LOGDIR/logfifo
 sleep 1 # wait for tee to complete. One second should be ok
-
 # old code
 # {
 # # a bash group command with { does not work on sparc
