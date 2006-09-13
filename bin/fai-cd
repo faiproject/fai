@@ -172,8 +172,6 @@ case `dpkg --print-installation-architecture` in
        *) die 11 "fai-cd only works on i386 and maybe on amd64 architecture. Exiting."
 esac
 
-# use environment variable if defined
-[ -n "$FAI_ETC_DIR" ] && cfdir=$FAI_ETC_DIR
 # Parse commandline options
 while getopts "hg:bm:C:" opt ; do
     case "$opt" in
@@ -197,9 +195,17 @@ isoname=$1
 [ -x "$(which mkinitrd-cd)" ] || die 7 "mkinitrd-cd not found. Please install package."
 [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
 
-[ -z "$cfdir" ] && cfdir=/etc/fai
-[ ! -d "$cfdir" ] && die 17 "$cfdir is not a directory."
-[ "$verbose" ] && echo "Using configuration files from directory $cfdir"
+# use FAI_ETC_DIR from environment variable
+if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+    echo "Using environment variable \$FAI_ETC_DIR."
+fi
+cfdir=${FAI_ETC_DIR:=/etc/fai}
+cfdir=$(readlink -f $cfdir) # canonicalize path
+if [ ! -d "$cfdir" ]; then
+    echo "$cfdir is not a directory"
+    exit 6
+fi
+[ "$verbose" ] && echo "Using configuration files from $cfdir"
 . $cfdir/fai.conf
 export NFSROOT=$(source $cfdir/make-fai-nfsroot.conf; echo $NFSROOT)
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
@@ -210,7 +216,7 @@ if [ -z "$grub_config" ]; then
 else
     grub_config="$cfdir/$grub_config"
 fi
-[ -f "$grub_config" ] || die 6 "Grub menu file $grub_config not found."
+[ -f "$grub_config" ] || die 13 "Grub menu file $grub_config not found."
 
 [ -z "$FAI_CONFIGDIR" ]  && die 14 "Variable \$FAI_CONFIG not set."
 [ -d $FAI_CONFIGDIR ] || die 15 "Can't find config space $FAI_CONFIGDIR."

@@ -134,7 +134,8 @@ EOF
 fstart() {
 
     # these tasks can define variables, that are needed later
-    echo $etc_message
+    echo "$etc_message"
+    echo "Using configuration files from $FAI_ETC_DIR"
     unset etc_message
     task confdir
     task setup
@@ -198,11 +199,12 @@ done
 # use FAI_ETC_DIR from environment variable
 if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
     # print this message later so it gets into the log files
-    etc_message="Using $FAI_ETC_DIR as FAI_ETC_DIR."
+    etc_message="Using environment variable \$FAI_ETC_DIR."
 fi
 [ -n "$cfdir" ] && FAI_ETC_DIR=$cfdir
 unset cfdir
 : ${FAI_ETC_DIR:=/etc/fai}
+FAI_ETC_DIR=$(readlink -f $FAI_ETC_DIR) # canonicalize path
 export FAI_ETC_DIR
 
 # override FAI_ACTION later if a command line argument is given

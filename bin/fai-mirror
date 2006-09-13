@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.9.1, 12-sep-2006"
+version="Version 1.9.2, 13-sep-2006"
 
 # variables: NFSROOT, FAI_CONFIGDIR
 
@@ -216,8 +216,6 @@ set-classes() {
 
 [ -x "$(which apt-move)" ] || die 5 "apt-move not found. Please install package."
 
-# use environment variable if defined
-[ -n "$FAI_ETC_DIR" ] && cfdir=$FAI_ETC_DIR
 preserve=0
 verbose=0
 add=1
@@ -236,12 +234,17 @@ while getopts "Bvhx:pc:C:" opt ; do
 done
 shift $(($OPTIND - 1))
 
-[ -z "$cfdir" ] && cfdir=/etc/fai
+# use FAI_ETC_DIR from environment variable
+if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+    echo "Using environment variable \$FAI_ETC_DIR."
+fi
+cfdir=${FAI_ETC_DIR:=/etc/fai}
+cfdir=$(readlink -f $cfdir) # canonicalize path
 if [ ! -d "$cfdir" ]; then
     echo "$cfdir is not a directory"
     exit 6
 fi
-[ "$verbose" ] && echo "Using configuration files from directory $cfdir"
+[ "$verbose" ] && echo "Using configuration files from $cfdir"
 . $cfdir/fai.conf
 . $cfdir/make-fai-nfsroot.conf
 
