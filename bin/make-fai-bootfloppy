@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.8.2, 13-september-2006"
+version="Version 2.8.3, 14-september-2006"
 set -e
 
 timeout=15
@@ -220,7 +220,7 @@ grub_floppy() {
     mkdir -p $mountpoint/boot/grub
     echo "(fd0)   /dev/fd0" > $mountpoint/boot/grub/device.map
     [ "$verbose" ] && echo "Copying the kernel $NFSROOT/boot/$kernel to the floppy."
-    cp -p $NFSROOT/lib/grub/i386-pc/stage? $mountpoint/boot/grub
+    cp -p $NFSROOT/usr/lib/grub/i386-pc/stage? $mountpoint/boot/grub
     cp $NFSROOT/boot/$kernel $mountpoint
 
     grubconf="
@@ -249,7 +249,7 @@ kernel (fd0)/$kernel root=/dev/nfs ip=::::::rarp $params
 $sd
 "
     echo "$grubconf" > $mountpoint/boot/grub/menu.lst
-    $NFSROOT/sbin/grub --batch --device-map=$mountpoint/boot/grub/device.map >/dev/null <<EOF
+    $NFSROOT/usr/sbin/grub --batch --device-map=$mountpoint/boot/grub/device.map >/dev/null <<EOF
 device (fd0) $floppydev
 root (fd0)
 setup (fd0)
