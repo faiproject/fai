@@ -210,15 +210,14 @@ export FAI_ETC_DIR
 
 # override FAI_ACTION later if a command line argument is given
 [ "$1" ] && action=$1
-[ "$2" ] && targetdir=$2 # only used for dirinst
+[ "$2" ] && export FAI_ROOT=$2 # only used for dirinst
 
 if [ X$action = Xdirinst ]; then
-    if [ -z "$targetdir" ]; then
+    if [ -z "$FAI_ROOT" ]; then
 	echo "Please specify a target directory. Aborted"
 	exit 3
     fi
     export NFSROOT=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $NFSROOT)
-    export FAI_ROOT=$targetdir
 fi
 
 if [ $(id -u) != "0" ]; then
@@ -259,9 +258,9 @@ if [ X$action = Xdirinst ]; then
     set -a
     clean_exit() {
 	rm -f $stamp
-	[ -z "$targetdir" ] && return
-	[ -d $targetdir/proc/self ] && umount $targetdir/proc $targetdir/sys
-	[ -f /etc/init.d/udev ] && umount $targetdir/dev
+	[ -z "$FAI_ROOT" ] && return
+	[ -d $FAI_ROOT/proc/self ] && umount $FAI_ROOT/proc $FAI_ROOT/sys
+	[ -f /etc/init.d/udev ] && umount $FAI_ROOT/dev
     }
     set +a
     trap 'clean_exit' EXIT
