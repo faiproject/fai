@@ -3,6 +3,8 @@
 # (c) Thomas Lange, 2006, lange@debian.org
 # create entries for removable media in fstab and directories in /media
 
+ainsl $target/etc/fstab "/dev/fd0  /floppy  auto  users,noauto 0 0"
+
 cdromlist() {
     [ -f /proc/sys/dev/cdrom/info ] || return
     devs=$(grep 'drive name:' /proc/sys/dev/cdrom/info | cut -d ":" -f 2)
@@ -12,16 +14,14 @@ cdromlist() {
 }
 
 fstabline () {
-    printf "%-15s %-15s %-7s %-15s %-7s %s\n" "$1" "$2" "$3" "$4" "$5" "$6" >> $target/etc/fstab
+    line=$(printf "%-15s %-15s %-7s %-15s %-7s %s\n" "$1" "$2" "$3" "$4" "$5" "$6")
+    ainsl $target/etc/fstab "$line"
 }
 
-
-[ -f $target/media/cdrom0 ] && return # make script idempotent
 i=0
 for cdrom in $(cdromlist | tac); do
     [ $i -eq 0 ] && ln -s cdrom0 $target/media/cdrom
-    echo "cdrom$i: $cdrom"
-    mkdir $target/media/cdrom$i
+    [ -d $target/media/cdrom$i ] || mkdir $target/media/cdrom$i
     fstabline /dev/$cdrom /media/cdrom$i udf,iso9660 ro,user,noauto 0 0
     i=$(($i + 1))
 done
