@@ -1,0 +1,66 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH ainsl 1 "21 september 2006" "FAI 3"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+ainsl \- AppendIfNoSuchLine
+.SH SYNOPSIS
+.B ainsl
+.RI [ options ] " FILE LINE [PATTERN]"
+.SH DESCRIPTION
+Add LINE to the end of FILE if this file does not contain this line
+already. If PATTERN is given, then the LINE is only appended if
+PATTERN is not found in the file.
+
+If PATTERN is not given, LINE is used instead for matching a line in
+FILE. Then LINE may also contain simple regex like '^' and '$' which
+are only used for matching, not when adding the line. Additionaly,
+following characters are escaped in LINE: ( )
+
+.SH OPTIONS
+.TP
+.B \-D
+Create debugging output.
+.TP
+.B \-h
+Show help, version and summary of options.
+.TP
+.BI "\-n "
+Print the actions, but do not execute them.
+.TP
+.BI "\-s "
+Convert blanks in LINE or PATTERN to '\\s+' regexp for matching.
+.TP
+.B \-v
+Create verbose output.
+
+.SH EXAMPLES
+.br
+ainsl -v /etc/fstab '/dev/fd0  /floppy  auto  users,noauto 0 0'
+
+Append the entry for the floppy device to /etc/fstab, if this line
+isn't already inlcuded.
+
+ainsl -s /etc/exports '/srv/www @linuxhosts(async,rw) backup(async,ro)'
+
+Add exports entry without excatly looking at spaces.
+
+.SH NOTES
+This is a similar function as AppendIfNoSuchLine from cfengine(8).
+.SH SEE ALSO
+.br
+This program is part of FAI (Fully Automatic Installation).  See the FAI manual
+for more information on how to use fcopy.  The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+
+.SH AUTHOR
+Thomas Lange <lange@informatik.uni-koeln.de>
