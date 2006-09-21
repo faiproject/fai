@@ -1,0 +1,27 @@
+#! /bin/bash
+
+# (c) Thomas Lange, 2006, lange@debian.org
+# create entries for removable media in fstab and directories in /media
+
+cdromlist() {
+    [ -f /proc/sys/dev/cdrom/info ] || return
+    devs=$(grep 'drive name:' /proc/sys/dev/cdrom/info | cut -d ":" -f 2)
+    for d in $devs; do
+	echo $d
+    done
+}
+
+fstabline () {
+    printf "%-15s %-15s %-7s %-15s %-7s %s\n" "$1" "$2" "$3" "$4" "$5" "$6" >> $target/etc/fstab
+}
+
+
+[ -f $target/media/cdrom0 ] && return # make script idempotent
+i=0
+for cdrom in $(cdromlist | tac); do
+    [ $i -eq 0 ] && ln -s cdrom $target/media/cdrom0
+    echo "cdrom$i: $cdrom"
+    mkdir $target/media/cdrom$i
+    fstabline /dev/$cdrom /media/cdrom$i udf,iso9660 ro,user,noauto 0 0
+    i=$(($i + 1))
+done
