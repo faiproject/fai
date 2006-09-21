@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 0.1, 21-september-2006";
+my $version = "Version 0.2, 21-september-2006";
 
 use Getopt::Std;
 
@@ -64,21 +64,25 @@ $optpattern  = shift;
 $found = 0;
 usage() unless defined $line;
 
-print "FILE: $filename LINE: $line PATTERN $pattern\n";
+print "FILE: $filename\nLINE: $line\nPATTERN $pattern\n" if $debug;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 $pattern = (defined $optpattern) ? $optpattern: $line;
 # process pattern and line
-$opt_s && $pattern=~ s/\s+/\\s+/;
+$opt_s && $pattern=~ s/\s+/\\s+/g;
 
 # remove ^ and $ in line (only at start and end), but still use it for pattern
 # in no explicit pattern was given
 unless (defined $optpattern) {
+# remove special chars ^ and $ from line
   $line =~ s/^\^//;
   $line =~ s/\$$//;
+# escape '(' and ')' if no pattern was given and line is used
+  $pattern =~s/\(/\\(/g;
+  $pattern =~s/\)/\\)/g;
 }
 
-print "newpattern: $pattern\n" if $debug;
+print "newpattern: $pattern XXX $pat\n" if $debug;
 print "newline: $line\n" if $debug;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # check if pattern already included in file
