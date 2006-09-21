@@ -1,0 +1,101 @@
+#! /usr/bin/perl
+
+# $Id$
+#*********************************************************************
+#
+# ainsl -- AppendIfNoSuchLine written in Perl
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2006 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# '/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+my $version = "Version 0.1, 21-september-2006";
+
+use Getopt::Std;
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub usage {
+
+  print << "EOF";
+ainsl, AppendIfNoSuchLine written in Perl. $version
+
+   Copyright (C) 2006 by Thomas Lange
+
+Usage: ainsl [OPTION] FILE LINE [PATTERN]
+
+   -D                   Create debug output.
+   -h                   Show summary of options.
+   -n                   Print the actions, but do not execute them.
+   -s                   Convert blanks in line to '\s+' regexp
+   -v                   Create verbose output.
+
+Report bugs to <lange\@informatik.uni-koeln.de>.
+EOF
+  exit 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+getopts('Dhsvn');
+
+$opt_h && usage;
+$verbose = $opt_v || $ENV{verbose} || 0;
+$debug   = $opt_D || $ENV{debug}   || 0;
+
+$filename = shift;
+$line     = shift;
+$optpattern  = shift;
+$found = 0;
+usage() unless defined $line;
+
+print "FILE: $filename LINE: $line PATTERN $pattern\n";
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+$pattern = (defined $optpattern) ? $optpattern: $line;
+# process pattern and line
+$opt_s && $pattern=~ s/\s+/\\s+/;
+
+# remove ^ and $ in line (only at start and end), but still use it for pattern
+# in no explicit pattern was given
+unless (defined $optpattern) {
+  $line =~ s/^\^//;
+  $line =~ s/\$$//;
+}
+
+print "newpattern: $pattern\n" if $debug;
+print "newline: $line\n" if $debug;
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# check if pattern already included in file
+open (INFILE, "<$filename") or die "Can't open $filename $!";
+while (<INFILE>) {
+  if (/$pattern/o) {
+    print "Pattern found. Nothing to append.\n" if $debug;
+    $found=1;
+    last;
+  }
+}
+close(INFILE);
+exit 0 if $found; # nothing to append
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Append line to file
+print "Appending to $filename: $line\n" if $verbose;
+exit 0 if $opt_n;
+open (INFILE, ">>$filename") or die "Can't open $filename for writing. $!";
+print INFILE $line,"\n";
+close(INFILE);
