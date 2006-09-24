@@ -27,9 +27,10 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 0.2, 21-september-2006";
+my $version = "Version 1.0, 24-september-2006";
 
 use Getopt::Std;
+our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v);
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
@@ -41,10 +42,11 @@ ainsl, AppendIfNoSuchLine written in Perl. $version
 
 Usage: ainsl [OPTION] FILE LINE [PATTERN]
 
+   -a                   Autocreate file if not existing.
    -D                   Create debug output.
    -h                   Show summary of options.
    -n                   Print the actions, but do not execute them.
-   -s                   Convert blanks in line to '\s+' regexp
+   -s                   Convert blanks in line to '\\s+' regexp
    -v                   Create verbose output.
 
 Report bugs to <lange\@informatik.uni-koeln.de>.
@@ -52,7 +54,16 @@ EOF
   exit 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('Dhsvn');
+sub autocreate {
+
+  -f $filename && return;
+  print "ainsl: create $filename\n" if $verbose;
+  $opt_n && return;
+  open (FILE,">$filename") || die "ainsl: can't create $filename $!";
+  close (FILE);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+getopts('aDhsvn');
 
 $opt_h && usage;
 $verbose = $opt_v || $ENV{verbose} || 0;
@@ -66,6 +77,7 @@ usage() unless defined $line;
 
 print "FILE: $filename\nLINE: $line\nPATTERN $pattern\n" if $debug;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+$opt_a && autocreate;
 
 $pattern = (defined $optpattern) ? $optpattern: $line;
 # process pattern and line
@@ -82,14 +94,14 @@ unless (defined $optpattern) {
   $pattern =~s/\)/\\)/g;
 }
 
-print "newpattern: $pattern XXX $pat\n" if $debug;
-print "newline: $line\n" if $debug;
+print "ainsl: newpattern: $pattern\n" if $debug;
+print "ainsl: newline: $line\n" if $debug;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # check if pattern already included in file
 open (INFILE, "<$filename") or die "Can't open $filename $!";
 while (<INFILE>) {
   if (/$pattern/o) {
-    print "Pattern found. Nothing to append.\n" if $debug;
+    print "aisnl: Pattern found. Nothing to append.\n" if $debug;
     $found=1;
     last;
   }
@@ -98,8 +110,8 @@ close(INFILE);
 exit 0 if $found; # nothing to append
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Append line to file
-print "Appending to $filename: $line\n" if $verbose;
+print "ainsl: appending to $filename: $line\n" if $verbose;
 exit 0 if $opt_n;
-open (INFILE, ">>$filename") or die "Can't open $filename for writing. $!";
+open (INFILE, ">>$filename") or die "ainsl: can't open $filename for writing. $!";
 print INFILE $line,"\n";
 close(INFILE);
