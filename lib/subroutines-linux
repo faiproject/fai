@@ -180,11 +180,18 @@ task_prepareapt () {
     [ -f /etc/resolv.conf ] && cp /etc/resolv.conf $FAI_ROOT/etc
     [ -f /etc/hosts ] && cp /etc/hosts $FAI_ROOT/etc
     # set hostname in $FAI_ROOT
-    if [ -f /var/run/fai//FAI_INSTALLATION_IN_PROGRESS ]; then
+    if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
       echo $HOSTNAME >$FAI_ROOT/etc/hostname
       if [ -n "$IPADDR" ]; then
-	  grep -q  $IPADDR $FAI_ROOT/etc/hosts 2>/dev/null || echo -e "$IPADDR\t$HOSTNAME.$DOMAIN $HOSTNAME" >>$FAI_ROOT/etc/hosts
+	  ainsl -s $FAI_ROOT/etc/hosts "$IPADDR $HOSTNAME.$DOMAIN $HOSTNAME"
       fi
+    fi
+
+    if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
+	cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
+APT::Get::AllowUnauthenticated "true";
+Aptitude::CmdLine::Ignore-Trust-Violations yes;
+EOF
     fi
     [ -d $FAI_ETC_DIR/apt ] && cp -r $FAI_ETC_DIR/apt/* $FAI_ROOT/etc/apt/
 }
@@ -220,7 +227,7 @@ task_finish() {
     fi
     # undo fake of all programs made by fai
     fai-divert -R
-    rm -f $FAI_ROOT/etc/apt/apt.conf.d/10fai $FAI_ROOT/etc/apt/apt.conf.d/90fai
+    rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
     date
     echo "The $FAI_ACTION took $[$(cut -d . -f 1 /proc/uptime)-$start_seconds] seconds."
 }
