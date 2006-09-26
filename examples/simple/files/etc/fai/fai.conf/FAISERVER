@@ -1,23 +1,10 @@
-# $Id: fai.conf 3096 2005-11-23 22:49:54Z lange $
+# $Id: fai.conf 3770 2006-08-07 12:08:51Z lange $
 
 # /etc/fai/fai.conf -- configuration for FAI (Fully Automatic Installation)
 
-# installserver must be the name seen by the install clients
-installserver=faiserver
-# the name of the Debian mirror, this is also hardcoded in /etc/fai/sources.list
-mirrorhost=faiserver
-
-# Don't use the variable FAI_SOURCES_LIST any more.
-# Instead use /etc/fai/sources.list 
-
 # Access to Debian mirror via NFS mounted directory
 # If FAI_DEBMIRROR is defined, install clients mount it to $MNTPOINT
-#FAI_DEBMIRROR=$mirrorhost:/files/scratch/debmirror
-
-# if your install server has multiple ethernet device, use this one to
-# determine its hostname. Default eth0. Set to the interface to which
-# the Beowulf clients are connected.
-SERVERINTERFACE=eth0
+#FAI_DEBMIRROR=yournfs debianmirror:/path/to/debianmirror
 
 # LOGUSER: an account on the install server which saves all log-files
 # and which can change the kernel that is booted via network.
@@ -28,34 +15,21 @@ SERVERINTERFACE=eth0
 # g+w /srv/tftp/fai. If the variable is undefined, this feature is disabled.
 # Define it, to enable it, eg. LOGUSER=fai
 LOGUSER=fai
-# use ssh or rsh for copying log files to user fai and for logging in
-# from install clients to install server
-FAI_REMOTESH=ssh
-FAI_REMOTECP=scp
 
-# set protocol type for saving logs, default is rcp/scp. Set to ftp if desired.
-FAI_LOGPROTO=
-# Name of log-server. If undefined, the install server will be used. 
-LOGSERVER=
-# writable directory on remote server, when using FTP protocol
-LOGREMOTEDIR="upload"
-# password for login to log server, when using FTP protocol
-LOGPASSWD=
+# set protocol type for saving logs. Values: ssh, rsh, ftp
+FAI_LOGPROTO=rsh
 
 # the configuration space on the install server
 FAI_CONFIGDIR=/srv/fai/config
-# the location of the config space, as seen by the install client
-# it can also be overwritten with T170 via BOOTP 
-FAI_LOCATION=$installserver:$FAI_CONFIGDIR
+
+# how to access the fai config space
+# default if undefined here: nfs://`hostname`/$FAI_CONFIGDIR
+#FAI_CONFIG_SRC=nfs://yourservername$FAI_CONFIGDIR
 
 # the following variables are read only for most users
 
 # mount point where the mirror will be mounted
-MNTPOINT=/mnt2
-
-# directory on the install server where the nfsroot for FAI is
-# created, approx size: 160MB, also defined in bootptab or dhcp.conf
-NFSROOT=/srv/fai/nfsroot
+MNTPOINT=/media/mirror
 
 # the local configuration directory on the install client
-FAI=/fai
+FAI=/var/lib/fai/config
