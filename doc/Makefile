@@ -30,7 +30,7 @@ test:
 
 clean:
 	rm -rf $(docname).txt $(docname).dvi $(docname).pdf $(docname).html $(docname).sasp* *~ $(docname).texinfo $(docname).ps $(docname).out $(docname).tpt $(docname).tex
-	rm -f body.tmp head.tmp thb*.png
+	rm -f body.tmp head.tmp thb*.png *.log
 
 print: dvi
 	dvips -f $(docname) | lpr
