@@ -80,6 +80,13 @@ fai_init() {
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
     target=$FAI_ROOT
 
+    if [ X$action = Xdirinst -a -n "$newhostname" ]; then
+	HOSTNAME=$newhostname
+	HOST=$newhostname
+	unset newhostname
+	echo "Hostname set to $HOST" | tee -a $LOGDIR/fai.log
+    fi
+
     if [ $do_init_tasks -eq 1 ]; then
         trap 'echo "Now rebooting";faireboot' INT QUIT
     else
@@ -150,7 +157,7 @@ fstart() {
 # Main routine
 
 # Parse commandline options
-TEMP=$(getopt -o Nhvc:C: --long new,help,verbose,class:,cfdir: -n "$0" -- "$@")
+TEMP=$(getopt -o u:Nhvc:C: --long new,help,verbose,class:,cfdir: -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -185,6 +192,10 @@ while true ; do
 	    export cmdlineclasses=$1
 	    shift
 	    cmdlineclasses=${cmdlineclasses//,/ }
+	    ;;
+	-u|--hostname)
+	    shift
+	    export newhostname=$1
 	    ;;
         --) 
             shift
