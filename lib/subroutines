@@ -491,6 +491,12 @@ task_softupdate() {
 
     [ -f "$stamp" ] && die "Another fai softupdate is already running. Aborting."
     > $stamp
+    # if the system had been installed using fai < 3.0 disk_var.sh is found in /etc/fai
+    if [ ! -f /var/lib/fai/disk_var.sh -a -f /etc/fai/disk_var.sh ] ; then
+      mv /etc/fai/disk_var.sh /var/lib/fai/
+    fi
+    # the following copy operation is required to make $LOGDIR a reliable source
+    # for disk_var.sh
     cp -p /var/lib/fai/disk_var.sh $LOGDIR # use the last disk_var during update
 
     defnop wait_for_jobs
