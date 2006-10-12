@@ -36,7 +36,13 @@ while [ $# -gt 0 ]; do
         esac
     shift
 done
-echo "Warning: Dummy start-stop-daemon called $prog. Doing nothing."
+
+case $prog in
+    udevd) /sbin/start-stop-daemon.distrib --start --quiet --exec /sbin/udevd -- --daemon
+	   ;;
+	*) echo "Warning: Dummy start-stop-daemon called $prog. Doing nothing."
+	   ;;
+esac
 
 [ -n "$stop" -a -z "$oknodo" ] && exit 1
 
