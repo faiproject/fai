@@ -112,13 +112,13 @@ task() {
         # skip task
 	rm $LOGDIR/skip.$taskname # TODO: remove skip files at the very end
 	[ "$verbose" ] && echo "Skiping task_$taskname"
-	sndmon "TASKSKIP $taskname"
+	sendmon "TASKSKIP $taskname"
     else
 	echo "Calling task_$taskname"
-	sndmon "TASKBEGIN $taskname"
+	sendmon "TASKBEGIN $taskname"
 	task_error=0   # task can set this variable to indicate an error
 	task_$taskname
-	sndmon "TASKEND $taskname $task_error"
+	sendmon "TASKEND $taskname $task_error"
     fi
     # since the subroutine is not needed any more, we can undefine it
     unset task_$taskname
@@ -148,14 +148,14 @@ call_hook() {
 	fi
 	if [ -x $hfile ]; then
 	    echo "Calling hook: $hook.$cl"
-	    sndmon "HOOK $hook.$cl"
+	    sendmon "HOOK $hook.$cl"
 	    # execute the hook
 	    $hfile $dflag
 	    check_status $hook.$cl $?
 	fi
 	if [ -x $hfile.source ]; then
 	    echo "Source hook: $hook.$cl.source"
-	    sndmon "HOOK $hook.$cl.source"
+	    sendmon "HOOK $hook.$cl.source"
             # source this hook
 	    . $hfile.source $dflag
 	    check_status $hook.$cl.source $?
@@ -240,7 +240,7 @@ task_action() {
 
     if [ -z "$FAI_ACTION" ]; then
 	echo "No action in \$FAI_ACTION defined."
-	sndmon "TASKERROR action 21"
+	sendmon "TASKERROR action 21"
 	task_faiend
 	exit 
     fi
@@ -279,7 +279,7 @@ task_action() {
 		$FAI/hooks/$FAI_ACTION
 	    else
 		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found."
-		sndmon "TASKERROR action 22"
+		sendmon "TASKERROR action 22"
 		task_faiend
 	    fi
 	    ;;
@@ -296,7 +296,7 @@ task_action() {
 task_defclass() {
 
     if [ ! -d $FAI/class ]; then
-	sndmon "TASKERROR defclass 21"
+	sendmon "TASKERROR defclass 21"
 	echo "Directory $FAI/class not found. Following subdirectories are found:"
 	find $FAI -maxdepth 1 -type d -printf "%p\n"
 	die "Aborting."
@@ -397,7 +397,7 @@ task_faiend() {
     # reboot without prompting if FAI_FLAG reboot is set
     [ "$flag_reboot" -lt "1" ] && read
     echo "Rebooting $HOSTNAME now"
-    sndmon REBOOT
+    sendmon REBOOT
     cd /
     sync
 
@@ -453,7 +453,7 @@ task_install() {
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
 	echo "$stamp was not removed."
-	sndmon "TASKERROR install 21"
+	sendmon "TASKERROR install 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
 }
@@ -480,7 +480,7 @@ task_dirinstall() {
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
 	echo "$stamp was not removed."
-	sndmon "TASKERROR install 21"
+	sendmon "TASKERROR install 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
 }
@@ -518,7 +518,7 @@ task_softupdate() {
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
 	echo "$stamp was not removed."
-	sndmon "TASKERROR softupdate 21"
+	sendmon "TASKERROR softupdate 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
     umount $FAI_ROOT/fai

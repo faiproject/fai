@@ -82,7 +82,7 @@ task_confdir() {
     [ -z "$monserver" ] && monserver=$SERVER
     faimond=1
     sendhostname=$HOSTNAME # save current hostname
-    if sndmon check; then
+    if sendmon check; then
 	echo "Monitoring to server $monserver enabled."
     else
 	faimond=0
@@ -103,7 +103,7 @@ task_partition() {
     # setup_harddisks must create $LOGDIR/disk_var.sh file
     if [ ! -s $LOGDIR/disk_var.sh ]; then
 	cat $LOGDIR/format.log
-	sndmon "TASKERROR partition 21"
+	sendmon "TASKERROR partition 21"
 	die "setup_harddisks did not create $LOGDIR/disk_var.sh file."
     fi
     # now define variable for root and boot partition and boot device
@@ -152,7 +152,7 @@ task_mirror() {
     if mount $romountopt $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT; then
       [ "$debug" ] && echo "Mirror mounted from $FAI_DEBMIRROR to $FAI_ROOT/$MNTPOINT"
     else
-      sndmon "TASKERROR mirror $?"
+      sendmon "TASKERROR mirror $?"
       die "Can't mount $FAI_DEBMIRROR"
     fi
 }
@@ -279,7 +279,7 @@ task_chboot() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sndmon() {
+sendmon() {
 
     # send message to monitor daemon
     [ "$faimond" -eq 0 ] && return 0
