@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-chboot 8 "15 september" "FAI 3"
+.TH fai-chboot 8 "29 october" "FAI 3"
 .SH NAME
 fai-chboot \- manage the network boot configuration files
 .SH SYNOPSIS
@@ -7,7 +7,7 @@ fai-chboot \- manage the network boot configuration files
 [OPTION]... KERNELNAME ROOTFS HOST...
 .br
 .B fai-chboot
--l [-e|-d|-t|-o|-g] [PATTERN]
+-l[e|d|t|o|g] [PATTERN]
 .br
 .B fai-chboot
 -e HOST...
@@ -16,7 +16,7 @@ fai-chboot \- manage the network boot configuration files
 -d HOST...
 .br
 .B fai-chboot
--c HOST|TEMPLATE HOST...
+-c HOST|TEMPLATE HOST|TEMPLATE...
 .br
 .B fai-chboot
 -i [OPTION]... HOST...
@@ -31,7 +31,7 @@ kernel will mount the root filesystem from device ROOTFS. You can add
 additional kernel parameters and define some FAI specific flags. For
 each host one configuration file is created. The file name of the
 configuration file is its IP address in upper case hexadecimal. HOST
-can be a host name or an IP address.
+can be a host name, an IP address or the keyword "default".
 
 .SH OPTIONS
 .TP
@@ -45,7 +45,7 @@ them for network booting.
 .TP
 .BI "\-D " DIR
 Set the default directory for the network boot configuration to
-DIR. The default value is /srv/tftp/pxelinux.cfg/.
+DIR. The default value is /srv/tftp/fai/pxelinux.cfg/.
 .TP
 .B \-d
 Disable network booting for HOST. This renames the config file and adds
@@ -79,12 +79,13 @@ Set kernel append parameters.
 .B \-l
 List the configuration for all hosts in short format. If PATTERN is
 given, list only hosts matching PATTERN. Lists hostname, FAI_ACTION,
-kernel name and IP address in hex. With \fB\-l\fR, list only enabled hosts. 
-With \fB-d\fR list only disabled hosts.
-With \fB-t\fR list only templates.
-With \fB-o\fR list only hosts that does not match any of the other categories. 
-With \fB-g\fR list the configuration for all hosts, sorted and ordered by 
-groups (enabled, disabled, templates, others).
+kernel name and IP address in hex. Use \fB\-le\fR, to list only enabled hosts,
+\fB-ld\fR to list only disabled hosts, \fB-lt\fR to list only templates,
+\fB-lo\fR to list only hosts that do not match any of the other before
+mentioned categories, and \fB-lg\fR to list the configuration for all hosts,
+sorted and ordered by groups (enabled, disabled, templates, others).
+Note that a combination of multiple \fB-l\fR options is not supported and that
+in listing mode no other action will be performed.
 .TP
 .B \-L
 List the configuration for all hosts. Also list the kernel append parameters.
