@@ -521,7 +521,10 @@ task_softupdate() {
 	sendmon "TASKERROR softupdate 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
-    umount $FAI_ROOT/fai
+    echo $FAI_CONFIG_SRC | grep -q ^nfs://
+    if [ $? -eq 0 ]; then
+	grep -q $FAI_ROOT /etc/mtab || umount $FAI
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
