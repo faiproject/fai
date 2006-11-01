@@ -79,63 +79,76 @@ sub readpxedir {
   opendir(DIR, $pxedir) || die "can't opendir $pxedir: $!";
   foreach (readdir(DIR)) {
     next if /^\./;
-    if (/^default/)    { push @default,  $_ ; next};
-    if (/^[0-9A-F]+$/) { push @enabled,  $_ ; next};
-    if (/\.disable$/)  { push @disabled, $_ ; next};
-    if (/\.tmpl$/)     { push @templates, $_ ; next};
+    if (/^(default|[0-9A-F]+)$/) { push @enabled,   $_ ; next};
+    if (/\.tmpl$/)               { push @templates, $_ ; next};
+    if (/\.disable$/) {
+        if (-f (split /\./)[0]) {
+            warn "Skipping $_ as disabled host because also enabled.\n" if $verbose; 
+        } else {
+            push @disabled,  $_; 
+        }
+        next;
+    };
     push @other, $_;
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub lsdir {
 
-# -lr list only disabled hosts
+# -ld list only disabled hosts
 # -le list only enabled hosts
 # -lt list only templates
 # -lo list only "other", i.e that does not match templates or hosts 
 # -lg list by goups (enabled, disabled, templates, others)
-# -l[retog] <pattern> list matching pattern
+# -l[detog] <pattern> list matching pattern
 
-  my (@n,$host,$ip,$iaddr,$hex,$type);
+  my ($n,$host,$iaddr,$hex,$type);
 
   @patterns = @_; # a global variable
 
   readpxedir();
 
   # create list which entries we want to list
-  @allfiles = (@default,@enabled,@disabled,@templates,@other);
+  @allfiles = (@enabled,@disabled,@templates,@other);
   $opt_d and @allfiles = @disabled;
   $opt_e and @allfiles = @enabled;
   $opt_t and @allfiles = @templates;
   $opt_o and @allfiles = @other;
-  $opt_g and @allfiles = (@default,@enabled,@disabled,@templates,@other);
+  $opt_g and @allfiles = (@enabled,@disabled,@templates,@other);
 
   # map all entries (in HEX) to hostname or IP
   foreach $hex (@allfiles) {
-    undef $type;
-    # hex to ip address
-    @n = $hex =~ m/[0-9A-F][0-9A-F]/g;
-    $ip = join ('.', map {$_ = hex $_} @n);
+    undef $host,$type;
 
-    if ($hex =~ /^default$/) {
+    if ($hex =~ /^default(.disable)?$/) {
       $host = $hex;
       $type = '[DEFAULT]';
     } elsif ($hex =~ /\.tmpl$/) {
       $host = "$hex";
       $type = '[Template]';
-    } elsif ($#n > 0 && $#n < 3) {
-      # Don't fail if not a complete IP
-      $host = "Subnet: $ip";
-    } else {
-      # ip to hostname
-      $iaddr = inet_aton($ip);
-      if ($h = gethostbyaddr($iaddr, AF_INET)) {
-	$host = $h->name;
-	$host =~ s/^([^.]+).*/$1/; # strip domain from FQDN so we have short hostnames
-      } else {
+    } elsif ($hex =~ /[0-9A-F]+/) {
+        my $hexstrip = (split /\./,$hex)[0]; # remove .disable if necessary
+        $n = $hexstrip;
+        # hex to ip/subnet address
+        while ( length $n ) { 
+            $host = sprintf( "%s%d" ,$host?"$host.":$host,
+                        (hex substr $n,0,1,"" ) * 16 + (hex substr $n,0,1,"")); 
+        }
+        if ( $host and ( length($hexstrip) < 8) ) {
+            $host = "Subnet: $host/". length($hexstrip)*4 
+        } else {
+            # ip to hostname
+            $iaddr = inet_aton($host);
+            if ($h = gethostbyaddr($iaddr, AF_INET)) {
+                $host = $h->name;
+                $host =~ s/^([^.]+).*/$1/; # strip domain from FQDN so we have short hostnames
+            }
+        }
+    }
+
+    if ( !$host ) {
         $host = $hex;
         $type = '[Other]';
-      }
     }
     $hexname{$host} = $hex;
     $hname{$hex}= $host;
@@ -143,7 +156,6 @@ sub lsdir {
   }
 
   if ($opt_g) { # print in group, sorted inside each group
-    prtsorted(@default);
     prtsorted(@enabled);
     prtsorted(@disabled);
     prtsorted(@templates);
@@ -190,9 +202,9 @@ sub printpxe {
     $append =~ /FAI_ACTION=(\S+)/;
     $append = $1;
 #    printf "%-16.16s $append $kernelname %-8s\n",$host,$hex;
-    printf "%-16.16s  %-20.20s $append $kernelname\n",$type?$type:$host,$hex;
+    printf "%-26.26s  %-20.20s $append $kernelname\n",$type?$type:$host,$hex;
   } else {
-    printf "%s %s $kernelname $append\n",$host,$hex;
+    printf "%s %s $kernelname $append\n",$type?$type:$host,$hex;
   }
 
   undef $append;
@@ -225,11 +237,15 @@ sub mkpxecfg {
   my ($ipadr,$hex) = host2hex($host);
 
   warn "$host has $ipadr in hex $hex\n" if $verbose;
+  if (-f "$pxedir/$hex.disable") {
+      unlink "$pxedir/$hex.disable";
+      print "removed old $pxedir/$hex.disable\n";
+  }
   warn "Writing file $pxedir/$hex for $host\n" if $verbose;
   return if $opt_n;
 
   if ($opt_p && -e "$pxedir/$hex") {
-    warn "WARNING: $pxedir/$hex already exists. Skipping file creation. ";
+    warn "WARNING: $pxedir/$hex already exists.\nSkipping file creation. ";
     return;
   }
   open (FILE,"> $pxedir/$hex") or warn "$0 $@ $!";
@@ -305,7 +321,7 @@ sub tcopy {
     } elsif (-e "$pxedir/$srchost" ) {
       $srcfile = "$pxedir/$srchost";
     } elsif (-e "$pxedir/$srchost.tmpl" ) {
-      $srcfile = "$pxedir/$srchost";
+      $srcfile = "$pxedir/$srchost.tmpl";
     } else {
       warn "Source file for $srchost ($srchex) not available\n";
       return;
@@ -313,7 +329,7 @@ sub tcopy {
   } elsif ( -e "$pxedir/$srchost") {
       $srcfile = "$pxedir/$srchost";
   } elsif ( -e "$pxedir/$srchost.tmpl") {
-      $srcfile = "$pxedir/$srchost";
+      $srcfile = "$pxedir/$srchost.tmpl";
   } else {
       warn "Source file for $srchost not available\n";
       return;
@@ -336,7 +352,7 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:D:edhnvlLiIp:f:Fk:Sto');
+getopts('gBc:D:edhnvlLiIpf:Fk:Sto');
 $opt_h and usage;
 defined @ARGV or usage;
 
@@ -406,7 +422,7 @@ if ($opt_i) {
 } else {
   $kernelname = shift;
   $kernelname = "kernel $kernelname";
-  $rootfs = shift;
+  $rootfs = shift or die "No rootfs specified.\n";
 }
 
 $opt_F and $opt_f="verbose,sshd,createvt";
