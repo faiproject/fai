@@ -84,11 +84,11 @@ sub readpxedir {
     if (/\.disable$/) {
       my $filename=(split (/\./,$_))[0];
       if (-f "$pxedir/$filename") {
-            warn "Skipping $_ as disabled host because also enabled.\n" if $verbose; 
-        } else {
-            push @disabled,  $_; 
-        }
-        next;
+	warn "Skipping $_ as disabled host because also enabled.\n" if $verbose;
+      } else {
+	push @disabled, $_;
+      }
+      next;
     };
     push @other, $_;
   }
@@ -99,7 +99,7 @@ sub lsdir {
 # -ld list only disabled hosts
 # -le list only enabled hosts
 # -lt list only templates
-# -lo list only "other", i.e that does not match templates or hosts 
+# -lo list only "other", i.e that does not match templates or hosts
 # -lg list by goups (enabled, disabled, templates, others)
 # -l[detog] <pattern> list matching pattern
 
@@ -129,28 +129,28 @@ sub lsdir {
       $host = "$hex";
       $type = '[Template]';
     } elsif ($hex =~ /[0-9A-F]+/) {
-        my $hexstrip = (split /\./,$hex)[0]; # remove .disable if necessary
-        $n = $hexstrip;
-        # hex to ip/subnet address
-        while ( length $n ) { 
-            $host = sprintf( "%s%d" ,$host?"$host.":$host,
-                        (hex substr $n,0,1,"" ) * 16 + (hex substr $n,0,1,"")); 
+      my $hexstrip = (split /\./,$hex)[0]; # remove .disable if necessary
+      $n = $hexstrip;
+      # hex to ip/subnet address
+      while ( length $n ) {
+	$host = sprintf( "%s%d" ,$host?"$host.":$host,
+                 (hex substr $n,0,1,"" ) * 16 + (hex substr $n,0,1,""));
+      }
+      if ( $host and ( length($hexstrip) < 8) ) {
+	$host = "Subnet: $host/". length($hexstrip)*4
+      } else {
+        # ip to hostname
+        $iaddr = inet_aton($host);
+        if ($h = gethostbyaddr($iaddr, AF_INET)) {
+	  $host = $h->name;
+          $host =~ s/^([^.]+).*/$1/; # strip domain from FQDN so we have short hostnames
         }
-        if ( $host and ( length($hexstrip) < 8) ) {
-            $host = "Subnet: $host/". length($hexstrip)*4 
-        } else {
-            # ip to hostname
-            $iaddr = inet_aton($host);
-            if ($h = gethostbyaddr($iaddr, AF_INET)) {
-                $host = $h->name;
-                $host =~ s/^([^.]+).*/$1/; # strip domain from FQDN so we have short hostnames
-            }
-        }
+      }
     }
 
     if ( !$host ) {
-        $host = $hex;
-        $type = '[Other]';
+      $host = $hex;
+      $type = '[Other]';
     }
     $hexname{$host} = $hex;
     $hname{$hex}= $host;
@@ -186,7 +186,7 @@ sub printpxe {
 
   $match = (@patterns) ? 0: 1; # set match to 1 if no pattern is given
   foreach (@patterns) {
-     $match = 1 if $host =~ /$_/;
+    $match = 1 if $host =~ /$_/;
   }
   return unless $match; # do not print entries if no pattern matches
 
@@ -240,8 +240,8 @@ sub mkpxecfg {
 
   warn "$host has $ipadr in hex $hex\n" if $verbose;
   if (-f "$pxedir/$hex.disable") {
-      unlink "$pxedir/$hex.disable";
-      print "removed old $pxedir/$hex.disable\n";
+    unlink "$pxedir/$hex.disable";
+    print "removed old $pxedir/$hex.disable\n";
   }
   warn "Writing file $pxedir/$hex for $host\n" if $verbose;
   return if $opt_n;
