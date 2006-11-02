@@ -260,7 +260,6 @@ task_action() {
 	    task faiend
 	    ;;
 	dirinstall)
-	    echo "Installing into directory $FAI_ROOT"
 	    task dirinstall
 	    ;;
 	softupdate)
@@ -335,6 +334,7 @@ _defvar() {
 task_defvar() {
 
     local svar=$LOGDIR/showvar.log
+    local odir=$(pwd)
     cd $FAI/class
     for class in $classes ; do
 	if [ -f $class.var ]; then
@@ -357,7 +357,7 @@ task_defvar() {
     unset class svar
     # now all variables are defined. Dump them to variables.log
     set | perl -ne 'print if /^\w\w+=/ and not /^(BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|rootpw|ROOTPW|HOME|PWD)/' > $LOGDIR/variables.log
-    cd /
+    cd $odir
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_mountdisks() {
@@ -463,6 +463,8 @@ task_dirinstall() {
     > $stamp
 
     mkdir -p $FAI_ROOT
+    FAI_ROOT=$(cd $FAI_ROOT;pwd)
+    echo "Installing into directory $FAI_ROOT"
     task extrbase
     [ -f $target/etc/fstab ] || touch $target/etc/fstab
     task mirror
