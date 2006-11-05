@@ -28,6 +28,19 @@
 #*********************************************************************
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    cat <<-EOF
+	Copyright (C) 1999-2006 Thomas Lange
+	Report bugs to <fai@informatik.uni-koeln.de>.
+
+	Usage: make-fai-nfsroot [OPTIONS]
+  Create an NFSROOT for FAI.
+	Read the man pages pages make-fai-nfsroot(8).
+EOF
+    exit 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
     echo "ERROR: $@"
@@ -36,11 +49,6 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
-
-if [ $(id -u) != "0" ]; then
-    echo "Run this program as root."
-    exit 9
-fi
 
 kfile="vmlinuz" # some architectures use different names
 kernelname="$kfile-install"
@@ -60,6 +68,11 @@ while getopts hervC:f:kKV: opt ; do
         ?) exit 5 ;; # error in option parsing
     esac
 done
+
+if [ $(id -u) != "0" ]; then
+    echo "Run this program as root."
+    exit 9
+fi
 
 set -e
 
@@ -417,19 +430,6 @@ else
     echo "No install kernel installed in /srv/tftp/fai."
     echo "No kernel modules available in nfsroot."
 fi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-usage() {
-
-    cat <<-EOF
-	Copyright (C) 1999-2006 Thomas Lange
-	Report bugs to <fai@informatik.uni-koeln.de>.
-
-	Usage: make-fai-nfsroot [OPTIONS]
-  Create an NFSROOT for FAI.
-	Read the man pages pages make-fai-nfsroot(8).
-EOF
-    exit 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
