@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 2.8.3, 14-september-2006"
+version="Version 2.8.4, 26-november-2006"
 set -e
 
 timeout=15
@@ -342,7 +342,10 @@ if [ $mkimage -eq 1 ]; then
     mkfsopt=-F
 else
     # blank first sector of floopy
+    set +e
     dd if=/dev/zero of=$floppydev bs=512 count=1 2>/dev/null
+    [ $? -ne 0 ] && die "Can't write to floppy device $floppydev."
+    set -e
 fi
 
 # pay attention: if -i option is too large, then too few inodes
