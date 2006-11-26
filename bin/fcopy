@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.2.9, 3-november-2006";
+my $version = "Version 2.2.10, 26-november-2006";
 
 use strict;
 use File::Copy;
@@ -162,12 +162,14 @@ sub copy_one {
   print LOGFILE "$source\t$class$logcomment\n" if $logfile;
   if ($preserve) {
     warn "preserving $source \n";
+    _unlink($tmpfile) unless ($tmpfile eq $sourcefile);
     return;
   }
 
   # if destination is a symlink and -l is given, complain about it
   if ($opt_l && -l $destfile) {
     ewarn("Destination $destfile is a symlink");
+    _unlink($tmpfile) unless ($tmpfile eq $sourcefile);
     return;
   }
 
