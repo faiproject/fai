@@ -69,7 +69,7 @@ reconfigure_packages() {
      fi
      packages=$(awk '{print $1}' $LOGDIR/debconf.data | sort | uniq)
      # backup database
-     tmpdb=$($ROOTCMD mktemp)
+     tmpdb=$($ROOTCMD mktemp -t fai-debconf.XXXXXXXXXX)
      $ROOTCMD debconf-copydb configdb faidb --config=Name:faidb --config=Driver:File --config=Filename:$tmpdb
      for p in $packages; do
 	 # test if package is installed
@@ -82,7 +82,7 @@ reconfigure_packages() {
 	     # echo "Package $p is not yet installed. Skipping reconfiguration."
 	 fi
      done
-     rm $target/$tmpdb
+     rm -f $target/$tmpdb $target/$tmpdb-old
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
