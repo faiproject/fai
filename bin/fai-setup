@@ -6,7 +6,7 @@
 # fai-setup -- set up FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2006 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2007 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -74,6 +74,10 @@ add_fai_account() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_fai_account() {
 
+    # most things should be executed as user $LOGUSER, since root may not have write
+    # permissions to $loguserhome (e.g if mount via NFS without no_root_squash)
+
+    set +e
     loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
     sshdir=$loguserhome/.ssh
     if [ -z "$loguserhome" ]; then
@@ -128,6 +132,7 @@ setup_fai_account() {
 
     logusergid=$(id -ng $LOGUSER)
     echo "User account $LOGUSER set up."
+    set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -140,8 +145,8 @@ make-fai-nfsroot $options
 
 if [ -n "$LOGUSER" ]; then
     # chown only if cd was successful
-    cd $loguserhome && chown -R $LOGUSER:$logusergid .
-    chown -R $LOGUSER:$logusergid /srv/tftp/fai
+    cd $loguserhome && chown -R $LOGUSER:$logusergid . || true
+    chown -R $LOGUSER:$logusergid /srv/tftp/fai || true
 fi
 
 if [ -z "$FAI_CONFIGDIR" ]; then
