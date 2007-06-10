@@ -6,7 +6,7 @@
 # fai-save-log -- save log files from fai to a local or remote location
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2002-2006 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2002-2007 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -49,8 +49,14 @@ save_log_local() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_log_remote_shell() {
 
-    echo "Save log files via $remotesh to $LOGUSER@$LOGSERVER:$HOSTNAME/$FAI_ACTION-$fai_rundate"
-    local thislog=$HOSTNAME/$FAI_ACTION-$fai_rundate
+    local thislog
+    if [ -n "$LOGREMOTEDIR" ];then
+	thislog=$LOGREMOTEDIR/$HOSTNAME/$FAI_ACTION-$fai_rundate
+    else
+	thislog=$HOSTNAME/$FAI_ACTION-$fai_rundate
+    fi
+
+    echo "Save log files via $remotesh to $LOGUSER@$LOGSERVER:$thislog"
     find $LOGDIR -size 0 -type f -exec rm {} \;
     $remotesh -l $LOGUSER $LOGSERVER " \
        mkdir -p $thislog ;\
