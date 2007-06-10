@@ -31,7 +31,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2006 Thomas Lange
+	Copyright (C) 1999-2007 Thomas Lange
 	Report bugs to <fai@informatik.uni-koeln.de>.
 
 	Usage: make-fai-nfsroot [OPTIONS]
@@ -53,8 +53,9 @@ PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 kfile="vmlinuz" # some architectures use different names
 kernelname="$kfile-install"
 merror="properly"
+sshpreserve=0
 # option e currently does nothing
-while getopts hervC:f:kKV: opt ; do
+while getopts hervC:f:kKV:p opt ; do
     case "$opt" in
         C) cfdir=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
@@ -64,7 +65,8 @@ while getopts hervC:f:kKV: opt ; do
         k) kinstall=1 ;;
         K) kremove=1; kinstall=1 ;;
         h) usage ;;
-	e) expert=1 ;;
+        e) expert=1 ;;
+        p) sshpreserve=1 ;;
         ?) exit 5 ;; # error in option parsing
     esac
 done
@@ -156,6 +158,12 @@ setup_ssh() {
 
     # nothing to do if no ssh is available in nfsroot
     [ -f $NFSROOT/usr/bin/ssh ] || return 0
+    if [ $sshpreserve = 1 ]; then
+	tar -C $NFSROOT -xf $tmptar
+	rm $tmptar
+	return 0
+    fi
+
     mkdir -p -m 700 $NFSROOT/root/.ssh
     if [ -n "$LOGUSER" ] ; then
         loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
@@ -453,6 +461,13 @@ fi
 echo "Creating FAI nfsroot in $NFSROOT."
 echo "By default it needs more than 250 MBytes disk space."
 echo "This may take a long time."
+
+if [ $sshpreserve = 1 ]; then
+    # save old .ssh directory
+    tmptar=$(mktemp) || exit 12
+    # should we set the umask before? Does it influence the other parts?
+    tar -C $NFSROOT -cvf $tmptar root/.ssh
+fi
 
 # Kill the directory if not in recover mode
 if [ -d $NFSROOT/$FAI -a ! "$recover" ]
