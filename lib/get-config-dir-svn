@@ -10,6 +10,7 @@
 ### END SUBROUTINE INFO
 
 # matched string: "svn://user@host/svnpath"
+# strings without user@ are processed below
 protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
 username=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^@]*\)@')
 svnpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://[^@]\+@\([^[:space:]]\+\)')
@@ -34,6 +35,7 @@ case $protocol in
 esac
 		
 [ -n "$username" ] && user="--username $username"
+[ -z "$username" ] && svnurl=$FAI_CONFIG_SRC # if no user is specified
 
 if [ -d "$FAI/.svn" ] ; then
    echo "Updating SVN in $FAI"
