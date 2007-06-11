@@ -1,5 +1,5 @@
 #! /usr/bin/perl
-# copyright Thomas Lange 2001, lange@debian.org
+# copyright Thomas Lange 2001-2007, lange@debian.org
 # map "normal" device notation to grub notation
 
 # TODO: read from stdin if no parameter given
@@ -17,13 +17,13 @@ while (<DEVICEMAP>) {
   $map{$olddevice} = $grubdevice;
 }
 
-$device=~ m#^(/dev/[sh]d\D)(\d*)$# || die "Can't match device: $device\n";
+$device=~ m#^(/dev/(?:[sh]d\D|ida/c\d*d\d*|cciss/c\d*d\d*))p*(\d*)$# || die "Can't match device: $device\n";
 my ($disk,$partition) = ($1,$2);
 
 if ($map{$disk}) {
   $grubdevice=$map{$disk};
 } else {
-  die "No match in $devicemap for $disk\n"; 
+  die "No match in $devicemap for $disk\n";
 }
 
 if ($partition) {
