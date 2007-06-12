@@ -110,8 +110,6 @@ fai_init() {
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -t devpts devpts /dev/pts
-	# add other options for nfs mount of /dev/root to root-path in dhcpd.conf
-	mount -o remount,noatime,ro /dev/root /
 	cat /proc/kmsg >/dev/tty4 &
     fi
 
@@ -249,7 +247,6 @@ export do_init_tasks=0
 [ "$0" = "/etc/init.d/rcS" ] && do_init_tasks=1
 if [ $do_init_tasks -eq 1 ]; then
     renewclass=1 # always renew class list when installing
-    create_ramdisk
 fi
 export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
