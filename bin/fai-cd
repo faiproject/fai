@@ -6,7 +6,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2006 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2007 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 # based on a script called make-fai-bootcd by Niall Young <niall@holbytla.org>
@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 2.4.3, 6 october 2006"
+version="fai-cd 3.0, 12 june 2007"
 
 burn=0
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache /media/mirror/.apt-move"
@@ -43,7 +43,7 @@ trap "unhide_dirs;umount_dirs" EXIT ERR
 usage() {
 
     cat <<-EOF
-	$version. Copyright (C) 2004-2006 Thomas Lange
+	$version. Copyright (C) 2004-2007 Thomas Lange
 	Report bugs to <fai@informatik.uni-koeln.de>.
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
@@ -62,28 +62,19 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_initrd_image() {
-
-    local kdir=$NFSROOT/lib/modules/$kernelversion
-
-    echo "Creating initrd image with kernel $kernelversion"
-    mkdir -p $tmp/boot/grub
-    sed "s/_VERSION_/$isoversion/" < /etc/mkinitrd-cd/id.txt > $NFSROOT/id.txt
-    mkinitrd-cd $kdir $tmp/boot/initrd.img full "$isoversion"
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub_image() {
 
     echo -n "Creating grub boot image ..."
 
-    > $tmp/boot/RUNNING_FROM_FAICD
+    mkdir -p $tmp/boot/grub $nfsrootdir
     [ -d /usr/lib/grub ] && cp /usr/lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
     # for sarge
     [ -d /lib/grub ] && cp /lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
-    cp $grub_config $tmp/boot/grub/menu.lst
+    cp $grub_config $tmp/boot/grub
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
     cp $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
+    cp $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
     cp $NFSROOT/boot/config-$kernelversion $tmp/boot/
     echo "done"
 }
@@ -95,9 +86,9 @@ customize_nfsroot() {
 
     mkdir $tmp/empty
     for d in $hidedirs; do
-	if [ -d $NFSROOT/$d ]; then
+	if [ -d $nfsrootdir/$d ]; then
 	    [ "$debug" ] && echo "hiding $d"
-	    mount --bind $tmp/empty $NFSROOT/$d
+	    mount --bind $tmp/empty $nfsrootdir/$d
 	fi
     done
 }
@@ -106,9 +97,9 @@ unhide_dirs() {
 
     set +e
     for d in $hidedirs; do
-	if [ -d $NFSROOT/$d ]; then
+	if [ -d $nfsrootdir/$d ]; then
 	    [ "$debug" ] && echo "disclosing $d"
-	    umount $NFSROOT/$d 2>/dev/null
+	    umount $nfsrootdir/$d 2>/dev/null
 	fi
     done
     set -e
@@ -120,8 +111,10 @@ umount_dirs() {
     local d
     local dirs="boot $FAI media/mirror etc/apt/sources.list"
     for d in $dirs; do
-	umount $NFSROOT/$d 2>/dev/null
+	umount $nfsrootdir/$d 2>/dev/null
     done
+    rm -f $nfsrootdir/etc/RUNNING_FROM_FAICD
+    [ -d $nfsrootdir ] && umount $nfsrootdir
     set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -132,9 +125,11 @@ create_iso() {
     echo "Mounting all needed parts"
 
     mkdir -p $NFSROOT/media/mirror
-    mount --bind $tmp/boot $NFSROOT/boot
-    mount --bind $FAI_CONFIGDIR $NFSROOT/$FAI && echo "Config space $FAI_CONFIGDIR mounted"
-    mount --bind $mirrordir $NFSROOT/media/mirror && echo "Mirror $mirrordir mounted"
+
+    mount --bind $NFSROOT $nfsrootdir
+    > $nfsrootdir/etc/RUNNING_FROM_FAICD
+    mount --bind $FAI_CONFIGDIR $nfsrootdir/$FAI && echo "Config space $FAI_CONFIGDIR mounted"
+    mount --bind $mirrordir $nfsrootdir/media/mirror && echo "Mirror $mirrordir mounted"
 # TODO: customize /etc/apt, copy apt preferences etc.
 
     # this will be the sources.list for the CD
@@ -152,10 +147,11 @@ EOF
 	echo "deb file:/media/mirror $i $comp" >> $tmp1
     done
 
-    mount --bind $tmp1 $NFSROOT/etc/apt/sources.list
+    mount --bind $tmp1 $nfsrootdir/etc/apt/sources.list
     customize_nfsroot
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
+#    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
+    mkisofs -V "$vname" -A "$aname" -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
     echo -n "ISO image size and filename: "; du -h $isoname
     rm $tmp1
     unhide_dirs
@@ -194,7 +190,6 @@ isoname=$1
 [ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it."
 [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 
-[ -x "$(which mkinitrd-cd)" ] || die 7 "mkinitrd-cd not found. Please install package."
 [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
 
 # use FAI_ETC_DIR from environment variable
@@ -225,6 +220,7 @@ fi
 [ -d $FAI_CONFIGDIR/class ] || die 16 "Config space $FAI_CONFIGDIR seems to be empty."
 
 tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
+nfsrootdir=$tmp/live/filesystem.dir
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|grep fai-client|awk '{print $3}')
@@ -232,7 +228,6 @@ isoversion="FAI $faiversion -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
-create_initrd_image
 create_grub_image
 create_iso
 rm -rf $tmp
