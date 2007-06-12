@@ -124,7 +124,7 @@ create_iso() {
 
     echo "Mounting all needed parts"
 
-    mkdir -p $NFSROOT/media/mirror
+    mkdir -p $nfsrootdir/media/mirror
 
     mount --bind $NFSROOT $nfsrootdir
     > $nfsrootdir/etc/RUNNING_FROM_FAICD
@@ -150,8 +150,7 @@ EOF
     mount --bind $tmp1 $nfsrootdir/etc/apt/sources.list
     customize_nfsroot
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-#    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -c boot.catalog -o $isoname $NFSROOT || die 12 "mkisofs failed." 
-    mkisofs -V "$vname" -A "$aname" -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
+    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
     echo -n "ISO image size and filename: "; du -h $isoname
     rm $tmp1
     unhide_dirs
