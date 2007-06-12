@@ -274,8 +274,8 @@ EOF
 
     # make little changes to nfsroot, because nfsroot is
     # read only for the install clients 
-    rm etc/mtab dev/MAKEDEV
-    ln -s /proc/mounts etc/mtab
+#    rm etc/mtab dev/MAKEDEV
+#    ln -s /proc/mounts etc/mtab
     [ -d "var/lib/discover" ] || mkdir var/lib/discover
     [ -d "var/discover" ] || mkdir var/discover
     mkdir etc/sysconfig tmp/etc
@@ -283,7 +283,7 @@ EOF
     ln -sf /tmp/etc/resolv.conf etc/resolv.conf
     ln -s /usr/sbin/fai etc/init.d/rcS
     # for nis
-    [ -d var/yp ] && ln -s /tmp/binding var/yp/binding
+#    [ -d var/yp ] && ln -s /tmp/binding var/yp/binding
 
     # definition for loopback device
     echo "iface lo inet loopback" > etc/network/interfaces
@@ -376,7 +376,7 @@ setup_bootp(){
 	# does not work any mork if we do not know the excatly kernel name
 :
 #	mkelf-linux --ip=any --output=/srv/tftp/fai/installimage \
-#	  $NFSROOT/boot/$kfile-$KERNELVERSION 
+#	  $NFSROOT/boot/$kfile-$KERNELVERSION
     else
         echo "Command mkelf-linux not found. Can not set up BOOTP booting. Please install the package mknbi and rerun fai-setup."
 	return
@@ -415,9 +415,6 @@ fdivert() {
 kernel_install() {
 
 # Install the kernel package
-if [ -f $KERNELPACKAGE ]; then
-    # determine kernel version
-#    get_kernel_version $KERNELPACKAGE
 
     # create tftp boot images
     call_with_stamp install_kernel_nfsroot
@@ -435,12 +432,6 @@ if [ -f $KERNELPACKAGE ]; then
 			echo "Unknown boot option" ;;
     	esac
     done
-else
-    merror="with errors"
-    echo "Error. Kernel package $KERNELPACKAGE not found."
-    echo "No install kernel installed in /srv/tftp/fai."
-    echo "No kernel modules available in nfsroot."
-fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
