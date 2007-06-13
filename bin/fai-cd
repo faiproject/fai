@@ -66,8 +66,6 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub_image() {
 
-    echo -n "Creating grub boot image ..."
-
     mkdir -p $tmp/boot/grub $nfsrootdir
     [ -d $NFSROOT//usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
     # for sarge
@@ -78,7 +76,6 @@ create_grub_image() {
     cp $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     cp $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
     cp $NFSROOT/boot/config-$kernelversion $tmp/boot/
-    echo "done"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 customize_nfsroot() {
@@ -129,9 +126,9 @@ create_iso() {
 
     # Create the El Torito bootable iso9660 cdrom image
 
-    echo "Mounting all needed parts"
+    echo "Bind mounting all required parts"
 
-    mount --bind $NFSROOT $nfsrootdir
+    mount --bind $NFSROOT $nfsrootdir && echo "NFSROOT mounted"
     mkdir -p $nfsrootdir/media/mirror || true
 
     > $nfsrootdir/etc/RUNNING_FROM_FAICD
