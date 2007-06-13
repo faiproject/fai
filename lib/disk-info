@@ -14,9 +14,12 @@ diskandsize() {
 	isdisk=1
 	# skip ide cdrom
 	[ -f /proc/ide/$device/media ] && grep -q cdrom /proc/ide/$device/media && isdisk=0
+	[ `cat /sys/block/$device/removable` -eq 1 ] && isdisk=0
 	[ $isdisk -eq 1 ] && echo "$device $blocks"
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # echo a space separated list of devices and their block size
 egrep ' cciss/c.d.\b| ida/c.d.\b| rd/c.d.\b| hd.\b| sd.\b|/disc\b' /proc/partitions | diskandsize
+
+
