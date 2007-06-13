@@ -82,7 +82,6 @@ fai_init() {
 
     if [ X$action = Xdirinstall -a -n "$newhostname" ]; then
 	HOSTNAME=$newhostname
-	HOST=$newhostname
 	unset newhostname
 	echo "Hostname set to $HOST" | tee -a $LOGDIR/fai.log
     fi
@@ -95,13 +94,6 @@ fai_init() {
 
     if [ $do_init_tasks -eq 1 ]; then
 	eval_cmdline
-	# if HOST was specified on the commandline, set hostname to it
-	if [ -n "$HOST" ]; then
-	    HOSTNAME=$HOST
-	    hostname $HOST
-	    echo "Hostname set to $HOST" | tee -a $LOGDIR/fai.log
-	fi
-
 	mount -t sysfs sysfs /sys
 	# we really need to start udev
 	[ -x /etc/init.d/udev ] && /etc/init.d/udev start
