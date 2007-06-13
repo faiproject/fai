@@ -34,6 +34,7 @@ version="fai-cd 3.0.1, 13 june 2007"
 
 forceremoval=0;
 burn=0
+keep=0
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache /media/mirror/.apt-move"
 
 # we need FAI_CONFIGDIR, NFSROOT
@@ -153,6 +154,11 @@ EOF
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
     mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
     echo -n "ISO image size and filename: "; du -h $isoname
+    if [ $keep -eq 1 ]; then
+	echo "fai-cd script stopped for 6666 seconds. The filesystem is now available in $tmp."
+	echo "To continue the script and call the cleanup call: pkill -f 'sleep 6666'"
+	sleep 6666 || true
+    fi
     rm $tmp1
     unhide_dirs
     umount_dirs
@@ -171,12 +177,13 @@ case `dpkg --print-installation-architecture` in
 esac
 
 # Parse commandline options
-while getopts "fhg:bm:C:" opt ; do
+while getopts "kfhg:bm:C:" opt ; do
     case "$opt" in
         C)  cfdir=$OPTARG ;;
 	f)  forceremoval=1 ;;
 	h)  usage ;;
 	g)  grub_config="$OPTARG" ;;
+	k)  keep=1 ;;
 	m)  mirrordir="$OPTARG" ;;
 	b)  burn=1 ;;
 	?)  usage ;;
@@ -189,7 +196,7 @@ isoname=$1
 [ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
 [ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
 [ -f "$isoname" ]     && [ $forceremoval -eq 1 ] && rm $isoname
-[ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it."
+[ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it or use -f."
 [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 
 [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
