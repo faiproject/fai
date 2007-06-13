@@ -35,11 +35,10 @@ version="fai-cd 3.0.1, 13 june 2007"
 forceremoval=0;
 burn=0
 keep=0
+makeiso=1
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache /media/mirror/.apt-move"
 
 # we need FAI_CONFIGDIR, NFSROOT
-
-trap "unhide_dirs;umount_dirs" EXIT ERR
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -67,9 +66,10 @@ die() {
 create_grub_image() {
 
     mkdir -p $tmp/boot/grub $nfsrootdir
-    [ -d $NFSROOT//usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
-    # for sarge
-    [ -d $NFSROOT/lib/grub ] && cp $NFSROOT/lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
+
+    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
+    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2 $tmp/boot/grub/
+    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage1 $tmp/boot/grub/
     cp $grub_config $tmp/boot/grub
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
@@ -128,7 +128,7 @@ create_iso() {
 
     echo "Bind mounting all required parts"
 
-    mount --bind $NFSROOT $nfsrootdir && echo "NFSROOT mounted"
+    mount --bind $NFSROOT $nfsrootdir && echo "NFSROOT $NFSROOT mounted"
     mkdir -p $nfsrootdir/media/mirror || true
 
     > $nfsrootdir/etc/RUNNING_FROM_FAICD
@@ -153,15 +153,19 @@ EOF
 
     mount --bind $tmp1 $nfsrootdir/etc/apt/sources.list
     customize_nfsroot
-    echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
-    echo -n "ISO image size and filename: "; du -h $isoname
     if [ $keep -eq 1 ]; then
 	echo "fai-cd script stopped for 6666 seconds. The filesystem is now available in $tmp."
 	echo "To continue the script and call the cleanup call: pkill -f 'sleep 6666'"
 	sleep_now 2>/dev/null
 	echo "Continue cleanup."
     fi
+
+    if [ $makeiso -eq 1 ]; then
+	echo "Writing FAI CD-ROM image to $isoname. This may need some time."
+	mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
+	echo -n "ISO image size and filename: "; du -h $isoname
+    fi
+
     rm $tmp1
     unhide_dirs
     umount_dirs
@@ -174,13 +178,8 @@ burniso() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
 
-case `dpkg --print-installation-architecture` in
-    i386|amd64) : ;;
-       *) die 11 "fai-cd only works on i386 and maybe on amd64 architecture. Exiting."
-esac
-
 # Parse commandline options
-while getopts "kfhg:bm:C:" opt ; do
+while getopts "nkfhg:bm:C:" opt ; do
     case "$opt" in
         C)  cfdir=$OPTARG ;;
 	f)  forceremoval=1 ;;
@@ -188,6 +187,7 @@ while getopts "kfhg:bm:C:" opt ; do
 	g)  grub_config="$OPTARG" ;;
 	k)  keep=1 ;;
 	m)  mirrordir="$OPTARG" ;;
+	n)  makeiso=0 ;;
 	b)  burn=1 ;;
 	?)  usage ;;
     esac
@@ -195,7 +195,7 @@ done
 shift $(($OPTIND - 1))
 isoname=$1
 
-[ "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
+[ $makeiso -eq 1 -a "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
 [ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
 [ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
 [ -f "$isoname" ]     && [ $forceremoval -eq 1 ] && rm $isoname
@@ -219,7 +219,6 @@ fi
 export NFSROOT=$(source $cfdir/make-fai-nfsroot.conf; echo $NFSROOT)
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
 
-
 if [ -z "$grub_config" ]; then
     grub_config="$cfdir/menu.lst"
 else
@@ -239,6 +238,8 @@ faiversion=$(dpkg --root=$NFSROOT -l fai-client|grep fai-client|awk '{print $3}'
 isoversion="FAI $faiversion -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
+
+trap "unhide_dirs;umount_dirs" EXIT ERR
 
 create_grub_image
 create_iso
