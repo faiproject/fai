@@ -2,7 +2,7 @@
 
 # (c) Thomas Lange, 2002-2005, lange@informatik.uni-koeln.de
 
-# NOTE: Files named *.source will be evaluated, but their output ignored and instead 
+# NOTE: Files named *.source will be evaluated, but their output ignored. Instead
 # the contents of $newclasses will be added to the list of defined classes.
 
 echo 0 > /proc/sys/kernel/printk
@@ -14,7 +14,7 @@ mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci -type f | sed 's/\.o$
 for i in $mod; do
     modprobe $i 1>/dev/null 2>&1
 done
-# Booting from CD does not enable dma always
+# Booting from CD does not always enable DMA.
 for d in $( echo /proc/ide/hd[a-z] 2>/dev/null); do
     [ -d $d ] && echo "using_dma:1" > $d/settings
 done
@@ -36,7 +36,7 @@ done
 # let discover do most of the job
 [ -x /sbin/discover-modprobe ] && /sbin/discover-modprobe
 
-# now we can mount the usb file system
+# now we can mount the USB filesystem
 mount -t usbfs  usbfs /proc/bus/usb
 
 modprobe -a sd_mod sr_mod
@@ -44,7 +44,7 @@ modprobe -a sd_mod sr_mod
 echo 6 > /proc/sys/kernel/printk
 
 # try to detect graphics card
-# the variable VIDEODRIVER may be used to generate the XF86config file
+# the variable VIDEODRIVER may be used to generate the xorg.conf file
 [ -x "$(which discover)" ] && {
     if discover --version | grep "discover \(version \)*1\." ; then
 	VIDEODRIVER=$(discover --xdriver video 2> /dev/null)
