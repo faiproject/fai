@@ -376,7 +376,7 @@ setup_bootp(){
     if [ -x "`which mkelf-linux`" ]; then
 	# does not work any mork if we do not know the excatly kernel name
 :
-#	mkelf-linux --ip=any --output=/srv/tftp/fai/installimage \
+#	mkelf-linux --ip=any --output=$TFTPROOT/installimage \
 #	  $NFSROOT/boot/$kfile-$KERNELVERSION
     else
         echo "Command mkelf-linux not found. Can not set up BOOTP booting. Please install the package mknbi and rerun fai-setup."
@@ -386,7 +386,7 @@ setup_bootp(){
     # imggen is free software from 3com - use ver1.00: 1.01 produces "Image too Big" errors.
     # it converts netboot images to images which are bootable by 3com network cards
     if [ -x "`which imggen`" ]; then
-	imggen -a /srv/tftp/fai/installimage /srv/tftp/fai/installimage_3com
+	imggen -a $TFTPROOT/installimage $TFTPROOT/installimage_3com
     fi
     echo "BOOTP environment prepared."
 }
@@ -397,11 +397,11 @@ setup_dhcp(){
     # pxe and dhcp environment
     local pxebin=/usr/lib/syslinux/pxelinux.0
     rm -f $NFSROOT/boot/*.bak
-    cp -pv $NFSROOT/boot/$kfile-* /srv/tftp/fai/
-    cp -pv $NFSROOT/boot/$ifile-* /srv/tftp/fai/
-#    echo "Kernel $KERNELVERSION copied to /srv/tftp/fai/$kernelname"
-    [ -f $pxebin ] && cp $pxebin /srv/tftp/fai
-    [ -d /srv/tftp/fai/pxelinux.cfg ] || mkdir -p /srv/tftp/fai/pxelinux.cfg
+    cp -pv $NFSROOT/boot/$kfile-* $TFTPROOT
+    cp -pv $NFSROOT/boot/$ifile-* $TFTPROOT
+#    echo "Kernel $KERNELVERSION copied to $TFTPROOT/$kernelname"
+    [ -f $pxebin ] && cp $pxebin $TFTPROOT
+    [ -d $TFTPROOT/pxelinux.cfg ] || mkdir -p $TFTPROOT/pxelinux.cfg
     echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
