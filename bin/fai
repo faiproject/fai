@@ -97,8 +97,8 @@ fai_init() {
 	mount -t sysfs sysfs /sys
 	# we really need to start udev
 	[ -x /etc/init.d/udev ] && /etc/init.d/udev start
-	[ -d /var/run/network ] || mkdir /var/run/network
-	[ -d /dev/shm/network ] || mkdir /dev/shm/network # when using initrd kernels
+	mkdir -p /var/run/network
+	mkdir -p /dev/shm/network # when using initrd kernels
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	mount -t devpts devpts /dev/pts
@@ -243,7 +243,7 @@ if [ $do_init_tasks -eq 1 ]; then
 fi
 export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
-[ -d /var/run/fai ] || mkdir /var/run/fai
+mkdir -p /var/run/fai
 export LOGDIR=/var/log/fai/current
 [ -d $LOGDIR ] && rm -rf $LOGDIR
 mkdir -p $LOGDIR
