@@ -147,6 +147,7 @@ call_verbose() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 install_kernel_nfsroot() {
 
+    LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /usr/sbin/update-initramfs
     $ROOTCMD update-initramfs -k all -t -u
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -324,7 +325,7 @@ upgrade_nfsroot() {
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
 
-    fdivert /sbin/start-stop-daemon /sbin/discover-modprobe
+    fdivert /sbin/start-stop-daemon /sbin/discover-modprobe /usr/sbin/update-initramfs
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
     $ROOTCMD apt-get -y dist-upgrade
