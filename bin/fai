@@ -80,12 +80,6 @@ fai_init() {
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
     target=$FAI_ROOT
 
-    if [ X$action = Xdirinstall -a -n "$newhostname" ]; then
-	HOSTNAME=$newhostname
-	unset newhostname
-	echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
-    fi
-
     if [ $do_init_tasks -eq 1 ]; then
         trap 'echo "Now rebooting";faireboot' INT QUIT
     else
@@ -243,8 +237,13 @@ if [ $do_init_tasks -eq 1 ]; then
 fi
 export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
+if [ X$action = Xdirinstall -a -n "$newhostname" ]; then
+    HOSTNAME=$newhostname
+fi
+
 mkdir -p /var/run/fai
 export LOGDIR=/var/log/fai/current
+[ X$action = Xdirinstall ] && export LOGDIR=/var/log/fai/dirinstall/$HOSTNAME
 [ -d $LOGDIR ] && rm -rf $LOGDIR
 mkdir -p $LOGDIR
 
@@ -256,6 +255,8 @@ fi
 
 fai_init
 if [ X$action = Xdirinstall ]; then
+    [ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
+    unset newhostname
     skiptask confdir
     export FAI=$FAI_CONFIGDIR
     set -a
