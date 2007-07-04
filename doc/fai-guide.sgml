@@ -235,7 +235,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Automatic hardware detection</p> </item>
 </list>
 
-<sect id=impatient>Quickstart - For the impatient user<p>
+<chapt id=impatient>Quickstart - For the impatient user<p>
 
 So, you do not like to read the whole manual? You like to try an
 installation without reading the manual? OK. Here's how to succeed in
@@ -1374,9 +1374,9 @@ sequence of the installation. No other scripts in
 <p>
 
 The installation script uses many subroutines, which are defined in
-<file>/usr/lib/fai/subroutines</file>, and an operating system specific
-file <footnote><file>/usr/lib/fai/subroutines-linux</file> for Linux,
-<file>/usr/lib/fai/subroutines-sunos</file> for Solaris.</footnote>.
+<file>/usr/share/fai/subroutines</file>, and an operating system specific
+file <footnote><file>/usr/share/fai/subroutines-linux</file> for Linux,
+<file>/usr/share/fai/subroutines-sunos</file> for Solaris.</footnote>.
 All important tasks of the
 installation are called via the subroutine <tt>task</tt>
 appended by the name of the task as an option (e.g. <tt>task
@@ -2569,7 +2569,41 @@ jumpstart.
 The file format of the configuration files in <file>disk_config</file> and
 <file>package_config</file> are different than those for Linux.
 
-<chapt id=advanced>Advanced FAI
+<chapt id=advanced>Advanced FAI<p>
+
+<sect id="dirinstall">Installing into a mounted directory for chroot and virtualization<p>
+If you have some chroot environments to install, or a virtualization environment where 
+you neither can nor want to run a normal Debian Installer in to
+get to a working system (for example, Xen guest domains), there is the 
+FAI action <tt>dirinstall</tt>.
+
+By calling 
+
+<example>fai &lt;options&gt; dirinstall &lt;target-directory&gt;</example>
+and using either the option 
+<example>-c &lt;classes&gt;</example> or <example>-u &lt;hostname&gt;</example>
+you get a FAI installation, without the partitioning action, right into the 
+target directory.
+
+This, for example, can be used to combine FAI with the tool <tt>xen-tools</tt>, which 
+helps you to build Xen guest domains. <tt>xen-tools</tt> are very nice for 
+generating config files and block devices for new guests based on simple
+commands and/or config files,  but they can only assign one role per installation
+for customization.
+FAI-users need and want more, as they are used to have the class system.
+They get them even in xen-tools installations, by using the following code as
+a xen-tools role script:
+
+<example>
+#!/bin/sh
+TARGET=$1
+CMD="fai -N  -v -u ${hostname} dirinstall $TARGET"
+echo running $CMD
+$CMD
+</example>
+
+Then, you will want to set the variable <example>install=0</example> in the xen-tools config for
+that host(in previous versions of xen-tools, this was <tt>no-install=1</tt>).
 
 <sect id=generalscm>Using revision control for FAI configuration<p>
 If there is a team of administrators involved, a revision control/sourcecode
@@ -2907,3 +2941,14 @@ sgml-local-catalogs:nil
 sgml-local-ecat-files:nil
 End:
 -->
+
+
+
+
+
+
+
+
+
+
+
