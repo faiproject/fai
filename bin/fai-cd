@@ -65,7 +65,7 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub_image() {
 
-    mkdir -p $tmp/boot/grub $nfsrootdir
+    mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
 
     [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
     [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2 $tmp/boot/grub/
@@ -217,6 +217,8 @@ fi
 [ "$verbose" ] && echo "Using configuration files from $cfdir"
 . $cfdir/fai.conf
 export NFSROOT=$(source $cfdir/make-fai-nfsroot.conf; echo $NFSROOT)
+NFSROOT="$NFSROOT/live/filesystem.dir"
+
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
 
 if [ -z "$grub_config" ]; then
