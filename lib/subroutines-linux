@@ -115,8 +115,23 @@ task_partition() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    none
-# Requires-Var:    $FAI_ROOT $do_init_tasks $NFSROOT $LOGDIR
+# Requires-Var:    $NFSROOT
 # Suggests-Var:    
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+call_debootstrap() {
+    
+    local dversion=$(dpkg -l debootstrap | grep debootstrap | cut -f7 -d' ')
+    echo "Creating base system using debootstrap version $dversion"
+    echo "Calling debootstrap $1 $FAI_ROOT $2"
+    yes '' | LC_ALL=C debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    none
+# Requires-Var:    $FAI_ROOT $do_init_tasks $NFSROOT $LOGDIR
+# Suggests-Var:    $FAI_DEBOOTSTRAP
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
 
@@ -130,10 +145,15 @@ task_extrbase() {
     [ -d $FAI/basefiles ] && ftar -1v -s $FAI/basefiles /
     if [ $? -ne 0 ]; then
 	[ $do_init_tasks -eq 0 ] && basefile=$NFSROOT/live/filesystem.dir/var/tmp/base.tgz
-	[ -f $basefile ] || die "$basefile not found. Can't extract it. Aborting."
-	# extract the tar file which was the result of debootstrap
-	echo "Extracting $basefile"
-	gzip -dc $basefile | tar -C $FAI_ROOT -xpf -
+	if [ -f $basefile ]; then
+	    # extract the tar file which was the result of debootstrap
+	    echo "Extracting $basefile"
+	    gzip -dc $basefile | tar -C $FAI_ROOT -xpf -
+	else
+	    echo "No base.tgz found. Calling debootstrap."
+	    [ -z "$FAI_DEBOOTSTRAP" ] && die "$FAI_DEBOOTSTRAP undefined. Aborting"
+	    call_debootstrap $FAI_DEBOOTSTRAP
+	fi
     fi
     # now we can copy fstab
     [ -f $fs ] && mv $fs $fs.old
