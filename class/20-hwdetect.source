@@ -36,7 +36,7 @@ for mod in $kernelmodules; do
 done
 
 # let discover do most of the job
-[ -x /sbin/discover-modprobe ] && /sbin/discover-modprobe
+#[ -x /sbin/discover-modprobe ] && /sbin/discover-modprobe
 
 # now we can mount the USB filesystem
 mount -t usbfs  usbfs /proc/bus/usb
@@ -44,18 +44,6 @@ mount -t usbfs  usbfs /proc/bus/usb
 modprobe -a sd_mod sr_mod
 
 echo 6 > /proc/sys/kernel/printk
-
-# try to detect graphics card
-# the variable VIDEODRIVER may be used to generate the xorg.conf file
-[ -x "$(which discover)" ] && {
-    if discover --version | grep "discover \(version \)*1\." ; then
-	VIDEODRIVER=$(discover --xdriver video 2> /dev/null)
-    else
-	VIDEODRIVER=$(discover --data-path=xfree86/server/device/driver display)
-    fi
-    [ -n "$VIDEODRIVER" ] && echo "VIDEODRIVER=$VIDEODRIVER" >> $LOGDIR/additional.var
-    echo "Video card detected: $VIDEODRIVER"
-}
 
 set_disk_info  # calculate number of available disks
 save_dmesg     # save new boot messages (from loading modules)
