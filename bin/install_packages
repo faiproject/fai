@@ -64,7 +64,8 @@ my $classpath;
 my $rootcmd;
 my @preloadlist;
 my @preloadrmlist;
-my %list;
+my %list;   # hash of arrays, key=type (yumi,aptitude,..), list of packages
+my %types;  # hash containing the types found in all loaded package_config files
 my %classisdef;
 my $maxpl;  # maximum length of package list
 my $cache;  # instance of AptPkg::Cache
@@ -153,6 +154,9 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
   }
 }
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# begin of the big foreach loop
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach $atype (@commands) {
 
@@ -218,6 +222,9 @@ foreach $atype (@commands) {
   # other types
   execute("$rootcmd $command{$atype} $packlist") if $packlist;
 }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# end of the big foreach loop
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # remove preloaded files
 foreach my $entry (@preloadrmlist) {
@@ -274,6 +281,7 @@ sub readconfig {
     warn "WARNING: Uppercase character found in package name in line $_\n" if $_ =~ /[A-Z]/;
     warn "ERROR: PACKAGES .. line missing in $filename\n",next unless $type;
     push @{$list{$type}}, split if $doit;
+    $types{$type}=1;   # remember which types are used in package_config
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
