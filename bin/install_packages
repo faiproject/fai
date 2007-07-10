@@ -6,7 +6,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2006, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2007, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -25,16 +25,30 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 3.4.1, 10-oct-2006";
+my $version = "Version 3.5, 10-jul-2007";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
 
 use strict;
 use Getopt::Std;
-use AptPkg::Config '$_config';
-use AptPkg::System '$_system';
-use AptPkg::Cache;
+
+# check if the Perl module is available
+my $aptpkg_avail=0;
+my $_config;
+my $_system;
+if (eval "require AptPkg::Config") {
+  $aptpkg_avail=1;
+  eval "require AptPkg::System";
+  eval "require AptPkg::Cache";
+
+  $_config = $AptPkg::Config::_config;
+  $_system = $AptPkg::System::_system;
+  eval 'import AptPkg::Config $_config';
+  eval 'import AptPkg::System $_system';
+  eval 'import AptPkg::Cache';
+}
+
 
 # global variables
 our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m,$opt_p);
@@ -113,11 +127,14 @@ $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
 @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 foreach (@classes) { $classisdef{$_}=1;}
 
-$_config->init;                 # initialize AptPkg
-$_config->set("Dir",$FAI_ROOT); # simulate "chroot"
-$_config->{quiet}=2;            # don't show cache initialization messages
-$_system = $_config->system;
-$cache = new AptPkg::Cache;
+# do not use AptPkg if target is not a Debian system
+if ($aptpkg_avail) {
+  $_config->init;                 # initialize AptPkg
+  $_config->set("Dir",$FAI_ROOT); # simulate "chroot"
+  $_config->{quiet}=2;            # don't show cache initialization messages
+  $_system = $_config->system;
+  $cache = new AptPkg::Cache;
+}
 
 # read all package config files
 foreach (@classes) {
