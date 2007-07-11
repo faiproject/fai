@@ -86,7 +86,7 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 	    "urpme" => "urpme --auto --foce --allow-force --keep",
 	     "yumi" => "yum -y install",
 	     "yumr" => "yum -y remove",
-	 "umgroup"  => "yum -y groupinstall",
+        "yumgroup"  => "yum -y groupinstall",
 	     "y2i"  => "y2pmsh isc",
 	     "y2r"  => "y2pmsh remove",
 	     "yast" => "yast -i",
@@ -323,8 +323,9 @@ sub dselectupgrade {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub installable {
+
   # ckeck, wether package can be installed.
-  # return false for packages which only exist in 
+  # return false for packages which only exist in
   # dpkg status files
 
   my $package  = shift;
@@ -339,7 +340,7 @@ sub installable {
     my $flist = $version->{FileList};
     foreach my $fitem (@$flist) {
       # if the file is a package index (not a dpkg status file)
-      # the package is installable 
+      # the package is installable
       return 1 if ($fitem->{File}{IndexType} eq "Debian Package Index");
     }
   }
@@ -366,7 +367,7 @@ sub mkpackagelist {
   }
 
   # ignore packages ending with - when using -d
-  @complete = grep {!/-$/} @complete if $opt_d; 
+  @complete = grep {!/-$/} @complete if $opt_d;
 
   foreach (reverse @complete) {
     my $pack = $_;
