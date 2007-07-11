@@ -34,11 +34,11 @@ use strict;
 use Getopt::Std;
 
 # check if the Perl module is available
-my $aptpkg_avail=0;
+my $use_aptpkg=0;
 my $_config;
 my $_system;
 if (eval "require AptPkg::Config") {
-  $aptpkg_avail=1;
+  $use_aptpkg=1;
   eval "require AptPkg::System";
   eval "require AptPkg::Cache";
 
@@ -82,9 +82,9 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 
 @commands = qw/y2i y2r yast rpmr urpmi urpme yumgroup yumi yumr hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
-	    install => "apt-get $aptopt --fix-missing install",
-	   ninstall => "apt-get $aptopt --fix-missing -s install",
-	    remove  => "apt-get $aptopt --purge remove",
+          "install" => "apt-get $aptopt --fix-missing install",
+	 "ninstall" => "apt-get $aptopt --fix-missing -s install",
+	   "remove" => "apt-get $aptopt --purge remove",
   "dselect-upgrade" => "apt-get $aptopt dselect-upgrade",
          "taskinst" => "tasksel -n install",
            "taskrm" => "tasksel -n remove",
@@ -96,15 +96,15 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
   "unpack-internal" => "dpkg --unpack --recursive $downloaddir; rm $downloaddir/*.deb",
           "pending" => "dpkg --configure --pending",
             "dpkgc" => "dpkg -C",
-	      urpmi => "urpmi --auto --foce --allow-force --keep",
-	      urpme => "urpme --auto --foce --allow-force --keep",
-	      yumi  => "yum -y install",
-	      yumr  => "yum -y remove",
-	 yumgroup   => "yum -y groupinstall",
-	      y2i   => "y2pmsh isc",
-	      y2r   => "y2pmsh remove",
-	      yast  => "yast -i",
-	       rpmr => "rpm -e",
+	    "urpmi" => "urpmi --auto --foce --allow-force --keep",
+	    "urpme" => "urpme --auto --foce --allow-force --keep",
+	     "yumi" => "yum -y install",
+	     "yumr" => "yum -y remove",
+	 "umgroup"  => "yum -y groupinstall",
+	     "y2i"  => "y2pmsh isc",
+	     "y2r"  => "y2pmsh remove",
+	     "yast" => "yast -i",
+	     "rpmr" => "rpm -e",
 );
 
 $test = 0;
@@ -129,7 +129,7 @@ $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
 foreach (@classes) { $classisdef{$_}=1;}
 
 # do not use AptPkg if target is not a Debian system
-if ($aptpkg_avail) {
+if ($use_aptpkg) {
   $_config->init;                 # initialize AptPkg
   $_config->set("Dir",$FAI_ROOT); # simulate "chroot"
   $_config->{quiet}=2;            # don't show cache initialization messages
@@ -445,7 +445,7 @@ undef %command;
 $maxpl=9999;
 @commands = qw/taskinst aptitude aptitude-r install unpack/;
 %command = (
-	    install => "apt-get $qopt -d $ENV{aptoptions} -y --fix-missing install",
+	  "install" => "apt-get $qopt -d $ENV{aptoptions} -y --fix-missing install",
          "taskinst" => "aptitude -d $ENV{aptoptions} -y install $devnull",
          "aptitude" => "aptitude -R -d $ENV{aptoptions} -y install $devnull",
        "aptitude-r" => "aptitude -r -d $ENV{aptoptions} -y install $devnull",
