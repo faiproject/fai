@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 3.5, 10-jul-2007";
+my $version = "Version 4.0, 11-jul-2007";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -34,12 +34,12 @@ use strict;
 use Getopt::Std;
 
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m,$opt_N,$opt_p);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_m,opt_n,$opt_N,$opt_p);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our @commands;
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
-my $test;
+my $dryrun=0;
 my $verbose;
 my $FAI_ROOT;
 my @classes;
@@ -93,15 +93,13 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 	     "rpmr" => "rpm -e",
 );
 
-$test = 0;
-getopts('dthvlLm:p:N');
+getopts('dhvlLm:p:nN');
 
 my $use_aptpkg=0;
 $opt_N || check_aptpkg(); # do not use AptPkg when -N is given
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
-$opt_t and $test = 1;
 $verbose=$ENV{verbose} || $opt_v;
 $opt_d && setdownloadonly();
 $maxpl=$ENV{MAXPACKAGES} || $opt_m ;
@@ -286,9 +284,9 @@ sub execute {
   my $command = join (' ',@cmds);
   my $error;
 
-  $test and $verbose = 1;
+  $dryrun and $verbose = 1;
   $verbose and warn "$0: executing $command\n";
-  $test and return;
+  $dryrun and return;
 
   # @cmds should me more efficient
   $error = system @cmds;
