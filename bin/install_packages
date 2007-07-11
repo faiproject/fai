@@ -33,25 +33,8 @@ $0=~ s#.+/##; # remove path from program name
 use strict;
 use Getopt::Std;
 
-# check if the Perl module is available
-my $use_aptpkg=0;
-my $_config;
-my $_system;
-if (eval "require AptPkg::Config") {
-  $use_aptpkg=1;
-  eval "require AptPkg::System";
-  eval "require AptPkg::Cache";
-
-  $_config = $AptPkg::Config::_config;
-  $_system = $AptPkg::System::_system;
-  eval 'import AptPkg::Config $_config';
-  eval 'import AptPkg::System $_system';
-  eval 'import AptPkg::Cache';
-}
-
-
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m,$opt_p);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_t,$opt_m,$opt_n,$opt_p);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our @commands;
 our %command;
@@ -64,6 +47,8 @@ my $classpath;
 my $rootcmd;
 my @preloadlist;
 my @preloadrmlist;
+my $_config;
+my $_system;
 my %list;   # hash of arrays, key=type (yumi,aptitude,..), list of packages
 my %types;  # hash containing the types found in all loaded package_config files
 my %classisdef;
@@ -108,7 +93,10 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 );
 
 $test = 0;
-getopts('dthvlLm:p:');
+getopts('dthvlLm:p:n');
+
+my $use_aptpkg=0;
+$opt_n || check_aptpkg(); # do not use AptPkg when -n is given
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
@@ -455,5 +443,21 @@ $maxpl=9999;
             "dpkgc" => 'true',
 );
 
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub check_aptpkg {
+
+  # check if the Perl module is available
+  if (eval "require AptPkg::Config") {
+    $use_aptpkg=1;
+    eval "require AptPkg::System";
+    eval "require AptPkg::Cache";
+
+    $_config = $AptPkg::Config::_config;
+    $_system = $AptPkg::System::_system;
+    eval 'import AptPkg::Config $_config';
+    eval 'import AptPkg::System $_system';
+    eval 'import AptPkg::Cache';
+  }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
