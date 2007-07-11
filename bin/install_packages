@@ -155,7 +155,7 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach $atype (@commands) {
 
-  if ($atype eq "clean") {
+  if ($atype eq "clean" && $hasdebian) {
     execute("$rootcmd $command{clean}") unless $listonly;
     next;
   }
@@ -170,15 +170,8 @@ foreach $atype (@commands) {
 
   my $packlist = join(' ',@{$list{$atype}});
 
-  if ($atype =~ /rpm|yum|y2/) {
-    $command{clean} = "true"; # do not cal apt-get lcean for rpm and yum packages
-    execute("$rootcmd $command{$atype} $packlist") if $packlist;
-    next;
-  }
-
   if ($atype eq "hold") {
-    my $hold = join " hold\n", @{$list{hold}};
-    $hold .= " hold\n";
+    my $hold = join " hold\n", @{$list{hold}}, " hold\n";
     execute("echo \"$hold\" | $rootcmd $command{hold}");
     next;
   }
