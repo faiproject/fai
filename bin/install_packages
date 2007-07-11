@@ -69,7 +69,7 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 @commands = qw/y2i y2r yast rpmr urpmi urpme yumgroup yumi yumr hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
-	 "ninstall" => "apt-get $aptopt --fix-missing -s install",
+    "inst-internal" => "apt-get $aptopt --fix-missing -s install",
 	   "remove" => "apt-get $aptopt --purge remove",
   "dselect-upgrade" => "apt-get $aptopt dselect-upgrade",
          "taskinst" => "tasksel -n install",
@@ -193,7 +193,7 @@ foreach $atype (@commands) {
     }
     if ($opt_L) {
       # only print the package list
-      execute("$rootcmd $command{ninstall} @known | egrep ^Inst");
+      execute("$rootcmd $command{inst-internal} @known | egrep ^Inst");
       exit 0;
     }
     # pass only maxpl packages to apt-get
