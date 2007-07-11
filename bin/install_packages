@@ -49,6 +49,7 @@ my @preloadlist;
 my @preloadrmlist;
 my $_config;
 my $_system;
+my $hasdebian=0;  # some Debian related commands/types are used in package_config
 my %list;   # hash of arrays, key=type (yumi,aptitude,..), list of packages
 my %types;  # hash containing the types found in all loaded package_config files
 my %classisdef;
@@ -131,6 +132,12 @@ foreach (@classes) {
   &readconfig($filename) if -f $filename;
 }
 
+# check if any Debian related commands/types are used in package_config
+my @debiantypes= qw/taskinst aptitude aptitude-r install remove dselect-upgrade/;
+foreach my $dt (@debiantypes) {
+  $types{$dt} and $hasdebian=1,last;
+}
+
 # get files which must exist before installing packages
 foreach my $entry (@preloadlist,@preloadrmlist) {
   my ($url, $directory) = @$entry;
@@ -194,7 +201,7 @@ foreach $atype (@commands) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
       # print "SL $shortlist\n";
       execute("$rootcmd $command{$atype} $shortlist") if $shortlist;
-      execute("$rootcmd $command{'clean'}"); # XXX do not execute always
+      execute("$rootcmd $command{'clean'}") if $hasdebian;
       execute("$rootcmd $command{'unpack-internal'}") if ($atype eq "unpack"); # unpack and rm deb files
     }
     next;
@@ -223,14 +230,17 @@ foreach my $entry (@preloadrmlist) {
   unlink $file || warn "Can't remove $file\n";
 }
 
+if ($hasdebian) {
+  # in case of unconfigured packages because of apt errors
+  # retry configuration
+  execute("$rootcmd $command{pending}");
+  # check if all went right
+  execute("$rootcmd $command{dpkgc}");
+  # clean apt cache
+  execute("$rootcmd $command{clean}");
+}
 
-# in case of unconfigured packages because of apt errors
-# retry configuration
-execute("$rootcmd $command{pending}");
-# check if all went right
-execute("$rootcmd $command{dpkgc}");
-# clean apt cache
-execute("$rootcmd $command{clean}");
+exit 0; # end of program
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
 
@@ -348,6 +358,12 @@ sub mkpackagelist {
   # create two list of packages
   # @unknown contains the unknown packages
   # @known contains the known packages
+
+  # nothing to do, when no Debian types/commands are used at all
+  unless ($hasdebian) {
+    @known = @complete;
+    return;
+  }
 
   # ignore packages ending with - when using -d
   @complete = grep {!/-$/} @complete if $opt_d; 
