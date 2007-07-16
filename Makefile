@@ -8,7 +8,7 @@ USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar inst
 
 USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl
 
-libfiles=$(wildcard lib/[a-z]*)  # do not include CVS dir
+libfiles=$(wildcard lib/[a-z]*)  # do not include .svn dir and S01
 
 # files with variable KERNLEVERSION in it; this string will be substituted
 KVERSION_FILES =  $(DESTDIR)/etc/fai/make-fai-nfsroot.conf
@@ -26,6 +26,7 @@ veryclean: clean
 install: 
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,dhcp3,apt/apt.conf.d}
 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
+	mkdir -p $(DESTDIR)/etc/rc2.d
 	install man/* $(DESTDIR)/man
 	$(MAKE) -C doc install
 	-install $(libfiles) $(LIBDIR)
@@ -40,6 +41,7 @@ install:
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
 	install -m644 conf/fai_modules_off $(DESTDIR)/etc/modutils
+	install -m755 lib/S01fai-abort $(DESTDIR)/etc/rc2.d
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
