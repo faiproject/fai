@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 3.2.3 23-jun-2007";
+$version="version 3.3 16-july-2007";
 
 use Socket;
 use Net::hostent;
@@ -79,8 +79,8 @@ sub readpxedir {
   opendir(DIR, $pxedir) || die "Can't opendir $pxedir: $!";
   foreach (readdir(DIR)) {
     next if /^\./;
-    if (/^(default|[0-9A-F]+)$/) { push @enabled,   $_ ; next};
-    if (/\.tmpl$/)               { push @templates, $_ ; next};
+    if (/^(default|[0-9A-F]+)$/) { push @enabled,   $_ ; next}
+    if (/\.tmpl$/)               { push @templates, $_ ; next}
     if (/\.disable$/) {
       my $filename=(split (/\./,$_))[0];
       if (-f "$pxedir/$filename") {
@@ -89,7 +89,7 @@ sub readpxedir {
 	push @disabled, $_;
       }
       next;
-    };
+    }
     push @other, $_;
   }
 }
@@ -125,10 +125,13 @@ sub lsdir {
     if ($hex =~ /^default(.disable)?$/) {
       $host = $hex;
       $type = '[DEFAULT]';
-    } elsif ($hex =~ /\.tmpl$/) {
+    }
+    if ($hex =~ /\.tmpl$/) {
       $host = "$hex";
       $type = '[Template]';
-    } elsif ($hex =~ /[0-9A-F]+/) {
+    }
+
+    if ($hex =~ /[0-9A-F]+/) {
       my $hexstrip = (split /\./,$hex)[0]; # remove .disable if necessary
       $n = $hexstrip;
       # hex to ip/subnet address
@@ -152,6 +155,7 @@ sub lsdir {
       $host = $hex;
       $type = '[Other]';
     }
+
     $hexname{$host} = $hex;
     $hname{$hex}= $host;
     $type{$hex} = $type if $type;
@@ -342,7 +346,7 @@ sub tcopy {
       return;
     }
     print "copy pxe config from $srchost to template $desthost\n" if $verbose;
-    docopy("$srcfile","$pxedir", "$desthost", "$desthost", "$ipadr");
+    docopy($srcfile,$pxedir,$desthost,$desthost,$ipadr);
   } else {
     ($ipadr,$desthex) = host2hex($desthost);
     if (-f "$pxedir/$desthex.disable") {
@@ -350,7 +354,7 @@ sub tcopy {
       print "removed old $pxedir/$desthex.disable\n";
     }
     print "copy pxe config from $srchost to $desthost ($desthex)\n" if $verbose;
-    docopy("$srcfile","$pxedir", "$desthex", "$desthost", "$ipadr");
+    docopy($srcfile,$pxedir,$desthex,$desthost,$ipadr);
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -372,7 +376,7 @@ $opt_l and lsdir(@ARGV);
 if ($opt_d) {
   die "Missing host name(s). Can't disable network booting.\n" unless @ARGV;
   foreach (@ARGV) {
-    disable("$_");
+    disable($_);
   }
   $error and die "$0: $error\n";
   exit 0;
@@ -391,7 +395,7 @@ if ($opt_c) {
 if ($opt_e) {
   die "Missing host name(s). Can't reenable network booting.\n" unless @ARGV;
   foreach (@ARGV) {
-    enable("$_");
+    enable($_);
   }
   $error and die "$0: $error\n";
   exit 0;
@@ -440,4 +444,4 @@ warn "Booting $kernelname\nrootfs is $rootfs\n" if $verbose;
 $opt_k && print "Kernel parameters: $opt_k\n";
 
 die "No host specified.\n" unless @ARGV;
-foreach (@ARGV) { mkpxecfg("$_",$kernelname,$rootfs); }
+foreach (@ARGV) { mkpxecfg($_,$kernelname,$rootfs); }
