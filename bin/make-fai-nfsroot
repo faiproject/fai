@@ -51,20 +51,17 @@ die() {
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 kfile="vmlinuz" # some architectures use different names
-ifile="initrd.img"
-kernelname="$kfile-install"
 merror="properly"
 sshpreserve=0
 # option e currently does nothing
-while getopts hervC:f:kKV:p opt ; do
+while getopts hervC:f:kKp opt ; do
     case "$opt" in
         C) cfdir=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
-        V) kernelname=$OPTARG ;;
         r) recover=1 ;;
         f) die "Option -f is not supported any more. Use option -C instead" ;;
         k) kinstall=1 ;;
-        K) kremove=1; kinstall=1 ;;
+        K) kremove=1;;
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
@@ -377,8 +374,7 @@ setup_dhcp(){
     local pxebin=/usr/lib/syslinux/pxelinux.0
     rm -f $NFSROOT/boot/*.bak
     cp -pv $NFSROOT/boot/$kfile-* $TFTPROOT
-    cp -pv $NFSROOT/boot/$ifile-* $TFTPROOT
-#    echo "Kernel $KERNELVERSION copied to $TFTPROOT/$kernelname"
+    cp -pv $NFSROOT/boot/initrd.img-* $TFTPROOT
     [ -f $pxebin ] && cp $pxebin $TFTPROOT
     mkdir -p $TFTPROOT/pxelinux.cfg
     echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
@@ -417,19 +413,19 @@ kernel_install() {
 # main routine
 
 # remove all kernels from nfsroot
-# TODO: use aptitude or dpkg to remove kernel package
 [ -n "$kremove" ] && {
     echo "Removing all kernels from NFSROOT."
-    rm -f $NFSROOT/boot/{System.map,vmlinuz,config,patches}*
-    rm -rf $NFSROOT/lib/modules/2.*
+    $ROOTCMD aptitude -y purge ~nlinux-image
+    exit
 }
 
 # just install a new kernel to the nfsroot
 [ -n "$kinstall" ] && {
     trap "true" EXIT
     echo "Installing new kernel into the nfsroot."
+    fdivert /usr/sbin/update-initramfs
+    LC_ALL=C add_packages_nfsroot
     kernel_install
-    echo "New kernel from" $KERNELPACKAGE "installed into the nfsroot."
     exit
 }
 
