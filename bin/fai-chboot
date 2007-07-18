@@ -239,7 +239,7 @@ EOM
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub mkpxecfg {
 
-  my ($host,$kernel,$rootfs) = @_;
+  my ($host,$kernel,$rootfs,$initrd) = @_;
   my ($ipadr,$hex) = host2hex($host);
 
   warn "$host has $ipadr in hex $hex\n" if $verbose;
@@ -263,7 +263,7 @@ label fai-generated
 $kernel
 EOM
 
-  $append="append $bootprot root=$rootfs $opt_k $flags\n";
+  $append="append $initrd $bootprot $rootfs $opt_k $flags $action\n";
   print FILE $append if $rootfs;
   close FILE;
 }
@@ -419,12 +419,16 @@ $tftproot = `. /etc/fai/make-fai-nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
 chomp $tftproot;
 $tftproot = '/srv/tftp/fai' unless $tftproot;
 
+$kernelsuffix = (glob "$tftproot/vmlinuz*")[0];
+$kernelsuffix=~ s/.+vmlinuz-//;
 
 if ($opt_i) {
   # create config so host will boot the install kernel
-  $kernelname = 'kernel vmlinuz-install';
-  $rootfs     = "/dev/nfs nfsroot=$nfsroot,v3,tcp,rsize=32768,wsize=32768";
-  $bootprot   = "ip=dhcp $action";
+  $kernelname = "kernel vmlinuz-$kernelsuffix";
+  $initrd     = "initrd=initrd.img-$kernelsuffix";
+  $rootfs     = "root=/dev/nfs nfsroot=$nfsroot,v3,tcp,rsize=32768,wsize=32768";
+  $bootprot   = "ip=dhcp boot=live";
+  
 } elsif ($opt_o) {
   $kernelname = 'localboot 0';
   $rootfs   = '';
@@ -433,15 +437,15 @@ if ($opt_i) {
 } else {
   $kernelname = shift;
   $kernelname = "kernel $kernelname";
-  $rootfs = shift or die "No rootfs specified.\n";
+#  $rootfs = shift or die "No rootfs specified.\n";
 }
 
 $opt_F and $opt_f="verbose,sshd,createvt";
 $opt_B and $opt_f="verbose,sshd,reboot";
 $opt_f and $flags="FAI_FLAGS=$opt_f";
-warn "append parameters: $bootprot $opt_k $flags\n" if $verbose;
-warn "Booting $kernelname\nrootfs is $rootfs\n" if $verbose;
+warn "Booting $kernelname\n" if $verbose;
+warn " append $initrd $bootprot $opt_k $flags\n\n" if $verbose;
 $opt_k && print "Kernel parameters: $opt_k\n";
 
 die "No host specified.\n" unless @ARGV;
-foreach (@ARGV) { mkpxecfg($_,$kernelname,$rootfs); }
+foreach (@ARGV) { mkpxecfg($_,$kernelname,$rootfs,$initrd); }
