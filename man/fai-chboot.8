@@ -1,10 +1,10 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-chboot 8 "29 october" "FAI 3"
+.TH fai-chboot 8 "18 july" "FAI 3.2"
 .SH NAME
 fai-chboot \- manage the network boot configuration files
 .SH SYNOPSIS
 .B fai-chboot
-[OPTION]... KERNELNAME ROOTFS HOST...
+[OPTION]... KERNELNAME HOST...
 .br
 .B fai-chboot
 -l[e|d|t|o|g] [PATTERN]
@@ -27,7 +27,7 @@ fai-chboot \- manage the network boot configuration files
 This command creates the configuration files for network booting.
 
 KERNELNAME is the file name of the kernel that will be booted. This
-kernel will mount the root filesystem from device ROOTFS. You can add
+kernel will mount the root filesystem via NFS. You can add
 additional kernel parameters and define some FAI specific flags. For
 each host one configuration file is created. The file name of the
 configuration file is its IP address in upper case hexadecimal. HOST
@@ -127,14 +127,12 @@ The host atom02 will be installed. ATTENTION! All data on the local
 hard disks are lost in most cases, because we want to install a new
 system. After the installation the host automatically reboots.
 .TP
-fai-chboot -v atom-localboot /dev/hda1 atom03 
-Next time atom03 will boot the kernel atom-localboot which mounts the
-root filesystem from /dev/hda1.
+fai-chboot -v atom-localboot atom03 
+Next time atom03 will boot the kernel atom-localboot.
 .TP
-fai-chboot memtest86+ koeln atom02
+fai-chboot memtest86+ atom02
 The host atom02 will boot the memory test. Install the package
-memtest86+ and copy the executable memtest86+.bin to /srv/tftp/fai. Since
-memtest does not need a root filesystem, you can use any string for it.
+memtest86+ and copy the executable memtest86+.bin to /srv/tftp/fai.
 .TP
 fai-chboot -o default
 All hosts, that do not have a PXE configuration for their IP-address
