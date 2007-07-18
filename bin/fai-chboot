@@ -358,7 +358,7 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:D:edhnvlLiIpf:Fk:Sto') || usage;
+getopts('gBc:D:edhnvlLiIpf:Fk:Ss:to') || usage;
 $opt_h and usage;
 defined @ARGV or usage;
 
@@ -419,7 +419,7 @@ $tftproot = `. /etc/fai/make-fai-nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
 chomp $tftproot;
 $tftproot = '/srv/tftp/fai' unless $tftproot;
 
-$kernelsuffix = (glob "$tftproot/vmlinuz*")[0];
+$kernelsuffix = (glob "$tftproot/vmlinuz*$opt_s")[0];
 $kernelsuffix=~ s/.+vmlinuz-//;
 
 if ($opt_i) {
@@ -428,7 +428,7 @@ if ($opt_i) {
   $initrd     = "initrd=initrd.img-$kernelsuffix";
   $rootfs     = "root=/dev/nfs nfsroot=$nfsroot,v3,tcp,rsize=32768,wsize=32768";
   $bootprot   = "ip=dhcp boot=live";
-  
+
 } elsif ($opt_o) {
   $kernelname = 'localboot 0';
   $rootfs   = '';
