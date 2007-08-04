@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.0, 12-jul-2007";
+my $version = "Version 4.1, 4-aug-2007";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -57,6 +57,7 @@ my $maxpl;  # maximum length of package list
 my $cache;  # instance of AptPkg::Cache
 my @unknown; # unknown packages
 my @known;   # list of all known packages
+my $execerrors; # counts execution errors
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
@@ -239,6 +240,11 @@ if ($hasdebian) {
   execute("$rootcmd $command{clean}");
 }
 
+if ($execerrors) {
+  warn "$execerrors errors during executing of commands\n";
+  exit 3;
+}
+
 exit 0; # end of program
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
@@ -299,6 +305,9 @@ sub execute {
   # @cmds should me more efficient
   $error = system @cmds;
   warn "ERROR: $error $?\n" if $error;
+  my $rc = $?>>8;
+  warn "ERROR: $cmds[0] return code $rc\n" if $rc;
+  $execerrors++ if $rc;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub dselectupgrade {
