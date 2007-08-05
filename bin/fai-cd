@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 3.1, 4 august 2007"
+version="fai-cd 3.1.1, 5 august 2007"
 
 forceremoval=0;
 burn=0
@@ -69,8 +69,7 @@ create_grub_image() {
     mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
 
     [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2_eltorito $tmp/boot/grub/
-    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage2 $tmp/boot/grub/
-    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage1 $tmp/boot/grub/
+    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/i386-pc/stage{1,2} $tmp/boot/grub/
     cp $grub_config $tmp/boot/grub
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
@@ -172,7 +171,7 @@ EOF
 	# TODO: If usbdir is a device (matches /dev/) mount it
 	[ -d $usbdir ] || die 17 "$usbdir does not exist."
 	echo "Writing FAI data to USB device $usbdir"
-	cp -a $tmp/live $usbdir 2>/dev/null || true
+	cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
     fi
 
     rm $tmp1
