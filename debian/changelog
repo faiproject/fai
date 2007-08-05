@@ -1,13 +1,15 @@
-fai (3.2~beta10) unstable; urgency=low
+fai (3.2~beta11) unstable; urgency=low
 
   * subroutines-linux: fix extra slash in path (closes: #428860),
     jobsrunning(): ignore rcS process (closes: #425725)
     during dirinstall call debootstrap if no base.tgz is found
   * setup_harddisks: fix file system type of /proc
-  * fai.conf: make ssh and scp the default (closes: 309678 380085)
+  * fai.conf: make ssh and scp the default (closes: #309678, #380085)
   * fai-guide.sgml: fix description of classes used (closes: #329984),
     change /usr/share/doc/fai to /usr/share/doc/fai-doc (closes: #387541),
-    fix an url, add documentation for dirinstall (closes: 390508)
+    fix an url, add documentation for dirinstall (closes: #390508),
+    document usage of basefiles/ (closes: #391660),
+    document the order hooks are called (closes: #380337)
   * get-config-dir-svn: add support for svn url's without username
     (closes: #415875)
   * subroutines: copy disk_var.sh only if available (closes: #415880)
@@ -27,13 +29,16 @@ fai (3.2~beta10) unstable; urgency=low
     remove -V, use aptitude to remove the kernels from the nfsroot, -k now
     reinstalls all packages from /etc/fai/NFSROOT (closes: #431613)
   * make-fai-nfsroot.conf:
-    remove the variable KERNELPACKAGE (closes: #416531) 
+    remove the variable KERNELPACKAGE (closes: #416531, #435098) 
   * make-fai-nfsroot.8: remove -V, new description for -K and -k
-  * fcopy: set mode on file even no file was copied (closes: #360184)
+  * fcopy: set mode on file even no file was copied (closes: #360184),
+    check error code of preinst and postinst scripts (closes: #432681),
+    add quotes to variable (closes: #430127), skip comment lines in
+    file-modes
   * fai-chboot: $NFSROOT is defined in new location (closes: #408247),
     add initrd support, add option -s (closes: #356380), remove nfs
-    options from append line
-  * fai-chboot.8: ROOTFS parameter is not needed any more
+    options from append line,
+  * fai-chboot.8: ROOTFS parameter is not needed any more, add option -s
   * device2grub: fix pattern to support /dev/cciss and /dev/ida devices
     (closes: #416381)
   * conf/NFSROOT: add packages needed for new fai-cd technique, add plain
@@ -48,7 +53,7 @@ fai (3.2~beta10) unstable; urgency=low
     use unionfs, remove HOST variable, only use HOSTNAME now, use mkdir
     -p, export $action for 20hwdetect.source, call save_dmesg only during
     initial installation, during dirinstall set
-    LOGDIR=/var/log/fai/dirinstall/$HOSTNAME (closes: 429553)
+    LOGDIR=/var/log/fai/dirinstall/$HOSTNAME (closes: #429553)
     define FAI_DEBOOTSTRAP, FAI_DEBOOTSTRAP_OPT for dirinstall
     create syslog.conf before starting the syslog daemon
   * move from mkinitrd-cd to live-initramfs to create a CD, use plain
@@ -63,6 +68,7 @@ fai (3.2~beta10) unstable; urgency=low
     add option -f, force removal of an existing ISO image
     add option -k, this is for debugging
     add option -n, do not create ISO image
+    add option -u, copy fai-cd data to a directory (USB support)
     use $NFSROOT/live/filesystem.dir
   * disk-info: do not include removable devices into list of disks
   * fai-class: remove HOST variable, only use HOSTNAME now
@@ -81,11 +87,14 @@ fai (3.2~beta10) unstable; urgency=low
     add patch that AptPkg module is only used when
     available and target system is Debian (closes: #422225), move code to
     check_aptpkg(), add smart package manager support (closes: #430798)
-    do execute Debian specific commands only when needed (closes: #392038)
+    do execute Debian specific commands only when needed (closes: #392038),
+    grab error codes when executing commands, exit with 3 when errors occured
   * install_packages.8: add option -N, change option -t to -n
   * create_ramdisk: replaced by unionfs
+  * fai-do-scripts: remove -k from cfagent call (closes: #425699)
+  * fai-server.post*: source make-fai-nfsroot.conf and use $TFTPROOT
   
- -- Thomas Lange <lange@debian.org>  Thu, 19 Jul 2007 15:41:17 +0200
+ -- Thomas Lange <lange@debian.org>  Sun,  5 Aug 2007 19:31:20 +0200
 
 fai (3.1.8) unstable; urgency=medium
 
