@@ -27,7 +27,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 2.2.11, 11-june-2007";
+my $version = "Version 2.2.12, 5-august-2007";
 
 use strict;
 use File::Copy;
@@ -222,6 +222,9 @@ sub runscript {
   warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
   return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   system "$sourcefile/$scriptname $class $destfile";
+  my $rc = $?>>8;
+  warn "ERROR: $scriptname returned code $rc\n" if $rc;
+  $error=1 if $rc;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub name2num {
