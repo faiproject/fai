@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 3.1.1, 5 august 2007"
+version="fai-cd 3.2, 5 august 2007"
 
 forceremoval=0;
 burn=0
@@ -125,6 +125,7 @@ sleep_now() {
 create_iso() {
 
     # Create the El Torito bootable iso9660 cdrom image
+    # or copy all FAI data to directory (for USB)
 
     echo "Bind mounting all required parts"
 
@@ -172,11 +173,33 @@ EOF
 	[ -d $usbdir ] || die 17 "$usbdir does not exist."
 	echo "Writing FAI data to USB device $usbdir"
 	cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
+	echo $isoversion > $usbdir/.FAI-CD-VERSION
+
+	# now make the USB device bootable
+	rootpartition=$(find_fai_data 2>/dev/null | grep -A 1 'find /.FAI-CD-VERSION' | grep -v 'find /.FAI-CD-VERSION')
+	usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
+	echo "Root partition is $rootpartition, device is: $usbdev"
+	if [ -n "$rootpartition" -a -n "$usbdev" ]; then
+	    echo "Installing grub."
+	    grub --batch >/dev/null << EOM
+root $rootpartition
+setup $usbdev
+EOM
+	else
+	    echo "Device could not be detemined. Installing grub will be skipped."
+	fi
     fi
 
     rm $tmp1
     unhide_dirs
     umount_dirs
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+find_fai_data() {
+
+  grub --batch <<EOM
+find /.FAI-CD-VERSION
+EOM
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 burniso() {
