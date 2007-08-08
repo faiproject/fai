@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.1, 4-aug-2007";
+my $version = "Version 4.1.1, 8-aug-2007";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -34,7 +34,7 @@ use strict;
 use Getopt::Std;
 
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_m,$opt_n,$opt_N,$opt_p);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our @commands;
 our %command;
@@ -66,8 +66,7 @@ $| = 1;
 # order of commands to execute
 
 my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
-
-@commands = qw/y2i y2r yast rpmr urpmi urpme yumgroup yumi yumr smarti smartr hold taskrm taskinst clean aptitude aptitude-r install unpack remove dselect-upgrade/;
+@commands = qw/y2i y2r yast rpmr urpmi urpme yumgroup yumi yumr smarti smartr hold taskrm taskinst clean-internal aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
     "inst-internal" => "apt-get $aptopt --fix-missing -s install",
@@ -76,13 +75,13 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
          "taskinst" => "tasksel -n install",
            "taskrm" => "tasksel -n remove",
              "hold" => "dpkg --set-selections",
-            "clean" => "apt-get clean",
+   "clean-internal" => "apt-get clean",
          "aptitude" => "aptitude -R $aptopt install",
        "aptitude-r" => "aptitude -r $aptopt install",
            "unpack" => "cd $downloaddir; aptitude download",
   "unpack-internal" => "dpkg --unpack --recursive $downloaddir; rm $downloaddir/*.deb",
-          "pending" => "dpkg --configure --pending",
-            "dpkgc" => "dpkg -C",
+ "pending-internal" => "dpkg --configure --pending",
+   "dpkgc-internal" => "dpkg -C",
 	    "urpmi" => "urpmi --auto --foce --allow-force --keep",
 	    "urpme" => "urpme --auto --foce --allow-force --keep",
 	     "yumi" => "yum -y install",
@@ -94,16 +93,17 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 	     "rpmr" => "rpm -e",
              smarti => "smart install -y",
              smartr => "smart remove -y",
-             smartc => "smart clean",
+  "smartc-internal" => "smart clean",
 );
 
-getopts('dhvlLm:p:nN');
+getopts('dhHvlLm:p:nN');
 
 my $use_aptpkg=0;
 $opt_N || check_aptpkg(); # do not use AptPkg when -N is given
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
+$opt_H && showcommands();
 $verbose=$ENV{verbose} || $opt_v;
 $opt_d && setdownloadonly();
 $maxpl=$ENV{MAXPACKAGES} || $opt_m ;
@@ -139,9 +139,9 @@ my @debiantypes= qw/taskinst aptitude aptitude-r install remove dselect-upgrade 
 foreach my $dt (@debiantypes) {
   $types{$dt} and $hasdebian=1;
   if ($types{$dt} eq 'smarti') {
-    $command{clean} = $command{smartc};
-    $command{pending} = "true";
-    $command{dpkgc} = "true";
+    $command{'clean-internal'} = $command{'smartc-internal'};
+    $command{'pending-internal'} = "true";
+    $command{'dpkgc-internal'} = "true";
   }
 }
 
@@ -162,8 +162,8 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
 # call apt-get or tasksel for each type of command whith the list of packages
 foreach $atype (@commands) {
 
-  if ($atype eq "clean" && $hasdebian) {
-    execute("$rootcmd $command{clean}") unless $listonly;
+  if ($atype eq "clean-internal" && $hasdebian) {
+    execute("$rootcmd $command{'clean-internal'}") unless $listonly;
     next;
   }
 
@@ -201,7 +201,7 @@ foreach $atype (@commands) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
       # print "SL $shortlist\n";
       execute("$rootcmd $command{$atype} $shortlist") if $shortlist;
-      execute("$rootcmd $command{'clean'}") if $hasdebian;
+      execute("$rootcmd $command{'clean-internal'}") if $hasdebian;
       execute("$rootcmd $command{'unpack-internal'}") if ($atype eq "unpack"); # unpack and rm deb files
     }
     next;
@@ -233,11 +233,11 @@ foreach my $entry (@preloadrmlist) {
 if ($hasdebian) {
   # in case of unconfigured packages because of apt errors
   # retry configuration
-  execute("$rootcmd $command{pending}");
+  execute("$rootcmd $command{'pending-internal'}");
   # check if all went right
-  execute("$rootcmd $command{dpkgc}");
+  execute("$rootcmd $command{'dpkgc-internal'}");
   # clean apt cache
-  execute("$rootcmd $command{clean}");
+  execute("$rootcmd $command{'clean-internal'}");
 }
 
 if ($execerrors) {
@@ -469,9 +469,9 @@ $maxpl=9999;
          "aptitude" => "aptitude -R -d $ENV{aptoptions} -y install $devnull",
        "aptitude-r" => "aptitude -r -d $ENV{aptoptions} -y install $devnull",
            "unpack" => "cd $downloaddir; aptitude download",
-            "clean" => 'true',
-          "pending" => 'true',
-            "dpkgc" => 'true',
+   "clean-internal" => 'true',
+ "pending-internal" => 'true',
+   "dpkgc-internal" => 'true',
 );
 
 }
@@ -490,5 +490,23 @@ sub check_aptpkg {
     eval 'import AptPkg::System $_system';
     eval 'import AptPkg::Cache';
   }
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub showcommands {
+
+  # show all available commands
+  print "List of known commands for package_config files\n";
+  print "Short list:\n";
+  foreach (sort keys %command) {
+    next if /-internal/; # skip internal commands
+    print "$_\n";
+  }
+
+  print "\nLong list:\n";
+  foreach (sort keys %command) {
+    next if /-internal/; # skip internal commands
+    printf "%15s    $command{$_}\n",$_;
+  }
+  exit 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
