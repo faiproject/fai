@@ -145,6 +145,7 @@ call_verbose() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 install_kernel_nfsroot() {
 
+    rm $NFSROOT/usr/sbin/update-initramfs
     LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /usr/sbin/update-initramfs
     $ROOTCMD update-initramfs -k all -t -u
 }
@@ -306,6 +307,7 @@ upgrade_nfsroot() {
     fdivert /sbin/start-stop-daemon /sbin/discover-modprobe /usr/sbin/update-initramfs
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
+    ln -s /bin/true $NFSROOT/usr/sbin/fai
     $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -424,6 +426,7 @@ kernel_install() {
     trap "true" EXIT
     echo "Installing new kernel into the nfsroot."
     fdivert /usr/sbin/update-initramfs
+    ln -s /bin/true $NFSROOT/usr/sbin/fai
     LC_ALL=C add_packages_nfsroot
     kernel_install
     exit
