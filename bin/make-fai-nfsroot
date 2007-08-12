@@ -351,6 +351,7 @@ get_kernel_version() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_bootp(){
 
+    mkdir -p $TFTPROOT
     if [ -x "`which mkelf-linux`" ]; then
 	# does not work any mork if we do not know the excatly kernel name
 :
@@ -375,10 +376,10 @@ setup_dhcp(){
     # pxe and dhcp environment
     local pxebin=/usr/lib/syslinux/pxelinux.0
     rm -f $NFSROOT/boot/*.bak
+    mkdir -p $TFTPROOT/pxelinux.cfg
     cp -pv $NFSROOT/boot/$kfile-* $TFTPROOT
     cp -pv $NFSROOT/boot/initrd.img-* $TFTPROOT
     [ -f $pxebin ] && cp $pxebin $TFTPROOT
-    mkdir -p $TFTPROOT/pxelinux.cfg
     echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
