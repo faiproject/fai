@@ -57,12 +57,12 @@ writing to the &fsf-addr;.
 <sect id="availability">Availability<p>
 The homepage of FAI is <url id="&faiwww;">.
 There you will find information about FAI, for example the mailing
-list archive. The FAI package is also available as a Debian package from
+list archives. The FAI package is also available as a Debian package from
 <url id="&faidownload;">. It's an official Debian package and is available from
 all Debian mirrors. To access the newest versions of the FAI packages,
 you can add the following line to your <file>/etc/apt/sources.list</file> file.
 
-<example>deb http://www.informatik.uni-koeln.de/fai/download sarge koeln</example>
+<example>deb http://www.informatik.uni-koeln.de/fai/download etch koeln</example>
 
 <p> Send any bug or comment to
 <email>fai@informatik.uni-koeln.de</email>. You can also use the
@@ -150,9 +150,9 @@ First, some terms used in this manual are described.
 
 <taglist>
 	  <tag> install server : <item> <p>The host where the package
-	  FAI is installed. It provides several services and data for
+	  <tt>fai-server</tt> is installed. It provides several services and data for
 	  all install clients. In the examples of this manual this
-	  host is called <tt>kueppers</tt>.
+	  host is called <tt>faiserver</tt>.
 
 	  <tag>install client : <item> A host which will be installed using
 	  FAI and a configuration from the install server. Also called
@@ -166,7 +166,7 @@ First, some terms used in this manual are described.
 		and mount options</p> </item>
 		<item> <p>Software packages</p>	</item>
 		<item> <p>Keyboard layout, time zone, NIS,
-		XFree86 configuration, remote filesystems, user accounts,
+		Xorg configuration, remote filesystems, user accounts,
 		printers ...</p>	</item>
 </list>
 	  <tag> nfsroot : <item> A (chroot) filesystem located on the install
@@ -207,10 +207,12 @@ inspect the hardware or do any other task.
 	    <item> <p>A fully automated installation can be performed.</p> </item>
 	    <item> <p>Very quick unattended installation</p> </item>
 	    <item> <p>Update of running systems without reinstallation</p> </item>
-	    <item> <p>Hosts can boot from floppy, network card or CD.</p> </item>
-	    <item> <p>Easy creation of the boot floppy or CD</p> </item>
-	    <item> <p>DHCP and BOOTP protocol and PXE boot method are supported.</p> </item>
-	    <item> <p>No initial ramdisk is needed, runs even on a 486 CPU.</p> </item>
+	    <item> <p>Hosts can boot from network card, CD, USB stick or floppy.</p> </item>
+	    <item> <p>Easy creation of the CD, USB stick or floppy boot media</p> </item>
+	    <item> <p>PXE with DHCP and BOOTP boot methods are supported.</p> </item>
+	    <item> <p>Lilo and grub support</p> </item>
+	    <item> <p>ReiserFS, ext3 and XFS filesystem support</p> </item>
+	    <item> <p>Automatic hardware detection</p> </item>
 	    <item> <p>Remote login via ssh during installation process
 	    possible.</p> </item>
 	    <item> <p>Two additional virtual terminals available
@@ -229,9 +231,6 @@ inspect the hardware or do any other task.
 	    <item> <p>Diskless client support</p> </item>
 	    <item> <p>Easily add your own functions via hooks.</p> </item>
 	    <item> <p>Easily change the default behavior via hooks.</p> </item>
-	    <item> <p>Lilo and grub support</p> </item>
-	    <item> <p>ReiserFS, ext3 and XFS filesystem support</p> </item>
-	    <item> <p>Automatic hardware detection</p> </item>
 </list>
 
 <chapt id=impatient>Quickstart - For the impatient user<p>
@@ -241,9 +240,9 @@ installation without reading the manual? OK. Here's how to succeed in
 a few minutes.
 
 <list>
-   <item><p>Install fai and all recommended packages (see
+   <item><p>Install the package <tt>fai-serber</tt> and all recommended packages (see
 <ref id="faisetup"> on your install server).</p></item>
-   <item><p>Edit /etc/fai.conf,run fai-setup -v and read its output.</p></item>
+   <item><p>Edit /etc/fai.conf, run fai-setup -v and read its output.</p></item>
    
 <item><p>
 Install the simple examples into the configuration space:
@@ -274,7 +273,9 @@ The following items are required for an installation via FAI.
 
 <taglist>
 	  <tag>A computer: </tag><item> The computer must have a
-	  network interface card. Unless a diskless installation
+	  network interface card<footnote>If you install from USB
+	  stick or CD you do not need a network
+	  card</footnote>. Unless a diskless installation
 	  should be performed a local hard disk is also needed. No floppy disk,
 	  CD-ROM, keyboard or graphic card is needed.</item>
 
@@ -285,7 +286,7 @@ The clients need one of these daemons to obtain boot information. But
 	  <tag>TFTP server:<item> The TFTP daemon is used for
 	  transferring the kernel to the clients. It's only needed when
 	  booting from network card with a boot PROM.</item>
-	  <tag>Client root:<item> It is a mountable directory which contains the whole
+	  <tag>NFS-Root:<item> It is a mountable directory which contains the whole
 	  filesystem for the install clients during installation. It will
 	  be created during the setup of the FAI package and is also
 	  called <strong>nfsroot</strong>.</item>
@@ -293,17 +294,17 @@ The clients need one of these daemons to obtain boot information. But
 	  mirror is needed. A local mirror of all Debian packages or
 	  an <manref name="apt-proxy" section="8"> is recommended if
 	  you install several computers.</item>
-	  <tag>Install kernel: <item> The kernel image that is used
+	  <tag>Install kernel: <item> The kernel image and the initial
+	  randisk that is used
 	  for booting the install clients. It mounts its root filesystem via NFS. </item>
 	  <tag>Configuration space:<item> This directory tree which
 	  contains the configuration data is mounted via NFS by
 	  default. But you can also get this directory from a revision
-	  control system like CVS.
+	  control system like CVS or subversion.
 	</taglist>
 <p>
 The TFTP daemon and an NFS server will be enabled automatically when
-installing the FAI package. All clients must have a network card
-which is recognized by the install kernel.
+installing the FAI package.
 <p>
 
 
@@ -314,9 +315,9 @@ The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
  for creating your own local Debian mirror. This script uses the
  script <manref name="debmirror" section="1"> and <manref name="rsync"
  section="1">. A partial Debian mirror only for i386 architecture for
- Debian 3.1 (aka sarge) without the source packages needs about
- &mirrorsize of disk space. Accessing the mirror via NFS will be the
- normal and fastest way in most cases. To see more output from the
+ Debian 4.0 (aka etch) without the source packages needs about
+ &mirrorsize of disk space. Accessing the mirror via HTTP will be the
+ normal way in most cases. To see more output from the
  script call <tt>mkdebmirror --debug</tt>. A root account is not
  necessary to create and maintain the Debian mirror.
 <p>
@@ -386,7 +387,7 @@ used for creating the nfsroot are located in &mfnc;. Edit these files before cal
 	  <p>For building the nfsroot there's the command called
 	  <manref name="debootstrap" section="8">. It needs
 	  the location of a Debian mirror and the name of the distribution
-	  (woody, sarge, sid) for which the basic Debian
+	  (etch, lenny, sid) for which the basic Debian
 	  system should be built.
 	    </p> </item>
 
@@ -400,7 +401,7 @@ used for creating the nfsroot are located in &mfnc;. Edit these files before cal
 	    </item>
 
 	    <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>Now
-	    OPSOLETE and unsupported. Use the file
+	    OBSOLETE and unsupported. Use the file
 	    <file>/etc/fai/apt/sources.list</file> instead.<p>
 	    </p> </item>
 
@@ -409,28 +410,57 @@ used for creating the nfsroot are located in &mfnc;. Edit these files before cal
 	      <p> THE USE OF THIS VARIABLE IS NOW OBSOLETE.</p></item>
 	<tag> <var>NFSROOT_PACKAGES</var></tag>
 	    <item>
-	  <p> This variable contains a list of additional software packages which
-	  will be added to the nfsroot.</p></item>
+	      <p> THE USE OF THIS VARIABLE IS NOW OBSOLETE. Use
+	      <file>/etc/fai/NFSROOT</file> instead.</p></item>
 
 	    <tag><var>FAI_BOOT</var></tag>
 	    <item><p>
 	    which of DHCP and/or BOOTP the server should create setups for
-	    (when make-fai-nfsroot is run). The default is to create
-	    the setup for both protocols.
+	    (when make-fai-nfsroot is run). If undefined (the default)
+	    it means to create the setup for both protocols.
 	    </p></item>
 	  </taglist>
+
 <p>
 
 These are important variables in &fc;:
 <taglist>
 	    <tag><var>FAI_LOCATION</var></tag>
-	    <item><p>This is the host name and the remote directory of
-	  the configuration space, which will be mounted via NFS. Its
-	  default value is <file>/srv/fai/config</file> but some
-	  like to use <file>/home/fai/config</file> or
-	  <file>/var/fai/config</file>. Remember that this directory
+	    <item> <p> THE USE OF THIS VARIABLE IS NOW OBSOLETE. Use
+            the variable <var>FAI_CONFIG_SRC</var> instead.</p></item>
+
+	    <tag><var>FAI_CONFIG_SRC</var></tag>
+	    <item> <p>This variables described how to access the
+	    configuration spoace on the install clients. It's an Universal Resource
+	    Identifier (URI) even it may not always comply to the
+	    official schemes. See
+	    <httpsite>en.wikipedia.org</httpsite><httppath>/wiki/URI_scheme</httppath>
+	    for details. <p>
+     Currently supported methods are: 
+
+    <taglist>
+		  <tag><var>nfs://host/path/to/exported/config</var></tag>
+		  <item> <p>The config space is mounted from host via NFS.</p></item>
+
+		  <tag><var>cvs[+ssh]://user@host/path/to/cvsroot
+		  module[=tag]</var></tag> 
+		  <item> <p>The config space is received from a cvs checkout.</p></item>
+
+		  <tag><var>svn://user@host/svnpath</var></tag>
+		  <item> <p>The config space checked out from a
+		  subversion repository. Also supported are svn+file,
+		  svn+http, svn+https and checkouts without an user
+		  name.</p></item>
+    </taglist>
+
+	  If <var>FAI_CONFIG_SRC</var> is undefined in &fc, then the
+	  default is to use an NFS mount from the fai install server
+	  onto the install client. It's the same as
+	  <tt>nfs://`hostname`/$FAI_CONFIGDIR</tt> with the hostname
+	  determined on the install server. Remember that this directory
 	  must be exported to all install clients, so that all files
 	  can be read by root. </p></item>
+
 
 	    <tag><var>FAI_DEBMIRROR</var></tag>
 	    <item>
@@ -450,14 +480,7 @@ server name which is known by the install clients.<p>
 
 FAI uses <manref name="apt-get" section="8"> to create the nfsroot
 filesystem in <file>/srv/fai/nfsroot</file>. It needs about
-&nfsrootsize; of free disk space. Before setting up FAI, you should get
-the program <prgn>imggen</prgn>,<footnote>Available at the download
-page <httpsite>www.ltsp.org</httpsite> or from the FAI download
-page &faidownload;.</footnote> if you like to boot from a 3Com network
-card. This executable converts netboot images created by <manref
-name="mknbi-linux" section="8">, so they can be booted by network
-cards from 3Com. Put that executable in your path
-(e.g. <file>/usr/local/bin</file>). After editing &fc; and &mfnc; call
+&nfsrootsize; of free disk space. After editing &fc; and &mfnc; call
 <prgn>fai-setup</prgn>.
 
 &faisetup;
@@ -476,7 +499,7 @@ calling 'make-fai-nfsroot -r'
 (recover). Adding '-v' gives you a more verbose output which may help you 
 pinpoint the error. If you want to create a log file you may use
 <p><tt>
-sudo /usr/sbin/make-fai-nfsroot -r -v 2>&1 | tee make-fai-nfsroot.log
+sudo make-fai-nfsroot -r -v 2>&1 | tee make-fai-nfsroot.log
 </tt><p>
 It may help to enter the chroot environment manually
 <example>
@@ -500,8 +523,8 @@ server has to reload its configuration. Use one of the following
 commands, depending on which NFS server you are using:
 
 <example>
-kueppers# /etc/init.d/nfs-kernel-server reload
-kueppers# /etc/init.d/nfs-user-server reload
+faiserver# /etc/init.d/nfs-kernel-server reload
+faiserver# /etc/init.d/nfs-user-server reload
 </example>
 
 <p>
@@ -529,7 +552,8 @@ When you make changes to &fc;, &mfnc; the nfsroot has to be rebuilt by calling <
 name="make-fai-nfsroot" section="8">. If you only like to install a new kernel to
 the nfsroot add the flags <tt>-k</tt> or <tt>-K</tt> to
 <tt>make-fai-nfsroot</tt>. This will not recreate your nfsroot, but
-only updates your kernel and kernel modules inside the nfsroot
+only updates your kernel and kernel modules inside the nfsroot or add
+additional poackages into the nfsroot.
 
 <sect1 id=troublefaisetup> Troubleshooting the setup<p>
 
@@ -539,7 +563,6 @@ The setup of FAI adds the FAI account, exports filesystems and calls
 will see more messages. When using a local Debian mirror, it's
 important that the install server can mount this directory via
 NFS. If this mount fails, check <file>/etc/exports</file> and <file>/etc/netgroup</file>.
-An example can be found in <file>/usr/share/doc/fai-doc/examples/etc/netgroup</file>.
 
 
 <chapt id="booting">Preparing booting <p> 
@@ -547,8 +570,12 @@ An example can be found in <file>/usr/share/doc/fai-doc/examples/etc/netgroup</f
 Before booting for the first time, you have to choose which medium you
 use for booting. You can use the boot floppy or configure the computer
 to boot via network card using a boot PROM, which is much smarter. 
+Also booting from CD-ROM or from an USB stick is easy to set up. The
+prefered method for booting is using PXE. PXE is the Preboot Execution
+Environment which most modern network cards support.
 
-<sect id="nicboot">Booting from 3Com network card with boot PROM
+
+<sect id="nicboot">Enabling PXE on a 3Com network card with boot PROM
 <p>
 If you have a 3Com network card that is equipped with a boot ROM by
 Lanworks Technologies or already includes the DynamicAccess Managed PC
@@ -576,10 +603,11 @@ Boot Failure Prompt:        Wait for timeout
   ESC to quit, F9 restore previous settings, F10 to save
 </example>
 
-Set the boot method to <tt>PXE</tt> and enable local boot in this
+Set the boot method to <tt>PXE</tt> (do not use RPL or BOOTP) and
+enable local boot in this 
 menu. So the first boot device will be the network card using PXE, and
 the second should be the local hard disk. This has to be configured in
-the BIOS of your computer. If you like to use the BOOTP protocol
+the BIOS of your computer. For using the BOOTP protocol
 choose <tt>TCP/IP</tt> and set the protocol to <tt>BOOTP</tt>. 
 
 When using BOOTP, you have to make a
@@ -588,18 +616,18 @@ kernel image in <file>/srv/tftp/fai</file>. You can also use the utility
 <prgn>tlink</prgn> (<file>/usr/share/doc/fai-doc/examples/utils/tlink</file>) to create
 this link. The file
 <file>installimage_3com</file> is created by <prgn>imggen</prgn> and
-is suitable for booting 3Com network cards<footnote> <p>If you have
+is suitable for booting 3Com network cards.<footnote> <p>If you have
 problems booting with a 3Com network card and get the error "BOOTP
 record too large" after the kernel is transfered to the computer, try
 the imggen-1.00 program to convert the netboot image to a
 installimage_3com image. I had this problem using netboot 0.8.1-4 and
 Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001 but only on an
 Athlon computer.
-</p></footnote>.
+</p></footnote>
 
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM<p>
 Most modern bootable network cards support the PXE boot environment.
-Some network cards (e.g. Intel EtherExpress PRO 100) have a fixed
+Some network cards (e.g. on notebooks) have a fixed
 boot configuration, so they can only use the PXE boot protocol. This requires a PXE
 Linux boot loader and a special version of the <tt>TFTP</tt> daemon,
 which is available in the Debian package <package>tftpd-hpa</package>.
@@ -621,7 +649,8 @@ tftp dgram udp wait root /usr/sbin/in.tftpd in.tftpd -s /srv/tftp/fai
 
 The install client then loads the pxelinux boot loader which receives
 its configuration via TFTP from a file in the directory
-<file>/srv/tftp/pxelinux.cfg</file>. Using the command <manref
+<file>/srv/tftp/fai/pxelinux.cfg</file> (defined by the variable
+<var>TFTPROOT</var> in &mfnc;). Using the command <manref
 name="fai-chboot" section="8"> you can 
 define which kernel will be loaded by the PXE Linux loader and
 which additional parameters are passed to this kernel. You should
@@ -638,13 +667,14 @@ by mknbi-linux) which is copied to
 <p>
 
 If your network card can't boot by itself, you have two options. The
-first is to create a small boot floppy that uses etherboot, so you can
+first is to create a small boot floppy that uses etherboot, which
+will provide the PXE feature for your network card. So you can
 use DHCP and TFTP to get the install kernel that was created with
 <manref name="mknbi-linux" section="8">.  A lot of ethernet cards
 support booting via ethernet if a special boot EPROM is inserted or
 booted from floppy <httpsite>rom-o-matic.net/</httpsite>. In
 depth documentation about booting via ethernet may be found at
-<httpsite>etherboot.sourceforge.net</httpsite>.
+<httpsite>www.etherboot.org</httpsite>.
 
 The second option is to boot via floppy disk that is created with the
 command <manref name="make-fai-bootfloppy" section="8">. Since there's
@@ -681,6 +711,19 @@ that are used by the classes used in your configuration space.
 
 A sample ISO image is available at
 <httpsite>www.informatik.uni-koeln.de</httpsite><httppath>/fai/fai-cd/</httppath>.
+
+<sect id="usbboot">Booting from USB stick<p>
+
+Using the command <manref name="fai-cd" section="8"> you can also
+create a bootable USB stick. First format your stick with an ext2 file
+system (ext3 makes no sense on flash memory devies). Then mount it.
+After that call:
+<tt>fai-cd -m /path/to/mirror -u /path/to/mounted/stick</tt>
+Then unmount the USB stick.
+
+The USB stick must be formatted with an ext2 file system. VFAT is not
+yet tested. Currently the file system that will be written onto the
+stick is not compressed.
 
 <sect id="mac">Collecting Ethernet addresses<p>
 
@@ -881,8 +924,8 @@ VFS: Cannot open root device "nfs" or 02:00
 Kernel panic: VFS Unable to mount root fs on 02:00
 </example>
 Use the following command to see which directories are exported
-from the install server (named kueppers):
-<example>showmount -e kueppers</example>
+from the install server (named faiserver):
+<example>showmount -e faiserver</example>
 
 <p>
 
@@ -975,19 +1018,23 @@ partitions are mounted according to this information. Here's an
 example:
 <example>
 demohost:~# df
-
-Filesystem 1k-blocks     Used Available Use% Mounted on
-rootfs       2064192  1071184    888152  55% /
-/dev/root    2064192  1071184    888152  55% /
-shm            63548       76     63472   1% /tmp
-kueppers:/srv/fai/config
-             2064192   994480   964856   51% /fai
-/dev/hda1      54447     9859    41777   19% /tmp/target
-/dev/hda10   1153576       20  1141992    0% /tmp/target/files/install
-/dev/hda9     711540       20   711520    0% /tmp/target/home
-/dev/hda8     303336       13   300191    0% /tmp/target/tmp
-/dev/hda7    1517948    98252  1342588    7% /tmp/target/usr
-/dev/hda6     202225     8834   182949    5% /tmp/target/var
+Filesystem           1K-blocks      Used Available Use% Mounted on
+rootfs                 4099064    414088   3645296  11% /
+udev                     10240        76     10164   1% /dev
+192.168.1.250:/srv/fai/nfsroot
+                       3905600    410976   3454944  11% /live/image
+unionfs                4099064    414088   3645296  11% /
+tmpfs                   193464      3112    190352   2% /live/cow
+unionfs                4099064    414088   3645296  11% /dev/.static/dev
+unionfs                4099064    414088   3645296  11% /tmp/fai
+faiserver:/srv/fai/config
+                       3905600    410976   3454944  11% /var/lib/fai/config
+/dev/sda1               241116     74519    154149  33% /tmp/target
+/dev/sda9              4364212    139888   4179988   4% /tmp/target/home
+/dev/sda7               553376     16840    536536   4% /tmp/target/tmp
+/dev/sda8              2221628    275936   1832840  14% /tmp/target/usr
+/dev/sda6               577096    172924    374856  32% /tmp/target/var
+udev                     10240        76     10164   1% /tmp/target/dev
 </example>
 
 <strong>This method can be used as a rescue environment!</strong> In the
@@ -1019,7 +1066,6 @@ has booted on the install clients.
 
 <enumlist>
 	    <item> <p>Set up FAI </p> </item>
-	    <item> <p>Load kernel modules</p> </item>
 	    <item> <p>Define classes</p> </item>
 	    <item> <p>Define variables</p> </item>
 	    <item> <p>Partition local disks</p> </item>
@@ -1063,6 +1109,21 @@ daemon is running on the install server (or the machine defined by the variable
 ends. The fai monitor daemon prints this messages to standard
 output. In the future, there will be a graphical frontend available.
 
+<sect id=bootkernel>Booting the kernel<p>
+The install client receives and loads the kernel and initial ramdisk. The kernel
+boots up and load the ramdisk. It does some hardware detection and
+then tries to figure where the root file system is located. When
+booting from network, this is determined by parameters from additional
+kernel parameters. When booting from CD-ROM or USB stick the kernel
+and initial ramdisk probes removable devices and tries to figure out
+where the root file system is located. This may also be a compressed
+file system (using squashfs).
+
+After the root file system is mounted read only, it is made writeable
+by mounting a ramdisk via unionfs on top of it. So it's possible for
+programms or daemons to write to files inside a read-only mounted file system.
+
+We are using the package <tt>live-initramfs</tt>
 
 <sect id=isetup>Set up FAI<p>
 
@@ -1074,9 +1135,7 @@ the clients is mounted via NFS, <prgn>fai</prgn> is located in
 sequence of tasks for FAI. No other scripts in
 <file>/etc/init.d/</file> are executed.
 <p>
-A ramdisk is created and mounted to <file>/tmp</file>, which is the
-only writable directory until local filesystems are
-mounted. Additional parameters are received from the BOOTP or DHCP
+Additional parameters are received from the BOOTP or DHCP
 daemon and the configuration space if
 mounted via NFS from the install server to <file>/fai</file>. The
 setup is finished after additional virtual terminals are created and
@@ -1086,13 +1145,13 @@ the secure shell daemon for remote access is started on demand.
 
 Now the script <manref name="fai-class" section="1"> is used to define
 classes. Therefore several scripts in <file>/fai/class/</file> are
-executed to define classes. All scripts matching <tt>[0-9]*</tt>
-(they start with a digit)
+executed to define classes. All scripts matching <tt>[0-9][0-9]*</tt>
+(they start with two digits)
 are executed in alphabetical order. Every word that these scripts
 print to the standard output are interpreted as class names. 
 Scripts ending in <tt>.source</tt>
 are sourced, so they can define new classes by adding these classes to
-the variable <var>newclasses</var> (see <file>06hwdetect.source</file> for an
+the variable <var>newclasses</var> (see <file>20-hwdetect.source</file> for an
 example). The output of these scripts is ignored.
 These classes are defined for the
 install client. You can also say this client belongs to these
@@ -1102,16 +1161,10 @@ of all classes can be found in
 <file>/usr/share/doc/fai-doc/classes_description.txt</file>. It is
 advisable to document the job a new class performs. Then, this
 documentation is the base for composing the whole configuration from classes.
-The scripts <prgn>06hwdetectsource</prgn> loads kernel modules on
+The scripts <prgn>20-hwdetect.source</prgn> loads kernel modules on
 demand.
 The complete description of all these scripts can be found in <ref id="cscripts">.
 
-<p>
-The script <file>30menu.source</file> pops up a little menu and asks
-the user which kind of installation should be performed (e.g. CAD
-workstation, notebook, scientific workstation, work group server, Gnome
-desktop...). Keep in mind that this won't lead to a fully automatic
-installation ;-)
 <p>
 After defining the classes, every file matching <tt>*.var</tt> with a
 prefix which matches a defined class is executed to define variables.
@@ -1170,27 +1223,29 @@ cfengine, ...) to be executed for one class. FAI comes with some
 examples for these scripts, but you can write your own Bourne, bash,
 Perl, cfengine or expect scripts.
 <p>
-These important scripts are described in detail in <ref
-id="cscripts">.
+More information about these scripts are described in <ref id="cscripts">.
 
-<sect id=isavelog>Save log files<p> When all installation tasks are
-finished, the log files are written to
+<sect id=isavelog>Save log files<p>
+
+When all installation tasks are finished, the log files are written to
 <tt>/var/log/fai/$HOSTNAME/install/</tt> <footnote>
 <p><file>/var/log/fai/localhost/install/</file> is a link to this
 directory.</p> </footnote> on the new system and to the account on the
 install server if <var>$LOGUSER</var> is defined in &fc;. It is also
 possible to specify another host as log saving destination through
-a file in <file>/fai/class/</file>. Additionally, two symlinks will
+the variable <var>$LOGSERVER</var>. Additionally, two symlinks will
 be created to indicated the last directory written to.
-This method uses rsh/rcp or ssh/scp and is the default.
+By default log files will be copied to the log server using scp.
 
 <p>
 You can use other methods to save logs to the remote server. The currently
 selected method is defined by the <var>$FAI_LOGPROTO</var> variable in 
 file &fc;:
 <taglist>
- <tag>ftp</tag><item><p>
+ <tag>rsh</tag> <item><p>Use the rcp command to copythe log files to
+ the log server.</p></item>
 
+ <tag>ftp</tag><item><p>
   This option saves logs to the remote FTP server defined by the
   <var>$LOGSERVER</var> variable (<var>$SERVER</var> value is used if
   not set). Connection to the FTP server is done as user
@@ -1273,8 +1328,9 @@ The configuration is the collection of information about how exactly to
 install a computer. The central configuration space for all install
 clients is located on the install server in <file>/srv/fai/config</file>
 and its subdirectories. This will be mounted by the install clients to
-<file>/fai</file>. It's also possible to receive all the
-configuration data from a <manref name="cvs" section="1"> repository.
+<file>/var/lib/fai/config</file>. It's also possible to receive all the
+configuration data from a <manref name="cvs" section="1"> or
+subversion repository.
 The following subdirectories are present and include
 several files:
 
@@ -1398,13 +1454,13 @@ variables, the syslog and kernel log daemon are started. The list of
 network devices is stored in <var>$netdevices</var>. Then additional
 parameters are fetched from a DHCP or BOOTP server and also
 additional variables
-are defined. The DNS resolver configuration file is created. The
-configuration space is mounted from the install server to
-<file>/fai</file> or it is checked out from the corresponding <manref
-name="cvs" section="1"> repository. To use a cvs repository, you have
-to set the variables <var>$FAI_CVSROOT, $FAI_CVSTAG,
-$FAI_CVSMODULE</var>. For details look a the subroutine
-<prgn>get_fai_cvs()</prgn>. After that, the file
+are defined. The DNS resolver configuration file is created. 
+<p>
+The location of the configuration space is defined by the variable
+<var>$FAI_CONFIG_SRC</var>. You can use NFS, cvs or svn to access the
+configuration space. See section <ref id="isetup"> for how to set the variable.
+<p>
+After that, the file
 <file>/fai/hooks/subroutines</file> is sourced if it exists. Using
 this file, you can define your own subroutines or override the
 definition of FAI's subroutines.
@@ -1445,7 +1501,7 @@ definition of FAI's subroutines.
      <tag>install</tag> <item><p>This task controls the installation
      sequence. You will hear three beeps before the installation
      starts. The major work is to call other tasks and to save the
-     output to <file>/tmp/fai/rcS.log</file>. If you have any problems
+     output to <file>/tmp/fai/fai.log</file>. If you have any problems
      during installation, look at all files in
      <file>/tmp/fai/</file>. You can find examples of the log files
      for some hosts in the download directory of the FAI homepage.</p>
@@ -1465,9 +1521,14 @@ definition of FAI's subroutines.
       according to the created <file>/tmp/fai/fstab</file> file relative to
       <var>$FAI_ROOT</var>.</p> </item>
 
-      <tag>extrbase</tag> <item><p>Extracts the base tar file
-      <file>base.tgz</file>, which consists of all required
-      packages. This is a snapshot of a basic Debian system created
+      <tag>extrbase</tag> <item><p>Extracts a minimal system after
+      that a chroot can be made into it. By default the base tar file
+      <file>/var/tmp/base.tgz</file> will be extracted. The command
+      <tt>ftar -1v -s $FAI/basefiles /</tt> is used for unpacking a
+      different tar file depending on classes defined. This can be
+      used for installing different Linux distributions than the one
+      used for creating the nfsroot. The default file
+      <file>base.tgz</file> is a snapshot of a basic Debian system created
       by <manref name="debootstrap" section="8"></p> </item>
 
       <tag>mirror</tag> <item><p>If a local Debian mirror is accessed via NFS
@@ -1671,7 +1732,7 @@ case $HOSTNAME in
     demohost)
         echo "FAIBASE GRUB DHCPC DEMO" ;;
     gnomehost)
-        echo "FAIBASE GRUB DHCPC DEMO XFREE GNOME";;
+        echo "FAIBASE GRUB DHCPC DEMO XORG GNOME";;
     *)
         echo "FAIBASE GRUB DHCPC" ;;
 esac
@@ -1702,15 +1763,15 @@ for your installation:
   section="8">. If you can't use this command and are not using a
    BOOTP server, define it in the script <file>LAST.var</file>.
 
-   <tag>FAI_CONSOLEFONT</tag> <item> <p>Is the font which is loaded during
+   <tag>CONSOLEFONT</tag> <item> <p>Is the font which is loaded during
    installation by <manref name="consolechars" section="8">.</p> </item>
 
-   <tag>FAI_KEYMAP</tag> <item> <p>Defines the keyboard map files in
+   <tag>KEYMAP</tag> <item> <p>Defines the keyboard map files in
    <file>/usr/share/keymaps</file> and <file>$FAI/files</file>. You
    need not specify the complete path, since this file will be located
    automatically.</p> </item>
 
-   <tag>rootpw</tag> <item> <p>The encrypted root password for the new
+   <tag>ROOTPW</tag> <item> <p>The encrypted root password for the new
    system. You can use <manref name="crypt" section="3"> or md5
    encryption for the password.</p> </item>
 
@@ -1718,11 +1779,11 @@ for your installation:
    <tt>$UTC=yes</tt>. Otherwise set clock to local time. See <manref
    name="clock" section="8"> for more information.</p> </item>
 
-   <tag>time_zone</tag> <item> <p>Is the file relative to
+   <tag>TIMEZONE</tag> <item> <p>Is the file relative to
    <file>/usr/share/zoneinfo/</file> which indicates your time
    zone.</p> </item>
 
-   <tag>moduleslist</tag> <item> <p>Can be a multi line
+   <tag>MODULESLIST</tag> <item> <p>Can be a multi line
    definition. List of modules (including kernel parameters) which are
    loaded during boot of the new system (written to /etc/modules).</p>
    </item>
@@ -1946,9 +2007,11 @@ a2ps                    install
 
 Comments are starting with a hash (#) and are ending at the end of
 the line. Every command begins with the word <tt>PACKAGES</tt>
-followed by a command name. The command name is similar to those of
-<prgn>apt-get</prgn>. Here's the list of supported command names:
-
+followed by a command name. The command defines which commnd will be
+used to install the packages named after this command. The list of all
+available commands can be listed using <tt>install_packages -H</tt>.
+Supported package tools are: <tt>aptitude, apt-get, smart, y2pmsh,
+yast, yum, urpm, rpm</tt>
 
 <taglist>
 <tag>hold:</tag> <item> <p>Put a package on hold. This package will
@@ -1989,7 +2052,7 @@ lines are the output of the command <tt>dpkg --get-selections</tt>.
 
 Multiple lines with lists of space separated names of packages follow
 the PACKAGES lines. All dependencies are resolved. Packages with
-suffix <tt>-</tt> (eg. <tt>lilo-</tt>)will be removed instead of
+suffix <tt>-</tt> (eg. <tt>lilo-</tt>) will be removed instead of
 installed. The order of the packages is of no matter.
 <p>
 A line which contains the <tt>PRELOADRM</tt> commands, downloads a
@@ -2012,7 +2075,8 @@ examples.
 
 <p>
 If you specify a package that does not exist this package will be
-removed from the installation list. You can also test all software package
+removed from the installation list when the command <tt>install</tt>
+is used. You can also test all software package
 configuration files with the utility <prgn>chkdebnames</prgn>, which
 is available in <file>/usr/share/doc/fai-doc/examples/utils/</file>.
 <example>
@@ -2043,11 +2107,11 @@ using classes, use <manref name="ftar" section="8">.
 But now have a look at the scripts and see what they are doing.
 
 <sect1 id=perl>Perl scripts<p>
-Currently no Perl script is used for modifying the system
+Currently no Perl script are used in the simple examples for modifying the system
 configuration.
 
 <sect1 id=expect>Expect scripts<p>
-Currently no expect scripts are used for modifying the system
+Currently no expect scripts are used in the simple examples for modifying the system
 configuration.
 
 <sect1 id=cfengine>Cfengine scripts<p>
@@ -2195,7 +2259,7 @@ partitioning. See <file>hooks/partition.DISKLESS</file>.</p></item>
 
 <item> <p>Partition the hard disk on an IA64 system, which needs a
 special partition table type that must be created with <manref
-name="parted" section="8">. See <file>hooks/partition.IA64</file>.</p></item>
+name="parted" section="8">.</p></item>
 </list>
 
 <sect id=errors>Looking for errors<p>
@@ -2229,7 +2293,11 @@ available on the FAI homepage.
 <chapt id=beowulf>How to build a Beowulf cluster using FAI<p>
 
 This chapter describes the details about building a Beowulf
-cluster using &dgl; and FAI. For more information about the Beowulf
+cluster using &dgl; and FAI. This chapter was written for FAI
+version 2.x for Debian woody and was not yet updated. The example
+configuration files were removed from the fai packages after FAI 2.8.4.
+
+For more information about the Beowulf
 concept look at <httpsite>www.beowulf.org</httpsite>. 
 
 <sect id=beoplan> Planning the Beowulf setup<p>
@@ -2584,12 +2652,11 @@ get to a working system (for example, Xen guest domains), there is the
 FAI action <tt>dirinstall</tt>.
 
 By calling 
-
 <example>fai &lt;options&gt; dirinstall &lt;target-directory&gt;</example>
-and using either the option 
-<example>-c &lt;classes&gt;</example> or <example>-u &lt;hostname&gt;</example>
-you get a FAI installation, without the partitioning action, right into the 
-target directory.
+and using either the option <tt>-c &lt;classes&gt;</tt> or
+<tt>-N</tt> you get a FAI installation, without the partitioning
+action, right into the target directory. The hostname for the target
+installation can be specified using <tt>-u &lt;hostname&gt;</tt>
 
 This, for example, can be used to combine FAI with the tool <tt>xen-tools</tt>, which 
 helps you to build Xen guest domains. <tt>xen-tools</tt> are very nice for 
@@ -2855,7 +2922,7 @@ ssh -o StrictHostKeyChecking=no root@installclient
 
 
 You can calculate the IP subnet adress (which is used in
-make-fai-nfsroot.conf for the variable <var>FAICLIENTS</var> by using
+&mfnc; for the variable <var>FAICLIENTS</var> by using
 the nice tool ipcalc. Following example gives you the notation for a
 class C network (16) when the server netork interface has the IP address
 123.45.6.123
@@ -2916,6 +2983,15 @@ from floppy. You can also set a password for this boot menu.
 On <httpsite>www.layer-acht.org</httpsite><httppath>/fai</httppath> you 
 will find an example how to fully automatically install a system using the Debian 
 Installer (d-i) in conjunction with FAI's new softupdate (see <ref id=softupdate>). 
+
+<p>
+You should get the program <prgn>imggen</prgn>,<footnote>Available at
+the download page <httpsite>www.ltsp.org</httpsite> or from the FAI
+download page &faidownload;.</footnote> if you like to boot from a
+3Com network card using the BOOTP protocol. This executable converts
+netboot images created by <manref name="mknbi-linux" section="8">, so
+they can be booted by network cards from 3Com. Put that executable in
+your path (e.g. <file>/usr/local/bin</file>)
 
 <sect id=functions>Useful functions for advanced administrators<p>
 
