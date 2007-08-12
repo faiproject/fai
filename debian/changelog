@@ -1,11 +1,13 @@
-fai (3.2~beta11) unstable; urgency=low
+fai (3.2~beta12) unstable; urgency=low
 
   * subroutines-linux: fix extra slash in path (closes: #428860),
     jobsrunning(): ignore rcS process (closes: #425725)
     during dirinstall call debootstrap if no base.tgz is found
   * setup_harddisks: fix file system type of /proc
   * fai.conf: make ssh and scp the default (closes: #309678, #380085)
-  * fai-guide.sgml: fix description of classes used (closes: #329984),
+  * fai-guide.sgml:
+    major update to reflect FAI 3.X changes (closes: #390508),
+    fix description of classes used (closes: #329984),
     change /usr/share/doc/fai to /usr/share/doc/fai-doc (closes: #387541),
     fix an url, add documentation for dirinstall (closes: #390508),
     document usage of basefiles/ (closes: #391660),
@@ -27,7 +29,8 @@ fai (3.2~beta11) unstable; urgency=low
     move creating of subdirs from make-fai-nfsroot to fai (from server to
     client), do not create shell script in make-fai-nfsroot,
     remove -V, use aptitude to remove the kernels from the nfsroot, -k now
-    reinstalls all packages from /etc/fai/NFSROOT (closes: #431613)
+    reinstalls all packages from /etc/fai/NFSROOT (closes: #431613),
+    update-initramfs symlinks to /bin/true during diversion
   * make-fai-nfsroot.conf:
     remove the variable KERNELPACKAGE (closes: #416531, #435098) 
   * make-fai-nfsroot.8: remove -V, new description for -K and -k
@@ -43,7 +46,8 @@ fai (3.2~beta11) unstable; urgency=low
     (closes: #416381)
   * conf/NFSROOT: add packages needed for new fai-cd technique, add plain
     debian kernel package, add ext2resize, add and change arch specific
-    packages
+    packages,
+    move packages cfengine2 and libapt-pkg-perl from control to NFSROOT
   * control: change dependencies from tetex to tetex or texlive, replace
     Recommends of rsh-server with ssh (closes: #426093), add aptitude for
     fai-server as Suggests, remove fai-kernels, add field XS-Vcs-Browser,
@@ -56,6 +60,7 @@ fai (3.2~beta11) unstable; urgency=low
     LOGDIR=/var/log/fai/dirinstall/$HOSTNAME (closes: #429553)
     define FAI_DEBOOTSTRAP, FAI_DEBOOTSTRAP_OPT for dirinstall
     create syslog.conf before starting the syslog daemon
+    when doing dirinstall -c or -N must be specified (closes: #429554)
   * move from mkinitrd-cd to live-initramfs to create a CD, use plain
     Debian kernel
   * menu.lst: remove unneeded options, add boot=live for new initrd,
@@ -88,13 +93,21 @@ fai (3.2~beta11) unstable; urgency=low
     available and target system is Debian (closes: #422225), move code to
     check_aptpkg(), add smart package manager support (closes: #430798)
     do execute Debian specific commands only when needed (closes: #392038),
-    grab error codes when executing commands, exit with 3 when errors occured
-  * install_packages.8: add option -N, change option -t to -n
+    grab error codes when executing commands,
+    exit with 3 when errors occured, add option -H (closes: #391659),
+    put suffix -internal to all internal commands,
+    remove -n from tasksel calls
+  * install_packages.8: add option -N and -H, change option -t to -n,
+    add option -p (closes: #424848)
   * create_ramdisk: replaced by unionfs
-  * fai-do-scripts: remove -k from cfagent call (closes: #425699)
-  * fai-server.post*: source make-fai-nfsroot.conf and use $TFTPROOT
-  
- -- Thomas Lange <lange@debian.org>  Sun,  5 Aug 2007 19:31:20 +0200
+  * fai-do-scripts: remove -k from cfagent call (closes: #425699),
+    add new strings for shell scripts (closes: #416616)
+  * fai-server.post*: do not manage $TFTPROOT (closes: #430000)
+  * package_config: move linux-image package from FAIBASE to DEFAULT, add
+    kernel name for architecture
+  * ainsl: escape + in pattern
+
+ -- Thomas Lange <lange@debian.org>  Sun, 12 Aug 2007 16:47:07 +0200
 
 fai (3.1.8) unstable; urgency=medium
 
