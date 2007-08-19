@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.1.2, 11-aug-2007";
+my $version = "Version 4.1.3, 17-aug-2007";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -128,10 +128,10 @@ if ($use_aptpkg) {
   $cache = new AptPkg::Cache;
 }
 
+warn "$0: reading config files from directory $classpath\n";
 # read all package config files
 foreach (@classes) {
-  my $filename = "$classpath/$_";
-  &readconfig($filename) if -f $filename;
+  &readconfig($classpath,$_) if -f "$classpath/$_";
 }
 
 # check if any Debian related commands/types are used in package_config
@@ -249,11 +249,11 @@ exit 0; # end of program
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub readconfig {
 
-  my $filename = shift;
+  my ($path,$file) = @_;
   my ($package,$type,$cllist,@oclasses,$doit);
 
-  open (FILE,"$filename") || warn "ERROR $0: Can't read config file: $filename\n";
-  warn "$0: read config file $filename\n" if $verbose;
+  open (FILE,"$path/$file") || warn "ERROR $0: Can't read config file: $path/$file\n";
+  warn "$0: read config file /$file\n" if $verbose;
 
   while (<FILE>) {
     next if /^#/;    # skip comments
@@ -282,7 +282,7 @@ sub readconfig {
 
     # warning if uppercase letters are found (package are always lowercase)
     warn "WARNING: Uppercase character found in package name in line $_\n" if $_ =~ /[A-Z]/;
-    warn "ERROR: PACKAGES .. line missing in $filename\n",next unless $type;
+    warn "ERROR: PACKAGES .. line missing in $file\n",next unless $type;
     push @{$list{$type}}, split if $doit;
     $types{$type}=1;   # remember which types are used in package_config
   }
