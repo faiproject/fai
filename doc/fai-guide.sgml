@@ -503,7 +503,7 @@ sudo make-fai-nfsroot -r -v 2>&1 | tee make-fai-nfsroot.log
 </tt><p>
 It may help to enter the chroot environment manually
 <example>
-sudo chroot /srv/fai/nfsroot
+sudo chroot /srv/fai/nfsroot/live/filesystem.dir
 </example>
 The setup routine adds some lines to <file>/etc/exports</file> to export
 the nfsroot and the configuration space to all hosts that belong to
@@ -880,6 +880,8 @@ configuration for the pxelinux environment.
 <sect id="bootmesg">Boot messages <p>
 
 These are the messages when booting from floppy disk.
+From FAI 3.2 the kernel and initrd will not fit onto a 1.4M floppy
+disk any more.
 <example>
 GRUB loading stage2..............
 &lt; now the grub menu with multiple boot options is displayed &gt;
@@ -918,12 +920,18 @@ working, but the install server does not export the configuration
 space directory to the install clients, mostly a problem of missing
 permissions on the server side.
 <example>
-Root-NFS: Server returned error -13 while mounting /srv/fai/nfsroot
-VFS: Unable to mount root fs via NFS, trying floppy.
-VFS: Cannot open root device "nfs" or 02:00
-Kernel panic: VFS Unable to mount root fs on 02:00
+Begin: Mounting root file system... ...
+eth0: link up
+
+BusyBox v1.1.3 (Debian 1:1.1.3-4) Built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+/bin/sh: can't access tty: job control turned off
+(initramfs)
 </example>
-Use the following command to see which directories are exported
+You will get a shell prompt and can look at the log files, for
+examples <file>/live.log</file> or <file>/tmp/net-eth0.conf</file>.
+<p>
+Use the following command on the isntall server to see which directories are exported
 from the install server (named faiserver):
 <example>showmount -e faiserver</example>
 
@@ -944,25 +952,14 @@ Sending BOOTP requests ........ timed out!
 IP-Config: Retrying forever (NFS root)...
 </example>
 
-If you get the following error message, the install kernel has
-no driver compiled in for your network card. 
+If you get the following error message, the install kernel could not
+detect your network card, for example because of a missing driver:
 <example>
-IP-Config: No network devices available
-Partition check:
- hda: hda1 hda2 < hda5 hda6 hda7 hda8 >
-Root-NFS: No NFS server available, giving up.
-VFS: Unable to mount root fs via NFS, trying floppy.
-VFS: Insert root floppy and press ENTER
+Begin: Mounting root file system... ...
+Kernel panic - not syncing: Attempted to kill init!
 </example>
-Then you have to compile the driver for your network card into a new
-kernel. This driver must not be a kernel module. The README file of
-the package fai-kernels <file>/usr/share/doc/fai-kernels/README</file>
-describes how to compile custom fai kernels. After that, adjust the
-variable <var>KERNELPACKAGE</var> in  &mfnc; and rebuild the nfsroot
-with the command <manref name="make-fai-nfsroot" section="8">.
-After that, you have to create a new boot floppy if you need it. Now your network
-card should be recognized and the install kernel should mount
-the nfsroot successfully.
+Check the initrd in teh nfsroot if the kernel driver of your network
+card is included there.
 
 <sect id="sysinfo">Collecting other system information 
 <p>
@@ -1123,8 +1120,8 @@ file system (using squashfs).
 After the root file system is mounted read only, it is made writeable
 by mounting a ramdisk via unionfs on top of it. So it's possible for
 programms or daemons to write to files inside a read-only mounted file system.
-
-We are using the package <tt>live-initramfs</tt>
+We are using the package <tt>live-initramfs</tt> to mount the nfsroot and
+to make this file system writeable using the unionfs.
 
 <sect id=isetup>Set up FAI<p>
 
@@ -2679,7 +2676,7 @@ $CMD
 Then, you will want to set the variable <example>install=0</example> in the xen-tools config for
 that host(in previous versions of xen-tools, this was <tt>no-install=1</tt>).
 
-<sect id=softupdate>Using FAI for online updates
+<sect id=softupdate>Using FAI for updates
 <p>FAI is even usable for system updates, using the same configuration
 as if initially installing. System update means updating the running
 system without doing a reinstallation. An updated client will almost
