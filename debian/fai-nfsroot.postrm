@@ -1,9 +1,15 @@
 #!/bin/sh -e
 
-if [ remove = "$1" ]; then
-    rm /etc/init.d/rcS
-    dpkg-divert --package fai-nfsroot --remove --rename /etc/init.d/rcS
-fi
+case "$1" in
+    remove)
+	rm /etc/init.d/rcS
+	dpkg-divert --package fai-nfsroot --remove --rename /etc/init.d/rcS
+	;;
+
+    purge)
+	update-rc.d fai-abort remove > /dev/null
+	;;
+esac
 
 #DEBHELPER#
 

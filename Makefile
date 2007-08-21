@@ -26,7 +26,7 @@ veryclean: clean
 install: 
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,dhcp3,apt/apt.conf.d}
 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
-	mkdir -p $(DESTDIR)/etc/rc2.d
+	mkdir -p $(DESTDIR)/etc/init.d
 	install man/* $(DESTDIR)/man
 	$(MAKE) -C doc install
 	-install $(libfiles) $(LIBDIR)
@@ -41,7 +41,7 @@ install:
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
 	install -m644 conf/fai_modules_off $(DESTDIR)/etc/modutils
-	install -m755 lib/S01fai-abort $(DESTDIR)/etc/rc2.d
+	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
