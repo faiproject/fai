@@ -14,10 +14,17 @@
 protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
 username=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^@]*\)@')
 svnpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://[^@]\+@\([^[:space:]]\+\)')
+[ -n "$username" ] && user="--username $username"
+[ -z "$username" ] && svnurl=$FAI_CONFIG_SRC # if no user is specified
 
 case $protocol in
 	svn)
 		svnurl="svn://$svnpath"
+		;;
+        svn+ssh)
+	        svnurl="svn+ssh://$svnpath"
+		user=""
+		export SVN_SSH="ssh -l $username"
 		;;
 	svn+file)
 		svnurl="file://$svnpath"
@@ -34,8 +41,6 @@ case $protocol in
 		;;
 esac
 		
-[ -n "$username" ] && user="--username $username"
-[ -z "$username" ] && svnurl=$FAI_CONFIG_SRC # if no user is specified
 
 if [ -d "$FAI/.svn" ] ; then
    echo "Updating SVN in $FAI"
