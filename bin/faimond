@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# vim:et:ts=2:sw=2:
 
 # $Id$
 #*********************************************************************
@@ -14,38 +15,126 @@
 use strict;
 use Socket;
 use Getopt::Std;
+use Proc::Daemon;
 
 $| = 1;
-my $port;
-our ($opt_b,$opt_h,$opt_p);
+my ($port, $timeout, $daemon, $timestamp);
+my $pidfile = '/var/run/faimond.pid';
+my $logfile = '-';
+my $daemonlogfile = '/var/log/faimond.log';
+my $useip;
+
+our ($opt_b,$opt_h,$opt_p,$opt_l,$opt_t,$opt_d,$opt_P,$opt_T,$opt_i);
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub logline(@) {
+  open(LOGFILE, $logfile) or return 0;
+  print LOGFILE (scalar localtime(), ' - ') if ($timestamp);
+  print LOGFILE @_ or return 0;
+  close(LOGFILE);
+  return 1;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub signal_die(@) {
+  logline(@_);
+  unlink($pidfile);
+  exit(1);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub signal_warn(@) {
+  logline(@_) or die "log: $!";
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub signal_deadly(@) {
+  # Use the die-handler
+  signal_die('Caught deadly signal ' . shift() . "\n");
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub server_init() {
+  logline("FAI monitoring daemon starting..\n") or die "log: $!";
 
+  # Init signals
+  $SIG{INT} = \&signal_deadly;
+  $SIG{QUIT} = \&signal_deadly;
+  $SIG{TERM} = \&signal_deadly;
+  $SIG{__DIE__} = \&signal_die;
+  $SIG{__WARN__} = \&signal_warn;
+  # HUP is usually used to reopen log files. This is not a problem
+  # in this design.
+  $SIG{HUP} = 'IGNORE';
+
+  if ($daemon) {
+    if (-e $pidfile) {
+    # Pid file already exists. Check if it's a valid pid.
+      open(PIDFILE, '<', "$pidfile") or die "open $pidfile: $!";
+      my $pid = <PIDFILE>;
+      chomp($pid);
+      if ($pid ne '') {
+      # Kill -0 exits with value 0 if pid is alive
+        system("kill -0 $pid 2> /dev/null");
+        if ($? == 0) {
+          logline("Pidfile $pidfile exists and contains an existing pid. Exiting.\n");
+          exit(1);
+        }
+      }
+      close(PIDFILE);
+    }
+    Proc::Daemon::Init;
+    umask 022;
+
+    open(PIDFILE, '>', "$pidfile") or die "open $pidfile: $!";
+    print PIDFILE $$ or die "print $pidfile: $!";
+    close(PIDFILE);
+  }
+
+  # Listen
   my $proto = getprotobyname('tcp');
   socket(SERVER, PF_INET, SOCK_STREAM, $proto) or die "socket: $!";
-  setsockopt(SERVER, SOL_SOCKET, SO_REUSEADDR, 1) or die "setsock: $!";
+  setsockopt(SERVER, SOL_SOCKET, SO_REUSEADDR, 1) or die "setsockopt: $!";
 
   my $paddr = sockaddr_in($port, INADDR_ANY);
 
   bind(SERVER, $paddr) or die "bind: $!";
   listen(SERVER, SOMAXCONN) or die "listen: $!";
-  print "FAI monitoring daemon started on port $port\n";
+  logline("FAI monitoring daemon started on port $port with pid $$\n") or die "log: $!";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub big_loop() {
 
   # accept a connection, print message received and close
-  my ($client_addr,$inp);
+  my ($client_addr);
   while ($client_addr = accept(CLIENT, SERVER)) {
-    $inp = <CLIENT>;
+    my ($port, $iaddr) = sockaddr_in($client_addr);
+    my $ip = inet_ntoa($iaddr);
+
+    my $inp = '';
+
+    eval {
+      local $SIG{__DIE__};
+      local $SIG{__WARN__};
+      local $SIG{'ALRM'} = sub { die("Timeout"); };
+
+      alarm($timeout);
+      $inp = <CLIENT>;
+      alarm(0);
+    };
+
     close CLIENT;
+
+    if (!defined($inp) || $inp eq '') {
+      # Client did not send anything, or alarm went off
+      logline("$ip:$port: No data or timeout.\n") or die "log: $!"; 
+      next;
+    }
 
     if ($inp =~ /^(\S+)\s+TASKEND install 0/ && $opt_b) {
       my $cname = $1;
-      system("fai-chboot -d $cname");
-      # warn "Disabling pxelinux configuration for $cname\n";
-   }
-    print "$inp";
+      if ($useip) {
+        $cname = $ip;
+      }
+      system('fai-chboot', '-d', $cname);
+      logline("$ip:$port: Disabling pxelinux configuration for $cname\n") or die "log: $!";
+    }
+    logline("$ip:$port: $inp") or die "log: $!";
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -54,21 +143,56 @@ sub usage {
   print << "EOF";
 faimond, FAI monitor daemon.
 
-   Copyright (C) 2003-2007 by Thomas Lange
+    Copyright (C) 2003-2007 by Thomas Lange
 
-Usage: faimond [OPTION]
+Usage: faimond [OPTIONS]
 
-   -b                   Call fai-chboot to change boot parameter.
-   -p PORT              Set port to listen to. Default is 4711.
+    -b                  Call fai-chboot to change boot parameter.
+    -p PORT             Set port to listen to. Default is 4711.
+    -l FILE             Logfile. Default is standard out and
+                        '$daemonlogfile' in daemon mode.
+    -t TIMEOUT          Timeout for bad clients. 0 to disable.
+    -d                  Daemon mode.
+    -P FILE             PID-file. Default is '$pidfile'.
+                        Used only if starting in daemon mode.
+    -T                  Print timestamps in the log.
+    -i                  When using -b: send IP of client to fai-choot
+                        instead of the hostname the host reports.
 
 EOF
   exit 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-getopts('bhp:') || usage;
+getopts('bhTp:l:t:dP:i') || usage;
 $opt_h && usage;
 $port = $opt_p || 4711;
+$timeout = $opt_t || 5;
+$daemon = $opt_d || 0;
+$timestamp = $opt_T || 0;
+$useip = $opt_i || 0;
+
+if (defined($opt_P)) {
+  $pidfile = $opt_P;
+}
+
+if (defined($opt_d)) {
+  # If in daemon mode, use standard daemon log file
+  $logfile = $daemonlogfile;
+}
+
+if (defined($opt_l)) {
+  $logfile = $opt_l;
+}
+
+# Constuct a $logfile that open can take as an argument
+if ($logfile eq '-') {
+  $logfile = ">&STDOUT";
+}
+else {
+  $logfile = ">>$logfile";
+}
+
 
 server_init;
 big_loop;
