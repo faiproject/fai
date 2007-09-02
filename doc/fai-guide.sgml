@@ -9,8 +9,8 @@
 <!entity faiver "3.2">
 <!entity faiverdate "21 Aug 2007">
 
-<!entity version "2.6.2">
-<!entity date    "30 august 2007">
+<!entity version "2.6.3">
+<!entity date    "2 September 2007">
 
 <!entity faisetup           system "entities/faisetup.sgml">
 <!entity bootexample        system "entities/bootexample.sgml">
@@ -28,9 +28,10 @@
 
 <abstract>
 This manual describes the fully automatic installation package for
-&dgl;. This includes the installation of the package, the planning and
+&dgl;. This includes the installation of the package, planning and
 creating of the configuration and how to deal with errors.
- 
+<!--MT: say what FAI is-->
+
 <copyright>
 <copyrightsummary>
 Copyright &copy; 2000-2007 Thomas Lange
@@ -54,7 +55,14 @@ writing to the &fsf-addr;.
 <toc detail="sect2">
 
 <chapt id="intro">Introduction<p>
+<!--MT: general comments: 
+  - dirinstall is only mentioned at the end
+  - mailinglists, IRC channel should be mentioned
+  - ULRs should be http://www. ... or only www. ..., but please be consistent
+  - Variables $VARNAME or VARNAME only? Be consistent.
+-->
 <sect id="availability">Availability<p>
+<!--MT: put Motivation before Availability-->
 The homepage of FAI is <url id="&faiwww;">.
 There you will find information about FAI, for example the mailing
 list archives. The FAI package is also available as a Debian package from
@@ -68,12 +76,13 @@ you can add the following line to your <file>/etc/apt/sources.list</file> file.
 <email>fai@informatik.uni-koeln.de</email>. You can also use the
 Debian bug tracking system (BTS)
 <url id="http://&www-debian-org;/Bugs/"> for reporting errors.
+<!--MT: is personal mail still the preferred way?-->
 <p>
 You can access the subversion repository containing the newest developer
-version of FAI from a Bourne shell using the
+version of FAI from a Unix shell using the
 following commands.
 <example>
-> svn co svn://svn.debian.org/svn/fai/trunk fai
+# svn co svn://svn.debian.org/svn/fai/trunk fai
 </example>
 
 You can also use the web interface for the subversion repository at:
@@ -89,15 +98,15 @@ be able to install a Linux cluster with dozens of nodes single
 handedly?
 
 <p>
-Repeating the same task time and again is boring -- and will surely
-lead to mistakes. Also a whole lot of time could be saved if the
+Repeating the same task again and again is boring -- and will surely
+lead to errors. Also a whole lot of time could be saved if the
 installations were done automatically. An installation process with
 manual interaction does not scale. But clusters have the habit of
 growing over the years. Think long-term rather than planning just a
 few months into the future.
 
 <p>
-In 1999, I had to organize an installation of a Linux cluster with one
+In 1999, I had to perform an installation of a Linux cluster with one
 server and 16 clients. Since I had much experience doing automatic
 installations of Solaris operating systems on SUN SPARC hardware, the
 idea to build an automatic installation for Debian was born. Solaris
@@ -127,7 +136,7 @@ I chose to adapt this technique to a PC cluster running Linux.
 <sect id="overview">Overview and concepts<p>
 <p>
 FAI is a non-interactive system to install a &dgl; operating system
-unattended on
+on
 a single computer or a whole cluster. You can take one or more virgin
 PCs, turn on the power and after a few minutes Linux is installed,
 configured and running on the whole cluster, without any interaction
@@ -155,22 +164,22 @@ First, some terms used in this manual are described.
 	  host is called <tt>faiserver</tt>.
 
 	  <tag>install client : <item> A host which will be installed using
-	  FAI and a configuration from the install server. Also called
+	  FAI and a configuration provided by the install server. Also called
 	  client for short. In this manual, the example hosts are
 	  called <tt>demohost, nucleus, atom01, atom02,...</tt></p> </item>
 	  <tag> configuration : <item> The details of how the installation
 	  of the clients should be performed. This includes information about:
 <list>
 		<item> <p>Hard disk layout</p> </item>
-		<item> <p>Local filesystems, their types, mount points
+		<item> <p>Local file systems, their types, mount points
 		and mount options</p> </item>
 		<item> <p>Software packages</p>	</item>
 		<item> <p>Keyboard layout, time zone, NIS,
-		Xorg configuration, remote filesystems, user accounts,
+		Xorg configuration, remote file systems, user accounts,
 		printers ...</p>	</item>
 </list>
-	  <tag> nfsroot : <item> A (chroot) filesystem located on the install
-	  server. It's the complete filesystem for the install
+	  <tag> nfsroot : <item> A file system located on the install
+	  server. It's the complete file system for the install
 	  clients during the installation process. All clients share the
 	  same nfsroot, which they mount read only.</item>
 </taglist>
@@ -179,10 +188,10 @@ First, some terms used in this manual are described.
 
 The install client which will be installed using FAI, is
 booted from floppy disk or via network card. It gets an IP address and
-boots a Linux kernel which mounts its root filesystem via NFS from the install
-server. After the operating system is running, the FAI startup script
+boots a Linux kernel which mounts its root file system via NFS from the install
+server. After the kernel is loaded, the FAI startup script
 performs the automatic installation which doesn't need any
-interaction. First, the hard disks will be partitioned, filesystems are
+interaction. First, the hard disks will be partitioned, file systems are
 created and then software packages are installed. After that, the new
 installed operating system is configured to your local needs using
 some scripts. Finally the new operating system will be booted from the local
@@ -199,19 +208,23 @@ great number of nodes.
 FAI can also be used as a network rescue system. You can boot your
 computer, but it will not perform an installation. Instead it will run a
 fully functional &dgl; without using the local hard disks. Then you can
-do a remote login and backup or restore a disk partition, check a filesystem,
+do a remote login and backup or restore a disk partition, check a file system,
 inspect the hardware or do any other task.
 
+<!--MT: here the class concept should be described, move the entire section
+here.-->
+
 <sect id="features">Features<p> 
+<!--MT: Full stop after each item or not? Be consistent.-->
 <list>
 	    <item> <p>A fully automated installation can be performed.</p> </item>
 	    <item> <p>Very quick unattended installation</p> </item>
-	    <item> <p>Update of running systems without reinstallation</p> </item>
+	    <item> <p>Update of running systems without re-installation</p> </item>
 	    <item> <p>Hosts can boot from network card, CD, USB stick or floppy.</p> </item>
 	    <item> <p>Easy creation of the CD, USB stick or floppy boot media</p> </item>
 	    <item> <p>PXE with DHCP and BOOTP boot methods are supported.</p> </item>
 	    <item> <p>Lilo and grub support</p> </item>
-	    <item> <p>ReiserFS, ext3 and XFS filesystem support</p> </item>
+	    <item> <p>ReiserFS, ext3 and XFS file system support</p> </item>
 	    <item> <p>Automatic hardware detection</p> </item>
 	    <item> <p>Remote login via ssh during installation process
 	    possible.</p> </item>
@@ -231,6 +244,7 @@ inspect the hardware or do any other task.
 	    <item> <p>Diskless client support</p> </item>
 	    <item> <p>Easily add your own functions via hooks.</p> </item>
 	    <item> <p>Easily change the default behavior via hooks.</p> </item>
+      <!--MT: SVN/CVS config management, softupdates, dirinstall-->
 </list>
 
 <chapt id=impatient>Quickstart - For the impatient user<p>
@@ -242,7 +256,7 @@ a few minutes.
 <list>
    <item><p>Install the package <tt>fai-server</tt> and all recommended packages (see
 <ref id="faisetup"> on your install server).</p></item>
-   <item><p>Edit /etc/fai.conf, run fai-setup -v and read its output.</p></item>
+   <item><p>Edit &fc;, run fai-setup -v and read its output.</p></item>
    
 <item><p>
 Install the simple examples into the configuration space:
@@ -255,19 +269,25 @@ Install the simple examples into the configuration space:
 <item><p>When using PXE, tell the install client to boot the install
   kernel and perform an installation during the next boot <example>fai-chboot -IFv demohost</example>
 </p></item>
-<item><p>If you want to try FAI without setting up a PXE+DNS+DHCP-Environment:
-put the hostnames into <file>/etc/hosts</file> inside the nfsroot and use
+<item><p>If you want to try FAI without setting up a PXE+DNS+DHCP-environment:
+put the host names into <file>/etc/hosts</file> inside the nfsroot at
+<file>/srv/fai/nfsroot</file> and use
 a bootfloppy/CD/DVD to boot the client.
-See <manref name="make-fai-bootfloppy" section="8">
+See <manref name="make-fai-bootfloppy" section="8">.
 <item><p>Boot your demo host and enjoy the fully automatic installation.</p></item>
 <item><p>If the installation has finished successfully, the computer should boot a
 small Debian system. You can login as user <tt>demo</tt> or <tt>root</tt> with password <tt>fai</tt>.</p></item>
 
 </list>
-But now don't forget to read chapters <ref id="plan">, <ref id="instprocess"> and <ref id="config"> !
+But now don't forget to read chapters <ref id="plan">, <ref id="instprocess"> and <ref id="config">!
 
 <chapt id="inst">Installing FAI
 <sect id="requirements">Requirements<p> 
+<!--MT: split this section to mark the specific requirments:
+  - boot media
+  - source of the root file system
+  - config source
+-->
 
 The following items are required for an installation via FAI.
 
@@ -277,7 +297,7 @@ The following items are required for an installation via FAI.
 	  stick or CD you do not need a network
 	  card</footnote>. Unless a diskless installation
 	  should be performed a local hard disk is also needed. No floppy disk,
-	  CD-ROM, keyboard or graphic card is needed.</item>
+	  CD-ROM, keyboard or graphics adapter is needed.</item>
 
 	  <tag>DHCP or BOOTP server: </tag><item> <p> 
 The clients need one of these daemons to obtain boot information. But
@@ -287,7 +307,7 @@ The clients need one of these daemons to obtain boot information. But
 	  transferring the kernel to the clients. It's only needed when
 	  booting from network card with a boot PROM.</item>
 	  <tag>NFS-Root:<item> It is a mountable directory which contains the whole
-	  filesystem for the install clients during installation. It will
+	  file system for the install clients during installation. It will
 	  be created during the setup of the FAI package and is also
 	  called <strong>nfsroot</strong>.</item>
 	  <tag>Debian mirror:<item> Access to a Debian
@@ -295,20 +315,21 @@ The clients need one of these daemons to obtain boot information. But
 	  an <manref name="apt-proxy" section="8"> is recommended if
 	  you install several computers.</item>
 	  <tag>Install kernel: <item> The kernel image and the initial
-	  randisk that is used
-	  for booting the install clients. It mounts its root filesystem via NFS. </item>
-	  <tag>Configuration space:<item> This directory tree which
-	  contains the configuration data is mounted via NFS by
+	  RAM disk that is used
+	  for booting the install clients. It mounts its root file system via NFS. </item>
+	  <tag>Configuration space:<item> This directory tree, which
+	  contains the configuration data, is mounted via NFS by
 	  default. But you can also get this directory from a revision
 	  control system like CVS or subversion.
 	</taglist>
 <p>
 The TFTP daemon and an NFS server will be enabled automatically when
-installing the FAI package.
+installing the <tt>fai-server</tt> package.
 <p>
 
 
 <sect id="debian-mirror">How to create a local Debian mirror<p> 
+<!--MT: move this section near the end of the chapter, it's not as important-->
 
 The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
  <p><file>/usr/share/doc/fai-doc/examples/utils/</file>.</p> </footnote> can be used
@@ -322,9 +343,9 @@ The script <prgn>mkdebmirror</prgn> <footnote> You can find the script in
  necessary to create and maintain the Debian mirror.
 <p>
 You can use the command <manref name="fai-mirror" section="1"> for
-creating a partial mirror, that only contains the software
+creating a partial mirror that only contains the software
 packages that are used in the classes in your configuration
-space. A partitial mirror containing all package for the simplex
+space. A partial mirror containing all package for the simple
 examples from the package fai-doc will only need about 300MB of disk
 space.
 
@@ -342,17 +363,18 @@ example can be found in
 <file>/usr/share/doc/fai-doc/examples/etc</file>. Also add the IP-address
 of the HTTP server to the variable <var>NFSROOT_ETC_HOSTS</var> in
 &mfnc; when the install clients have no DNS access.
+<!--MT: some link to a signing howto would be nice-->
 
 <sect id=faisetup> Setting up FAI<p>
 
 To setup a FAI install server you need at least the packages
-<tt>fai-server, fai-doc</tt>. The package
+<tt>fai-server</tt> and <tt>fai-doc</tt>. The package
 <tt>fai-quickstart</tt> contains dependencies on all required packages
 for an install server. Do not install the package <tt>fai-nfsroot</tt>
-on a normals system. This package can only be installed inside the nfsroot.
+on a normal system. This package can only be installed inside the nfsroot.
 
 If you would like to install all packages that are useful
-for a fai install server, use the following command
+for a FAI install server, use the following command
 
 <p><example>
 # aptitude install fai-quickstart
@@ -364,17 +386,16 @@ Reading task descriptions... Done
 The following NEW packages will be automatically installed:
   dhcp3-common dhcp3-server fai-client fai-doc fai-server 
   tftp-hpa tftpd-hpa 
-The following packages have been kept back:
-  kernel-headers-2.6-686 
 The following NEW packages will be installed:
   dhcp3-common dhcp3-server fai-client fai-doc fai-quickstart 
   fai-server tftp-hpa tftpd-hpa 
-0 packages upgraded, 9 newly installed, 0 to remove and 1 not upgraded.
+0 packages upgraded, 9 newly installed, 0 to remove and 0 not upgraded.
 Need to get 13.0MB of archives. After unpacking 17.9MB will be used.
 Do you want to continue? [Y/n/?] 
 </example><p>
 
 The suggested packages for FAI are: <tt>debmirror, mknbi, apt-move, mkisofs, grub, aptitude</tt>.<p>
+<!--MT: is this up to date?-->
 
 <p>The configuration for the FAI package (not the configuration data
 for the install clients) is defined in &fc;. Definitions that are only
@@ -400,7 +421,8 @@ used for creating the nfsroot are located in &mfnc;. Edit these files before cal
 	      needed when the clients have access to a DNS server.</p>
 	    </item>
 
-	    <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>Now
+	    <!--MT: don't keep obsolete information
+      <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>Now
 	    OBSOLETE and unsupported. Use the file
 	    <file>/etc/fai/apt/sources.list</file> instead.<p>
 	    </p> </item>
@@ -412,6 +434,7 @@ used for creating the nfsroot are located in &mfnc;. Edit these files before cal
 	    <item>
 	      <p> THE USE OF THIS VARIABLE IS NOW OBSOLETE. Use
 	      <file>/etc/fai/NFSROOT</file> instead.</p></item>
+      -->
 
 	    <tag><var>FAI_BOOT</var></tag>
 	    <item><p>
@@ -425,17 +448,19 @@ used for creating the nfsroot are located in &mfnc;. Edit these files before cal
 
 These are important variables in &fc;:
 <taglist>
+	    <!--MT: don't keep obsolete information
 	    <tag><var>FAI_LOCATION</var></tag>
 	    <item> <p> THE USE OF THIS VARIABLE IS NOW OBSOLETE. Use
             the variable <var>FAI_CONFIG_SRC</var> instead.</p></item>
+      -->
 
 	    <tag><var>FAI_CONFIG_SRC</var></tag>
 	    <item> <p>This variables described how to access the
 	    configuration space on the install clients. It's an Universal Resource
 	    Identifier (URI) even it may not always comply to the
-	    official schemes. See
+	    official schemes. <!--MT: not so important... See
 	    <httpsite>en.wikipedia.org</httpsite><httppath>/wiki/URI_scheme</httppath>
-	    for details. <p>
+	    for details.--> <p>
      Currently supported methods are: 
 
     <taglist>
@@ -449,14 +474,14 @@ These are important variables in &fc;:
 		  <tag><var>svn://user@host/svnpath</var></tag>
 		  <item> <p>The config space checked out from a
 		  subversion repository. Also supported are svn+file,
-		  svn+http, svn+ssh, svn+https and checkouts without an user
+		  svn+http, svn+ssh, svn+https and checkouts without a user
 		  name.</p></item>
     </taglist>
 
 	  If <var>FAI_CONFIG_SRC</var> is undefined in &fc, then the
 	  default is to use an NFS mount from the fai install server
 	  onto the install client. It's the same as
-	  <tt>nfs://`hostname`/$FAI_CONFIGDIR</tt> with the hostname
+	  <tt>nfs://`hostname`/$FAI_CONFIGDIR</tt> with the host name
 	  determined on the install server. Remember that this directory
 	  must be exported to all install clients, so that all files
 	  can be read by root. </p></item>
@@ -465,7 +490,7 @@ These are important variables in &fc;:
 	    <tag><var>FAI_DEBMIRROR</var></tag>
 	    <item>
 	      <p> If you have NFS access to your local Debian mirror,
-	      specify the remote filesystem. It will be mounted to
+	      specify the remote file system. It will be mounted to
 	      <var>$MNTPOINT</var>, which must also be defined. It's
 	      not needed if you use access via FTP or HTTP.</p>
 	      </item>
@@ -474,23 +499,26 @@ These are important variables in &fc;:
 
 The content of <file>/etc/fai/apt/sources.list</file> and <var>FAI_DEBMIRROR</var>
 are used by the install server and also by the clients. If your
-install server has multiple network cards and different hostnames for
+install server has multiple network cards and different host names for
 each card (as for a Beowulf server), use the install
 server name which is known by the install clients.<p>
 
+<!--MT: FAI uses debootstrap and apt-get-->
 FAI uses <manref name="apt-get" section="8"> to create the nfsroot
-filesystem in <file>/srv/fai/nfsroot</file>. It needs about
+file system in <file>/srv/fai/nfsroot</file>. It needs about
 &nfsrootsize; of free disk space. After editing &fc; and &mfnc; call
 <prgn>fai-setup</prgn>.
 
+<!--MT: smaller font, if possible-->
 &faisetup;
 
 <p>
-A complete log of fai-setup is available on the fai web page.
-It's important that you will see both lines that are marked with an
-asterisk. Otherwise something went wrong. If you'll get a lot of blank
+A complete log of fai-setup is available on the FAI web page.
+It's important that you find both lines that are marked with an
+asterisk in your output. Otherwise something went wrong. If you'll get a lot of blank
 lines, it's likely that you are using <tt>konsole</tt>, the X terminal
 emulation for KDE which has a bug. Try again using <tt>xterm</tt>.
+<!--MT: this problem should be debugged-->
 <p>
 The warning messages from dpkg about dependency problems can be ignored.
 If you have problems running fai-setup, they usually stem from 
@@ -526,6 +554,7 @@ commands, depending on which NFS server you are using:
 faiserver# /etc/init.d/nfs-kernel-server reload
 faiserver# /etc/init.d/nfs-user-server reload
 </example>
+<!--MT: do we still support the nfs-user-server?-->
 
 <p>
 The setup also creates the account <tt>fai</tt> (defined by <var>$LOGUSER</var>)
@@ -538,6 +567,7 @@ account. If you boot from network card, you should change the primary
 group of this account, so this account has write permissions to
 <file>/srv/tftp/fai</file> in order to change the symbolic links to the kernel
 image which is booted by a client.
+<!--MT: the log files - which ones? Give a little explanation here-->
 
 
 <p>
@@ -553,11 +583,11 @@ name="make-fai-nfsroot" section="8">. If you only like to install a new kernel t
 the nfsroot add the flags <tt>-k</tt> or <tt>-K</tt> to
 <tt>make-fai-nfsroot</tt>. This will not recreate your nfsroot, but
 only updates your kernel and kernel modules inside the nfsroot or add
-additional poackages into the nfsroot.
+additional packages into the nfsroot.
 
 <sect1 id=troublefaisetup> Troubleshooting the setup<p>
 
-The setup of FAI adds the FAI account, exports filesystems and calls
+The setup of FAI adds the <tt>fai</tt> account, exports file systems and calls
 <manref name="make-fai-nfsroot" section="8">. If you call
 <tt>make-fai-nfsroot -v</tt> you
 will see more messages. When using a local Debian mirror, it's
@@ -567,11 +597,11 @@ NFS. If this mount fails, check <file>/etc/exports</file> and <file>/etc/netgrou
 
 <chapt id="booting">Preparing booting <p> 
 
-Before booting for the first time, you have to choose which medium you
+Before booting the client for the first time, you have to choose which medium you
 use for booting. You can use the boot floppy or configure the computer
-to boot via network card using a boot PROM, which is much smarter. 
+to boot via network card using a boot PROM. 
 Also booting from CD-ROM or from an USB stick is easy to set up. The
-prefered method for booting is using PXE. PXE is the Preboot Execution
+preferred method for booting is using PXE. PXE is the Preboot Execution
 Environment which most modern network cards support.
 
 
@@ -584,6 +614,7 @@ Boot Agent (MBA) software<footnote> <p><httpsite>support.3com.com/</httpsite>
 can enter the MBA setup by typing <tt>Ctrl+Alt+B</tt> during boot. The
 setup should look like this:
 
+<!--MT: smaller font, if possible-->
 <example>
 Managed PC Boot Agent (MBA) v4.00
 (C) Copyright 1999 Lanworks Technologies Co. a subsidiary of 3Com Corporation
@@ -611,7 +642,7 @@ the BIOS of your computer. For using the BOOTP protocol
 choose <tt>TCP/IP</tt> and set the protocol to <tt>BOOTP</tt>. 
 
 When using BOOTP, you have to make a
-symbolic link from the hostname of your client to the appropriate
+symbolic link from the host name of your client to the appropriate
 kernel image in <file>/srv/tftp/fai</file>. You can also use the utility
 <prgn>tlink</prgn> (<file>/usr/share/doc/fai-doc/examples/utils/tlink</file>) to create
 this link. The file
@@ -624,6 +655,7 @@ installimage_3com image. I had this problem using netboot 0.8.1-4 and
 Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001 but only on an
 Athlon computer.
 </p></footnote>
+<!--MT: imggen: which package, what is it good for?-->
 
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM<p>
 Most modern bootable network cards support the PXE boot environment.
@@ -655,12 +687,15 @@ name="fai-chboot" section="8"> you can
 define which kernel will be loaded by the PXE Linux loader and
 which additional parameters are passed to this kernel. You should
 read the manual pages, which give you some good examples.
+<!--MT: $TFTPROOT only tells FAI where the tftpd directory is found, but what
+you are saying here rather refers to the entry in inetd.conf-->
 
 See <file>/usr/share/doc/syslinux/pxelinux.doc</file> for more
 information about how to boot such an environment. The PXE
 environment uses the original kernel image (not the netboot image made
 by mknbi-linux) which is copied to
 <file>/srv/tftp/fai/vmlinuz-install</file>.
+<!--MT: mknbi-linux has not been mentioned before, what does it do?-->
 
 
 <sect id="bootfloppy">Creating a boot floppy
@@ -672,10 +707,11 @@ will provide the PXE feature for your network card. So you can
 use DHCP and TFTP to get the install kernel that was created with
 <manref name="mknbi-linux" section="8">.  A lot of ethernet cards
 support booting via ethernet if a special boot EPROM is inserted or
-booted from floppy <httpsite>rom-o-matic.net/</httpsite>. In
+booted from floppy provided by <httpsite>rom-o-matic.net/</httpsite>. In
 depth documentation about booting via ethernet may be found at
 <httpsite>www.etherboot.org</httpsite>.
 
+<!--MT: not all install clients, but only those of a single architecture-->
 The second option is to boot via floppy disk that is created with the
 command <manref name="make-fai-bootfloppy" section="8">. Since there's
 no client specific 
@@ -688,7 +724,7 @@ page for <manref name="make-fai-bootfloppy" section="8">. If you have
 no BOOTP or DHCP server, supply the network configuration as kernel
 parameters. The format is
 <p>
-<tt>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;
+<tt>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;host-name&gt;:&lt;device&gt;:&lt;autoconf&gt;
 </tt>
 for setting up the network and
 <tt>nfsroot=[&lt;server-ip&gt;:]&lt;root-dir&gt;[,&lt;nfs-options&gt;]</tt>
@@ -705,7 +741,7 @@ It's possible to perform an automatic installation from CD-ROM without
 an install server. The CD-ROM contains all data needed for the
 installation. The command <manref name="fai-cd" section="8"> puts the
 nfsroot, the configuration space and a subset of the Debian mirror
-onto a CD-ROM. The partitial mirror is created using the command
+onto a CD-ROM. The partial mirror is created using the command
 <manref name="fai-mirror" section="1"> which contains all packages
 that are used by the classes used in your configuration space.
 
@@ -734,7 +770,7 @@ easily collect all Ethernet addresses of the network cards.
 <p>
 
 You have to collect all Ethernet (MAC) addresses of the install clients
-and assign a hostname and IP address to each client. To collect 
+and assign a host name and IP address to each client. To collect 
  all MAC addresses, now boot all your install clients. While the
 install clients are booting, they send broadcast packets to the LAN. You
 can log the MAC addresses of these hosts by running the following
@@ -750,13 +786,13 @@ of all unique MAC addresses with these commands:
 
 <example># perl -ane 'print "\U$F[0]\n"' /tmp/mac.lis|sort|uniq</example>
 
-After that, you only have to assign these MAC addresses to hostnames
+After that, you only have to assign these MAC addresses to host names
 and IP addresses (<file>/etc/ethers</file> and <file>/etc/hosts</file>
 or corresponding NIS maps). With this information you can configure
 your <prgn>BOOTP</prgn> or <prgn>DHCP</prgn> daemon (see the section
 <ref id="bootptab">). I recommend to write the MAC addresses (last
 three bytes will suffice if you have network cards from the same
-vendor) and the hostname in the front of each chassis.
+vendor) and the host name in the front of each chassis.
 
 <sect id=bootptab>Configuration of the BOOTP daemon<p>
 
@@ -789,8 +825,9 @@ An example configuration for the BOOTP daemon can be found in
 demohost:ha=0x00105A240012:bf=demohost:tc=.failocal:T172="verbose sshd createvt debug":
 ant01:ha=0x00105A000000:bf=ant01:tc=.failocal:T172="sshd":
 </example>
+<!--MT: break the lines of the host entries as well-->
 
-Insert one line for each install client at the end of this file as
+Insert one entry for each install client at the end of this file as
 done for the hosts <em>demohost</em> and <em>ant01</em>. Replace the string
 <tt>FAISERVER</tt> with the name of your install server. If the
 install server has multiple network cards and host names, use the host
@@ -813,7 +850,7 @@ The tag for time servers (<tt>nt</tt>) are
 optional. Tags with prefix <tt>T</tt> (starting from T170) are generic
 tags which are used to transfer some FAI specific data to the
 clients<footnote>T170=FAI_LOCATION (now defined in
-<file>fai.conf</file> and T171=FAI_ACTION. You can define theses
+<file>fai.conf</file>) and T171=FAI_ACTION. You can define theses
 variables in a class/*.var script. But for backward compatibility, you
 can define theses variables also from a BOOTP or DHCP
 server.</footnote>
@@ -857,15 +894,17 @@ enabled in <file>inetd.conf</file>:
 <example># bootpd -d7</example>
 
 <sect id="bootdhcp">Configuration of the DHCP daemon <p>
-An example for <manref name="dhcp.conf" section="5"> is available in
+An example for <manref name="dhcpd.conf" section="5"> is available in
 <file>/usr/share/doc/fai-doc/examples/etc</file>, which is working with
 version 3.x of the DHCP daemon. Start using this example
 and look at all options used therein. 
+<!--MT: give the full path to the dhcpd.conf file-->
 
 One issue to bear in mind when configuring your DHCP daemon is that the
 daemon needs to supply the nfsroot path to the client because
 the kernel uses a path different from 
 <file>/srv/fai/nfsroot</file> by default.
+<!--MT: nfsroot may also be set using the PXE config-->
 
 If you make any changes
 to the DHCP daemon configuration, you must restart the daemon.
@@ -903,14 +942,14 @@ network card. When booting from network card with PXE you will see:
 When the copyright message of FAI is shown, the install client has mounted
 the nfsroot<footnote> <p><file>/srv/fai/nfsroot</file> from the
 install server</p> </footnote> to the clients' root directory
-<file>/</file>. This is the whole filesystem for the client at this
+<file>/</file>. This is the whole file system for the client at this
 moment. 
 
 After <tt>task_confdir</tt> is executed, the configuration space is
 mounted or received from a CVS repository.
 
 Before the installation is started (<var>FAI_ACTION=install</var>) the computer
-beeps three times. So, be watchful when you hear three beeps
+beeps three times. So, be careful when you hear three beeps
 but you do not want to perform an installation!
 
 <sect1 id=booterror>Troubleshooting the boot messages<p>
@@ -1003,15 +1042,16 @@ links are created. The symlink <file>last</file> points to the log
 directory of the last fai action performed. The symlinks
 <file>last-install</file> and <file>last-sysinfo</file> point to the
 directory with of the last corresponding action.
+<!--MT: I think it should be <tt>~$LOGUSER/$HOSTNAME/$FAI_ACTION-`DATE`/</tt>-->
 
 Examples of the log
 files can be found on the FAI homepage.
 </footnote>
 
 <p>
-A very nice feature is that FAI mounts all filesystems it finds on
+FAI mounts all file systems it finds on
 the local disks read only. It also tells you on which partition a file
-<file>/etc/fstab</file> exists. When only one filesystem table is found, the
+<file>/etc/fstab</file> exists. When only one file system table is found, the
 partitions are mounted according to this information. Here's an
 example:
 <example>
@@ -1037,7 +1077,7 @@ udev                10240        76     10164   1% /target/dev
 
 <strong>This method can be used as a rescue environment!</strong> In the
 future it will be possible to make backups or restore data to existing
-filesystems. If you need a filesystem with read-write access use the
+file systems. If you need a file system with read-write access use the
 <prgn>rwmount</prgn> command:
 
 <example>demohost:~# rwmount /target/home</example> 
@@ -1067,12 +1107,13 @@ has booted on the install clients.
 	    <item> <p>Define classes</p> </item>
 	    <item> <p>Define variables</p> </item>
 	    <item> <p>Partition local disks</p> </item>
-	    <item> <p>Create and mount local filesystems</p> </item>
+	    <item> <p>Create and mount local file systems</p> </item>
 	    <item> <p>Install software packages</p> </item>
 	    <item> <p>Call site specific configuration scripts</p> </item>
 	    <item> <p>Save log files</p> </item>
 	    <item> <p>Reboot the new installed system</p> </item>
 	  </enumlist>
+    <!--MT: debconf, update base missing-->
 
 You can also define additional programs or scripts
 which will be run on particular
@@ -1092,7 +1133,7 @@ installing several clients simultaneously.
 
 <example>
 Athlon XP1600+    , 896MB,SCSI disk,   1 GB software  6 min
-AMD-K7, 500MHz    , 320MB, IDE disk, 780 MB software 12 min
+AMD-K7  500MHz    , 320MB, IDE disk, 780 MB software 12 min
 PentiumPro 200MHz , 128MB, IDE disk, 800 MB software 28 min
 Pentium III 850MHz, 256MB, IDE disk, 820 MB software 10 min
 Pentium III 850MHz, 256MB, IDE disk, 180 MB software  3 min
@@ -1108,25 +1149,26 @@ ends. The fai monitor daemon prints this messages to standard
 output. In the future, there will be a graphical frontend available.
 
 <sect id=bootkernel>Booting the kernel<p>
-The install client receives and loads the kernel and initial ramdisk. The kernel
-boots up and load the ramdisk. It does some hardware detection and
+The install client receives and loads the kernel and initial RAM disk. The kernel
+boots up and load the RAM disk. It does some hardware detection and
 then tries to figure where the root file system is located. When
 booting from network, this is determined by parameters from additional
 kernel parameters. When booting from CD-ROM or USB stick the kernel
-and initial ramdisk probes removable devices and tries to figure out
+and initial RAM disk probes removable devices and tries to figure out
 where the root file system is located. This may also be a compressed
 file system (using squashfs).
 
 After the root file system is mounted read only, it is made writeable
-by mounting a ramdisk via unionfs on top of it. So it's possible for
+by mounting a RAM disk via unionfs on top of it. So it's possible for
 programms or daemons to write to files inside a read-only mounted file system.
 We are using the package <tt>live-initramfs</tt> to mount the nfsroot and
-to make this file system writeable using the unionfs.
+to make this file system writeable using unionfs.
 
 <sect id=isetup>Set up FAI<p>
+<!--MT: CVS, SVN missing-->
 
 After the install client has booted, only the script
-<file>/usr/sbin/fai</file><footnote><p>Since the root filesystem on
+<file>/usr/sbin/fai</file><footnote><p>Since the root file system on
 the clients is mounted via NFS, <prgn>fai</prgn> is located in
 <file>/srv/fai/nfsroot/usr/sbin</file> on the install server.</p>
 </footnote> is executed. This is the main script which controls the
@@ -1150,6 +1192,7 @@ print to the standard output are interpreted as class names.
 Scripts ending in <tt>.source</tt>
 are sourced, so they can define new classes by adding these classes to
 the variable <var>newclasses</var> (see <file>20-hwdetect.source</file> for an
+<!--MT: 20-hwdetect.source does not really use newclasses-->
 example). The output of these scripts is ignored.
 These classes are defined for the
 install client. You can also say this client belongs to these
@@ -1171,12 +1214,12 @@ others. By default, <var>FAI_ACTION</var> is defined via the command
 <manref name="fai-chboot" section="8">.
 
 
-<sect id=ipartition>Partitioning local disks, creating filesystems<p>
+<sect id=ipartition>Partitioning local disks, creating file systems<p>
 
 For disk partitioning exactly one disk configuration file from
 <file>/fai/disk_config</file> is selected using classes. This file
 describes how all the local disks will be partitioned, where
-filesystems should be created (and their types like ext2, ext3,
+file systems should be created (and their types like ext2, ext3,
 reiserfs), and how they are mounted. It's also possible to preserve
 the disk layout or to preserve the data on certain partitions. It's
 done by the command <prgn>setup_harddisks</prgn>, which uses
@@ -1184,16 +1227,16 @@ done by the command <prgn>setup_harddisks</prgn>, which uses
 file is described in <ref id="diskconfig">.
 
 <p>
-During the installation process all local filesystems are mounted
+During the installation process all local file systems are mounted
 relative to <file>/target</file>. For example
 <file>/target/home</file> will become <file>/home</file> in the
 new installed system.
 
 <sect id=ipackages>Installing software packages<p>
 
-When local filesystems are created, they are all empty (except for
+When local file systems are created, they are all empty (except for
 preserved partitions). Now the Debian base system and all requested
-software packages are installed on the new filesystems. First the
+software packages are installed on the new file systems. First the
 base archive is unpacked, then the command
 <manref name="install_packages" section="8"> installs all packages using <manref
 name="apt-get" section="8"> or <manref name="aptitude" section="1">
@@ -1240,7 +1283,7 @@ You can use other methods to save logs to the remote server. The currently
 selected method is defined by the <var>$FAI_LOGPROTO</var> variable in 
 file &fc;:
 <taglist>
- <tag>rsh</tag> <item><p>Use the rcp command to copythe log files to
+ <tag>rsh</tag> <item><p>Use the rcp command to copy the log files to
  the log server.</p></item>
 
  <tag>ftp</tag><item><p>
@@ -1273,10 +1316,10 @@ for how to change the boot device.
 
 <chapt id=plan>Plan your installation, and FAI installs your plans<p>
 <p>
-Before starting your installation, you should spend much time in
+Before starting your installation, you should spend a lot of time in
 planning your installation. When you're happy with your installation
 concept, FAI can do all the boring, repetitive tasks to turn your plans
-into practice. FAI can't do good installations if your concept is
+into reality. FAI can't do good installations if your concept is
 imperfect or lacks some important details. Start planning the
 installation by answering the following
 questions:
@@ -1284,7 +1327,7 @@ questions:
 <taglist>
   <tag></tag> <item> <p>Will I create a Beowulf cluster, or do I
   have to install some desktop machines?</p> </item>
-  <tag></tag> <item> <p>How does my LAN topology looks like?</p> </item>
+  <tag></tag> <item> <p>What does my LAN topology look like?</p> </item>
   <tag></tag> <item> <p>Do I have uniform hardware?
   Will the hardware stay uniform in the future?</p> </item>
   <tag></tag> <item> <p>Does the hardware need a special kernel?</p> </item>
@@ -1292,14 +1335,17 @@ questions:
   <tag></tag> <item> <p>How should the local hard disks be partitioned?</p> </item>
   <tag></tag> <item> <p>Which applications will be run by the users?</p> </item>
   <tag></tag> <item> <p>Do the users need a queueing system?</p> </item>
+  <!--MT: what is a queueing system?-->
   <tag></tag> <item> <p>What software should be installed?</p> </item>
   <tag></tag> <item> <p>Which daemons should be started, and what
   should the configuration for these look like?</p> </item>
-  <tag></tag> <item> <p>Which remote filesystems should be mounted?</p> </item>
+  <tag></tag> <item> <p>Which remote file systems should be mounted?</p> </item>
   <tag></tag> <item> <p>How should backups be performed?</p> </item>
   <tag></tag> <item> <p>Do you have sufficient power supply?</p> </item>
+  <!--MT: not a problem of using FAI-->
   <tag></tag> <item> <p>How much heat do the cluster nodes produce and how are
   they cooled?</p> </item>
+  <!--MT: not a problem of using FAI-->
 </taglist>
 
 You also have to think about user accounts, printers, a mail system, cron jobs,
@@ -1310,7 +1356,7 @@ that knowledge is power, and it's up to you to use it. Installation
 and administration is a process, not a product. FAI can't do things
 you don't tell it to do.
 <p>
-But you need not to start from scratch. Look at all files and scripts
+But you need not start from scratch. Look at all files and scripts
 in the configuration space. There are a lot of things you can use for
 your own installation.
 
@@ -1337,7 +1383,7 @@ several files:
 	   define classes and variables and to load kernel modules.</p> </item>
 
 	  <tag><tt>disk_config/</tt></tag> <item> <p>Configuration
-	  files for disk partitioning and filesystem creation.</p> </item>
+	  files for disk partitioning and file system creation.</p> </item>
 
 	  <tag><tt>debconf/</tt></tag> <item> <p>This directory holds
 	  all <manref name="debconf" section="8"> data. The format is
@@ -1403,7 +1449,7 @@ then edit the configuration with a normal user account.
 </example>
 
 These files contain simple configuration for some example
-hosts. Depending on the hostname used, your computer will be
+hosts. Depending on the host name used, your computer will be
 configured as follows:
 
 <taglist>  
@@ -1414,7 +1460,7 @@ configured as follows:
    <tag>gnomehost</tag>  <item> <p>A GNOME desktop is installed, and
    the account demo is created. <p>
 
-   <tag>other hostnames</tag>  <item> Hosts with other hostname will
+   <tag>other host names</tag>  <item> Hosts with other host name will
    most notably use the classes FAIBASE, DHCPC and GRUB.<p>
 
 </taglist>
@@ -1424,7 +1470,7 @@ installation!
 
 <sect id=tasks>The default tasks<p>
 
-After the kernel has booted, it mounts the root filesystem via NFS
+After the kernel has booted, it mounts the root file system via NFS
 from the install server and <manref name="init" section="8"> starts the script
 <file>/usr/sbin/fai</file>. This script controls the
 sequence of the installation. No other scripts in
@@ -1435,6 +1481,7 @@ The installation script uses many subroutines, which are defined in
 <file>/usr/share/fai/subroutines</file>, and an operating system specific
 file <footnote><file>/usr/share/fai/subroutines-linux</file> for Linux,
 <file>/usr/share/fai/subroutines-sunos</file> for Solaris.</footnote>.
+<!--MT: no more Solaris-->
 All important tasks of the
 installation are called via the subroutine <tt>task</tt>
 appended by the name of the task as an option (e.g. <tt>task
@@ -1457,6 +1504,8 @@ are defined. The DNS resolver configuration file is created.
 The location of the configuration space is defined by the variable
 <var>$FAI_CONFIG_SRC</var>. You can use NFS, cvs or svn to access the
 configuration space. See section <ref id="isetup"> for how to set the variable.
+<!--MT: there is no info about that at id="isetup"-->
+<!--MT: config is also mounted/checked out in this task-->
 <p>
 After that, the file
 <file>/fai/hooks/subroutines</file> is sourced if it exists. Using
@@ -1514,6 +1563,7 @@ definition of FAI's subroutines.
       definitions for the root and boot partition and device (<var>$ROOT_PARTITION,
       $BOOT_PARTITION, $BOOT_DEVICE</var>) to
       <file>/tmp/fai/disk_var.sh</file> and creates an <file>fstab</file> file.</p></item>
+      <!--MT: file systems are created here-->
 
       <tag>mountdisks</tag> <item><p>Mounts the created partitions
       according to the created <file>/tmp/fai/fstab</file> file relative to
@@ -1548,13 +1598,13 @@ definition of FAI's subroutines.
 
       <tag>instsoft</tag> <item><p>Installs the desired software
       packages using class files in
-      <file>/fai/package_config</file>.</p> </item>
+      <file>/fai/package_config/</file>.</p> </item>
 
 	<tag>configure</tag> <item><p>Calls scripts in
       <file>/fai/scripts/</file> and its subdirectories for every
       defined class.</p> </item>
 
-      <tag>finish</tag> <item><p>Unmounts all filesystems in the
+      <tag>finish</tag> <item><p>Unmounts all file systems in the
       new installed system and removes diversions of files
       using the command <prgn>fai-divert</prgn>.</p></item>
 
@@ -1570,6 +1620,7 @@ definition of FAI's subroutines.
       the account <var>$LOGUSER</var> on <var>$LOGSERVER</var> (defaults to
       the install server). Currently the file <file>error.log</file>
       will not be copied to the log server.</p> </item>
+      <!--MT: why is error.log not copied?-->
 
  </taglist>
 
@@ -1577,7 +1628,7 @@ definition of FAI's subroutines.
 <sect id=s1>The setup routines of the install clients<p>
 
 After the subroutine <prgn>fai_init</prgn> has done some basic
-initialization (create ramdisk, read <file>fai.conf</file> and all
+initialization (create RAM disk, read <file>fai.conf</file> and all
 subroutines definitions, set path, print copyright notice), the setup
 continues by calling the task <tt>confdir</tt> and the task
 <tt>setup</tt>. The command <prgn>get-boot-info</prgn> is called to
@@ -1626,6 +1677,7 @@ known:
 
 
 <sect id=classc> The class concept<p>
+<!--MT: as marked above, this section should be put in chapter 1-->
 
 Classes determine which configuration file to choose from a list of
 available templates. Classes are used in all further tasks of the
@@ -1634,7 +1686,7 @@ client searches the list of defined classes and uses all
 configuration files that match a class name. It's also possible to use
 only the configuration file with the highest priority since the order
 of classes define the priority from low to high. There are some
-predefined classes (DEFAULT, LAST and the hostname), but classes can
+predefined classes (DEFAULT, LAST and the host name), but classes can
 also be listed in a file or defined dynamically by scripts. So it's
 easy to define a class depending on the subnet information or on some
 hardware that is available on the install client.
@@ -1678,7 +1730,7 @@ the configuration files if the existing classes suffice for your needs.
 There are different possibilities to define classes:
 <enumlist>
      <item><p>Some default classes are defined for every host:
-     DEFAULT, LAST and its hostname.</p> </item>
+     DEFAULT, LAST and its host name.</p> </item>
      <item><p>Classes may be listed within a file.</p> </item>
      <item><p>Classes may be defined by scripts.</p> </item>
  </enumlist>
@@ -1686,13 +1738,13 @@ There are different possibilities to define classes:
 The last option is a very nice feature, since these scripts will
 define classes automatically. For example, several classes are
 defined only if certain hardware is identified. We use Perl and shell
-scripts to define classes. All names of classes, except the hostname,
+scripts to define classes. All names of classes, except the host name,
 are written in uppercase. They must not contain a hyphen, a hash or a
 dot, but may contain underscores. A description of all classes can be
 found in <file>/usr/share/doc/fai-doc/classes_description.txt</file>.
 <p>
 
-Hostnames should rarely be used for the configuration files in the
+host names should rarely be used for the configuration files in the
 configuration space. Instead, a class should be defined and
 then added for a given host. This is because most of the time the
 configuration data is not specific for one host, but can be shared
@@ -1703,7 +1755,7 @@ among several hosts.
 The task <em>defclass</em> calls the script <manref
 name="fai-class" section="1"> to define classes. Therefore, scripts
 matching <tt>[0-9][0-9]*</tt> in <tt>/fai/class</tt> are
-executed. Additionally, a file with the hostname may contain a list of
+executed. Additionally, a file with the host name may contain a list of
 classes. 
 For more information on defining class, read the manual pages for <manref
 name="fai-class" section="1">. <p>
@@ -1742,7 +1794,7 @@ some specific hardware is found, it can also define a new class for it.
 You can find messages from modprobe in <file>/tmp/fai/kernel.log</file> and
 on the fourth console terminal by pressing <tt>Alt-F4</tt>.<p>
 
-<sect id=classvariables> Defining Variables<p>
+<sect id=classvariables> Defining variables<p>
 
 The task <tt>defvar</tt> defines the variables for the install
 client. Variables are defined by scripts in
@@ -1790,7 +1842,7 @@ for your installation:
 
 <sect id=diskconfig>Hard disk configuration<p> 
 
-The script <prgn>setup_harddisks.pl</prgn> partitions and formats
+The script <prgn>setup_harddisks</prgn> partitions and formats
 the local disks. It uses all configuration files in
 <file>/fai/disk_config/</file> which are also defined as classes.
 Lines beginning with # are comments. The config file
@@ -1799,7 +1851,7 @@ one hard disk (IDE or SCSI), which most installations should be able to adapt. I
 can't partition your hard disk using this script <footnote><p>Currently
 this script uses the command <tt>sfdisk(8)</tt>, which isn't available
 on SUN SPARC, IA64 and PowerPC.</p> </footnote>, use a hook instead. The hook should
-write the new partition table, create the filesystems and create the
+write the new partition table, create the file systems and create the
 files <file>/tmp/fai/fstab</file> and <file>/tmp/fai/disk_var.sh</file>, which
 contains definitions of boot and root partitions.
 
@@ -1844,21 +1896,21 @@ the mount options by a semicolon -- can be added.
 <taglist>
   <tag>Type</tag> <item> <p>There are two types of partitions: primary
   and logical. Primary partitions are bootable, but there is a maximum
-  of four primary partitions on each disk. The Linux root filesystem
+  of four primary partitions on each disk. The Linux root file system
   must be of this type.
   <p>
   All other partitions are called logical. Because logical partitions
   are gathered internally in one big primary partition, only three
   primary partitions can be used if logical partitions are defined.
-  Normally only one primary partition for the root filesystem is
+  Normally only one primary partition for the root file system is
   created and all others are logical, like <tt>disk1</tt> in the example above.
 
   <tag>Mount point</tag> <item> <p> The mount point is the full path
-  (beginning with a slash) for the filesystem. The value <tt>swap</tt>
+  (beginning with a slash) for the file system. The value <tt>swap</tt>
   defines a Linux swap partition.  Both types will be automatically
-  added to <file>/etc/fstab</file>.  A dash <tt>-</tt> indicates that
+  added to <file>/etc/fstab</file>.  A dash (<tt>-</tt>) indicates that
   the partition will not be mounted and can be used for other types of
-  filesystems (FAT, NTFS, UFS, MINIX, ...)
+  file systems (FAT, NTFS, UFS, MINIX, ...)
 
   <tag>Size</tag> <item> <p> This is the size of the partition in
   megabytes. This value is rounded up to fit to a cylinder
@@ -1870,7 +1922,7 @@ the mount options by a semicolon -- can be added.
 	"-300" sets a minimum of 1MB and a 300MB maximum
   </example>
   <p>
-  By default, a new filesystem (currently of type ext2 or swap) will be
+  By default, a new file system (currently of type ext2 or swap) will be
   created, and all data on the partition is lost.  The meaning of
   <tt>preserve&lt;no&gt;</tt> will be described later.
   <p>
@@ -1888,17 +1940,17 @@ the mount options by a semicolon -- can be added.
   separated extra options list. The following options are known:
   <example>
 boot         : Make this partition the boot-partition (the
-               Linux root filesystem is the default).
+               Linux root file system is the default).
 -i &lt;bytes&gt;   : bytes per inode (ext2/3 only)
 -m &lt;blocks&gt;  : reserved blocks percentage (ext2/3 only)
--j           : Create the filesystem with an ext3 journal.
+-j           : Create the file system with an ext3 journal.
 -c           : Check for bad blocks.
 ext2         : Flag as ext2 instead of auto in /etc/fstab.
 ext3         : Flag as ext3 instead of auto in /etc/fstab.
 swap         : swap partition
-dosfat16     : DOS 16 bit FAT filesystem
-winfat32     : Win95 FAT32 filesystem
-reiser       : Create a ReiserFS filesystem, not an ext2.
+dosfat16     : DOS 16 bit FAT file system
+winfat32     : Win95 FAT32 file system
+reiser       : Create a ReiserFS file system, not an ext2.
 xfs          : XFS
 format       : Always format even if preserve is specified.
 writable     : Mounts a preserved partition writable.
@@ -1919,7 +1971,7 @@ ext2        : An ext2 fs flagged as ext2 in the fstab.
 ext3        : An ext2 fs flagged as ext3 in the fstab. !!BAD!!
   </example>
   <p>
-  Using <tt>auto</tt> in the fstab for ext3 filesystems enables a
+  Using <tt>auto</tt> in the fstab for ext3 file systems enables a
   non-ext3-enabled kernel or tool to cope with these partitions.
 </taglist>
 
@@ -1975,8 +2027,14 @@ specified) the root partition (<file>/</file>) will become the boot
 partition. <prgn>setup_harddisks</prgn> will write some variables
 containing the information about boot partition and boot device to
 <file>/tmp/fai/disk_var.sh</file>.
+<!--MT: I think you did not say how to preserve data-->
 
 <sect id=packageconfig>Software package configuration<p>
+<!--MT: This section is pretty much a chaos:
+  - which commands belong to which package tools
+  - you say something about PRELOADRM and PRELOAD commands, but give no example
+    and don't list them otherwise
+-->
 The script <prgn>install_packages</prgn> installs the selected software
 packages. It uses all configuration files in <file>/fai/package_config</file>
 whose file name matches a defined class. The syntax is very
@@ -2005,7 +2063,7 @@ a2ps                    install
 
 Comments are starting with a hash (#) and are ending at the end of
 the line. Every command begins with the word <tt>PACKAGES</tt>
-followed by a command name. The command defines which commnd will be
+followed by a command name. The command defines which command will be
 used to install the packages named after this command. The list of all
 available commands can be listed using <tt>install_packages -H</tt>.
 Supported package tools are: <tt>aptitude, apt-get, smart, y2pmsh,
@@ -2067,7 +2125,7 @@ shouldn't be removed, use the command <tt>PRELOAD</tt> instead.
 It's possible to append a list of class names after the command for
 apt-get. So this <tt>PACKAGE</tt> command will only be executed when
 the corresponding class is defined. So you can combine many small
-files into the file DEFAULT. <tt>WARNING!</tt> Use this feature only
+files into the file DEFAULT. WARNING! Use this feature only
 in the file DEFAULT to keep everything simple. See this file for some
 examples.
 
@@ -2091,7 +2149,7 @@ The command <manref name="fai-do-scripts" section="1"> is called to
 execute all scripts in this directory. If a directory with a class
 name exists, all scripts matching <file>[0-9][0-9]*</file> are executed in
 alphabetical order. So it's possible to use scripts of different
-lanuages (shell, cfengine, Perl,..) for one class.
+languages (shell, cfengine, Perl,..) for one class.
 
 <sect1 id=shell>Shell scripts<p>
 
@@ -2132,6 +2190,8 @@ Changing the boot sequence is normally done in the BIOS setup. But
 you can't change the BIOS from a running Linux system as far as I
 know. If you know how to perform this, please send me an email. But there's
 another way of swapping the boot device of a running Linux system.
+<!--MT: recently, there has been some discussion on linux-fai, add a link to the
+archives-->
 <p>
 So, normally the boot sequence of the BIOS will remain unchanged and
 your computer should always boot first from its network card and the
@@ -2196,7 +2256,7 @@ called, if the class is defined for the install client. For example,
 the hook <file>partition.DISKLESS</file> is called for every client
 belonging to the class <tt>DISKLESS</tt> before the local disks would
 be partitioned. If it should become a diskless client, this hook
-can mount remote filesystems via NFS and create a <tt>/tmp/fai/fstab</tt>.
+can mount remote file systems via NFS and create a <tt>/tmp/fai/fstab</tt>.
 After that, the installation process will not try to partition and
 format a local hard disk, because a file <file>/tmp/fai/fstab</file>
 already exists.
@@ -2209,12 +2269,13 @@ be Bourne shell scripts and are sourced. So it's possible to
 redefine variables for the installation scripts.
 <p>
 
-In the first part of fai, all hooks with prefix <tt>confdir</tt> are called.
+In the first part of FAI, all hooks with prefix <tt>confdir</tt> are called.
 Since the configuration directory <file>/fai</file> is mounted in the
 default task <tt>confdir</tt>, the hooks for this task are the only
 hooks located in <var>$nfsroot</var><file>/fai/hooks</file> on the
 install server. All other hooks are found in
 <file>$FAI_CONFIGDIR/hooks</file> on the install server.
+<!--MT: what about softupdates?-->
 
 All hooks that are called before classes are defined can only use the
 following classes: <tt>DEFAULT $HOSTNAME LAST</tt>. If a hook for
@@ -2245,7 +2306,7 @@ possible spoofing host.</p></item>
 
 <item> <p>Do not mount the configuration directory, instead get a
 compressed archive via HTTP or from floppy disk and extract it into a
-new ram disk, then redefine <var>$FAI_LOCATION</var>.</p></item>
+new RAM disk, then redefine <var>$FAI_LOCATION</var>.</p></item>
 
 <item> <p>Load kernel modules before classes are defined
 in <file>/fai/class</file>. </p></item>
@@ -2270,7 +2331,7 @@ several log files made by <manref name="tftpd" section="8">,
 <example>egrep "tftpd|bootpd|dhcpd" /var/log/*</example>
 
 If the installation process finishes, the hook
-<file>faiend.LAST</file> searches all log files for common errors and
+<file>savelog.LAST.source</file> searches all log files for common errors and
 writes them to the file <file>error.log</file>. So, you should first
 look into this file for errors. Also the file <file>status.log</file>
 give you the exit code of the last command executed in a script. To be
@@ -2289,6 +2350,7 @@ questions. Sample log files from successfully installed computers are
 available on the FAI homepage.
 
 <chapt id=beowulf>How to build a Beowulf cluster using FAI<p>
+<!--MT: I did not read this chapter-->
 
 This chapter describes the details about building a Beowulf
 cluster using &dgl; and FAI. This chapter was written for FAI
@@ -2653,13 +2715,13 @@ By calling
 <example>fai &lt;options&gt; dirinstall &lt;target-directory&gt;</example>
 and using either the option <tt>-c &lt;classes&gt;</tt> or
 <tt>-N</tt> you get a FAI installation, without the partitioning
-action, right into the target directory. The hostname for the target
-installation can be specified using <tt>-u &lt;hostname&gt;</tt>
+action, right into the target directory. The host name for the target
+installation can be specified using <tt>-u &lt;host-name&gt;</tt>
 
 This, for example, can be used to combine FAI with the tool <tt>xen-tools</tt>, which 
 helps you to build Xen guest domains. <tt>xen-tools</tt> are very nice for 
-generating config files and block devices for new guests based on simple
-commands and/or config files,  but they can only assign one role per installation
+generating configuration files and block devices for new guests based on simple
+commands and/or configuration files,  but they can only assign one role per installation
 for customization.
 FAI-users need and want more, as they are used to have the class system.
 They get them even in xen-tools installations, by using the following code as
@@ -2679,7 +2741,7 @@ that host(in previous versions of xen-tools, this was <tt>no-install=1</tt>).
 <sect id=softupdate>Using FAI for updates
 <p>FAI is even usable for system updates, using the same configuration
 as if initially installing. System update means updating the running
-system without doing a reinstallation. An updated client will almost
+system without doing a re-installation. An updated client will almost
 look like a newly installed machine, though all local data is
 preserved (except of course newer configuration files introduced in
 the FAI config).</p>
@@ -2693,7 +2755,8 @@ the same way as an installation, though some things are different:
 	initial installation) is used, so <prgn>fai-class</prgn>
 	is not called to define a new list of classes. This can be
 	changed by calling <tt>fai -N softupdate</tt>.</item>
-	<item>No partitioning and filesystem creation is performed.</item>
+  <!--MT: Is this still the current behavior?-->
+	<item>No partitioning and file system creation is performed.</item>
 	<item>The basesytem isn't bootstrapped.</item>
 	<item>FAI skips tasks only useful when installing, such as setting up
 		a keymap or starting special daemons.</item>
@@ -2861,7 +2924,7 @@ class C network (16) when the server netork interface has the IP address
 
 You can merge two directories which contain configuration
 information, if one is a global one, and the other a local one. We use
-it to merge the templates from the fai package, and our local
+it to merge the templates from the FAI package, and our local
 configuration, which contains encrypted passwords and other
 information that should not be readable by others. 
 If you remove a file in your local configuration, do not forget to
@@ -2888,8 +2951,9 @@ example <tt>$ROOTCMD dpkg -l</tt> shows the packages installed on
 the new system.
 <p>
 
+<!--MT: has been said already
 The only task which has to be done manually for new hardware is to
-assign the MAC address to a hostname and to an IP address, and to define
+assign the MAC address to a host name and to an IP address, and to define
 classes for this host if the existing configuration files are not generic
 enough to deal with this new host.
 <p>
@@ -2898,6 +2962,7 @@ or many short scripts, one for each class. Large scripts can
 distinguish classes by using case statements, the <tt>ifclass</tt>
 test or with class mechanisms for <tt>cfengine</tt> scripts.
 <p>
+-->
 If your computer can't boot from the network card, you do not always need to boot
 from floppy. Add  the class
 <tt>FAI_BOOTPART</tt> and FAI will automatically create a
@@ -2913,6 +2978,7 @@ On <httpsite>www.layer-acht.org</httpsite><httppath>/fai</httppath> you
 will find an example how to fully automatically install a system using the Debian 
 Installer (d-i) in conjunction with FAI's new softupdate (see <ref id=softupdate>). 
 
+<!--MT: has been said already
 <p>
 You should get the program <prgn>imggen</prgn>,<footnote>Available at
 the download page <httpsite>www.ltsp.org</httpsite> or from the FAI
@@ -2932,6 +2998,7 @@ diversions are removed.</p> </item>
 
 <tag>skiptask</tag> <item> <p>This given list of tasks are
 skipped. For use e.g. in <file>partition.DISKLESS</file>.</p> </item> </taglist>
+-->
 
 </book>
 </debiandoc>
