@@ -53,8 +53,9 @@ PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 kfile="vmlinuz" # some architectures use different names
 merror="properly"
 sshpreserve=0
+divert=0
 # option e currently does nothing
-while getopts hervC:f:kKp opt ; do
+while getopts hervC:f:kKpU opt ; do
     case "$opt" in
         C) cfdir=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
@@ -65,6 +66,7 @@ while getopts hervC:f:kKp opt ; do
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
+        U) divert=0 ;;
         ?) exit 5 ;; # error in option parsing
     esac
 done
@@ -145,9 +147,11 @@ call_verbose() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 install_kernel_nfsroot() {
 
-    rm $NFSROOT/usr/sbin/update-initramfs
-    LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /usr/sbin/update-initramfs
-    $ROOTCMD update-initramfs -k all -t -u
+    if [ $divert = 1 ]; then
+	rm $NFSROOT/usr/sbin/update-initramfs
+	LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /usr/sbin/update-initramfs
+	$ROOTCMD update-initramfs -k all -t -u
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
@@ -304,10 +308,13 @@ upgrade_nfsroot() {
     rm -rf $NFSROOT/etc/apm
     mount -t proc /proc $NFSROOT/proc
 
-    fdivert /sbin/start-stop-daemon /sbin/discover-modprobe /usr/sbin/update-initramfs
+    if [ $divert = 1 ]; then
+	fdivert /usr/sbin/update-initramfs
+	ln -s /bin/true $NFSROOT/usr/sbin/update-initramfs
+    fi
+    fdivert /sbin/start-stop-daemon /sbin/discover-modprobe
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin
     cp -p /sbin/fai-start-stop-daemon $NFSROOT/sbin/start-stop-daemon
-    ln -s /bin/true $NFSROOT/usr/sbin/update-initramfs
     $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -426,8 +433,10 @@ kernel_install() {
 [ -n "$kinstall" ] && {
     trap "true" EXIT
     echo "Installing new kernel into the nfsroot."
-    fdivert /usr/sbin/update-initramfs
-    ln -s /bin/true $NFSROOT/usr/sbin/fai
+    if [ $divert = 1 ]; then
+	fdivert /usr/sbin/update-initramfs
+	ln -s /bin/true $NFSROOT/usr/sbin/fai
+    fi
     LC_ALL=C add_packages_nfsroot
     kernel_install
     exit
