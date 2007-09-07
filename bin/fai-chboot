@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 3.4 19-august-2007";
+$version="version 3.4.1 7-september-2007";
 
 use Socket;
 use Net::hostent;
@@ -358,13 +358,14 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:D:edhnvlLiIpf:Fk:Ss:to') || usage;
+getopts('gBc:C:D:edhnvlLiIpf:Fk:Ss:to') || usage;
 $opt_h and usage;
 defined @ARGV or usage;
 
 $opt_n and $opt_v = 1;
 $opt_v and $verbose = 1;
 $pxedir = $opt_D || '/srv/tftp/fai/pxelinux.cfg';
+$cfdir = $opt_C || $ENV{'FAI_ETC_DIR'} || '/etc/fai';
 $opt_L and $opt_l = 1;
 $opt_l and lsdir(@ARGV);
 ($opt_B and $opt_F) && die "ERROR: use only one option out of -B and -F\n";
@@ -411,11 +412,11 @@ if ($opt_I) {
 }
 
 # read the nfsroot variable; a little bit ugly, but it works
-$nfsroot = `. /etc/fai/make-fai-nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
+$nfsroot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
 chomp $nfsroot;
 $nfsroot = '/srv/fai/nfsroot' unless $nfsroot;
 
-$tftproot = `. /etc/fai/make-fai-nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
+$tftproot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
 chomp $tftproot;
 $tftproot = '/srv/tftp/fai' unless $tftproot;
 
