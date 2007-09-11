@@ -26,7 +26,7 @@
 # 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 #*********************************************************************
 
-version="version 1.5.3, 5-aug-2007"
+version="version 1.6, 11-sep-2007"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -37,6 +37,14 @@ version="version 1.5.3, 5-aug-2007"
 # it, but do not execute files ending in ~
     
 # TODO: -n only shows which scripts should be executed, but do not execute them
+
+maxstatus=0
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+savemaxstatus() {
+
+    # save the highest exit status
+    [ $1 -gt $maxstatus ] && maxstatus=$1
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fc_check_status() {
 
@@ -48,6 +56,7 @@ fc_check_status() {
 	res="OK."
     else
 	res="FAILED with exit code $st."
+	savemaxstatus $st
     fi
     # put result in the log file and write to stdout
     printf "%-20s $res\n" $cmd | tee -a $LOGDIR/status.log
@@ -147,7 +156,7 @@ usage() {
     local ex
     ex=$1
     cat <<-EOF
-        fai-do-scripts $version. Copyright (C) 2003-2005 Thomas Lange
+        fai-do-scripts $version. Copyright (C) 2003-2007 Thomas Lange
         Read the manual page fai-do-scripts(1) for more information.
 
         Usage: fai-do-scripts [OPTION] DIRECTORY
@@ -174,3 +183,6 @@ if [ "x$classes" = "x" ]; then
 fi
 
 call_conf $1
+# move error number from child scripts to 100+x if any error happened
+[ $maxstatus -gt 0 ] && maxstatus=$((100+$maxstatus))
+exit $maxstatus
