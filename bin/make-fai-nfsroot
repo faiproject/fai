@@ -427,6 +427,20 @@ kernel_install() {
     	esac
     done
 }
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+run_hooks() {
+
+    local file
+    if [ -z "$FAI_HOOK_DIR" ]; then
+	return
+    fi
+    if [ -d "$FAI_HOOK_DIR"  ]; then
+        echo "Running hooks..."
+        for file in `ls $FAI_HOOK_DIR/* 2>/dev/null`; do
+            . $file
+        done
+    fi
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
 
@@ -447,7 +461,11 @@ kernel_install() {
     fi
     LC_ALL=C add_packages_nfsroot
     kernel_install
-    exit
+    run_hooks
+    umount_dirs
+    trap "true" EXIT
+    echo "make-fai-nfsroot finished $merror."
+    exit 0
 }
 
 echo "Creating FAI nfsroot in $NFSROOT."
@@ -478,7 +496,7 @@ fi
 call_with_stamp create_nfsroot
 
 kernel_install
-
+run_hooks
 umount_dirs
 trap "true" EXIT
 echo "make-fai-nfsroot finished $merror."
