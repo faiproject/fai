@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# (c) 2002-2006 Henning Glawe <glaweh@debian.org>
+# (c) 2007 Holger Levsen <holger@layer-acht.org> for the modifications to use git
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_CONFIG_SRC $FAI $LOGDIR
+# Suggests-Var:
+# Short-Description: get $FAI from a git repository.
+### END SUBROUTINE INFO
+
+# matched string: "git://user@host/svnpath"
+protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
+gitpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^[:space:]]\+\)')
+
+case $protocol in
+	git)
+		giturl="git://$gitpath"
+		;;
+	git+http)
+		echo git+http
+		giturl="http://$gitpath"
+		;;
+	*)
+		echo "get-config-dir-git: protocol $protocol not implemented"
+		exit 1
+		;;
+esac
+		
+if [ -d "$FAI/.git" ] ; then
+   echo "Updating git copy in $FAI"
+   cd $FAI
+   git pull
+else 
+   echo "Checking out from git"
+   git clone $giturl $FAI 
+fi
