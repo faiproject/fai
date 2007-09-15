@@ -1,0 +1,175 @@
+#! /usr/bin/perl
+
+# faimond-gui: graphical FAI monitor daemon
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2007 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# '/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#*********************************************************************
+
+# TODO: Add support for TASKERROR
+
+use Tk;
+use Tk::HList;
+use Tk::ItemStyle;
+use Tk::Balloon;
+
+$debug = 0;
+$icondir='/usre/share/fai/pixmaps';
+
+#@tasklist = qw/hostname confdir defclass action partition mountdisks extrbase mirror debconf prepareapt instsoft configure chboot savelog faiend reboot/;
+@tasklist = qw/hostname confdir defclass partition extrbase debconf instsoft configure savelog faiend reboot/;
+$tasklist[0] = ' 'x15 . 'hostname'. ' 'x15;
+
+$rowcount = 0;
+%message = ( 'TASKBEGIN' => 'BEG', 'TASKEND' => 'END', 'REBOOT' => 'reboot');
+
+# -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+sub getinp {
+
+  $line = <INP>;
+  return 0 if $line =~/^FAI monitoring daemon start/; # ignore start up messages from faimond
+  warn "INPUT received $line" if $debug;
+  hostentry($line);
+  return 0;
+}
+# -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+sub mkgraphics {
+
+  #Style entries
+  #
+
+  $icon{'success'} = $top->Photo(-file=>"$icondir/ok.gif");
+  $icon{'fail'}    = $top->Photo(-file=>"$icondir/fail.gif");
+  $icon{'minor'}   = $top->Photo(-file=>"$icondir/minor.gif");
+  $icon{'warning'} = $top->Photo(-file=>"$icondir/warning.gif");
+  $icon{'fail'}    = $top->Photo(-file=>"$icondir/fail.gif");
+  $icon{'begin'}   = $top->Photo(-file=>"$icondir/begin.gif");
+  $icon{'host'}    = $top->Photo(-file=>"$icondir/bar.gif");
+
+  $defstyle = $hlist->ItemStyle("imagetext",
+				-foreground => $forecolor,
+				-background => $backcolor,
+				-font => $font,
+			       );
+
+  $headerstyle = $hlist->ItemStyle("imagetext",
+				   -bg=>$backcolor,
+				   -fg=>$headercolor,
+				   -font=>$font
+				  );
+
+  # not yet used
+  # $balloonstatus = $top->Balloon();
+  # $balloonstatus->attach($top,-msg=>"status",-balloonposition=>"mouse");
+}
+# -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+sub icon {
+
+    my ($host,$task,$iname) = @_;
+
+    $hlist->itemCreate($row{$host}, $task{$task}, -text=>'' ,-itemtype=>"imagetext",-image=>$icon{$iname});
+    $hlist->itemConfigure($row{$host}, $task{$task}, -itemtype=>"imagetext",-style=>$defstyle);
+}
+# -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+sub hostentry {
+
+  my $str = shift(@_);
+  my ($host,$startstop,$task,$code) = split(/\s+/,$str);
+
+  warn "hostentry: $host $startstop $task $code\n" if $debug;
+
+  unless (exists $row{$host}) {
+    # add host, first column
+    $row{$host} = $rowcount++;
+
+    $hlist->add($row{$host},-state=>"disabled");
+    $hlist->itemCreate($row{$host}, 0,
+		       -itemtype => "imagetext",
+		       -text => $host,
+		       -style=>$headerstyle,
+		       -image=>$icon{'host'});
+  }
+
+  # remove old information when doing an reinstallation
+  if ($startstop eq 'check') {
+    foreach (1 .. $#tasklist) {
+      warn "XXX $row{$host} X $_\n" if $debug;
+      $hlist->itemCreate($row{$host}, $_, -text => '');
+    }
+    return;
+  }
+
+  warn "create: $row{$host} X  $task{$task} X $startstop $message{$startstop} $code\n" if $debug;
+  unless (exists $task{$task}) {
+    # do not show unknown tasks
+    return;
+  }
+
+  $message = ($startstop =~ /TASKEND/) ?  $message="$message{$startstop} $code": $message{$startstop};
+
+  ($message eq 'BEG')   && icon($host,$task,'begin');
+  if ($message =~ /END (\d+)/) {
+    $ret = $1; # save error code
+    ($ret == 0) && icon($host,$task,'success');
+    # here we can add different icons for different error codes
+    ($ret != 0) && icon($host,$task,'fail');
+  }
+
+}
+# -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+# main program
+
+open(INP, "<$ARGV[0]") or die "Can't open input file. $@";
+
+$backcolor="#76716f";
+$forecolor="#ffffff";
+$headercolor="#ffffff";
+$font="Sans 15";
+
+$top = new MainWindow;
+#$top->configure(-background=> $backcolor);
+$hlist = $top->Scrolled("HList",
+            -header => 1,
+            -columns => $#tasklist+1,
+            -scrollbars => 'oe',
+            -width => 102,
+	    -height => 20,
+            -selectbackground => $backcolor,
+	    -background=> $backcolor,
+	    -selectborderwidth=>0,
+	    -selectmode=>'single',
+	    -highlightthickness=>0,
+	    -relief=>'flat',
+	    -borderwidth=>0,
+         )->pack(-expand => 1, -fill => 'both');
+
+mkgraphics;
+$top->fileevent(INP,'readable', [\&getinp]);
+
+foreach (@tasklist) {
+  $hlist->header('create', $n++, -text => $_,
+		 -headerbackground=>"#aabbcc",
+		 -borderwidth=>1,
+		 -relief=>"groove");
+  $task{$_} = $tcounter++;
+}
+
+MainLoop();
