@@ -6,7 +6,7 @@ export DOCDIR = $(shell pwd)/debian/fai-doc/usr/share/doc/fai-doc
 LIBDIR = $(DESTDIR)/usr/lib/fai
 USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai setup_harddisks faireboot fai-statoverride
 
-USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl
+USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl faimond-gui
 
 libfiles=$(wildcard lib/[a-z]*)  # do not include .svn dir and S01
 
@@ -26,7 +26,7 @@ veryclean: clean
 install: 
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,dhcp3,apt/apt.conf.d}
 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
-	mkdir -p $(DESTDIR)/etc/init.d
+	mkdir -p $(DESTDIR)/etc/init.d $(DESTDIR)/usr/share/fai/pixmaps
 	install man/* $(DESTDIR)/man
 	$(MAKE) -C doc install
 	-install $(libfiles) $(LIBDIR)
@@ -42,6 +42,7 @@ install:
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
 	install -m644 conf/fai_modules_off $(DESTDIR)/etc/modutils
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
+	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
 	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
