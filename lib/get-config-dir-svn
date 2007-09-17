@@ -10,21 +10,13 @@
 ### END SUBROUTINE INFO
 
 # matched string: "svn://user@host/svnpath"
-# strings without user@ are processed below
 protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
 username=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^@]*\)@')
 svnpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://[^@]\+@\([^[:space:]]\+\)')
-[ -n "$username" ] && user="--username $username"
-[ -z "$username" ] && svnurl=$FAI_CONFIG_SRC # if no user is specified
 
 case $protocol in
 	svn)
 		svnurl="svn://$svnpath"
-		;;
-        svn+ssh)
-	        svnurl="svn+ssh://$svnpath"
-		user=""
-		export SVN_SSH="ssh -l $username"
 		;;
 	svn+file)
 		svnurl="file://$svnpath"
@@ -35,12 +27,19 @@ case $protocol in
 	svn+https)
 		svnurl="https://$svnpath"
 		;;
+	svn+ssh)
+		svnurl="svn+ssh://$username@$svnpath"
+		# this is a bit hackish: if $username is empty, the path gets corrected below... 
+		# explaination: svn co -username foo svn+ssh://bar doesnt work as svn co svn+ssh://foo@bar
+		;;
 	*)
 		echo "get-config-dir-svn: protocol $protocol not implemented"
 		exit 1
 		;;
 esac
 		
+[ -n "$username" ] && user="--username $username"
+[ -z "$username" ] && svnurl=$FAI_CONFIG_SRC
 
 if [ -d "$FAI/.svn" ] ; then
    echo "Updating SVN in $FAI"
