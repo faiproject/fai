@@ -46,6 +46,17 @@ die() {
     echo "ERROR: $@"
     exit 99
 }
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+badupdateto32() {
+
+    cat <<-EOF
+        It seems that you have updated an older FAI version without checking files in /etc/fai/
+        Please check the NEWS file for changes in variable names and if you have a linux-image package
+        defined in /etc/fai/NFSROOT.
+EOF
+    die $@
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
@@ -109,12 +120,13 @@ fi
 
 # IMO this may be removed, since all information should be included into sources.list
 [ -n "$FAI_LOCAL_REPOSITORY" ] && die "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list." 
-[ -n "$packages" ] && die "The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$packages" ] && badupdateto32 "The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$NFSROOT_PACKAGES" ] && die "The use of \$NFSROOT_PACKAGES in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$FAI_SOURCES_LIST" ] && die "The use of \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
 
 [ -z "$NFSROOT" ] && die "\$NFSROOT is not set. Please check your settings in $cfdir/fai.conf."
-[ -z "$TFTPROOT" ] && die "\$TFTPROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
+[ -z "$TFTPROOT" ] && badupdateto32 "\$TFTPROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
+[ -n "$KERNELPACKAGE" ] && badupdateto32 "The use of \$KERNELPACKAGE is deprecated. Please use $cfdir/NFSROOT now."
 [ ! -d "$cfdir/apt" ] && die "$cfdir/apt/ does not exists. Can't continue."
 
 NFSROOT="$NFSROOT/live/filesystem.dir"
