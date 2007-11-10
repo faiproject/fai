@@ -240,10 +240,13 @@ task_instsoft() {
     echo "Installing software may take a while"
     if [ "$debug" ]; then
 	install_packages | tee -a $LOGDIR/software.log
+	task_error $?
     elif [ "$verbose" ]; then
 	install_packages </dev/null 2>&1 | tee -a $LOGDIR/software.log
+	task_error $?
     else
 	install_packages </dev/null >> $LOGDIR/software.log 2>&1
+	task_error $?
     fi
     # This almost indicates an error
     egrep "^E:" $LOGDIR/software.log && task_error 1
