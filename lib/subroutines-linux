@@ -190,7 +190,7 @@ task_debconf () {
 
     if [ ! -d $FAI/debconf ]; then
 	echo "Can't find debconf directory $FAI/debconf. Skipping preseeding."
-	task_error=2
+	task_error 2
 	return
     fi
     fai-debconf $FAI/debconf
@@ -246,7 +246,7 @@ task_instsoft() {
 	install_packages </dev/null >> $LOGDIR/software.log 2>&1
     fi
     # This almost indicates an error
-    egrep "^E:" $LOGDIR/software.log && task_error=1
+    egrep "^E:" $LOGDIR/software.log && task_error 1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
@@ -285,7 +285,7 @@ task_chboot() {
 
     if [ -z "$SERVER" ] ; then
 	echo "SERVER not defined. Can't change network boot configuration"
-	task_error=2
+	task_error 2
 	doexit=1
     fi
     [ $doexit -eq 1 ] && return
@@ -299,7 +299,7 @@ task_chboot() {
         # first test if rsh to server works
 	$frsh true >/dev/null 2>&1
 	if [ $? -ne 0 ]; then
-	    task_error=3
+	    task_error 3
 	    echo "WARNING: $frsh failed. Can't call fai-chboot on the install server."
 	else
 	    # remove pxe config, so host will use default and boot from local disk
