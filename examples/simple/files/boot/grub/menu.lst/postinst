@@ -10,6 +10,9 @@ set -a
 # if class NOMBR is defined, write boot loader into root partition, not into mbr
 ifclass NOMBR && BOOT_DEVICE=$BOOT_PARTITION
 
+[ -z "$BOOT_DEVICE" ]    && exit 701
+[ -z "$BOOT_PARTITION" ] && exit 702
+
 grub-install --no-floppy --root-directory=$target $BOOT_DEVICE
 GROOT=$(device2grub $BOOT_PARTITION)
 perl -pi -e 's/#(\w+)#/$ENV{$1}/' $2
