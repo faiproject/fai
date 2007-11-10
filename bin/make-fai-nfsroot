@@ -48,6 +48,14 @@ die() {
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+check_nfsroot() {
+
+    # simple test, to see if important thing are available inside the nfsroot
+    [ -d $NFSROOT/usr/share/live-initramfs ] || die "live-initramfs is not installed."
+    local files=$(ls /boot/initrd* 2>/dev/null)
+    [ -z "$files" ] && die "No initrd installed."
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 badupdateto32() {
 
     cat <<-EOF
@@ -511,6 +519,7 @@ call_with_stamp create_nfsroot
 
 kernel_install
 run_hooks
+check_nfsroot
 umount_dirs
 trap "true" EXIT
 echo "make-fai-nfsroot finished $merror."
