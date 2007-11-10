@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 3.4.1 7-september-2007";
+$version="version 3.4.2 10-november-2007";
 
 use Socket;
 use Net::hostent;
@@ -364,15 +364,26 @@ defined @ARGV or usage;
 
 $opt_n and $opt_v = 1;
 $opt_v and $verbose = 1;
-$pxedir = $opt_D || '/srv/tftp/fai/pxelinux.cfg';
 $cfdir = $opt_C || $ENV{'FAI_ETC_DIR'} || '/etc/fai';
 $opt_L and $opt_l = 1;
-$opt_l and lsdir(@ARGV);
 ($opt_B and $opt_F) && die "ERROR: use only one option out of -B and -F\n";
 ($opt_S and $opt_I) && die "ERROR: use only one option out of -I and -S\n";
 #TODO: also -e, -r and -c can't be used together
 
+# read the nfsroot variable; a little bit ugly, but it works
+$nfsroot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
+chomp $nfsroot;
+$nfsroot = '/srv/fai/nfsroot' unless $nfsroot;
+
+$tftproot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
+chomp $tftproot;
+$tftproot = '/srv/tftp/fai' unless $tftproot;
+
+$pxedir = $opt_D || "$tftproot/pxelinux.cfg";
+
 (-d $pxedir) || die "PXE directory $pxedir does not exist.";
+
+$opt_l and lsdir(@argv);
 
 if ($opt_d) {
   die "Missing host name(s). Can't disable network booting.\n" unless @ARGV;
@@ -410,15 +421,6 @@ if ($opt_I) {
   $opt_i = 1;
   $action="FAI_ACTION=install";
 }
-
-# read the nfsroot variable; a little bit ugly, but it works
-$nfsroot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
-chomp $nfsroot;
-$nfsroot = '/srv/fai/nfsroot' unless $nfsroot;
-
-$tftproot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
-chomp $tftproot;
-$tftproot = '/srv/tftp/fai' unless $tftproot;
 
 $kernelsuffix = (glob "$tftproot/vmlinuz*$opt_s")[-1];
 $kernelsuffix=~ s/.+vmlinuz-//;
