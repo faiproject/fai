@@ -129,6 +129,7 @@ fi
 [ -n "$KERNELPACKAGE" ] && badupdateto32 "The use of \$KERNELPACKAGE is deprecated. Please use $cfdir/NFSROOT now."
 [ ! -d "$cfdir/apt" ] && die "$cfdir/apt/ does not exists. Can't continue."
 
+oldnfsroot=$NFSROOT
 NFSROOT="$NFSROOT/live/filesystem.dir"
 ROOTCMD="chroot $NFSROOT"
 
@@ -497,9 +498,9 @@ if [ -d $NFSROOT/$FAI -a ! "$recover" ]
 then
     echo $NFSROOT already exists. Removing $NFSROOT
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
-    rm -rf $NFSROOT/.??* $NFSROOT/*
+    rm -rf $oldnfsroot/.??* $oldnfsroot/*
     # also remove files $NFSROOT/.? but not . and ..
-    find $NFSROOT -xdev -maxdepth 1 ! -type d | xargs -r rm -f
+    find $oldnfsroot -xdev -maxdepth 1 ! -type d | xargs -r rm -f
 fi
 
 # Create a new nfsroot
