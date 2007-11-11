@@ -106,13 +106,14 @@ stop_fai_installation() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:      $task_error
-# Required-Var:      $task_error
-# Short-Description: save the maximum error code
+# Required-Var:      $1 $2 $task_error
+# Short-Description: save the maximum error code,
+# Short-Description: $1 is the error that will be saved unless $2 is zero
 ### END SUBROUTINE INFO
 
 task_error() {
 
-    [ $1 -eq 0 ] && return
+    [ X$2 = X0 ] && return
     echo "Error $1. Traceback: ${FUNCNAME[*]}"
     [ $1 -gt $task_error ] && $task_error=$1
     [ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
