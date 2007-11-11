@@ -30,15 +30,23 @@
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 set -e
-. /etc/fai/fai.conf
-. /etc/fai/make-fai-nfsroot.conf
+
+cfdir=/etc/fai
 
 options=$@ # all options are also passed to make-fai-nfsroot
 
-# look for option -e (expert mode)
-case "$options" in
-    *-e*) expert=1 ;;
-esac
+while getopts ervC:f:kKV: opt ; do
+    case "$opt" in
+	C) cfdir=$OPTARG ;;
+	v) verbose=1 ; v=-v ;;
+	e) expert=1 ;;
+    esac
+done
+
+
+. $cfdir/fai.conf
+. $cfdir/make-fai-nfsroot.conf
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_export_line() {
 
