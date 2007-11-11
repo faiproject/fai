@@ -159,6 +159,7 @@ task_extrbase() {
 	    echo "No base.tgz found. Calling debootstrap."
 	    [ -z "$FAI_DEBOOTSTRAP" ] && die "$FAI_DEBOOTSTRAP undefined. Aborting"
 	    call_debootstrap $FAI_DEBOOTSTRAP
+	    task_error 801 $?
 	fi
     fi
     # now we can copy fstab
@@ -240,16 +241,16 @@ task_instsoft() {
     echo "Installing software may take a while"
     if [ "$debug" ]; then
 	install_packages | tee -a $LOGDIR/software.log
-	task_error $?
+	task_error 471 $?
     elif [ "$verbose" ]; then
 	install_packages </dev/null 2>&1 | tee -a $LOGDIR/software.log
-	task_error $?
+	task_error 471 $?
     else
 	install_packages </dev/null >> $LOGDIR/software.log 2>&1
-	task_error $?
+	task_error 471 $?
     fi
     # This almost indicates an error
-    egrep "^E:" $LOGDIR/software.log && task_error 1
+    egrep "^E:" $LOGDIR/software.log && task_error 472
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
