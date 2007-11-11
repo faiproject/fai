@@ -25,11 +25,10 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.9.8, 7-september-2007"
+version="Version 1.9.9, 11-november-2007"
 
 # variables: NFSROOT, FAI_CONFIGDIR, FAI_ETC_DIR
 
-export FAI_ROOT=/ # do not execute in chroot
 export PATH=$PATH:/usr/sbin
 
 trap "umount_dirs" EXIT ERR
@@ -100,7 +99,7 @@ get_addpackages() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
 
-    [ "$FAI_DEBMIRROR" ] && umount $FAI_ROOT/$MNTPOINT 2>/dev/null 1>&2 || true
+    [ "$FAI_DEBMIRROR" ] && umount $MNTPOINT 2>/dev/null 1>&2 || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 cleandirs() {
@@ -280,7 +279,8 @@ initialize
 # otherwise mounting is not needed. call task_mirror
 
 if [ "$FAI_DEBMIRROR" ]; then
-    mount -r $FAI_DEBMIRROR $FAI_ROOT/$MNTPOINT || exit 9
+    mkdir -p $MNTPOINT
+    mount -r $FAI_DEBMIRROR $MNTPOINT || exit 9
 fi
 
 # TODO: use -p to preserve sources.list
