@@ -455,7 +455,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_install() {
 
-    > $stamp
+    echo $$ > $stamp
 
     save_dmesg
 
@@ -478,7 +478,8 @@ task_install() {
 
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
-	echo "$stamp was not removed."
+	echo -n "$stamp was not removed. PID of running process: "
+	cat $stamp
 	sendmon "TASKERROR install 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
@@ -486,7 +487,7 @@ task_install() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_dirinstall() {
 
-    > $stamp
+    echo $$ > $stamp
 
     mkdir -p $FAI_ROOT
     FAI_ROOT=$(cd $FAI_ROOT;pwd)
@@ -507,7 +508,8 @@ task_dirinstall() {
 
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
-	echo "$stamp was not removed."
+	echo -n "$stamp was not removed. PID of running process: "
+	cat $stamp
 	sendmon "TASKERROR install 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
@@ -518,7 +520,7 @@ task_softupdate() {
     local stamp=/var/run/fai/fai_softupdate_is_running
 
     [ -f "$stamp" ] && die "Another fai softupdate is already running. Aborting."
-    > $stamp
+    echo $$ > $stamp
     # if the system had been installed using fai < 3.0 disk_var.sh is found in /etc/fai
     if [ ! -f /var/lib/fai/disk_var.sh -a -f /etc/fai/disk_var.sh ] ; then
       mv /etc/fai/disk_var.sh /var/lib/fai/
@@ -546,7 +548,8 @@ task_softupdate() {
 
     if [ -f $stamp ]; then
 	echo "Error while executing commands in subshell."
-	echo "$stamp was not removed."
+	echo -n "$stamp was not removed. PID of running process: "
+	cat $stamp
 	sendmon "TASKERROR softupdate 21"
 	die "Please look at the log files in $LOGDIR for errors."
     fi
