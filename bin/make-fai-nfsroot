@@ -50,10 +50,12 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 check_nfsroot() {
 
+    set +e
     # simple test, to see if important thing are available inside the nfsroot
     [ -d $NFSROOT/usr/share/live-initramfs ] || die "live-initramfs is not installed."
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
     [ -z "$files" ] && die "No initrd installed."
+    return 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 badupdateto32() {
@@ -102,6 +104,8 @@ if [ $(id -u) != "0" ]; then
     echo "Run this program as root."
     exit 9
 fi
+
+{ # start of block which output will be written to log file
 
 set -e
 
@@ -524,3 +528,5 @@ umount_dirs
 trap "true" EXIT
 echo "make-fai-nfsroot finished $merror."
 exit 0
+} | tee /var/log/fai/make-fai-nfsroot.log
+echo "Log file written to /var/log/fai/make-fai-nfsroot.log"
