@@ -115,7 +115,7 @@ task_error() {
 
     [ X$2 = X0 ] && return
     echo "Error $1. Traceback: ${FUNCNAME[*]}"
-    [ $1 -gt $task_error ] && $task_error=$1
+    [ $1 -gt $task_error ] && task_error=$1
     [ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -146,6 +146,7 @@ task() {
 	task_error=0   # task can set this variable to indicate an error
 	task_$taskname
 	sendmon "TASKEND $taskname $task_error"
+	[ "$task_error" -ne 0 ] && echo "Exit code task_$taskname: $task_error"
     fi
     # since the subroutine is not needed any more, we can undefine it
     unset task_$taskname
