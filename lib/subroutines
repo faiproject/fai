@@ -99,9 +99,8 @@ wait_for_jobs() {
 stop_fai_installation() {
 
     # this subroutine should directly stop the installation process
-    echo "FATAL ERROR. Installation stopped."
-    echo "Currently I do not know how to stop."
-    exit 9999
+    echo "Traceback: $task_error_func"
+    die "FATAL ERROR. Installation stopped."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -114,7 +113,7 @@ stop_fai_installation() {
 task_error() {
 
     [ X$2 = X0 ] && return
-    echo "Error $1. Traceback: ${FUNCNAME[*]}"
+    task_error_func=${FUNCNAME[*]}
     [ $1 -gt $task_error ] && task_error=$1
     [ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
 }
@@ -144,6 +143,7 @@ task() {
 	echo "Calling task_$taskname"
 	sendmon "TASKBEGIN $taskname"
 	task_error=0   # task can set this variable to indicate an error
+	task_error_func=''
 	task_$taskname
 	sendmon "TASKEND $taskname $task_error"
 	[ "$task_error" -ne 0 ] && echo "Exit code task_$taskname: $task_error"
