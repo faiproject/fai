@@ -202,7 +202,7 @@ setup_ssh() {
 
     mkdir -p -m 700 $NFSROOT/root/.ssh
     if [ -n "$LOGUSER" ] ; then
-        loguserhome=`eval "cd ~$LOGUSER 2>/dev/null && pwd;true"`
+        loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
         [ -f $loguserhome/.ssh/known_hosts ] && cp $loguserhome/.ssh/known_hosts $NFSROOT/root/.ssh/known_hosts
         [ -d $loguserhome/.ssh ] && {
 	    [ -f $loguserhome/.ssh/id_dsa ] &&
@@ -396,7 +396,7 @@ get_kernel_version() {
 setup_bootp(){
 
     mkdir -p $TFTPROOT
-    if [ -x "`which mkelf-linux`" ]; then
+    if [ -x "$(which mkelf-linux)" ]; then
 	# does not work any mork if we do not know the excatly kernel name
 :
 #	mkelf-linux --ip=any --output=$TFTPROOT/installimage \
@@ -408,7 +408,7 @@ setup_bootp(){
 
     # imggen is free software from 3com - use ver1.00: 1.01 produces "Image too Big" errors.
     # it converts netboot images to images which are bootable by 3com network cards
-    if [ -x "`which imggen`" ]; then
+    if [ -x "$(which imggen)" ]; then
 	imggen -a $TFTPROOT/installimage $TFTPROOT/installimage_3com
     fi
     echo "BOOTP environment prepared."
@@ -465,7 +465,7 @@ run_hooks() {
     fi
     if [ -d "$NFSROOT_HOOKS"  ]; then
         echo "Running hooks..."
-        for file in `ls $NFSROOT_HOOKS/* 2>/dev/null`; do
+        for file in $(ls $NFSROOT_HOOKS/* 2>/dev/null); do
             . $file
         done
     fi
@@ -519,7 +519,7 @@ then
 fi
 
 # Create a new nfsroot
-if [ ! -x "`which debootstrap`" ]; then
+if [ ! -x "$(which debootstrap)" ]; then
     die "Can't find debootstrap command. Aborting."
 fi
 call_with_stamp create_nfsroot
