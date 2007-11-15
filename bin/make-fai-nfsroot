@@ -386,7 +386,7 @@ umount_dirs() {
        LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /sbin/discover-modprobe
     cd /
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
-    [ -d $NFSROOT/proc/self ] && umount $NFSROOT/dev/pts
+    [ -d $NFSROOT/proc/self ] && die "/proc still mounted inside the nfsroot."
     if [ "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
     fi
@@ -518,10 +518,12 @@ if [ $sshpreserve = 1 ]; then
 fi
 
 # Kill the directory if not in recover mode
-if [ -d $NFSROOT/$FAI -a ! "$recover" ]
+if [ -d $NFSROOT/proc -a ! "$recover" ]
 then
     echo $NFSROOT already exists. Removing $NFSROOT
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
+    [ -L $NFSROOT/proc/self ] && umount $NFSROOT/proc || true
+    [ -L $NFSROOT/proc/self ] && die "/proc is still mounted inside the nfsroot."
     rm -rf $oldnfsroot/.??* $oldnfsroot/*
     # also remove files $NFSROOT/.? but not . and ..
     find $oldnfsroot -xdev -maxdepth 1 ! -type d | xargs -r rm -f
