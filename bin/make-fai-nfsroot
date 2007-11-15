@@ -288,8 +288,17 @@ create_nfsroot() {
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
     # live.conf will set hostname to debian
-    cp /dev/null etc/live.conf
-
+    if [ -f $cfdir/live.conf ]; then
+	cp -p $cfdir/live.conf etc/live.conf
+    else
+	cat >> etc/live.conf <<EOF
+# UNIONTYPE=aufs # if unionfs is broken
+NOUSER="Yes"
+NOHOSTS="Yes"
+export UNIONTYPE NOHOSTS NOUSER
+EOF
+    fi
+    
     cp -a $cfdir/apt $NFSROOT/etc
 
     ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
