@@ -256,16 +256,15 @@ if [ X$action = Xdirinstall -a -n "$newhostname" ]; then
 fi
 
 mkdir -p /var/run/fai
-export LOGDIR=/var/log/fai/current
-[ X$action = Xdirinstall ] && export LOGDIR=/var/log/fai/dirinstall/$HOSTNAME
-[ -d $LOGDIR ] && rm -rf $LOGDIR
-mkdir -p $LOGDIR
 
-# for compability, can be removed later
 if [ $do_init_tasks -eq 1 ]; then
-    mkdir /tmp/fai
-    mount --bind $LOGDIR /tmp/fai 
+    # we are running an initial installation
+    export LOGDIR=/tmp/fai
+else
+    fai_rundate=$(date +'%Y%m%d_%H%M%S')
+    export LOGDIR=/var/log/fai/$HOSTNAME/$action-$fai_rundate
 fi
+mkdir -p $LOGDIR
 
 fai_init
 if [ X$action = Xdirinstall ]; then
