@@ -260,11 +260,14 @@ mkdir -p /var/run/fai
 if [ $do_init_tasks -eq 1 ]; then
     # we are running an initial installation
     export LOGDIR=/tmp/fai
+    mkdir -p $LOGDIR
 else
     export fai_rundate=$(date +'%Y%m%d_%H%M%S')
     export LOGDIR=/var/log/fai/$HOSTNAME/$action-$fai_rundate
+    mkdir -p $LOGDIR
+    ln -snf $FAI_ACTION-$fai_rundate $LOGDIR/../last-$FAI_ACTION
+    ln -snf $FAI_ACTION-$fai_rundate $LOGDIR/../last
 fi
-mkdir -p $LOGDIR
 chown root $LOGDIR
 chgrp adm  $LOGDIR
 chmod 0750 $LOGDIR
