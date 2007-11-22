@@ -288,18 +288,6 @@ create_nfsroot() {
     > etc/raidtab
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
-    # live.conf will set hostname to debian
-    if [ -f $cfdir/live.conf ]; then
-	cp -p $cfdir/live.conf etc/live.conf
-    else
-	cat >> etc/live.conf <<EOF
-# UNIONTYPE=aufs # if unionfs is broken
-NOUSER="Yes"
-NOHOSTS="Yes"
-export UNIONTYPE NOHOSTS NOUSER
-EOF
-    fi
-    
     cp -a $cfdir/apt $NFSROOT/etc
 
     ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
@@ -314,6 +302,19 @@ Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
     echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
+
+    # overwrite default live.conf
+    if [ -f $cfdir/live.conf ]; then
+	cp -p $cfdir/live.conf etc/live.conf
+    else
+	cat > etc/live.conf <<EOF
+# UNIONTYPE=aufs # if unionfs is broken
+NOUSER="Yes"
+NOHOSTS="Yes"
+export UNIONTYPE NOHOSTS NOUSER
+EOF
+    fi
+
     LC_ALL=C call_with_stamp add_packages_nfsroot
     call_with_stamp copy_fai_files
 
