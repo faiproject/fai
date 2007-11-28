@@ -57,10 +57,8 @@ sub getinp {
 sub mkgraphics {
 
   #Style entries
-  #
 
   $icon{'success'} = $top->Photo(-file=>"$icondir/ok.gif");
-  $icon{'fail'}    = $top->Photo(-file=>"$icondir/fail.gif");
   $icon{'minor'}   = $top->Photo(-file=>"$icondir/minor.gif");
   $icon{'warning'} = $top->Photo(-file=>"$icondir/warning.gif");
   $icon{'fail'}    = $top->Photo(-file=>"$icondir/fail.gif");
@@ -131,9 +129,10 @@ sub hostentry {
   ($message eq 'BEG')   && icon($host,$task,'begin');
   if ($message =~ /END (\d+)/) {
     $ret = $1; # save error code
-    ($ret == 0) && icon($host,$task,'success');
-    # here we can add different icons for different error codes
-    ($ret != 0) && icon($host,$task,'fail');
+    ($ret < 300) and icon($host,$task,'success'),return;
+    ($ret < 500) and icon($host,$task,'warning'),return;
+    ($ret < 700) and icon($host,$task,'minor'),return;
+    icon($host,$task,'fail');
   }
 
 }
