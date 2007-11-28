@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 3.2.2, 9 november 2007"
+version="fai-cd 3.3, 26 november 2007"
 
 forceremoval=0;
 burn=0
@@ -122,6 +122,40 @@ sleep_now() {
 	sleep 6666 || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkiso() {
+
+    if [ $makeiso -eq 1 ]; then
+	echo "Writing FAI CD-ROM image to $isoname. This may need some time."
+	mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
+	echo -n "ISO image size and filename: "; du -h $isoname
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+mkusb(){
+
+    if [ $makeusb -eq 1 ]; then
+	# TODO: If usbdir is a device (matches /dev/) mount it
+	[ -d $usbdir ] || die 17 "$usbdir does not exist."
+	echo "Writing FAI data to USB device $usbdir"
+	cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
+	echo $isoversion > $usbdir/.FAI-CD-VERSION
+
+	# now make the USB device bootable
+	rootpartition=$(find_fai_data 2>/dev/null | grep -A 1 'find /.FAI-CD-VERSION' | grep -v 'find /.FAI-CD-VERSION')
+	usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
+	echo "Root partition is $rootpartition, device is: $usbdev"
+	if [ -n "$rootpartition" -a -n "$usbdev" ]; then
+	    echo "Installing grub."
+	    grub --batch >/dev/null << EOM
+root $rootpartition
+setup $usbdev
+EOM
+	else
+	    echo "Device could not be detemined. Installing grub will be skipped."
+	fi
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_iso() {
 
     # Create the El Torito bootable iso9660 cdrom image
@@ -162,34 +196,8 @@ EOF
 	echo "Continue cleanup."
     fi
 
-    if [ $makeiso -eq 1 ]; then
-	echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-	mkisofs -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
-	echo -n "ISO image size and filename: "; du -h $isoname
-    fi
-
-    if [ $makeusb -eq 1 ]; then
-	# TODO: If usbdir is a device (matches /dev/) mount it
-	[ -d $usbdir ] || die 17 "$usbdir does not exist."
-	echo "Writing FAI data to USB device $usbdir"
-	cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
-	echo $isoversion > $usbdir/.FAI-CD-VERSION
-
-	# now make the USB device bootable
-	rootpartition=$(find_fai_data 2>/dev/null | grep -A 1 'find /.FAI-CD-VERSION' | grep -v 'find /.FAI-CD-VERSION')
-	usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
-	echo "Root partition is $rootpartition, device is: $usbdev"
-	if [ -n "$rootpartition" -a -n "$usbdev" ]; then
-	    echo "Installing grub."
-	    grub --batch >/dev/null << EOM
-root $rootpartition
-setup $usbdev
-EOM
-	else
-	    echo "Device could not be detemined. Installing grub will be skipped."
-	fi
-    fi
-
+    mkiso
+    mkusb
     rm $tmp1
     unhide_dirs
     umount_dirs
