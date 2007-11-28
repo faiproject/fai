@@ -325,8 +325,6 @@ EOF
 
     rm etc/mtab && ln -s /proc/mounts etc/mtab
     ln -s /usr/sbin/fai etc/init.d/rcS
-    # for nis
-#    [ -d var/yp ] && ln -s /tmp/binding var/yp/binding
 
     # definition for loopback device
     echo "iface lo inet loopback" > etc/network/interfaces
@@ -396,44 +394,13 @@ umount_dirs() {
     mount | grep " on $NFSROOT " || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_kernel_version() {
-
-    local package=$1
-
-    KERNELVERSION=`dpkg --info $package | grep ' Package: '`
-    KERNELVERSION=${KERNELVERSION/*-image-/}
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-setup_bootp(){
-
-    mkdir -p $TFTPROOT
-    if [ -x "$(which mkelf-linux)" ]; then
-	# does not work any mork if we do not know the excatly kernel name
-:
-#	mkelf-linux --ip=any --output=$TFTPROOT/installimage \
-#	  $NFSROOT/boot/$kfile-$KERNELVERSION
-    else
-        echo "Command mkelf-linux not found. Can not set up BOOTP booting. Please install the package mknbi and rerun fai-setup."
-	return
-    fi
-
-    # imggen is free software from 3com - use ver1.00: 1.01 produces "Image too Big" errors.
-    # it converts netboot images to images which are bootable by 3com network cards
-    if [ -x "$(which imggen)" ]; then
-	imggen -a $TFTPROOT/installimage $TFTPROOT/installimage_3com
-    fi
-    echo "BOOTP environment prepared."
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_dhcp(){
 
     # pxe and dhcp environment
     local pxebin=/usr/lib/syslinux/pxelinux.0
     rm -f $NFSROOT/boot/*.bak
     mkdir -p $TFTPROOT/pxelinux.cfg
-    cp -pv $NFSROOT/boot/$kfile-* $TFTPROOT
-    cp -pv $NFSROOT/boot/initrd.img-* $TFTPROOT
+    cp -pv $NFSROOT/boot/$kfile-* $NFSROOT/boot/initrd.img-* $TFTPROOT
     [ -f $pxebin ] && cp $pxebin $TFTPROOT
     echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
 }
@@ -454,14 +421,14 @@ kernel_install() {
     call_with_stamp install_kernel_nfsroot
 
     # setup for DHCP, BOOTP or both
-    [ "x$FAI_BOOT" = "x" ] && FAI_BOOT="dhcp bootp"
+    [ "x$FAI_BOOT" = "x" ] && FAI_BOOT="dhcp"
     
     for bootopt in $FAI_BOOT; do
     	case $bootopt in
     		dhcp|DHCP)      
 			call_with_stamp setup_dhcp ;;
     		bootp|BOOTP)      
-			call_with_stamp setup_bootp ;;
+			echo "You have to setup BOOTP support no manually." ;;
 		*)
 			echo "Unknown boot option" ;;
     	esac
