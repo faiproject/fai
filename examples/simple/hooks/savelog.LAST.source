@@ -112,6 +112,7 @@ task_error=0
 warning: /usr/lib/X11/fonts
 can't read /etc/udev/rules.d/z25_persistent-net.rules
 /cow': No such file or directory
+Dummy start-stop-daemon called
 cdrom: open failed."
 
 # add pattern on some conditions
@@ -139,6 +140,10 @@ if [ -s $errfile ]; then
 fi
 
 grep -i "$errorpatterns" *.log | grep -vi "$ignorepatterns" > $errfile
+if [ "$verbose" ]; then
+    egrep -v '^software.log:' $errfile > $LOGDIR/tempfile
+    mv $LOGDIR/tempfile $errfile
+fi
 
 if [ -s $errfile ]; then
    echo "ERRORS found in log files. See $errfile"
