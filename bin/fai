@@ -113,7 +113,7 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
     cat <<-EOF
-	fai $FAI_VERSION. Copyright (C) 1999-2006 Thomas Lange
+	fai $FAI_VERSION. Copyright (C) 1999-2007 Thomas Lange
 	Usage: $0 [options] [action]
        
 	Options:
@@ -255,8 +255,6 @@ if [ X$action = Xdirinstall -a -n "$newhostname" ]; then
     export HOSTNAME=$newhostname
 fi
 
-mkdir -p /var/run/fai
-
 if [ $do_init_tasks -eq 1 ]; then
     # we are running an initial installation
     export LOGDIR=/tmp/fai
@@ -288,6 +286,7 @@ if [ X$action = Xdirinstall ]; then
     trap 'clean_exit' EXIT
 fi
 
+# remove this crap, use old thing
 mkfifo $LOGDIR/logfifo
 tee -a $LOGDIR/fai.log < $LOGDIR/logfifo &
 # in bash &> redirect stdout and stderr to file
