@@ -267,11 +267,11 @@ NFSROOT="$NFSROOT/live/filesystem.dir"
 
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
 
-if [ -z "$grub_config" ]; then
-    grub_config="$cfdir/menu.lst"
-else
-    grub_config="$cfdir/$grub_config"
-fi
+# if -g is a file name, add prefix
+
+[ -z "$grub_config" ] && grub_config="$cfdir/menu.lst" # set default if undefined
+# if grub_config contains / do not change it, else add prefix $cfdir
+echo $grub_config | grep -q '/' || grub_config="$cfdir/$grub_config"
 [ -f "$grub_config" ] || die 13 "Grub menu file $grub_config not found."
 
 [ -z "$FAI_CONFIGDIR" ]  && die 14 "Variable \$FAI_CONFIG not set."
