@@ -27,7 +27,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-my $version = "Version 1.1, 5-august-2007";
+my $version = "Version 1.1.1, 4-may-2008";
 
 use Getopt::Std;
 our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v);
@@ -38,7 +38,7 @@ sub usage {
   print << "EOF";
 ainsl, AppendIfNoSuchLine written in Perl. $version
 
-   Copyright (C) 2006-2007 by Thomas Lange
+   Copyright (C) 2006-2008 by Thomas Lange
 
 Usage: ainsl [OPTION] FILE LINE [PATTERN]
 
@@ -75,16 +75,15 @@ $optpattern  = shift;
 $found = 0;
 usage() unless defined $line;
 
-print "FILE: $filename\nLINE: $line\nPATTERN $pattern\n" if $debug;
+print "FILE: $filename\nLINE: $line\nPATTERN: $pattern\n" if $debug;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 $opt_a && autocreate;
 
 $pattern = (defined $optpattern) ? $optpattern: $line;
 # process pattern and line
-$opt_s && $pattern=~ s/\s+/\\s+/g;
-
 # remove ^ and $ in line (only at start and end), but still use it for pattern
 # in no explicit pattern was given
+
 unless (defined $optpattern) {
 # remove special chars ^ and $ from line
   $line =~ s/^\^//;
@@ -94,6 +93,7 @@ unless (defined $optpattern) {
   $pattern =~s/\)/\\)/g;
   $pattern =~s/\+/\\+/g;
 }
+$opt_s && $pattern=~ s/\s+/\\s+/g;
 
 print "ainsl: newpattern: $pattern\n" if $debug;
 print "ainsl: newline: $line\n" if $debug;
