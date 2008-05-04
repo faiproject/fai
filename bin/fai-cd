@@ -6,7 +6,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2007 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2008 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 # based on a script called make-fai-bootcd by Niall Young <niall@holbytla.org>
@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 3.3, 26 november 2007"
+version="fai-cd 3.3.1, 4-may-2008"
 
 forceremoval=0;
 burn=0
@@ -220,7 +220,7 @@ burniso() {
 # Parse commandline options
 while getopts "nkfhg:bm:C:u:" opt ; do
     case "$opt" in
-        C)  cfdir=$OPTARG ;;
+        C)  cdir=$OPTARG ;;
 	f)  forceremoval=1 ;;
 	h)  usage ;;
 	g)  grub_config="$OPTARG" ;;
@@ -251,10 +251,12 @@ if [ $makeiso -eq 1 ]; then
 fi
 
 # use FAI_ETC_DIR from environment variable
-if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+if [ -n "$FAI_ETC_DIR" -a -z "$cdir" ]; then
     echo "Using environment variable \$FAI_ETC_DIR."
+    cfdir=$FAI_ETC_DIR
 fi
-cfdir=${FAI_ETC_DIR:=/etc/fai}
+[ -n "$cdir" ] && cfdir=$cdir
+${cfdir:=/etc/fai}
 cfdir=$(readlink -f $cfdir) # canonicalize path
 if [ ! -d "$cfdir" ]; then
     echo "$cfdir is not a directory"
