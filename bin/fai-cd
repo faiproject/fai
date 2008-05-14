@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 3.3.1, 4-may-2008"
+version="fai-cd 3.3.2, 13-may-2008"
 
 forceremoval=0;
 burn=0
@@ -242,6 +242,7 @@ isoname=$1
 [ $makeiso -eq 1 -a "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
 [ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
 [ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
+[ -z "$(ls $mirrordir)" ] && die 18 "No mirror found in $mirrordir. Empty directory."
 [ -f "$isoname" ]     && [ $forceremoval -eq 1 ] && rm $isoname
 [ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it or use -f."
 [ $(id -u) != "0" ]   && die 9 "Run this program as root."
@@ -256,7 +257,7 @@ if [ -n "$FAI_ETC_DIR" -a -z "$cdir" ]; then
     cfdir=$FAI_ETC_DIR
 fi
 [ -n "$cdir" ] && cfdir=$cdir
-${cfdir:=/etc/fai}
+cfdir=${cfdir:=/etc/fai}
 cfdir=$(readlink -f $cfdir) # canonicalize path
 if [ ! -d "$cfdir" ]; then
     echo "$cfdir is not a directory"
