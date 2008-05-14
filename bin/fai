@@ -223,12 +223,17 @@ if [ X$action = Xdirinstall ]; then
 	exit 4
     fi
 
+    # two lines taken from task_dirinstall
+    mkdir -p $FAI_ROOT
+    FAI_ROOT=$(cd $FAI_ROOT;pwd)
+
     # check if target directory is mounted with bad options
-    local fs=$(df $FAI_ROOT | tail -1 | awk '{print $6}')
-    if mount | grep "on $fs" |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
+    fs=$(df $FAI_ROOT | tail -1 | awk '{print $6}')
+    if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
 	echo "Target directory is mounted using nosuid or nodev. Aborting"
 	exit 5
     fi
+    unset fs
 
     export NFSROOT=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $NFSROOT)
     export FAI_DEBOOTSTRAP=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $FAI_DEBOOTSTRAP)
