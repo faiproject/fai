@@ -6,7 +6,7 @@
 # bootinfo -- get boot information via DHCP or BOOTP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2006 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2008 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -120,9 +120,16 @@ get_fixed_info() {
 
 netdevice_info
 boot=0
-dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
-dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
-[ $boot -eq 0 -a "$ip" = "dhcp" ] && get_dhcp_info
+
+# when using live-initramfs
+if [ -d /var/log/live.log ]; then
+    grep IP-Config /var/log/live.log | grep -q "DHCP" && get_dhcp_info
+    grep IP-Config /var/log/live.log | grep -q "BOOTP" && get_bootp_info
+else
+    dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
+    dmesg | grep -q "Sending BOOTP requests" && get_bootp_info
+    [ $boot -eq 0 -a "$ip" = "dhcp" ] && get_dhcp_info
+fi
 
 if [ $boot -eq 0 ]; then
     get_fixed_info
