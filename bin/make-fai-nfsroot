@@ -6,7 +6,7 @@
 # make-fai-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2007 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2008 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -31,7 +31,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2007 Thomas Lange
+	Copyright (C) 1999-2008 Thomas Lange
 	Report bugs to <fai@informatik.uni-koeln.de>.
 
 	Usage: make-fai-nfsroot [OPTIONS]
@@ -239,6 +239,12 @@ copy_fai_files() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
     
+    # check if NFSROOT directory is mounted with bad options
+    fs=$(df $NFSROOT | tail -1 | awk '{print $6}')
+    if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
+        die "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
+    fi
+
     local dversion=$(dpkg -l debootstrap | grep debootstrap | cut -f7 -d' ')
     echo "Creating base system using debootstrap version $dversion"
     echo "Calling debootstrap $1 $NFSROOT $2"
