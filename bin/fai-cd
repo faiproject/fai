@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 3.3.3, 20-may-2008"
+version="fai-cd 3.3.4, 31-may-2008"
 
 forceremoval=0;
 burn=0
@@ -68,14 +68,14 @@ create_grub_image() {
 
     mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
 
-    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
-    [ -d $NFSROOT/usr/lib/grub ] && cp $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
+    [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
+    [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
     cp $grub_config $tmp/boot/grub/menu.lst
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
-    cp $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
-    cp $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
-    cp $NFSROOT/boot/config-$kernelversion $tmp/boot/
+    cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
+    cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
+    cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 customize_nfsroot() {
@@ -136,8 +136,13 @@ mkusb(){
     if [ $makeusb -eq 1 ]; then
 	# TODO: If usbdir is a device (matches /dev/) mount it
 	[ -d $usbdir ] || die 17 "$usbdir does not exist."
-	echo "Writing FAI data to USB device $usbdir"
-	cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
+	if [ $rsync -eq 1 ]; then
+	    echo "Syncing FAI data to USB device $usbdir"
+	    rsync --delete -av $tmp/live $tmp/boot $usbdir || true
+	else
+	    echo "Writing FAI data to USB device $usbdir"
+	    cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
+	fi
 	echo $isoversion > $usbdir/.FAI-CD-VERSION
 
 	# now make the USB device bootable
@@ -218,6 +223,9 @@ burniso() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
 
+rsync=0
+[ -x $(which rsync) ] && rsync=1
+
 # Parse commandline options
 while getopts "nkfhg:bm:C:u:" opt ; do
     case "$opt" in
@@ -232,7 +240,7 @@ while getopts "nkfhg:bm:C:u:" opt ; do
 	u)  usbdir="$OPTARG"
 	    makeusb=1
 	    makeiso=0
-	    [ -e $usbdir/live ] && die 11 "Please remove $usbdir/live. Aborting."
+	    [ $rsync -eq 0 -a -e $usbdir/live ] && die 11 "Please remove $usbdir/live. Aborting."
 	    ;;
 	?)  usage ;;
     esac
