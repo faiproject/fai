@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2002-2007, lange@informatik.uni-koeln.de
+# (c) Thomas Lange, 2002-2008, lange@informatik.uni-koeln.de
 
 # NOTE: Files named *.source will be evaluated, but their output ignored. Instead
 # the contents of $newclasses will be added to the list of defined classes.
@@ -23,7 +23,7 @@ done
 
 # load additional kernel modules (from old 11modules.source)
 # this order should also enable DMA for all IDE drives
-kernelmodules="rtc floppy usbkbd ide-disk ide-cd"
+kernelmodules="rtc usbkbd ide-disk ide-cd"
 case $(uname -r) in
     2.4*) kernelmodules="$kernelmodules keybdev mousedev hid ide-detect isa-pnp" ;;
     2.6*) kernelmodules="$kernelmodules ehci-hcd ohci-hcd uhci-hcd usbhid usbmouse ide-generic mptspi ata_piix" ;;
@@ -43,7 +43,7 @@ mount -t usbfs  usbfs /proc/bus/usb
 
 modprobe -a sd_mod sr_mod
 
-echo 6 > /proc/sys/kernel/printk
+echo $printk > /proc/sys/kernel/printk
 
 set_disk_info  # calculate number of available disks
 save_dmesg     # save new boot messages (from loading modules)
