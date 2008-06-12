@@ -108,13 +108,19 @@ task_confdir() {
 
 task_partition() {
 
-    echo "Partitioning local harddisks"
-    [ ! -s $LOGDIR/disk_var.sh ] && setup_harddisks -d -X | tee $LOGDIR/format.log 2>&1
-    # setup_harddisks must create $LOGDIR/disk_var.sh file
+    if [ "$USE_SETUP_STORAGE" -eq 1 ]; then
+	echo "Partitioning local harddisks using setup-storage"
+	[ ! -s $LOGDIR/disk_var.sh ] && setup_harddisks -X | tee $LOGDIR/format.log 2>&1
+    else
+	echo "Partitioning local harddisks using setup_harddisks"
+	[ ! -s $LOGDIR/disk_var.sh ] && setup_harddisks -d -X | tee $LOGDIR/format.log 2>&1
+    fi
+
+    # partitioning tool must create $LOGDIR/disk_var.sh file
     if [ ! -s $LOGDIR/disk_var.sh ]; then
 	cat $LOGDIR/format.log
 	sendmon "TASKERROR partition 21"
-	die "setup_harddisks did not create $LOGDIR/disk_var.sh file."
+	die "Partitioning tool did not create $LOGDIR/disk_var.sh file."
     fi
     # now define variable for root and boot partition and boot device
     . $LOGDIR/disk_var.sh
