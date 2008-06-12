@@ -600,8 +600,8 @@ sub rebuild_preserved_partitions {
     $post = "rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
     # build a parted command to create the partition
-    &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B
-      ${end}B", "cleared1_$disk", $post );
+    &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
+      "cleared1_$disk", $post );
   }
 }
 
@@ -773,9 +773,8 @@ sub setup_partitions {
     my $pre = "";
     $pre = ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
     # build a parted command to create the partition
-    &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B
-      ${end}B", "cleared2_$disk$pre", "exist_" . &FAI::make_device_name($disk,
-      $part_id) );
+    &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
+      "cleared2_$disk$pre", "exist_" . &FAI::make_device_name($disk, $part_id) );
     $prev_id = $part_id;
   }
 
