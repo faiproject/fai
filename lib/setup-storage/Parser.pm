@@ -680,7 +680,7 @@ sub run_parser {
 
   # check for old-style configuration files
   ($input =~ m{(^|\n)[^\n#]+;})
-    and die "Old style configuration files are not supported\n";
+    and die "Error: Old style configuration files are not supported\n";
 
   # attempt to parse $input - any error will lead to termination
   defined $FAI::Parser->file($input) or die "Syntax error\n";
