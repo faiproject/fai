@@ -1,0 +1,215 @@
+#!/usr/bin/perl -w
+
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+use strict;
+
+# treat all warnings about uninitialised values as errors
+use warnings FATAL => qw(uninitialized);
+
+################################################################################
+#
+# @file setup-storage
+#
+# @brief The main function of setup-storage - the tool to configure the
+# partitioning from within FAI.
+#
+# This is an implementation from scratch to properly support LVM and RAID. The
+# input format is documented in @ref parser.pm
+#
+# Some (developer) documentation may be found on
+# http://faiwiki.debian.net/index.php/Setup-storage
+#
+# Some coding conventions:
+# - no whitespace after ( and before )
+# - keyword<whitespace>(...)
+# - do not start a new line for {
+# - } goes on a line on its own
+# - one blank line after sub ...
+#
+# $Id$
+#
+# @author Christian Kern, Michael Tautschnig
+# @date Sun Jul 23 16:09:36 CEST 2006
+#
+################################################################################
+
+package FAI;
+
+my $version = "0.9";
+
+# command line parameter handling
+use Getopt::Std;
+our ($opt_X, $opt_f, $opt_h, $opt_d); # the variables for getopt
+&getopts('Xf:hd') || die <<EOF;
+setup-storage version $version
+
+USAGE: [-X]                     no test, your harddisks will be formated
+                                default: only test, no real formating
+       [-f<config-filename>]    default: parse classes
+       [-d]                     enable debug output (equivalent to debug=1)
+       [-h]                     print this help message
+EOF
+
+# $disklist must be provided by the environment
+defined ($ENV{disklist}) or die "Environment variable disklist is not set\n";
+
+################################################################################
+#
+# @brief Really write any changes to disk
+#
+################################################################################
+$FAI::no_dry_run = 0;
+$opt_X and $FAI::no_dry_run = 1;
+$opt_X or warn "setup-harddisks is running in test-only mode\n";
+
+# include all subparts, which are part of the FAI perl package
+use lib "/usr/share/fai/setup-storage/";
+use init;
+use volumes;
+use parser;
+use sizes;
+use commands;
+use fstab;
+use exec;
+
+# the config source file
+my $config_file = undef;
+# use the config file, if given
+open($config_file, $opt_f) or die "Failed to open config file $opt_f\n" if ($opt_f);
+unless ($opt_f) {
+  # see which class file to use
+  foreach my $classfile (reverse split(/\s+/, $ENV{classes})) {
+    next unless (-r "$ENV{FAI}/disk_config/$classfile");
+    open($config_file, "$ENV{FAI}/disk_config/$classfile") 
+      or die "Failed to open $ENV{FAI}/disk_config/$classfile\n";
+    last;
+  }
+}
+
+# if we could not find any matching class file, bail out
+defined ($config_file) or die "No matching disk_config found\n";
+
+# start the parsing - thereby $FAI::configs is filled
+warn "Starting setup-storage $version";
+&FAI::run_parser($config_file);
+
+# mark devices as preserve, where not all already done so
+&FAI::propagate_preserve;
+
+# read the sizes and partition tables of all disks listed in $FAI::disks
+&FAI::get_current_disks;
+
+# see whether there are any existing LVMs
+# load the dm-mod module first, otherwise the LVM tools won't work
+`modprobe dm-mod`;
+&FAI::get_current_lvm;
+
+# see whether there are any existing RAID devices
+# load the md-mod module first, otherwise there is nothing that can be detected
+`modprobe md-mod`;
+&FAI::get_current_raid;
+
+# debugging only: print the current configuration
+if ($FAI::debug) {
+  # for debugging purposes to print the hash structures
+  use Data::Dumper;
+
+  print "Current disk layout\n";
+
+  # make sure perl doesn't warn about it being used only once, same below
+  our %current_config;
+  print Dumper \%current_config;
+
+  print "Current LVM layout\n";
+
+  our %current_lvm_config;
+  print Dumper \%current_lvm_config;
+
+  print "Current RAID layout\n";
+
+  our %current_raid_config;
+  print Dumper \%current_raid_config;
+}
+
+# compute the new LVM and partition sizes; do the partition sizes first to have
+# them available for the the volume group size estimation
+&FAI::compute_partition_sizes;
+&FAI::compute_lv_sizes;
+
+# print the current contents of $FAI::configs
+$FAI::debug and print "Desired disk layout\n";
+$FAI::debug and print Dumper \%FAI::configs;
+
+# generate the command script
+&FAI::build_disk_commands;
+&FAI::build_raid_commands;
+&FAI::build_lvm_commands;
+&FAI::order_commands;
+
+# run all commands
+# debugging only: print the command script
+$FAI::debug and print "$_:" . $FAI::commands{$_}{cmd} . "\n" foreach (&numsort(keys %FAI::commands));
+
+# run the commands (if $FAI::no_dry_run is set)
+# load the modules to support encryption
+`modprobe aes`;
+`modprobe dm-crypt`;
+&FAI::execute_command($FAI::commands{$_}{cmd}) foreach (&numsort(keys %FAI::commands));
+
+# generate the proposed fstab contents
+# wait for udev to set up all devices
+`udevsettle --timeout=10`;
+my @fstab = &FAI::generate_fstab(\%FAI::configs);
+
+# print fstab
+$FAI::debug and print "$_\n" foreach (@fstab);
+
+# write the proposed contents of fstab to $LOGDIR/fstab
+if ($FAI::no_dry_run) {
+  open(FSTAB, ">$ENV{LOGDIR}/fstab")
+    or die "Failed to open $ENV{LOGDIR}/fstab for writing\n";
+  print FSTAB "$_\n" foreach (@fstab);
+  close FSTAB;
+}
+
+# write variables to $LOGDIR/disk_var.sh
+# debugging
+$FAI::debug and print "$_=$FAI::disk_var{$_}\n"
+  foreach (keys %FAI::disk_var);
+
+if ($FAI::no_dry_run)
+{
+  open(DISK_VAR, ">$ENV{LOGDIR}/disk_var.sh")
+    or die "Unable to write to file $ENV{LOGDIR}/disk_var.sh\n";
+  print DISK_VAR "$_=$FAI::disk_var{$_}\n" foreach (keys %FAI::disk_var);
+  close DISK_VAR;
+}
+
+# print crypttab
+$FAI::debug and print "$_\n" foreach (@FAI::crypttab);
+
+# write the proposed contents of fstab to $LOGDIR/fstab
+if ($FAI::no_dry_run && scalar(@FAI::crypttab)) {
+  open(CRYPTTAB, ">$ENV{LOGDIR}/crypttab")
+    or die "Failed to open $ENV{LOGDIR}/crypttab for writing\n";
+  print CRYPTTAB "$_\n" foreach (@FAI::crypttab);
+  close CRYPTTAB;
+}
+
