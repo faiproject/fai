@@ -281,7 +281,7 @@ sub execute_command_internal {
 
     # execute the bash command, write stderr and stdout into the testfiles
     `$command 1> $stdout_filename 2> $stderr_filename`;
-    ( ($?>>8) ne 0 ) and warn "Command had exit code " . ($?>>8) . "\n";
+    ( ($?>>8) ne 0 ) and warn "Command $command had exit code " . ($?>>8) . "\n";
   } else {
     print "would run command $command; to have them executed, use -X \n";
   }
