@@ -117,13 +117,9 @@ warn "Starting setup-storage $version\n";
 &FAI::get_current_disks;
 
 # see whether there are any existing LVMs
-# load the dm-mod module first, otherwise the LVM tools won't work
-`modprobe dm-mod`;
 &FAI::get_current_lvm;
 
 # see whether there are any existing RAID devices
-# load the md-mod module first, otherwise there is nothing that can be detected
-`modprobe md-mod`;
 &FAI::get_current_raid;
 
 # debugging only: print the current configuration
@@ -168,9 +164,6 @@ $FAI::debug and print Dumper \%FAI::configs;
 $FAI::debug and print "$_:" . $FAI::commands{$_}{cmd} . "\n" foreach (&numsort(keys %FAI::commands));
 
 # run the commands (if $FAI::no_dry_run is set)
-# load the modules to support encryption
-`modprobe aes`;
-`modprobe dm-crypt`;
 &FAI::execute_command($FAI::commands{$_}{cmd}) foreach (&numsort(keys %FAI::commands));
 
 # generate the proposed fstab contents
