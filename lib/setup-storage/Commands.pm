@@ -57,8 +57,8 @@ sub build_mkfs_commands {
   my ($create_options) = $partition->{fs_options} =~ m/createopts="([^"]+)"/;
   my ($tune_options)   = $partition->{fs_options} =~ m/tuneopts="([^"]+)"/;
   $create_options = $partition->{fs_options} unless $create_options;
-  print "create_options: $create_options\n" if ($FAI::debug && $create_options);
-  print "tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
+  print "$partition->{mountpoint} create_options: $create_options\n" if ($FAI::debug && $create_options);
+  print "$partition->{mountpoint} tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
 
   # check for encryption requests
   $device = &FAI::encrypt_device($device, $partition);
