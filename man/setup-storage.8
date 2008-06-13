@@ -126,15 +126,22 @@ reside on a disk drive.
 .Sh SYNTAX
 This section describes the syntax of disk_config files
 .Pp
-file ::= <lines> EOF 
+.Bd -literal
+file ::= <lines> EOF
+.Ed
 .Pp
+.Bd -literal
 lines ::= EOL 
           /* empty lines or whitespace only */
           | <comment> EOL 
           | <config> EOL 
+.Ed
 .Pp
+.Bd -literal
 comment ::= #.* 
+.Ed
 .Pp
+.Bd -literal
 config ::= disk_config lvm( <lvmoption>)* 
            | disk_config raid( <raidoption>)*
            | disk_config end 
@@ -143,7 +150,9 @@ config ::= disk_config lvm( <lvmoption>)*
            /* fully qualified device-path or short form, like hda, whereby full
             * path is assumed to be /dev/hda */
            | <volume>
+.Ed
 .Pp
+.Bd -literal
 lvmoption ::= /* empty */
            | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
            /* preserve partitions -- always */
@@ -156,7 +165,9 @@ lvmoption ::= /* empty */
            /* when creating the fstab, the key used for defining the device
            may be the device (/dev/xxx), a label given using -L, or the uuid
            */  
+.Ed
 .Pp
+.Bd -literal
 raidoption ::= /* empty */
            | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
            /* preserve partitions -- always */
@@ -167,7 +178,9 @@ raidoption ::= /* empty */
            /* when creating the fstab, the key used for defining the device
            may be the device (/dev/xxx), a label given using -L, or the uuid
            */  
+.Ed
 .Pp
+.Bd -literal
 option ::= /* empty */
            | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
            /* preserve partitions -- always */
@@ -186,11 +199,15 @@ option ::= /* empty */
            /* when creating the fstab, the key used for defining the device
            may be the device (/dev/xxx), a label given using -L, or the uuid
            */  
+.Ed
 .Pp
+.Bd -literal
 volume ::= <type> <mountpoint> <size> <filesystem> <mount_options> <fs_options>
            | vg <name> <size>
            /* lvm vg */
+.Ed
 .Pp
+.Bd -literal
 type ::= primary
          /* for physical disks only */
          | logical
@@ -199,7 +216,9 @@ type ::= primary
          /* raid level */
          | [^/[:space:]]+-[^/[:space:]]+
          /* lvm logical volume: vg name and lv name*/
+.Ed
 .Pp
+.Bd -literal
 mountpoint ::= -
                /* do not mount */
                | swap
@@ -207,10 +226,14 @@ mountpoint ::= -
                | /[^[:space:]]*(:encrypt)?
                /* fully qualified path; if :encrypt is given, the partition
                 * will be encrypted, the key is generated automatically */
+.Ed
 .Pp
+.Bd -literal
 name ::= [^/[:space:]]+
          /* lvm volume group name */
+.Ed
 .Pp
+.Bd -literal
 size ::= [[:digit:]]+[kMGTP%]?(-([[:digit:]]+[kMGTP%]?)?)?(:resize)?
          /* size in kilo, mega (default), giga, tera or petabytes or %,
           * possibly given as a range; physical
@@ -221,21 +244,29 @@ size ::= [[:digit:]]+[kMGTP%]?(-([[:digit:]]+[kMGTP%]?)?)?(:resize)?
           * or lvm logical volumes only */
          | [^,:[:space:]]+(:(spare|missing))*(,[^,:[:space:]]+(:(spare|missing))*)*
          /* devices and options for a raid or lvm vg */
-
-mount_options ::= [^[:space:]]+
+.Ed
 .Pp
+.Bd -literal
+mount_options ::= [^[:space:]]+
+.Ed
+.Pp
+.Bd -literal
 filesystem ::= -
                | swap
                | [^[:space:]]
                /* mkfs.xxx must exist */
+.Ed
 .Pp
+.Bd -literal
 fs_options ::= (createopts=".*"|tuneopts=".*")*
                /* options to append to mkfs.xxx and to the filesystem-specific
                 * tuning tool */
                | .*
                /* arbitrary options appended to mkfs.xxx call */
+.Ed
 .Sh EXAMPLES
-# Configure the device /dev/hda
+Simple configuration of /dev/hda
+.Bd -literal
 disk_config hda   preserve:6,7   disklabel:msdos  bootable:3
 # preserve the 6th and the 7th partition. The disklabel is msdos, which is the default
 # for x86. Furthermore the 3rd partition is made bootable. 
@@ -254,8 +285,10 @@ logical /var      10%-      ext3               rw
 # make /dev/hda7 at least 10% of the disk size
 logical /nobackup 0-        xfs                rw
 # use mkfs.xfs to format the partition
+.Ed
 .Pp
-# Create a softRAID
+Create a softRAID
+.Bd -literal
 disk_config raid
 raid1        /    sda1,sdd1  ext2        rw,errors=remount-ro
 # create a RAID-1 on /dev/sda1 and /dev/sdd1, format using mkfs.ext2 and mount
@@ -263,16 +296,18 @@ raid1        /    sda1,sdd1  ext2        rw,errors=remount-ro
 raid0        -    disk2.2,sdc1,sde1:spare:missing  ext2       default
 # create a RAID-0 on the second partition of the second disk, /dev/sdc1, and
 # /dev/sde1 as a spare partition, which (may?) me missing
+.Ed
 .Pp
-# Simple LVM example
+Simple LVM example
+.Bd -literal
 disk_config sda  bootable:1
 primary /boot 500 ext3 rw
 primary -       4096-   -       -
-
 disk_config lvm
 vg my_pv        sda2
 my_pv-_swap     swap    2048    swap    sw
 my_pv-_root     /       2048    ext3 rw
+.Ed
 .Sh SEE ALSO
 This program is part of FAI (Fully Automatic Installation).
 The FAI homepage is http://www.informatik.uni-koeln.de/fai.
