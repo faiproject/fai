@@ -157,7 +157,7 @@ sub numsort { return sort { $a <=> $b } @_; }
 #
 # @param $dev Device string
 #
-# @return 1, iff it the matches the regexp, and disk device string, and
+# @return 1, if it the matches the regexp, and disk device string, and
 # partition number, if any, otherwise -1
 #
 ################################################################################
