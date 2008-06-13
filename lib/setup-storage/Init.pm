@@ -52,7 +52,7 @@ defined( $ENV{debug} ) and $FAI::debug = $ENV{debug};
 #
 ################################################################################
 @FAI::disks = split( /\n/, $ENV{disklist} );
-( $FAI::debug > 0 ) and print "disklist was:\n" . $ENV{disklist};
+( $FAI::debug > 0 ) and print "disklist was: $ENV{disklist}\n";
 
 ################################################################################
 #
