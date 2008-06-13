@@ -263,7 +263,7 @@ sub compute_lv_sizes {
     }
   }
 }
-        
+
 ################################################################################
 #
 # @brief Handle preserved partitions while computing the size of partitions
@@ -280,7 +280,7 @@ sub compute_lv_sizes {
 sub do_partition_preserve {
 
   my ($part_id, $config, $current_disk, $next_start, $min_req_total_space) = @_;
-      
+
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
 
@@ -353,7 +353,7 @@ sub do_partition_preserve {
 sub do_partition_extended {
 
   my ($part_id, $config, $current_disk) = @_;
-      
+
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
 
@@ -405,10 +405,10 @@ sub do_partition_real {
 
   my ($part_id, $config, $current_disk, $next_start, $min_req_total_space,
     $worklist) = @_;
-      
+
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
-        
+
   my ($start, $end) = &FAI::make_range($part->{size}->{range},
     $current_disk->{size} . "B");
 

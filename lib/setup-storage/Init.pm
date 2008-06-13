@@ -133,7 +133,7 @@ $FAI::n_c_i = 1;
 ################################################################################
 sub push_command { 
   my ($cmd, $pre, $post) = @_;
-    
+
   $FAI::commands{$FAI::n_c_i} = {
     cmd => $cmd,
     pre => $pre,

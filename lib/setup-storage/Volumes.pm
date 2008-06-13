@@ -85,7 +85,7 @@ sub get_current_disks {
       $error =
         &FAI::execute_ro_command("parted -s $disk unit TiB print", \@parted_print, 0);
     }
-        
+
     ($error eq "") or die "Failed to read the partition table from $disk\n";
 
 # the following code parses the output of parted print, using various units
@@ -289,7 +289,7 @@ sub get_current_disks {
 #
 ################################################################################
 sub get_current_lvm {
-  
+
   use Linux::LVM;
 
   # get the existing volume groups
@@ -297,13 +297,13 @@ sub get_current_lvm {
     # initialise the hash entry
     $FAI::current_lvm_config{$vg}{physical_volumes} = ();
     &FAI::push_command( "true", "", "vg_created_$vg" );
-    
+
     # store the vg size in MB
     my %vg_info = get_volume_group_information($vg);
     $FAI::current_lvm_config{$vg}{size} = 
       &FAI::convert_unit( $vg_info{alloc_pe_size} .
         $vg_info{alloc_pe_size_unit} );
-    
+
       # store the logical volumes and their sizes
     my %lv_info = get_logical_volume_information($vg);
     foreach my $lv_name (sort keys %lv_info) {
@@ -314,7 +314,7 @@ sub get_current_lvm {
           $lv_info{$lv_name}->{lv_size_unit});
       &FAI::push_command( "true", "", "exist_/dev/$vg/$short_name" );
     }
-    
+
     # store the physical volumes
     my %pv_info = get_physical_volume_information($vg);
     @{ $FAI::current_lvm_config{$vg}{physical_volumes} } = 
@@ -406,10 +406,10 @@ sub propagate_preserve {
 
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
-    
+
     # no physical devices here
     next if ($config =~ /^PHY_./);
-    
+
     if ($config =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
       # check for logical volumes that need to be preserved and preserve the

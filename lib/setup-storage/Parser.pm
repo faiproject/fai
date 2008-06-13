@@ -351,7 +351,7 @@ $FAI::Parser = Parse::RecDescent->new(
           &FAI::init_disk_config($item[ 1 ]);
         }
         option(s?)
-    
+
     raid_option: /^preserve_always:(\d+(,\d+)*)/
         {
           # set the preserve flag for all ids in all cases
@@ -559,7 +559,7 @@ $FAI::Parser = Parse::RecDescent->new(
             # range has no upper limit, assume the whole disk
             $range = "${range}100%";
           } 
-          
+
           # convert the units, if necessary
           my ($min, $max) = split (/-/, $range);
           $min   = &FAI::convert_unit($min);

@@ -198,7 +198,7 @@ sub execute_command {
   my ($command, $stdout, $stderr) = @_;
 
   my $err = &execute_command_internal($command, $stdout, $stderr);
-  
+
   if ($err ne "") {
     my $response = &get_error($err, "response");
     my $message  = &get_error($err, "message");
@@ -216,7 +216,7 @@ sub execute_command {
 
 sub execute_ro_command {
   my ($command, $stdout, $stderr) = @_;
-  
+
   # backup value of $FAI::no_dry_run
   my $no_dry_run = $FAI::no_dry_run;
 
@@ -224,10 +224,10 @@ sub execute_ro_command {
   $FAI::no_dry_run = 1;
 
   my $err = &execute_command_internal($command, $stdout, $stderr);
-  
+
   # reset no_dry_run
   $FAI::no_dry_run = $no_dry_run;
-  
+
   if ($err ne "") {
     my $response = &get_error($err, "response");
     my $message  = &get_error($err, "message");

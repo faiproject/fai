@@ -59,7 +59,7 @@ sub build_mkfs_commands {
   $create_options = $partition->{fs_options} unless $create_options;
   print "create_options: $create_options\n" if ($FAI::debug && $create_options);
   print "tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
-  
+
   # check for encryption requests
   $device = &FAI::encrypt_device($device, $partition);
 
@@ -71,7 +71,7 @@ sub build_mkfs_commands {
   $pre_encrypt = "encrypt_$device" if ($partition->{encrypt});
   &FAI::push_command( "$create_tool $create_options $device", $pre_encrypt,
     "has_fs_$device" );
-  
+
   # possibly tune the file system - this depends on whether the file system
   # supports tuning at all
   return unless $tune_options;
@@ -96,7 +96,7 @@ sub build_mkfs_commands {
 #
 ################################################################################
 sub encrypt_device {
-  
+
   my ($device, $partition) = @_;
 
   return $device unless $partition->{encrypt};
@@ -169,7 +169,7 @@ sub build_raid_commands {
       my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
       # the desired RAID level
       my $level = $vol->{mode};
-      
+
       warn "RAID implementation is incomplete - preserve is not supported\n" if
         ($vol->{preserve});
 
@@ -203,7 +203,7 @@ sub build_raid_commands {
       # wait for udev to set up all devices
       &FAI::push_command( "udevsettle --timeout=10", $pre_req_no_comma,
         "settle_for_mdadm_create$id" );
-      
+
       # create the command
       if (0 == $id) {
         $pre_req = "settle_for_mdadm_create$id$pre_req";
@@ -406,7 +406,7 @@ sub build_lvm_commands {
 
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
-    
+
     # no physical devices or RAID here
     next if ($config =~ /^PHY_./ || $config eq "RAID");
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
@@ -441,11 +441,11 @@ sub build_lvm_commands {
 #
 ################################################################################
 sub get_preserved_partitions {
-  
+
   my ($config) = @_;
   ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
   my $disk = $1; # the device to be configured
-  
+
   # the list of partitions that must be preserved
   my @to_preserve = ();
 
@@ -558,11 +558,11 @@ sub get_preserved_partitions {
 #
 ################################################################################
 sub rebuild_preserved_partitions {
-  
+
   my ($config, $to_preserve) = @_;
   ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
   my $disk = $1; # the device to be configured
-  
+
   # once we rebuild partitions, their ids are likely to change; this counter
   # helps keeping track of this
   my $part_nr = 0;
@@ -591,7 +591,7 @@ sub rebuild_preserved_partitions {
         $part_nr = 4 if ( $part_nr < 4 );
       }
     }
-    
+
     # restore the partition type, if any
     my $fs =
       $FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem};
@@ -626,7 +626,7 @@ sub setup_partitions {
   my ($config) = @_;
   ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
   my $disk = $1; # the device to be configured
-  
+
   # the list of partitions that must be preserved
   my @to_preserve = &FAI::get_preserved_partitions($config);
 
@@ -703,11 +703,11 @@ sub setup_partitions {
         $deps .= ",resized_" . &FAI::make_device_name($disk, $p_other);
       }
     }
-    
+
     # get the new starts and ends
     my $start = $part->{start_byte};
     my $end = $part->{end_byte};
-    
+
     # build an appropriate command
     # ntfs requires specific care
     if ($FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem} eq
@@ -736,7 +736,7 @@ sub setup_partitions {
         "rebuilt_" . &FAI::make_device_name($disk, $p), "resized_" .
         &FAI::make_device_name($disk, $p) );
     }
-    
+
   }
 
   # write the disklabel again to drop the partition table and create a new one
@@ -768,7 +768,7 @@ sub setup_partitions {
         $part_type = "logical";
       }
     }
-    
+
     my $fs = $part->{filesystem};
     $fs = "" unless defined($fs);
     $fs = "linux-swap" if ($fs eq "swap");
@@ -806,7 +806,7 @@ sub setup_partitions {
 #
 ################################################################################
 sub build_disk_commands {
-  
+
   # loop through all configs
   foreach my $config ( keys %FAI::configs ) {
     # no RAID or LVM devices here
@@ -816,7 +816,7 @@ sub build_disk_commands {
 
     # create partitions on non-virtual configs
     &FAI::setup_partitions($config) unless ($FAI::configs{$config}{virtual});
-    
+
     # generate the commands for creating all filesystems
     foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
       # reference to the current partition
@@ -866,7 +866,7 @@ sub restore_partition_table {
           $part_type = "logical";
         }
       }
-      
+
       # restore the partition type, if any
       my $fs = $curr_part->{filesystem};
 

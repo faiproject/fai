@@ -118,7 +118,7 @@ sub get_fstab_key {
     return $device_name;
   }
 }
-          
+
 
 ################################################################################
 #
@@ -138,7 +138,7 @@ sub generate_fstab {
 
   # the file to be returned, a list of lines
   my @fstab = ();
-      
+
   # walk through all configured parts
   # the order of entries is most likely wrong, it is fixed at the end
   foreach my $c (keys %$config) {
@@ -159,14 +159,14 @@ sub generate_fstab {
 
         # skip extended partitions and entries without a mountpoint
         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
-  
+
         my $device_name = &FAI::make_device_name($device, $p_ref->{number});
         if ($p_ref->{encrypt}) {
           # encryption requested, rewrite the device name
           $device_name =~ "s#/#_#g";
           $device_name = "/dev/mapper/crypt$device_name";
         }
-          
+
         # if the mount point is / or /boot, the variables should be set, unless
         # they are already
         if ($p_ref->{mountpoint} eq "/boot" || ($p_ref->{mountpoint} eq "/" && 
@@ -177,14 +177,14 @@ sub generate_fstab {
           defined ($FAI::disk_var{BOOT_DEVICE}) and ($FAI::disk_var{BOOT_DEVICE} ne "") or
             $FAI::disk_var{BOOT_DEVICE} = $1;
         }
-  
+
         push @fstab, &FAI::create_fstab_line($p_ref,
           &FAI::get_fstab_key($device_name, $config->{$c}->{fstabkey}), $device_name);
 
       }
     } elsif ($c =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
-      
+
       my $device = $1;
 
       # create a line in the output file for each logical volume
@@ -202,14 +202,14 @@ sub generate_fstab {
         # resolve the symlink to the real device
         # and write it as the first entry
         &FAI::execute_ro_command("readlink -f /dev/$device/$l", \@fstab_key, 0);
-        
+
         # remove the newline
         chomp ($fstab_key[0]);
 
         # make sure we got back a real device
         ($FAI::no_dry_run == 0 || -b $fstab_key[0]) 
           or die "Failed to resolve /dev/$device/$l\n";
-        
+
         my $device_name = "/dev/$device/$l";
         if ($l_ref->{encrypt}) {
           # encryption requested, rewrite the device name
@@ -218,7 +218,7 @@ sub generate_fstab {
         } else {
           $device_name = $fstab_key[0];
         }
-        
+
         # according to http://grub.enbug.org/LVMandRAID, this should work...
         # if the mount point is / or /boot, the variables should be set, unless
         # they are already
@@ -243,7 +243,7 @@ sub generate_fstab {
 
         # skip entries without a mountpoint
         next if ($r_ref->{mountpoint} eq "-");
-        
+
         my $device_name = "/dev/md$r";
         if ($r_ref->{encrypt}) {
           # encryption requested, rewrite the device name
@@ -273,7 +273,7 @@ sub generate_fstab {
   # cleanup the swaplist (remove leading space and add quotes)
   $FAI::disk_var{SWAPLIST} =~ s/^\s*/"/;
   $FAI::disk_var{SWAPLIST} =~ s/\s*$/"/;
-  
+
   # cleanup the list of boot devices (remove leading space and add quotes)
   $FAI::disk_var{BOOT_DEVICE} =~ s/^\s*/"/;
   $FAI::disk_var{BOOT_DEVICE} =~ s/\s*$/"/;
