@@ -56,7 +56,19 @@ sub build_mkfs_commands {
 
   my ($create_options) = $partition->{fs_options} =~ m/createopts="([^"]+)"/;
   my ($tune_options)   = $partition->{fs_options} =~ m/tuneopts="([^"]+)"/;
-  $create_options = $partition->{fs_options} unless $create_options;
+
+  # this enables the use of all remaining options as create option if
+  # you did not specify createopts= Example: -m0 -i0 will then be used
+  # as createopts. This fails if you do only specify tuneopts without
+  # using createopts. Therefore is disable this feature. IMO this
+  # special behaviour is also not documented in setup-storage.8
+  # T.Lange
+  # $create_options = $partition->{fs_options} unless $create_options;
+
+  # prevent warnings of uninitialized variables
+  $create_options = '' unless $create_options;
+  $tune_options   = '' unless $tune_options;
+
   print "$partition->{mountpoint} create_options: $create_options\n" if ($FAI::debug && $create_options);
   print "$partition->{mountpoint} tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
 
