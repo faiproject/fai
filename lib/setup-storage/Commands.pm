@@ -214,7 +214,10 @@ sub build_raid_commands {
         "yes | mdadm --create /dev/md$id --level=$level --force --run --raid-devices="
           . scalar(@eff_devs) . " --spare-devices=" . scalar(@spares) . " "
           . join(" ", @eff_devs) . " " . join(" ", @spares),
-        "$pre_req", "exist_/dev/md$id" );
+        "$pre_req", "run_udev_/dev/md$id" );
+
+      &FAI::push_command( "udevsettle --timeout=10", "run_udev_/dev/md$id",
+        "exist_/dev/md$id" );
 
       # create the filesystem on the volume
       &FAI::build_mkfs_commands("/dev/md$id",
@@ -382,7 +385,9 @@ sub setup_logical_volumes {
 
     # create a new volume
     &FAI::push_command( "lvcreate -n $lv -L " . $lv_size->{eff_size} . " $vg",
-      "vg_enabled_$vg,$lv_rm_pre", "exist_/dev/$vg/$lv" );
+      "vg_enabled_$vg,$lv_rm_pre", "run_udev_/dev/$vg/$lv" );
+    &FAI::push_command( "udevsettle --timeout=10", "run_udev_/dev/$vg/$lv",
+      "exist_/dev/$vg/$lv" );
 
     # create the filesystem on the volume
     &FAI::build_mkfs_commands("/dev/$vg/$lv",
@@ -596,19 +601,22 @@ sub rebuild_preserved_partitions {
     $part_nr++;
     $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id} = $part_nr;
 
-    my $post = "exist_" . &FAI::make_device_name($disk, $part_nr);
+    my $post = "run_udev_" . &FAI::make_device_name($disk, $part_nr);
     $post = "rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
     # build a parted command to create the partition
     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
       "cleared1_$disk", $post );
+    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" . 
+      &FAI::make_device_name($disk, $part_nr), "exist_" .
+      &FAI::make_device_name($disk, $part_nr) ) if 
+      $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
   }
 }
 
 ################################################################################
 #
-# @brief Create the volume group $config, unless it exists already; if the
-# latter is the case, only add/remove the physical devices
+# @brief Set up physical partitions
 #
 # @param $config Config entry
 #
@@ -774,7 +782,10 @@ sub setup_partitions {
     $pre = ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
     # build a parted command to create the partition
     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
-      "cleared2_$disk$pre", "exist_" . &FAI::make_device_name($disk, $part_id) );
+      "cleared2_$disk$pre", "run_udev_" . &FAI::make_device_name($disk, $part_id) );
+    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" . 
+      &FAI::make_device_name($disk, $part_id), "exist_" . 
+      &FAI::make_device_name($disk, $part_id) );
     $prev_id = $part_id;
   }
 
