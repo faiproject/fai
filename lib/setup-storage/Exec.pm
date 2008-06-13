@@ -280,6 +280,7 @@ sub execute_command_internal {
       and print "(CMD) $command 1> $stdout_filename 2> $stderr_filename\n";
 
     # execute the bash command, write stderr and stdout into the testfiles
+    print "Executing: $command\n";
     `$command 1> $stdout_filename 2> $stderr_filename`;
     ( ($?>>8) ne 0 ) and warn "Command $command had exit code " . ($?>>8) . "\n";
   } else {
