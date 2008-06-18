@@ -261,45 +261,81 @@ filesystem ::= -
 fs_options ::= (createopts=".*"|tuneopts=".*")*
                /* options to append to mkfs.xxx and to the filesystem-specific
                 * tuning tool */
-               | .*
-               /* arbitrary options appended to mkfs.xxx call */
 .Ed
+.Sh MIGRATION FROM SETUP_HARDDISKS
+The major differences to the prior configuration syntax are:
+.Bl -bullet -offset indent -compact
+.It
+The disk_config ... line allows for the keywords lvm and raid
+.It
+Options may need to be appended to the disk_config line
+.It
+The ";" is not used anymore, the options that were given there have now been split up
+.Bl -dash -offset indent -compact
+.It
+The filesystem is now an explicit parameter; note, that the order of
+filesystem/mount-options is the same /etc/fstab, as opposed to the previous
+format of disk_config
+.It
+Any options to mkfs.xxx may be given using createopts=""
+.It
+The "preserveX" and "boot" options are one of the options now given on the
+disk_config line, using preserve_install or preserve_always and bootable
+.El
+.It
+Support for LVM and RAID is completely new
+.It
+Resizing partitions and filesystems is supported
+.El
 .Sh EXAMPLES
 Simple configuration of /dev/hda
-.Bd -literal
+.Bd -literal -offset indent -compact
 disk_config hda   preserve:6,7   disklabel:msdos  bootable:3
-# preserve the 6th and the 7th partition. The disklabel is msdos, which is the default
-# for x86. Furthermore the 3rd partition is made bootable. 
 primary /boot     20-100        ext3            rw
-# create a primary partition /dev/hda1 with a size between 20 and 100 MB and mount it
-# read-write as /boot; it is formatted using ext3 filesystem
 primary swap      1000     swap       sw
-# /dev/hda2 will be a swap space of 1000 MB
-primary /         12000      ext3           rw        -b 2048
-# /dev/hda3 should be formatted using ext3 filesystem; when calling mkfs.ext3
-# the option "-b 2048" is appended.
+primary /         12000      ext3           rw        createopts="-b 2048"
 logical /tmp      1000      ext3            rw,nosuid
-# create the logical partition /dev/hda5
 logical /usr      preserve6      ext3          rw
 logical /var      10%-      ext3               rw
-# make /dev/hda7 at least 10% of the disk size
 logical /nobackup 0-        xfs                rw
-# use mkfs.xfs to format the partition
 .Ed
+.Bl -bullet -compact
+.It
+Preserve the 6th and the 7th partition. The disklabel is msdos, which is the default
+for x86. Furthermore the 3rd partition is made bootable.
+.It
+Create a primary partition /dev/hda1 with a size between 20 and 100 MB and mount it
+read-write as /boot; it is formatted using ext3 filesystem.
+.It
+/dev/hda2 will be a swap space of 1000 MB
+.It
+/dev/hda3 should be formatted using ext3 filesystem; when calling mkfs.ext3
+the option "-b 2048" is appended.
+.It
+Create the logical partition /dev/hda5
+.It
+Make /dev/hda7 at least 10% of the disk size
+.It
+Use mkfs.xfs to format the partition 8
+.El
 .Pp
 Create a softRAID
-.Bd -literal
+.Bd -literal -offset indent -compact
 disk_config raid
 raid1        /    sda1,sdd1  ext2        rw,errors=remount-ro
-# create a RAID-1 on /dev/sda1 and /dev/sdd1, format using mkfs.ext2 and mount
-# it as /
 raid0        -    disk2.2,sdc1,sde1:spare:missing  ext2       default
-# create a RAID-0 on the second partition of the second disk, /dev/sdc1, and
-# /dev/sde1 as a spare partition, which (may?) me missing
 .Ed
+.Bl -bullet -compact
+.It
+Create a RAID-1 on /dev/sda1 and /dev/sdd1, format using mkfs.ext2 and mount
+it as /
+.It
+Create a RAID-0 on the second partition of the second disk, /dev/sdc1, and
+/dev/sde1 as a spare partition. The latter may be missing.
+.El
 .Pp
 Simple LVM example
-.Bd -literal
+.Bd -literal -offset indent -compact
 disk_config sda  bootable:1
 primary /boot 500 ext3 rw
 primary -       4096-   -       -
@@ -312,9 +348,9 @@ my_pv-_root     /       2048    ext3 rw
 This program is part of FAI (Fully Automatic Installation).
 The FAI homepage is http://www.informatik.uni-koeln.de/fai.
 .Pp
-As
 .Nm
-is still beta-software being actively developed, its documentation is maintained
+is still beta-software being actively developed. Further documentation,
+including coding related information, is maintained
 in a wiki page at http://faiwiki.debian.net/index.php/Setup-storage.
 .Sh AUTHOR
 FAI is courtesy of Thomas Lange <lange@informatik.uni-koeln.de>. Michael
