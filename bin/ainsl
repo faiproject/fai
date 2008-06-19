@@ -27,10 +27,10 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-my $version = "Version 1.1.1, 4-may-2008";
+my $version = "Version 1.2, 18-june-2008";
 
 use Getopt::Std;
-our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v);
+our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q);
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
@@ -42,12 +42,14 @@ ainsl, AppendIfNoSuchLine written in Perl. $version
 
 Usage: ainsl [OPTION] FILE LINE [PATTERN]
 
-   -a                   Autocreate file if not existing.
-   -D                   Create debug output.
-   -h                   Show summary of options.
-   -n                   Print the actions, but do not execute them.
-   -s                   Convert blanks in line to '\\s+' regexp
-   -v                   Create verbose output.
+   -a         Autocreate file if not existing.
+   -D         Create debug output.
+   -h         Show summary of options.
+   -n         Print the actions, but do not execute them.
+   -Q         Quote all metacharacters in pattern. Uses perl\'s \\Q function.
+   -q         Quote * and + metacharacters in pattern.
+   -s         Convert blanks in line to '\\s+' regexp.
+   -v         Create verbose output.
 
 Report bugs to <lange\@informatik.uni-koeln.de>.
 EOF
@@ -63,7 +65,7 @@ sub autocreate {
   close (FILE);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('aDhsvn') || usage;
+getopts('aDhsvnQq') || usage;
 
 $opt_h && usage;
 $verbose = $opt_v || $ENV{verbose} || 0;
@@ -94,6 +96,9 @@ unless (defined $optpattern) {
   $pattern =~s/\+/\\+/g;
 }
 $opt_s && $pattern=~ s/\s+/\\s+/g;
+$opt_q && $pattern=~ s/\*/\\*/g;
+$opt_q && $pattern=~ s/\+/\+/g;
+$pattern="\Q$pattern\E" if $opt_Q;
 
 print "ainsl: newpattern: $pattern\n" if $debug;
 print "ainsl: newline: $line\n" if $debug;
