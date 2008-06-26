@@ -246,6 +246,7 @@ sub compute_lv_sizes {
     my $redist_factor = 0;
     $redist_factor = ($vg_size - $min_space) / ($max_space - $min_space)
       if ($max_space > $min_space);
+    $redist_factor = 1.0 if ($redist_factor > 1.0);
 
     # update all sizes that are still ranges
     foreach my $lv (@redist_list) {
