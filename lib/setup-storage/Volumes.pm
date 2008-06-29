@@ -290,37 +290,137 @@ sub get_current_disks {
 ################################################################################
 sub get_current_lvm {
 
-  use Linux::LVM;
+  # use Linux::LVM, once #488205
 
-  # get the existing volume groups
-  foreach my $vg (get_volume_group_list()) {
+  # the list to hold the output of vgdisplay commands as parsed below
+  my @vgdisplay_print = ();
+
+  # try to obtain the list of volume groups
+  my $error =
+    &FAI::execute_ro_command( "vgdisplay --units m -s", \@vgdisplay_print, 0 );
+
+  # the expected output (if any) contains lines like the following
+  #
+  # $ vgdisplay -s
+  #   "XENU" 453.36 MB [451.93 MB used / 1.43 MB free]
+
+  # parse the output line by line and call vgdisplay -v <VG>
+  foreach my $line (@vgdisplay_print) {
+    ( 
+      # example output with an empty vg:
+      #   "my_pv" 267476.00 MB [0 MB      used / 267476.00 MB free]
+      $line =~
+/^\s*"(\S+)"\s+\d+\.\d+ MB\s+\[\d+\.*\d* MB\s+used \/ \d+\.\d+ MB\s+free\]$/
+    ) or die "Unexpected vgdisplay output $line";
+
+    # the name of the volume group
+    my $vg = $1;
+    
     # initialise the hash entry
-    $FAI::current_lvm_config{$vg}{physical_volumes} = ();
+    $FAI::current_lvm_config{$vg}{"physical_volumes"} = ();
     &FAI::push_command( "true", "", "vg_created_$vg" );
 
-    # store the vg size in MB
-    my %vg_info = get_volume_group_information($vg);
-    $FAI::current_lvm_config{$vg}{size} = 
-      &FAI::convert_unit( $vg_info{alloc_pe_size} .
-        $vg_info{alloc_pe_size_unit} );
+    # get the detailed configuration for $vg
+    my @vgdisplay_v_print = ();
 
-      # store the logical volumes and their sizes
-    my %lv_info = get_logical_volume_information($vg);
-    foreach my $lv_name (sort keys %lv_info) {
-      my $short_name = $lv_name;
-      $short_name =~ "s{/dev/\Q$vg\E/}{}";
-      $FAI::current_lvm_config{$vg}{volumes}{$short_name}{size} =
-        &FAI::convert_unit($lv_info{$lv_name}->{lv_size} .
-          $lv_info{$lv_name}->{lv_size_unit});
-      &FAI::push_command( "true", "", "exist_/dev/$vg/$short_name" );
+    # try to obtain the detailed information for the volume group $vg
+    my $error = &FAI::execute_ro_command( "vgdisplay --units m -v $vg",
+      \@vgdisplay_v_print, 0 );
+
+    # the expected output (if any) looks like this:
+    # $ vgdisplay -v XENU
+    #     Using volume group(s) on command line
+    #     Finding volume group "XENU"
+    #   --- Volume group ---
+    #   VG Name               XENU
+    #   System ID
+    #   Format                lvm2
+    #   Metadata Areas        4
+    #   Metadata Sequence No  65
+    #   VG Access             read/write
+    #   VG Status             resizable
+    #   MAX LV                0
+    #   Cur LV                53
+    #   Open LV               46
+    #   Max PV                0
+    #   Cur PV                4
+    #   Act PV                4
+    #   VG Size               453.36 MB
+    #   PE Size               4.00 MB
+    #   Total PE              116060
+    #   Alloc PE / Size       115693 / 451.93 MB
+    #   Free  PE / Size       367 / 1.43 MB
+    #   VG UUID               09JCPv-v2RU-NWEZ-ilNA-mNLk-Scw3-aURtE6
+    #
+    #   --- Logical volume ---
+    #   LV Name                /dev/XENU/mole_
+    #   VG Name                XENU
+    #   LV UUID                WBcBDw-1z2J-F3b2-FGAk-u7Ki-IEgF-lMEURK
+    #   LV Write Access        read/write
+    #   LV Status              available
+    #   # open                 1
+    #   LV Size                1000.00 MB
+    #   Current LE             250
+    #   Segments               1
+    #   Allocation             inherit
+    #   Read ahead sectors     0
+    #   Block device           254:0
+    #
+    #   --- Physical volumes ---
+    #   PV Name               /dev/sda8
+    #   PV UUID               4i7Tpi-k9io-Ud44-gWJd-nSuG-hbh7-CE1m43
+    #   PV Status             allocatable
+    #   Total PE / Free PE    29015 / 0
+    #
+    #   PV Name               /dev/sda9
+    #   PV UUID               VXSxq1-vEwU-5VrY-QVC8-3Wf1-AY45-ayD9KY
+    #   PV Status             allocatable
+    #   Total PE / Free PE    29015 / 0
+    #
+
+    # parse the output to select the interesting parts
+    # there are 3 main groups: the volume group, logical volumes and physical
+    # volumes; use mode to indicate this
+    my $mode = "";
+
+    # we need to remember the logical volume name across the lines
+    my $lv_name = "";
+
+    # do the line-wise parsing
+    foreach my $line_v (@vgdisplay_v_print) {
+      $mode = "vg" if ( $line_v =~ /^\s*--- Volume group ---\s*$/ );
+      $mode = "lv" if ( $line_v =~ /^\s*--- Logical volume ---\s*$/ );
+      $mode = "pv" if ( $line_v =~ /^\s*--- Physical volumes ---\s*$/ );
+      $mode = "" if ( $mode ne "pv" && $line_v =~ /^\s*$/ );
+      next if ( $mode eq "" );
+
+      # Now select the interesting information for each mode
+      if ( $mode eq "vg" ) {
+
+        # for a volume group only the size is needed
+        # extract the floatingpoint value
+        $FAI::current_lvm_config{$vg}{"size"} = $1
+          if ( $line_v =~ /^\s*Alloc PE \/ Size\s+\d+ \/ (\d+\.\d+) MB\s*$/ );
+      } elsif ( $mode eq "lv" ) {
+
+        # we need the name and the size of each existing logical volume
+        if ( $line_v =~ /^\s*LV Name\s+\/dev\/\Q$vg\E\/(\S+)\s*$/ ) {
+          $lv_name = $1;
+          &FAI::push_command( "true", "", "exist_/dev/$vg/$lv_name" );
+        }
+
+        # the size of the logical volume
+        # extract the floatingpoint value
+        $FAI::current_lvm_config{$vg}{"volumes"}{$lv_name}{"size"} = $1
+          if ( $line_v =~ /^\s*LV Size\s+(\d+\.\d+) MB\s*$/ );
+      } elsif ( $mode eq "pv" ) {
+
+        # get the physical devices that are part of this volume group
+        push @{ $FAI::current_lvm_config{$vg}{"physical_volumes"} }, $1
+          if ( $line_v =~ /^\s*PV Name\s+(\S+)\s*$/ );
+      }
     }
-
-    # store the physical volumes
-    my %pv_info = get_physical_volume_information($vg);
-    @{ $FAI::current_lvm_config{$vg}{physical_volumes} } = 
-      sort keys %{ get_physical_volume_information($vg) };
   }
-
 }
 
 ################################################################################
