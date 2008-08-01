@@ -154,12 +154,12 @@ config ::= disk_config lvm( <lvmoption>)*
 .Pp
 .Bd -literal
 lvmoption ::= /* empty */
-           | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
+           | preserve_always:[^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*
            /* preserve partitions -- always */
-           | preserve_reinstall:[[:digit:]]+(,[[:digit:]]+)*
+           | preserve_reinstall:[^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*
            /* preserve partitions -- unless the system is installed for the 
            first time */
-           | resize:[[:digit:]]+(,[[:digit:]]+)*
+           | resize:[^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*
            /* attempt to resize partitions */
            | fstabkey:(device|label|uuid)
            /* when creating the fstab, the key used for defining the device
@@ -280,7 +280,10 @@ format of disk_config
 Any options to mkfs.xxx may be given using createopts=""
 .It
 The "preserveX" and "boot" options are one of the options now given on the
-disk_config line, using preserve_install or preserve_always and bootable
+disk_config line, using preserve_reinstall or preserve_always and bootable.
+preserve_always is equivalent to the previous preserveX option, whereas
+preserve_reinstall preserves the partition unless "initial" is given as one of
+the FAI_FLAGS.
 .El
 .It
 Support for LVM and RAID is completely new
@@ -290,12 +293,12 @@ Resizing partitions and filesystems is supported
 .Sh EXAMPLES
 Simple configuration of /dev/hda
 .Bd -literal -offset indent -compact
-disk_config hda   preserve:6,7   disklabel:msdos  bootable:3
+disk_config hda   preserve_always:6,7   disklabel:msdos  bootable:3
 primary /boot     20-100        ext3            rw
 primary swap      1000     swap       sw
 primary /         12000      ext3           rw        createopts="-b 2048"
 logical /tmp      1000      ext3            rw,nosuid
-logical /usr      preserve6      ext3          rw
+logical /usr      5000      ext3          rw
 logical /var      10%-      ext3               rw
 logical /nobackup 0-        xfs                rw
 .Ed
