@@ -354,11 +354,12 @@ upgrade_nfsroot() {
 	cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
 	cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
     fi
+    mount -t proc /proc $NFSROOT/proc
+    mount -t devpts devpts $NFSROOT/dev/pts
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
     $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/apm
-    mount -t proc /proc $NFSROOT/proc
 
     if [ $divert = 1 ]; then
 	fdivert /usr/sbin/update-initramfs
@@ -394,6 +395,8 @@ umount_dirs() {
     cd /
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
     [ -d $NFSROOT/proc/self ] && die "/proc still mounted inside the nfsroot."
+    umount $NFSROOT/dev/pts 2> /dev/null || true
+
     if [ "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
     fi
