@@ -109,8 +109,6 @@ if [ $(id -u) != "0" ]; then
     exit 9
 fi
 
-{ # start of block which output will be written to log file
-
 set -e
 
 # use FAI_ETC_DIR from environment variable
@@ -153,9 +151,6 @@ RUNDIR=/var/run/fai/make-fai-nfsroot
 mkdir -p $RUNDIR
 export DEBIAN_FRONTEND=noninteractive
 [ "$recover" ] || rm -rf $RUNDIR/*
-
-trap 'echo "Aborting";umount_dirs' EXIT
-trap "bad_exit" ERR
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bad_exit() {
 
@@ -463,6 +458,10 @@ run_hooks() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
 
+trap 'echo "Aborting";umount_dirs' EXIT
+trap "bad_exit" ERR
+{
+
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
     echo "Removing all kernels from NFSROOT."
@@ -520,8 +519,8 @@ kernel_install
 run_hooks
 check_nfsroot
 umount_dirs
-trap "true" EXIT
 echo "make-fai-nfsroot finished $merror."
 exit 0
 } 2>&1 | tee /var/log/fai/make-fai-nfsroot.log
+trap "true" EXIT
 echo "Log file written to /var/log/fai/make-fai-nfsroot.log"
