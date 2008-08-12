@@ -165,13 +165,13 @@ sub phys_dev {
   my ($dev) = @_;
   if ($dev =~ m{^/dev/(i2o/hd[a-t]|sd[a-t]{1,2}|hd[a-t])(\d+)?$})
   {
-    defined($2) or return (1, $1, -1);
+    defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $2);
   }
   elsif ($dev =~ m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d)p(\d+)?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
-    return (1, $1, $2);
+    return (1, "/dev/$1", $2);
   }
   return (0, "", -2);
 }
