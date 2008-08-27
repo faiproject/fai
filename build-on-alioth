@@ -1,0 +1,175 @@
+#!/bin/bash
+
+mangle_version_number() {
+  dh_testdir || exit 3
+  trunk_vers="`dpkg-parsechangelog | grep ^Version: | awk '{ print $2 }'`"
+  first_level="`echo $trunk_vers | cut -f1 -d.`"
+  second_level="`echo $trunk_vers | cut -f2 -d.`"
+  third_level="`echo $trunk_vers | cut -f3 -d.`"
+  if [ x$second_level = x ] ; then
+    second_level=0
+  fi
+  if [ x$third_level = x ] ; then
+    third_level=0
+  fi
+  third_level=$((third_level + 1))
+  if [ ! -f $storage/LATEST_BUILD ] ; then
+    echo "$first_level.$second_level.$third_level~b1" > $storage/LATEST_BUILD
+  else
+    cp $storage/LATEST_BUILD $storage/LATEST_BUILD.successful
+    if dpkg --compare-versions $trunk_vers gt $(<$storage/LATEST_BUILD) ; then
+      echo "$first_level.$second_level.$third_level~b1" > $storage/LATEST_BUILD
+    else
+      beta_level="`cat $storage/LATEST_BUILD | sed 's/.*~b//'`"
+      beta_level=$((beta_level + 1))
+      echo "$first_level.$second_level.$third_level~b$beta_level" > $storage/LATEST_BUILD
+    fi
+  fi
+}
+
+build_changelog() {
+  dh_testdir || exit 3
+  mv debian/changelog debian/changelog.orig
+  echo "fai ($(<$storage/LATEST_BUILD)) unstable; urgency=low" > debian/changelog
+  echo >> debian/changelog
+  echo "  * Experimental FAI based on SVN r$REV" >> debian/changelog
+  for i in `quilt series` ; do 
+    author="`quilt header $i | sed 1p | sed 's/^[[:digit:]- ]*//'`"
+    quilt header $i | sed '/^[[:space:]]*$/d' | sed '/^[^[:space:]]/d' | \
+      sed "s/^[[:space:]]*\*/& $author:/" >> debian/changelog
+  done
+  echo >> debian/changelog
+  echo " -- FAI Developers <linux-fai-devel@uni-koeln.de>  `date -R`" >> debian/changelog
+  echo >> debian/changelog
+  cat debian/changelog.orig >> debian/changelog
+  rm debian/changelog.orig
+}
+
+REPOS="$1"
+REV="$2"
+
+set -v -x
+
+storage=/org/alioth.debian.org/chroot/home/groups/fai
+log=`mktemp -t faiXXX`
+date > $log
+
+tmppatch=`mktemp -t faiXXX`
+cat > $tmppatch << "EOF"
+--- debian/rules	(revision 5044)
++++ debian/rules	(working copy)
+@@ -1,5 +1,7 @@
+ #!/usr/bin/make -f
+ 
++include /usr/share/quilt/quilt.make
++
+ DESTDIR=`pwd`/debian/tmp
+ DOCDIR=`pwd`/debian/fai-doc/usr/share/doc/fai-doc
+ 
+@@ -12,7 +14,7 @@
+ include VERSION
+ 
+ build: build-stamp
+-build-stamp:
++build-stamp: patch
+ 	dh_testdir
+ 
+ # Add here commands to compile the package.
+@@ -20,7 +22,7 @@
+ 
+ 	touch build-stamp
+ 
+-clean:
++clean: unpatch
+ 	dh_testdir
+ #	dh_testroot
+ 	rm -f build-stamp
+EOF
+
+{
+
+set -e
+
+for i in `seq 1 21` ; do
+  if [ $i -eq 21 ] ; then
+    echo "Timed out!" 1>&2
+    exit 1
+  fi
+  if [ -e $storage/BUILDING ] ; then
+    sleep 5
+  else
+    > $storage/BUILDING
+    break
+  fi
+done
+
+
+test -n "$REV" -a -n "$REPOS"
+
+if [ ! -d $storage/trunk-w-exp ] ; then
+  svn co -r $REV file:///srv/svn.debian.org/svn/fai/trunk $storage/trunk-w-exp
+fi
+
+if [ ! -d $storage/trunk-w-exp/debian/patches ] ; then
+  svn co -r $REV file:///srv/svn.debian.org/svn/fai/people/michael/experimental/patches $storage/trunk-w-exp/debian/patches
+fi
+
+if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; then
+  svn revert $storage/trunk-w-exp/debian/rules
+  svn revert $storage/trunk-w-exp/debian/changelog
+  svn up -r $REV $storage/trunk-w-exp
+  svn up -r $REV $storage/trunk-w-exp/debian/patches
+  cd $storage
+  rm -f fai*.deb fai*.changes fai*.dsc fai*.tar.gz
+  cd trunk-w-exp
+  mangle_version_number
+  patch -p0 < $tmppatch
+  build_changelog
+  dpkg-buildpackage -uc -us -d -I.svn -rfakeroot
+  dpkg_exit=$?
+  echo "STATUS: dpkg-buildpackage exited with status $dpkg_exit"
+  cd ..
+  if [ $dpkg_exit -eq 0 ] ; then
+    rm -f $storage/LATEST_BUILD.successful
+    vers="$(<$storage/LATEST_BUILD)"
+    if [ -x /usr/bin/lintian ] ; then
+      lintian -iI *$vers*.dsc *$vers*.deb
+    fi
+    rm -f htdocs/fai*.deb htdocs/fai*.changes htdocs/fai*.dsc htdocs/fai*.tar.gz
+    mv *$vers* htdocs/
+    cd htdocs
+    md5sum *$vers* | mail -s "Experimental FAI version $vers built" mt@debian.org
+    md5sum *$vers* | mail -s "FAI:$vers:$REV" mt@debian.org
+  else
+    who_did_it="`svnlook author -r $REV $REPOS`"
+    if [ -f $storage/LATEST_BUILD.successful ] ; then
+      mv $storage/LATEST_BUILD.successful $storage/LATEST_BUILD
+    else
+      rm $storage/LATEST_BUILD
+    fi
+    REPLYTO="mt@debian.org" mail -s "FAI build of $REV failed!" $who_did_it@alioth.debian.org < $log
+  fi
+fi
+
+echo "STATUS: build exit status $?"
+
+} 2>&1 | tee $log
+
+date >> $log
+
+err_found=0
+if ! grep -q "^STATUS: build exit status 0" $log ; then
+  err_found=1
+elif ! grep -q "^STATUS: dpkg-buildpackage exited with status 0" $log ; then
+  err_found=1
+fi
+
+if [ $err_found -eq 1 ] ; then
+  mail -s "FAI build of $REV failed!" mt@alioth.debian.org < $log
+  mv $log $storage/buildlog.failed.$REV
+else
+  mail -s "FAI build of $REV maybe successful" mt@alioth.debian.org < $log
+fi
+
+rm -f $log $tmppatch $storage/BUILDING
+

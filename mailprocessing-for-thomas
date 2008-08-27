@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -v -x
+
+mailtext=`mktemp -t faiXXX`
+cat > $mailtext
+
+log=`mktemp -t faiXXX`
+date > $log
+
+LAST_RUN_FILE="/var/run/fai_experimental_latest"
+
+{
+
+set -e
+
+subject="`cat $mailtext | formail -X Subject: | sed 's/^Subject: //'`"
+if ! echo $subject | egrep -q "^FAI:[[0-9]b~\.]+:[0-9]+$" ; then
+  echo "Subject line $subject does not match pattern" 1>&2
+  exit 1
+fi
+rev="`echo $subject | cut -f3 -d:`"
+if [ -s $LAST_RUN_FILE ] ; then
+  if [ "$(<LAST_RUN_FILE)" -ge $rev ] ; then
+    echo "Already downloaded same or newer version $(<LAST_RUN_FILE)!" 1>&2
+    exit 1
+  fi
+fi
+
+cat $mailtext | formail -I "" | while read md5 pkg ; do
+  wget "http://fai.alioth.debian.org/$pkg"
+  our_sum="`md5sum $pkg | awk '{ print $1 }'`"
+  if [ "$md5" != "$our_sum" ] ; then
+    echo "md5sum of $pkg does not match!" 1>&2
+    exit 1
+  fi
+done
+
+echo "STATUS: download exit status 0"
+
+} 2>&1 | tee $log
+
+date >> $log
+
+err_found=0
+if ! grep -q "^STATUS: download exit status 0" $log ; then
+  err_found=1
+fi
+
+if [ $err_found -eq 1 ] ; then
+  mail -s "FAI download processing failed!" mt@debian.org < $log
+else
+  mail -s "FAI download processing successful" mt@debian.org < $log
+fi
+
+rm -f $log $mailtext
+
