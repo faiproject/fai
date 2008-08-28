@@ -3,26 +3,16 @@
 mangle_version_number() {
   dh_testdir || exit 3
   trunk_vers="`dpkg-parsechangelog | grep ^Version: | awk '{ print $2 }'`"
-  first_level="`echo $trunk_vers | cut -f1 -d.`"
-  second_level="`echo $trunk_vers | cut -f2 -d.`"
-  third_level="`echo $trunk_vers | cut -f3 -d.`"
-  if [ x$second_level = x ] ; then
-    second_level=0
-  fi
-  if [ x$third_level = x ] ; then
-    third_level=0
-  fi
-  third_level=$((third_level + 1))
   if [ ! -f $storage/LATEST_BUILD ] ; then
-    echo "$first_level.$second_level.$third_level~b1" > $storage/LATEST_BUILD
+    echo "$trunk_ver+experimental1" > $storage/LATEST_BUILD
   else
     cp $storage/LATEST_BUILD $storage/LATEST_BUILD.successful
     if dpkg --compare-versions $trunk_vers gt $(<$storage/LATEST_BUILD) ; then
-      echo "$first_level.$second_level.$third_level~b1" > $storage/LATEST_BUILD
+      echo "$trunk_vers+experimental1" > $storage/LATEST_BUILD
     else
-      beta_level="`cat $storage/LATEST_BUILD | sed 's/.*~b//'`"
+      beta_level="`cat $storage/LATEST_BUILD | sed 's/.*+experimental//'`"
       beta_level=$((beta_level + 1))
-      echo "$first_level.$second_level.$third_level~b$beta_level" > $storage/LATEST_BUILD
+      echo "$trunk_vers+experimental$beta_level" > $storage/LATEST_BUILD
     fi
   fi
 }
