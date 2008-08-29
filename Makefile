@@ -12,9 +12,6 @@ USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub pol
 # do not include .svn dir and setup-storage subdir
 libfiles=$(patsubst lib/setup-storage,,$(wildcard lib/[a-z]*))
 
-# files with variable KERNLEVERSION in it; this string will be substituted
-KVERSION_FILES =  $(DESTDIR)/etc/fai/make-fai-nfsroot.conf
-
 all:
 	$(MAKE) -C doc all
 
@@ -46,7 +43,6 @@ install:
 	install -m644 conf/fai_modules_off $(DESTDIR)/etc/modutils
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
 	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
-	perl -pi -e 's/_KERNELVERSION_/$(KERNELVERSION)/' $(KVERSION_FILES)
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
 	cp -a utils $(DOCDIR)/examples
