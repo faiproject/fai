@@ -137,7 +137,7 @@ sub get_current_disks {
     foreach my $line (@parted_print) {
 
       # now we test line by line - some of them may be ignored
-      next if ($line =~ /^Disk / || $line =~ /^\s*$/
+      next if ($line =~ /^Disk / || $line =~ /^Model: / || $line =~ /^\s*$/
         || $line =~ /^WARNING: You are not superuser/);
 
       # determine the logical sector size
