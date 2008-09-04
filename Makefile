@@ -5,7 +5,7 @@ DESTDIR=$(shell pwd)/debian/tmp
 export DOCDIR = $(shell pwd)/debian/fai-doc/usr/share/doc/fai-doc
 LIBDIR = $(DESTDIR)/usr/lib/fai
 SHAREDIR = $(DESTDIR)/usr/share/fai
-USRSBIN_SCRIPTS = make-fai-nfsroot make-fai-bootfloppy fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai setup_harddisks faireboot fai-statoverride setup-storage
+USRSBIN_SCRIPTS = make-fai-nfsroot fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai setup_harddisks faireboot fai-statoverride setup-storage
 
 USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl faimond-gui
 
