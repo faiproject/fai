@@ -6,11 +6,11 @@
   <!-- SVN revision of this document -->
   <!entity svn-rev "$Id$">
 
-<!entity faiver "3.2.1">
-<!entity faiverdate "17 Sep 2007">
+<!entity faiver "3.2.10">
+<!entity faiverdate "XXXXXX Sep 2008">
 
-<!entity version "2.6.10">
-<!entity date    "20 May 2008">
+<!entity version "2.7">
+<!entity date    "4 Sep 2008">
 
 <!entity faisetup           system "entities/faisetup.sgml">
 <!entity bootexample        system "entities/bootexample.sgml">
@@ -73,13 +73,12 @@ list archives. The FAI package is also available as a Debian package from
 all Debian mirrors. To access the newest versions of the FAI packages,
 you can add the following line to your <file>/etc/apt/sources.list</file> file.
 
-<example>deb http://www.informatik.uni-koeln.de/fai/download etch koeln</example>
+<example>deb http://www.informatik.uni-koeln.de/fai/download lenny koeln</example>
 
-<p> Send any bug or comment to
-<email>fai@informatik.uni-koeln.de</email>. You can also use the
+<p> Send any comments to
+<email>fai@informatik.uni-koeln.de</email>. You should use the
 Debian bug tracking system (BTS)
 <url id="http://&www-debian-org;/Bugs/"> for reporting errors.
-<!--MT: is personal mail still the preferred way?-->
 <p>
 You can access the subversion repository containing the newest developer
 version of FAI from a Unix shell using the
@@ -190,7 +189,7 @@ First, some terms used in this manual are described.
 <sect id="work">How does FAI work?<p> 
 
 The install client which will be installed using FAI, is
-booted from floppy disk or via network card. It gets an IP address and
+booted via network card or from CD or USB stick. It gets an IP address and
 boots a Linux kernel which mounts its root file system via NFS from the install
 server. After the kernel is loaded, the FAI startup script
 performs the automatic installation which doesn't need any
@@ -223,11 +222,12 @@ here.-->
 	    <item> <p>A fully automated installation can be performed.</p> </item>
 	    <item> <p>Very quick unattended installation</p> </item>
 	    <item> <p>Update of running systems without re-installation</p> </item>
-	    <item> <p>Hosts can boot from network card, CD, USB stick or floppy.</p> </item>
-	    <item> <p>Easy creation of the CD, USB stick or floppy boot media</p> </item>
+	    <item> <p>Hosts can boot from network card, CD, USB stick.</p> </item>
+	    <item> <p>Easy creation of the CD and USB stick</p> </item>
 	    <item> <p>PXE with DHCP and BOOTP boot methods are supported.</p> </item>
 	    <item> <p>Lilo and grub support</p> </item>
 	    <item> <p>ReiserFS, ext3 and XFS file system support</p> </item>
+	    <item> <p>Software RAID and LVM support</p> </item>
 	    <item> <p>Automatic hardware detection</p> </item>
 	    <item> <p>Remote login via ssh during installation process
 	    possible.</p> </item>
@@ -243,7 +243,7 @@ here.-->
 	    <item> <p>Can be used as a rescue system.</p> </item>
 	    <item> <p>Tested on SUN SPARC hardware running Linux or Solaris.</p> </item>
 	    <item> <p>Flexible system through easy class concept </p> </item>
-	    <item> <p>Predefined Beowulf classes included </p> </item>
+<!-- 	    <item> <p>Predefined Beowulf classes included </p> </item> -->
 	    <item> <p>Diskless client support</p> </item>
 	    <item> <p>Easily add your own functions via hooks.</p> </item>
 	    <item> <p>Easily change the default behavior via hooks.</p> </item>
@@ -275,8 +275,7 @@ Install the simple examples into the configuration space:
 <item><p>If you want to try FAI without setting up a PXE+DNS+DHCP-environment:
 put the host names into <file>/etc/hosts</file> inside the nfsroot at
 <file>/srv/fai/nfsroot</file> and use
-a bootfloppy/CD/DVD to boot the client.
-See <manref name="make-fai-bootfloppy" section="8">.
+a CD/DVD to boot the client.
 <item><p>Boot your demo host and enjoy the fully automatic installation.</p></item>
 <item><p>If the installation has finished successfully, the computer should boot a
 small Debian system. You can login as user <tt>demo</tt> or <tt>root</tt> with password <tt>fai</tt>.</p></item>
@@ -303,8 +302,7 @@ The following items are required for an installation via FAI.
 	  CD-ROM, keyboard or graphics adapter is needed.</item>
 
 	  <tag>DHCP or BOOTP server: </tag><item> <p> 
-The clients need one of these daemons to obtain boot information. But
-	  you can also put all this information onto the boot floppy.</item>
+The clients need one of these daemons to obtain boot information.</item>
 
 	  <tag>TFTP server:<item> The TFTP daemon is used for
 	  transferring the kernel to the clients. It's only needed when
@@ -397,7 +395,7 @@ Need to get 13.0MB of archives. After unpacking 17.9MB will be used.
 Do you want to continue? [Y/n/?] 
 </example><p>
 
-The suggested packages for FAI are: <tt>debmirror, mknbi, apt-move, mkisofs, grub, aptitude</tt>.<p>
+The suggested packages for FAI are: <tt>debmirror, apt-move, mkisofs, grub, aptitude</tt>.<p>
 <!--MT: is this up to date?-->
 
 <p>The configuration for the FAI package (not the configuration data
@@ -423,21 +421,6 @@ used for creating the nfsroot are located in &mfnc;. Edit these files before cal
 	      IP-address of both networks to it. This variable is not
 	      needed when the clients have access to a DNS server.</p>
 	    </item>
-
-	    <!--MT: don't keep obsolete information
-      <tag><var>FAI_SOURCES_LIST</var></tag> <item> <p>Now
-	    OBSOLETE and unsupported. Use the file
-	    <file>/etc/fai/apt/sources.list</file> instead.<p>
-	    </p> </item>
-
-	    <tag><var>KERNELPACKAGE</var></tag>
-	    <item>
-	      <p> THE USE OF THIS VARIABLE IS NOW OBSOLETE.</p></item>
-	<tag> <var>NFSROOT_PACKAGES</var></tag>
-	    <item>
-	      <p> THE USE OF THIS VARIABLE IS NOW OBSOLETE. Use
-	      <file>/etc/fai/NFSROOT</file> instead.</p></item>
-      -->
 
 	    <tag><var>FAI_BOOT</var></tag>
 	    <item><p>
@@ -611,8 +594,8 @@ NFS. If this mount fails, check <file>/etc/exports</file> and <file>/etc/netgrou
 <chapt id="booting">Preparing booting <p> 
 
 Before booting the client for the first time, you have to choose which medium you
-use for booting. You can use the boot floppy or configure the computer
-to boot via network card using a boot PROM. 
+use for booting. Normally, you will configure the computer
+to boot via network card. 
 Also booting from CD-ROM or from an USB stick is easy to set up. The
 preferred method for booting is using PXE. PXE is the Preboot Execution
 Environment which most modern network cards support.
@@ -651,24 +634,7 @@ Set the boot method to <tt>PXE</tt> (do not use RPL or BOOTP) and
 enable local boot in this 
 menu. So the first boot device will be the network card using PXE, and
 the second should be the local hard disk. This has to be configured in
-the BIOS of your computer. For using the BOOTP protocol
-choose <tt>TCP/IP</tt> and set the protocol to <tt>BOOTP</tt>. 
-
-When using BOOTP, you have to make a
-symbolic link from the host name of your client to the appropriate
-kernel image in <file>/srv/tftp/fai</file>. You can also use the utility
-<prgn>tlink</prgn> (<file>/usr/share/doc/fai-doc/examples/utils/tlink</file>) to create
-this link. The file
-<file>installimage_3com</file> is created by <prgn>imggen</prgn> and
-is suitable for booting 3Com network cards.<footnote> <p>If you have
-problems booting with a 3Com network card and get the error "BOOTP
-record too large" after the kernel is transfered to the computer, try
-the imggen-1.00 program to convert the netboot image to a
-installimage_3com image. I had this problem using netboot 0.8.1-4 and
-Image Creator for MBA ROMs v1.01, Date: Nov 26, 2001 but only on an
-Athlon computer.
-</p></footnote>
-<!--MT: imggen: which package, what is it good for?-->
+the BIOS of your computer. 
 
 <sect id="pxeboot">Booting from network card with a PXE conforming boot ROM<p>
 Most modern bootable network cards support the PXE boot environment.
@@ -704,11 +670,7 @@ read the manual pages, which give you some good examples.
 you are saying here rather refers to the entry in inetd.conf-->
 
 See <file>/usr/share/doc/syslinux/pxelinux.doc</file> for more
-information about how to boot such an environment. The PXE
-environment uses the original kernel image (not the netboot image made
-by mknbi-linux) which is copied to
-<file>/srv/tftp/fai/vmlinuz-install</file>.
-<!--MT: mknbi-linux has not been mentioned before, what does it do?-->
+information about how to boot such an environment.
 
 
 <sect id="bootfloppy">Creating a boot floppy
@@ -1322,10 +1284,7 @@ At last the system is automatically rebooted if "reboot" was added to
 <var>FAI_FLAGS</var>. Normally this should boot the new installed
 system from its second boot device, the local hard disk. To skip
 booting from network card, you can use the command <manref
-name="fai-chboot" section="8"> to enable localboot. If using a boot
-floppy you have to remove the floppy from the floppy drive. Otherwise
-the installation would be performed again. Read <ref id="changeboot">
-for how to change the boot device.
+name="fai-chboot" section="8"> to enable localboot.
 
 <chapt id=plan>Plan your installation, and FAI installs your plans<p>
 <p>
@@ -2248,17 +2207,6 @@ Boot Failure           Next boot device
 This will enable the first IDE hard disk as second boot device after
 the network card.
 
-If booting from a FAI floppy disk, another solution can be used to skip a
-re-installation if the BIOS is configured to boot from the floppy disk
-first and you are not there to remove the floppy disk:
-<example>
-# lilo -R ...
-</example>
-will instruct the FAI floppy to boot from the hard disk only once (see
-<manref name="lilo" section="8">). Thus after this first reboot, the FAI
-floppy disk can be used for another FAI installation.
-
-
 <sect id=hooks>Hooks<p>
 
 Hooks let you specify functions or programs which are run at certain
@@ -2333,7 +2281,7 @@ you mounted the configuration from the correct server and not a
 possible spoofing host.</p></item>
 
 <item> <p>Do not mount the configuration directory, instead get a
-compressed archive via HTTP or from floppy disk and extract it into a
+compressed archive via HTTP and extract it into a
 new RAM disk, then redefine <var>$FAI_LOCATION</var>.</p></item>
 
 <item> <p>Load kernel modules before classes are defined
@@ -2701,8 +2649,8 @@ interested and would like to help me, please send an email to
 Although FAI is architecture independent, there are some packages which
 are only available for certain architectures (e.g. silo, sparc-utils).
 
-SUN SPARC computers can boot from their boot prompt and don't need a
-boot floppy. To boot a SUN use: <example>boot net:dhcp - ip=::::::dhcp</example>
+SUN SPARC computers can boot from their boot prompt. To boot a SUN
+use: <example>boot net:dhcp - ip=::::::dhcp</example>
 
 
 You have to convert the kernel image from ELF format to a.out
@@ -3013,28 +2961,6 @@ On <httpsite>www.layer-acht.org</httpsite><httppath>/fai</httppath> you
 will find an example how to fully automatically install a system using the Debian 
 Installer (d-i) in conjunction with FAI's new softupdate (see <ref id=softupdate>). 
 
-<!--MT: has been said already
-<p>
-You should get the program <prgn>imggen</prgn>,<footnote>Available at
-the download page <httpsite>www.ltsp.org</httpsite> or from the FAI
-download page &faidownload;.</footnote> if you like to boot from a
-3Com network card using the BOOTP protocol. This executable converts
-netboot images created by <manref name="mknbi-linux" section="8">, so
-they can be booted by network cards from 3Com. Put that executable in
-your path (e.g. <file>/usr/local/bin</file>)
-
-<sect id=functions>Useful functions for advanced administrators<p>
-
-<taglist>
-<tag>fai-divert</tag> <item> <p>Add or remove a file to the list of diversions
-and replace the file with a dummy script. This is useful when a
-postinst script needs manual input. At the end of the installation all
-diversions are removed.</p> </item>
-
-<tag>skiptask</tag> <item> <p>This given list of tasks are
-skipped. For use e.g. in <file>partition.DISKLESS</file>.</p> </item> </taglist>
--->
-
 </book>
 </debiandoc>
 
@@ -3054,14 +2980,3 @@ sgml-local-catalogs:nil
 sgml-local-ecat-files:nil
 End:
 -->
-
-
-
-
-
-
-
-
-
-
-
