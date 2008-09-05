@@ -1,13 +1,12 @@
-# generic disk configuration for one small disk
-# disk size from 500Mb up to what you can buy today
+# example of new config file for setup-storage
 #
-# <type> <mountpoint> <size in mb> [mount options]     [;extra options]
+# <type> <mountpoint> <size>   <fs type> <mount options> <misc options>
 
-disk_config disk1
-primary  /             150-300      rw,errors=remount-ro ; -c -j ext3
-logical  swap          40-500      rw                   
-logical  /var          90-1000     rw                   ; -m 5  -j ext3
-logical  /tmp          50-1000     rw                   ; -m 0 -j ext3
-logical  /usr          200-4000    rw                   ; -j ext3
-logical  /home         50-         rw,nosuid            ; -m 1 -j ext3
-# logical /home        preserve9   rw,nosuid            ; -m 1 -j ext3
+disk_config disk1 disklabel:msdos
+
+primary  /             250	  ext3   rw,errors=remount-ro
+logical  swap          200-1000   swap   rw                   
+logical  /var          600-1300   ext3   rw         createopts="-m 5" tuneopts="-c 0 -i 0"
+logical  /tmp          100-1000   ext3   rw         createopts="-m 0" tuneopts="-c 0 -i 0"
+logical  /usr          1000-8000  ext3   rw
+logical  /home         100-50%    ext3   rw,nosuid  createopts="-m 1" tuneopts="-c 0 -i 0"
