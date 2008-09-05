@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2001-2007, lange@debian.org
+# (c) Thomas Lange, 2001-2008, lange@debian.org
 
 error=0 ; trap "error=$((error|1))" ERR
 
@@ -8,13 +8,6 @@ error=0 ; trap "error=$((error|1))" ERR
 fcopy -i /etc/modules
 for module in $MODULESLIST; do
     ainsl -a $target/etc/modules "^$module$"
-done
-
-# disable fsck on ext3 filesystemsm this can be replaced by tuneopts in disk_config
-for part in $(mount|grep $target |grep "type ext3"|perl -ane 'print "$F[0] "')
-do
-    echo "Disable periodic fsck on $part"
-    tune2fs -c 0 -i 0 $part
 done
 
 fcopy /etc/hostname || echo $HOSTNAME     > $target/etc/hostname
