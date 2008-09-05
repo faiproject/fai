@@ -77,7 +77,7 @@ $FAI::disk_var{BOOT_DEVICE} = "";
 #
 ################################################################################
 $FAI::reinstall = 1;
-defined( $ENV{fl_initial} ) and $FAI::reinstall = 0;
+defined( $ENV{flag_initial} ) and $FAI::reinstall = 0;
 
 ################################################################################
 #
