@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.\" .TH setup-storage 8 "11 april 2008" "FAI 3.2.8"
+.\" .TH setup-storage 8 "05 september 2008" "FAI 3.2.9"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -12,7 +12,7 @@
 .\" .br        insert line break
 .\" .sp <n>    insert n+1 empty lines
 .\" for manpage-specific macros, see man(7)
-.Dd April 11, 2008
+.Dd September 5, 2008
 .Dt SETUP-STORAGE 8 SMM
 .Os Debian/GNU Linux
 .Sh NAME
@@ -31,32 +31,36 @@ computes effective partition and volume sizes and executes the necessary
 commands to configure storage devices. It manages disk drives as well as RAID
 and LVM volumes. It handles all file systems supported by
 .Xr parted 8
-as well as ntfs, but is flexible enough to be extended to further types as well.
+as well as ntfs but is flexible enough to be extended to further types as well.
 Once the storage devices are prepared, an appropriate
 .Xr fstab 5
 file is generated.
 .Pp
 Without the
 .Fl X
-parameter,
+parameter
 .Nm
 runs in test-only mode and does not execute commands other than writing disk
 labels to a blank disk.
 .Pp
 The exit code of
 .Nm
-is 0 if all operations were performed successfully, and non-zero if an error
+is 0 if all operations were performed successfully and non-zero if an error
 occurs.
+.Sh USAGE
+To enable the use of the new partioning tool setup-storage you have to
+set USE_SETUP_STORAGE=1 in the according class file in configspace (like
+/srv/fai/config/class/FAIBASE.var for example).
 .Sh OPTIONS
 .Bl -tag -width Ds
 .Pp
 .It Fl X
-Really write the configuration to disk. Otherwise,
+Really write the configuration to disk. Otherwise
 .Nm
 runs in test-only mode.
 .Pp
 .It Fl f Ar filename
-Normally,
+Normally
 .Nm
 selects an appropriate configuration from
 .Sm off
@@ -66,9 +70,9 @@ selects an appropriate configuration from
 by picking the first class from
 .EV classes
 that has an existing file.
-If, however,
+If however
 .Fl f
-is given, the configuration in
+is given the configuration in
 .Ar filename
 is used.
 .Pp
@@ -80,7 +84,7 @@ Display the synopsis and version info and exit.
 .El
 .Sh ENVIRONMENT
 .Nm
-will uses the following environment variables:
+will use the following environment variables:
 .Bl -tag -width "disklist"
 .It Ev disklist
 The
@@ -91,7 +95,7 @@ disk_config.
 .It Ev debug
 If
 .Ev debug
-is set to a non-zero value, all actions and details to track the operation of
+is set to a non-zero value all actions and details to track the operation of
 .Nm
 are printed to stderr.
 .It Ev FAI
@@ -105,14 +109,14 @@ generates disk_var.sh and fstab (see below) in this directory.
 .Sh FILES
 If
 .Nm
-executes successfully, an
+executes successfully an
 .Xr fstab 5
 file matching the specified configuration is generated as
 .Sm off
 .Ev LOGDIR
 /fstab.
 .Sm on
-Further,
+Further
 .Sm off
 .Ev LOGDIR
 /disk_var.sh
@@ -175,7 +179,7 @@ raidoption ::= /* empty */
            /* preserve partitions -- unless the system is installed for the 
            first time */
            | fstabkey:(device|label|uuid)
-           /* when creating the fstab, the key used for defining the device
+           /* when creating the fstab the key used for defining the device
            may be the device (/dev/xxx), a label given using -L, or the uuid
            */  
 .Ed
@@ -196,7 +200,7 @@ option ::= /* empty */
            | virtual
            /* do not assume the disk to be a physical device, use with xen */
            | fstabkey:(device|label|uuid)
-           /* when creating the fstab, the key used for defining the device
+           /* when creating the fstab the key used for defining the device
            may be the device (/dev/xxx), a label given using -L, or the uuid
            */  
 .Ed
@@ -224,7 +228,7 @@ mountpoint ::= -
                | swap
                /* swap space */
                | /[^[:space:]]*(:encrypt)?
-               /* fully qualified path; if :encrypt is given, the partition
+               /* fully qualified path; if :encrypt is given the partition
                 * will be encrypted, the key is generated automatically */
 .Ed
 .Pp
@@ -273,11 +277,11 @@ Options may need to be appended to the disk_config line
 The ";" is not used anymore, the options that were given there have now been split up
 .Bl -dash -offset indent -compact
 .It
-The filesystem is now an explicit parameter; note, that the order of
-filesystem/mount-options is the same /etc/fstab, as opposed to the previous
-format of disk_config
+The filesystem is now an explicit parameter; note that the order of
+filesystem/mount-options is the same /etc/fstab as opposed to the previous
+format of disk_config.
 .It
-Any options to mkfs.xxx may be given using createopts=""
+Any options to mkfs.xxx may be given using createopts="".
 .It
 The "preserveX" and "boot" options are one of the options now given on the
 disk_config line, using preserve_reinstall or preserve_always and bootable.
@@ -304,7 +308,7 @@ logical /nobackup 0-        xfs                rw
 .Ed
 .Bl -bullet -compact
 .It
-Preserve the 6th and the 7th partition. The disklabel is msdos, which is the default
+Preserve the 6th and the 7th partition. The disklabel is msdos which is the default
 for x86. Furthermore the 3rd partition is made bootable.
 .It
 Create a primary partition /dev/hda1 with a size between 20 and 100 MB and mount it
