@@ -229,11 +229,14 @@ task_setup() {
     # source user specific subroutines
     [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
 
+    # warn user if cdrom has DMA not enabled
     if [ -f /etc/RUNNING_FROM_FAICD ]; then
 	local cdrom=$(mount| awk '/dev.+on \/ /{print $1}')
-	hdparm -d $cdrom | grep -q off 2>/dev/null
-	if [ $? -eq 0 ]; then
-	    echo "WARNING: CD-ROM does not use DMA mode. The installation will be sloooow."
+	if [ -n "$cdrom" ]; then
+	    hdparm -d $cdrom | grep -q off 2>/dev/null
+	    if [ $? -eq 0 ]; then
+		echo "WARNING: CD-ROM does not use DMA mode. The installation will be sloooow."
+	    fi
 	fi
     fi
 
