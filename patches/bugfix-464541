@@ -1,0 +1,18 @@
+2008-08-23  Michael Tautschnig  <mt@debian.org>
+
+	* lib/mount2dir: Add commands to create /var/lock and /var/run on the
+		filesystem mounted at / (closes: #464541)
+Index: trunk/lib/mount2dir
+===================================================================
+--- trunk.orig/lib/mount2dir
++++ trunk/lib/mount2dir	
+@@ -87,6 +87,9 @@
+ 	    # should we fsck the partition first?
+ 	    [ "$fscheck" = 1 ] && fsck -nt $fstype $device
+ 	    mount -t $fstype -o noatime $mopt $device $target$mountpoint
++	    if [ "$mountpoint" = "/" ] ; then
++	      mkdir $target/var/lock $target/var/run
++	    fi
+     esac
+ done
+ 
