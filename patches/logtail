@@ -1,0 +1,50 @@
+2008-08-23  Michael Tautschnig  <mt@debian.org>
+
+	* bin/fai, debian/control, lib/subroutines: Use logtail to mark the offset on
+		/var/log/kern.log and only copy new entries to $LOGDIR/dmesg.log
+Index: trunk/bin/fai
+===================================================================
+--- trunk.orig/bin/fai
++++ trunk/bin/fai	
+@@ -280,6 +280,9 @@
+     mkdir -p $LOGDIR
+     ln -snf $action-$fai_rundate $LOGDIR/../last-$action
+     ln -snf $action-$fai_rundate $LOGDIR/../last
++    if [ -x /usr/sbin/logtail ] ; then
++      logtail -f /var/log/kern.log -o /var/run/fai/kern.log.offset > /dev/null
++    fi
+ fi
+ chown root $LOGDIR
+ chgrp adm  $LOGDIR
+Index: trunk/debian/control
+===================================================================
+--- trunk.orig/debian/control
++++ trunk/debian/control	
+@@ -14,7 +14,7 @@
+ Section: admin
+ Depends: perl, file, libapt-pkg-perl, libparse-recdescent-perl
+ Recommends: debconf-utils
+-Suggests: ntfsprogs, dmsetup, cryptsetup
++Suggests: ntfsprogs, dmsetup, cryptsetup, logtail
+ Conflicts: fai, fai-kernels
+ Replaces: fai
+ Homepage: http://www.informatik.uni-koeln.de/fai
+Index: trunk/lib/subroutines
+===================================================================
+--- trunk.orig/lib/subroutines
++++ trunk/lib/subroutines	
+@@ -82,8 +82,12 @@
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ save_dmesg() {
+-
+-    dmesg > $LOGDIR/dmesg.log
++    if [ -r /var/run/fai/kern.log.offset ] ; then
++      logtail -f /var/log/kern.log -o /var/run/fai/kern.log.offset > $LOGDIR/dmesg.log
++      rm /var/run/fai/kern.log.offset
++    else
++      dmesg > $LOGDIR/dmesg.log
++    fi
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ wait_for_jobs() {
