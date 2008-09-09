@@ -80,6 +80,7 @@ EOF
 
 set -e
 
+# make sure no other build is running concurrently
 for i in `seq 1 21` ; do
   if [ $i -eq 21 ] ; then
     echo "Timed out!" 1>&2
@@ -93,21 +94,22 @@ for i in `seq 1 21` ; do
   fi
 done
 
-
+# check arguments
 test -n "$REV" -a -n "$REPOS"
 
+# checkout the directories, if necessary
 if [ ! -d $storage/trunk-w-exp ] ; then
   svn co -r $REV file:///srv/svn.debian.org/svn/fai/trunk $storage/trunk-w-exp
   chmod -R g+wX $storage/trunk-w-exp
   find $storage/trunk-w-exp -type d -exec chmod g+s {} \;
 fi
-
 if [ ! -d $storage/trunk-w-exp/debian/patches ] ; then
   svn co -r $REV file:///srv/svn.debian.org/svn/fai/people/michael/experimental/patches $storage/trunk-w-exp/debian/patches
-  chmod -R g+wX $storage/trunk-w-exp/patches
-  find $storage/trunk-w-exp/patches -type d -exec chmod g+s {} \;
+  chmod -R g+wX $storage/trunk-w-exp/debian/patches
+  find $storage/trunk-w-exp/debian/patches -type d -exec chmod g+s {} \;
 fi
 
+# is this a commit to experimental?
 if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; then
   svn revert $storage/trunk-w-exp/debian/rules
   svn revert $storage/trunk-w-exp/debian/changelog
@@ -116,11 +118,12 @@ if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; 
   cd $storage
   rm -f fai*.deb fai*.changes fai*.dsc fai*.tar.gz
   cd trunk-w-exp
+  export QUILT_PC=$PWD/debian/.pc
+  export QUILT_PATCHES=$PWD/debian/patches
   mangle_version_number
   patch -p0 < $tmppatch
   build_changelog
-  dpkg-buildpackage -uc -us -d -I.svn -rfakeroot
-  dpkg_exit=$?
+  dpkg-buildpackage -uc -us -d -I.svn -rfakeroot && dpkg_exit=$? || dpkg_exit=$?
   echo "STATUS: dpkg-buildpackage exited with status $dpkg_exit"
   cd ..
   if [ $dpkg_exit -eq 0 ] ; then
@@ -140,7 +143,7 @@ if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; 
     else
       rm $storage/LATEST_BUILD
     fi
-    REPLYTO="mt@debian.org" mail -s "FAI build of $REV failed!" $who_did_it@alioth.debian.org < $log
+    REPLYTO="mt@debian.org" mail -s "FAI build of $REV failed!" -c mt@debian.org $who_did_it@alioth.debian.org < $log
   fi
 fi
 
@@ -160,8 +163,6 @@ fi
 if [ $err_found -eq 1 ] ; then
   mail -s "FAI build of $REV failed!" mt@alioth.debian.org < $log
   mv $log $storage/buildlog.failed.$REV
-else
-  mail -s "FAI build of $REV maybe successful" mt@alioth.debian.org < $log
 fi
 
 rm -f $log $tmppatch $storage/BUILDING
