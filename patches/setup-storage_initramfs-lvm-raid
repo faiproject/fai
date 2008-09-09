@@ -1,0 +1,30 @@
+2008-09-09  Michael Tautschnig  <mt@debian.org>
+
+	* examples/simple/scripts/GRUB/20-initramfs: Update the initramfs in case lvm2
+    or mdadm have been installed.
+Index: trunk/examples/simple/scripts/GRUB/20-initramfs
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/examples/simple/scripts/GRUB/20-initramfs	
+@@ -0,0 +1,21 @@
++#! /bin/bash
++
++error=0 ; trap "error=$((error|1))" ERR
++
++not_up2date() {
++  if [ $# -eq 0 ] ; then
++    echo "No package name given!"
++    return 127
++  fi
++
++  egrep -q "(^Unpacking $1 |^Unpacking replacement $1 )" $LOGDIR/*.log
++  return $?
++}
++
++if [ `not_up2date lvm2` -o `not_up2date mdadm` ] ; then
++  $ROOTCMD update-initramfs -k all -u
++fi
++
++
++exit $error
++

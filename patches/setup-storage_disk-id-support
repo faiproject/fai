@@ -1,0 +1,65 @@
+2008-08-25  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Parser.pm, man/setup-storage.8: Added and documented
+		support for glob patterns in device names (e.g., /dev/disk/by-id/scsi-*)
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -99,6 +99,10 @@
+   # test, whether the device name starts with a / and prepend /dev/, if
+   # appropriate
+   ($disk =~ m{^/}) or $disk = "/dev/$disk";
++  my @candidates = glob($disk);
++  die "Failed to resolve $disk to a unique device name\n" if (scalar(@candidates) > 1);
++  $disk = $candidates[0] if (scalar(@candidates) == 1);
++  die "Device name $disk could not be substituted\n" if ($disk =~ m{[\*\?\[\{\~]});
+ 
+   # prepend PHY_
+   $FAI::device = "PHY_$disk";
+@@ -605,6 +609,8 @@
+                 $dev = "/dev/$dev";
+               }
+             }
++            my @candidates = glob($dev);
++
+             # options are only valid for RAID
+             defined ($2) and ($FAI::device ne "RAID") and die "Option $2 invalid in a non-RAID context\n";
+             if ($FAI::device eq "RAID") {
+@@ -615,6 +621,13 @@
+                 ($2 =~ /spare/) and $spare = 1;
+                 ($2 =~ /missing/) and $missing = 1;
+               }
++              if ($missing) {
++                die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) > 1);
++                $dev = $candidates[0] if (scalar(@candidates) == 1);
++              } else {
++                die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
++                $dev = $candidates[0];
++              }
+               # each device may only appear once
+               defined ($FAI::partition_pointer->{devices}->{$dev}) and 
+                 die "$dev is already part of the RAID volume\n";
+@@ -624,6 +637,8 @@
+                 "missing" => $missing
+               };
+             } else {
++              die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
++              $dev = $candidates[0];
+               # create an empty hash for each device
+               $FAI::configs{$FAI::device}{devices}{$dev} = {};
+             }
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -152,7 +152,8 @@
+            | disk_config disk[[:digit:]]+( <option>)*
+            | disk_config [^[:space:]]+( <option>)*
+            /* fully qualified device-path or short form, like hda, whereby full
+-            * path is assumed to be /dev/hda */
++            * path is assumed to be /dev/hda; may contain shell globbing such
++            * as /dev/disk/by-id/scsi-* */
+            | <volume>
+ .Ed
+ .Pp
