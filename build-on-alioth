@@ -26,7 +26,9 @@ build_changelog() {
   for i in `quilt series` ; do 
     author="`quilt header $i | sed -n 1p | sed 's/^[[:digit:] -]*//'`"
     quilt header $i | sed '/^[[:space:]]*$/d' | sed '/^[^[:space:]]/d' | \
-      sed "s/^[[:space:]]*\*/  [ $author ]\n&/" >> debian/changelog
+      sed "s/^[[:space:]]*\*/  [ $author ]\n&/" | \
+      sed 's/^[[:space:]]\+/    /' | sed 's/^[[:space:]]*\[/  [/' | \
+      sed 's/^[[:space:]]*\*/  */' >> debian/changelog
   done
   echo >> debian/changelog
   echo " -- FAI Developers <linux-fai-devel@uni-koeln.de>  `date -R`" >> debian/changelog
@@ -124,6 +126,7 @@ if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; 
   patch -p0 < $tmppatch
   build_changelog
   dpkg-buildpackage -uc -us -d -I.svn -rfakeroot && dpkg_exit=$? || dpkg_exit=$?
+  debian/rules clean
   echo "STATUS: dpkg-buildpackage exited with status $dpkg_exit"
   cd ..
   if [ $dpkg_exit -eq 0 ] ; then
