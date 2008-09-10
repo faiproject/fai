@@ -1,0 +1,65 @@
+2008-09-11  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Fstab.pm: Proper perl text replace syntax
+	* lib/setup-storage/Commands.pm: ditto and additional random initialization of
+		partition
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -115,7 +115,7 @@
+ 
+   # encryption requested, rewrite the device name
+   my $enc_dev_name = $device;
+-  $enc_dev_name =~ "s#/#_#g";
++  $enc_dev_name =~ s#/#_#g;
+   my $enc_dev_short_name = "crypt$enc_dev_name";
+   $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
+   my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
+@@ -124,11 +124,13 @@
+   &FAI::push_command( 
+     "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
+     "", "keyfile_$device" );
+-
+   # prepare encryption
+   &FAI::push_command(
++    "dd if=/dev/urandom of=$device",
++    "exist_$device", "random_init_$device" );
++  &FAI::push_command(
+     "yes YES | cryptsetup luksFormat $device $keyfile -c aes-cbc-essiv:sha256 -s 256",
+-    "exist_$device,keyfile_$device", "crypt_format_$device" );
++    "random_init_$device,keyfile_$device", "crypt_format_$device" );
+   &FAI::push_command(
+     "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
+     "crypt_format_$device", "encrypted_$device" );
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -163,7 +163,7 @@
+         my $device_name = &FAI::make_device_name($device, $p_ref->{number});
+         if ($p_ref->{encrypt}) {
+           # encryption requested, rewrite the device name
+-          $device_name =~ "s#/#_#g";
++          $device_name =~ s#/#_#g;
+           $device_name = "/dev/mapper/crypt$device_name";
+         }
+ 
+@@ -213,7 +213,7 @@
+         my $device_name = "/dev/$device/$l";
+         if ($l_ref->{encrypt}) {
+           # encryption requested, rewrite the device name
+-          $device_name =~ "s#/#_#g";
++          $device_name =~ s#/#_#g;
+           $device_name = "/dev/mapper/crypt$device_name";
+         } else {
+           $device_name = $fstab_key[0];
+@@ -247,7 +247,7 @@
+         my $device_name = "/dev/md$r";
+         if ($r_ref->{encrypt}) {
+           # encryption requested, rewrite the device name
+-          $device_name =~ "s#/#_#g";
++          $device_name =~ s#/#_#g;
+           $device_name = "/dev/mapper/crypt$device_name";
+         } 
+ 
