@@ -1,7 +1,12 @@
 2008-09-09  Michael Tautschnig  <mt@debian.org>
 
 	* examples/simple/scripts/GRUB/20-initramfs: Update the initramfs in case lvm2
-    or mdadm have been installed.
+		or mdadm have been installed.
+	* example/simple/classes/50-host-classes: Added hosts bear (class
+		LVM_XEN_SERVER) and puma (RAID_XEN_VIRTUAL)
+	* example/simple/disk_config/{LVM_XEN_SERVER,RAID_XEN_VIRTUAL}: Added
+		corresponding disk_config examples that have a large LVM and a software RAID
+		configured
 Index: trunk/examples/simple/scripts/GRUB/20-initramfs
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
@@ -28,3 +33,112 @@ Index: trunk/examples/simple/scripts/GRUB/20-initramfs
 +
 +exit $error
 +
+Index: trunk/examples/simple/class/50-host-classes
+===================================================================
+--- trunk.orig/examples/simple/class/50-host-classes
++++ trunk/examples/simple/class/50-host-classes	
+@@ -12,6 +12,10 @@
+ 	echo "FAIBASE DHCPC DEMO XORG GNOME";;
+     atom*)
+ 	echo "FAIBASE DHCPC DEMO" ;;
++    bear)
++	echo "FAIBASE DHCPC LVM_XEN_SERVER" ;;
++    puma)
++	echo "FAIBASE DHCPC RAID_XEN_VIRTUAL" ;;
+     *)
+ 	echo "FAIBASE DHCPC" ;;
+ esac
+Index: trunk/examples/simple/disk_config/LVM_XEN_SERVER
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/examples/simple/disk_config/LVM_XEN_SERVER	
+@@ -0,0 +1,64 @@
++disk_config disk1  fstabkey:uuid
++primary /boot       100       ext3    rw
++primary swap        256       swap    sw
++primary /           2000      ext3    rw
++logical /tmp        1000      ext3    rw,nosuid
++logical /usr        2000      ext3    rw
++logical /var        2000      ext3    rw
++logical -           0-        -       -
++
++disk_config lvm
++vg      XENU        disk1.8
++XENU-worm_      -  2000  ext3  -
++XENU-wormswap   -  500   swap  -
++XENU-worm_tmp   -  500   ext3  -
++XENU-worm_usr   -  2000  ext3  -
++XENU-worm_var   -  2000  ext3  -
++XENU-gnat_      -  2000  ext3  -
++XENU-gnatswap   -  500   swap  -
++XENU-gnat_tmp   -  500   ext3  -
++XENU-gnat_usr   -  2000  ext3  -
++XENU-gnat_var   -  2000  ext3  -
++XENU-swan_      -  2000  ext3  -
++XENU-swanswap   -  500   swap  -
++XENU-swan_tmp   -  500   ext3  -
++XENU-swan_usr   -  2000  ext3  -
++XENU-swan_var   -  2000  ext3  -
++XENU-goat_      -  2000  ext3  -
++XENU-goatswap   -  500   swap  -
++XENU-goat_tmp   -  500   ext3  -
++XENU-goat_usr   -  2000  ext3  -
++XENU-goat_var   -  2000  ext3  -
++XENU-goat_var_spool   -  4000  ext3  -
++XENU-lynx_      -  2000  ext3  -
++XENU-lynxswap   -  500   swap  -
++XENU-lynx_tmp   -  500   ext3  -
++XENU-lynx_usr   -  2000  ext3  -
++XENU-lynx_var   -  2000  ext3  -
++XENU-lynx_home   -  20000  ext3  -
++XENU-joey_      -  2000  ext3  -
++XENU-joeyswap   -  500   swap  -
++XENU-joey_tmp   -  500   ext3  -
++XENU-joey_usr   -  2000  ext3  -
++XENU-joey_var   -  2000  ext3  -
++XENU-coke_      -  2000  ext3  -
++XENU-cokeswap   -  500   swap  -
++XENU-coke_tmp   -  500   ext3  -
++XENU-coke_usr   -  12000  ext3  -
++XENU-coke_var   -  2000  ext3  -
++XENU-coke_nobackup   -  8000  ext3  -
++XENU-bull_      -  2000  ext3  -
++XENU-bullswap   -  500   swap  -
++XENU-bull_tmp   -  500   ext3  -
++XENU-bull_usr   -  2000  ext3  -
++XENU-bull_var   -  2000  ext3  -
++XENU-bull_var_spool   -  4000  ext3  -
++XENU-bull_var_mail   -  100000  ext3  -
++XENU-bush_   -  50000  ext3  -
++# migration dummies
++XENU-puma_      -  1  ext3  -
++XENU-pumaswap   -  1  swap  -
++XENU-puma_tmp   -  1  ext3  -
++XENU-puma_usr   -  1  ext3  -
++XENU-puma_var   -  1  ext3  -
++
+Index: trunk/examples/simple/disk_config/RAID_XEN_VIRTUAL
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/examples/simple/disk_config/RAID_XEN_VIRTUAL	
+@@ -0,0 +1,20 @@
++disk_config hda virtual
++primary -        2000     -    -
++primary -        500      -    -
++primary -        500      -    -
++primary -        2000     -    -
++primary -        2000     -    -
++
++disk_config sda virtual
++primary -        2000     -    -
++primary -        500      -    -
++primary -        500      -    -
++primary -        2000     -    -
++primary -        2000     -    -
++
++disk_config raid
++raid1 /           hda1,sda1     ext3    rw
++raid1 swap        hda2,sda2      swap    sw
++raid1 /tmp        hda3,sda3      ext3    rw,nosuid
++raid1 /usr        hda4,sda4     ext3    rw
++raid1 /var        hda5,sda5     ext3    rw
