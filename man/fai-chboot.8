@@ -1,5 +1,14 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-chboot 8 "7 September 2008" "FAI 3.2"
+.TH fai-chboot 8 "16 September 2008" "FAI 3.2"
+..
+.\"
+.\" File Name macro.  This used to be `.PN', for Path Name,
+.\" but Sun doesn't seem to like that very much.
+.\"
+.de FN
+\fI\|\\$1\|\fP
+..
+
 .SH NAME
 fai-chboot \- manage the network boot configuration files
 .SH SYNOPSIS
@@ -24,7 +33,8 @@ fai-chboot \- manage the network boot configuration files
 .B fai-chboot
 -I [OPTION]... HOST...
 .SH DESCRIPTION
-This command creates the configuration files for network booting.
+This command creates the configuration files for network booting using
+pxelinux and DHCP.
 
 KERNELNAME is the file name of the kernel that will be booted. This
 kernel will mount the root filesystem via NFS. You can add
@@ -147,11 +157,18 @@ Writing file /srv/tftp/fai/pxelinux.cfg/01020304 for faiserver
 .TP
 fai-chboot memtest86+ atom02
 The host atom02 will boot the memory test. Install the package
-memtest86+ and copy the executable memtest86+.bin to /srv/tftp/fai.
+memtest86+ and copy the executable memtest86+.bin to /srv/tftp/fai
+without the .bin suffix.
 .TP
 fai-chboot -o default
 All hosts, that do not have a PXE configuration for their IP-address
 will do a localboot, i.e. booting from local disk.
+.TP
+fai-chboot -vc lenny64 james007
+This command will tell the host james007 to use the template called lenny64.
+Beforehand, you have to manually create the template 
+and save it to /srv/tftp/fai/pxelinux.cfg/lenny64.tmpl.
+
 
 .SH NOTES
 Currently only PXE boot is supported. BOOTP configuration can be
@@ -159,8 +176,13 @@ managed using the tlink utility.
 
 .SH SEE ALSO
 .br
-This program is part of FAI (Fully Automatic Installation).  See the FAI manual
-for more information on how to use fai-chboot.  The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+\fBfai-mirror\fP(1)
+.TP
+.FN /usr/share/doc/syslinux/pxelinux.doc.gz
+The pxelinux documentation.
+.TP
+
+This program is part of FAI (Fully Automatic Installation). See the FAI manual for more information on how to use fai-chboot. The FAI homepage is http://www.informatik.uni-koeln.de/fai.
 
 .SH AUTHOR
 Thomas Lange <lange@informatik.uni-koeln.de>
