@@ -1,4 +1,4 @@
-.TH setup-storage 8 "September 5, 2008" "Debian/GNU Linux"
+.TH setup-storage 8 "September 16, 2008" "Debian/GNU Linux"
 .SH NAME
 \fBsetup-storage\fP
 \- automatically prepare storage devices
@@ -51,8 +51,7 @@ runs in test-only mode.
 Normally
 \fBsetup-storage\fP
 selects an appropriate configuration from
-.IRFAI
-/disk_config/
+$FAI/disk_config/
 by picking the first class from
 .IR classes
 that has an existing file.
@@ -102,11 +101,7 @@ If
 executes successfully an
 \fBfstab\fP(5)
 file matching the specified configuration is generated as
-.IRLOGDIR
-/fstab.
-Further
-.IRLOGDIR
-/disk_var.sh
+$LOGDIR/fstab. Further $LOGDIR/disk_var.sh
 is generated and may be sourced to get the variables
 .IR SWAPLIST ,
 .IR ROOT_PARTITION ,
@@ -357,23 +352,21 @@ Support for LVM and RAID is completely new
 Resizing partitions and filesystems is supported
 .SH EXAMPLES
 Simple configuration of /dev/hda
-
+.sp
+.nf
+.ta 40n
 disk_config hda   preserve_always:6,7   disklabel:msdos  bootable:3
-.br
-primary /boot     20-100        ext3            rw
-.br
-primary swap      1000     swap       sw
-.br
-primary /         12000      ext3           rw        createopts="-b 2048"
-.br
-logical /tmp      1000      ext3            rw,nosuid
-.br
-logical /usr      5000      ext3          rw
-.br
-logical /var      10%-      ext3               rw
-.br
-logical /nobackup 0-        xfs                rw
-.br
+
+primary /boot     20-100    ext3         rw
+primary swap      1000      swap         sw
+primary /         12000     ext3         rw        createopts="-b 2048"
+logical /tmp      1000      ext3         rw,nosuid
+logical /usr      5000      ext3         rw
+logical /var      10%-      ext3         rw
+logical /nobackup 0-        xfs          rw
+.sp
+.fi
+.PP
 .IP \(bu
 Preserve the 6th and the 7th partition. The disklabel is msdos which is the default
 for x86. Furthermore the 3rd partition is made bootable.
@@ -392,14 +385,17 @@ Make /dev/hda7 at least 10% of the disk size
 .IP \(bu
 Use mkfs.xfs to format the partition 8
 
+.TP
 Create a softRAID
-
+.sp
+.nf
+.ta 40n
 disk_config raid
-.br
-raid1        /    sda1,sdd1  ext2        rw,errors=remount-ro
-.br
-raid0        -    disk2.2,sdc1,sde1:spare:missing  ext2       default
-.br
+raid1   /   sda1,sdd1  ext2    rw,errors=remount-ro
+raid0   -   disk2.2,sdc1,sde1:spare:missing  ext2  default
+.sp
+.fi
+.PP
 .IP \(bu
 Create a RAID-1 on /dev/sda1 and /dev/sdd1, format using mkfs.ext2 and mount
 it as /
@@ -407,29 +403,26 @@ it as /
 Create a RAID-0 on the second partition of the second disk, /dev/sdc1, and
 /dev/sde1 as a spare partition. The latter may be missing.
 
+.TP
 Simple LVM example
-
+.sp
+.nf
+.ta 40n
 disk_config sda  bootable:1
-.br
 primary /boot 500 ext3 rw
-.br
 primary -       4096-   -       -
-.br
 disk_config lvm
-.br
 vg my_pv        sda2
-.br
 my_pv-_swap     swap    2048    swap    sw
-.br
 my_pv-_root     /       2048    ext3 rw
-.br
+.sp
+.fi
+.PP
 .SH SEE ALSO
 This program is part of FAI (Fully Automatic Installation).
 The FAI homepage is http://www.informatik.uni-koeln.de/fai.
 
-\fBsetup-storage\fP
-is still beta-software being actively developed. Further documentation,
-including coding related information, is maintained
+Further documentation, including coding related information, is maintained
 in a wiki page at http://faiwiki.informatik.uni-koeln.de/index.php/Setup-storage.
 .SH AUTHOR
 FAI is courtesy of Thomas Lange <lange@informatik.uni-koeln.de>. Michael
