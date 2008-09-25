@@ -9,8 +9,8 @@
 <!entity faiver "3.2.10">
 <!entity faiverdate "9 Sep 2008">
 
-<!entity version "2.7">
-<!entity date    "4 Sep 2008">
+<!entity version "2.8">
+<!entity date    "25 Sep 2008">
 
 <!entity faisetup           system "entities/faisetup.sgml">
 <!entity bootexample        system "entities/bootexample.sgml">
@@ -825,8 +825,12 @@ enabled in <file>inetd.conf</file>:
 An example for <manref name="dhcpd.conf" section="5"> is available in
 <file>/usr/share/doc/fai-doc/examples/etc/dhcpd.conf</file>, which is working with
 version 3.x of the DHCP daemon. Start using this example
-and look at all options used therein. 
-
+and look at all options used therein. The only FAI specific
+information inside this configuration file is to set <tt>filename</tt> to
+<tt>pxelinux.0</tt> and to set <tt>next-server</tt> and
+<tt>server-name</tt>. All other information is only network related
+data, which is used in almost all DHCP configurations.
+ 
 If you make any changes
 to the DHCP daemon configuration, you must restart the daemon.
 <example># /etc/init.d/dhcp3-server restart</example>
@@ -2534,15 +2538,12 @@ Additional information is available from
 <httpsite>www.scyld.com/</httpsite><httppath>expert/wake-on-lan.html</httppath>.
 
 <chapt id=arch>FAI on other architectures and distributions<p>
-If you want to use FAI on other architectures than i386 you might need
+If you want to use FAI on other architectures than i386 or amd64 you might need
 to take care of some things yourself.
 
 These are things that may have to be changed on other architectures:
 
 <taglist>
-   <tag> make-nfsroot.conf <item> <p>FAI_DEBOOTSTRAP_OPTS must be adopted to the
-   architecture you're using.</p>
-
    <tag> Boot loader: <item> <p> There are scripts for setting up
  <manref name="lilo" section="8"> and <manref name="grub" section="8">. Here you may
    add support for your specific boot loader.
@@ -2555,9 +2556,6 @@ for fai, like <file>/etc/fai-sarge</file> and
 <var>NFSROOT</var> variables to different directories and run
 <tt>make-fai-nfsroot -c /etc/fai-sarge</tt>.
 
-<sect id=amd64>FAI on AMD64<p>
-No problems. This works out of the box.
-
 <sect id=powerpc>FAI on PowerPC<p>
 There's some stuff on <httpsite>www.layer-acht.org</httpsite><httppath>/fai</httppath>. 
 Most notably there are hooks for partitioning and config-files to 
@@ -2566,9 +2564,14 @@ setup bootloaders for oldworld and newworld.
 <sect id=ia64>FAI on IA64<p>
 There's one big IA64 Beowulf cluster running which was installed with
 FAI. Only the partitioning part has to be replaced by a short script,
-since sfdisk is not available on IA64.
+since sfdisk is not available on IA64. This should not be need any
+more since the patitioning tool <manref name="setup-storage"
+section="8"> works on all architectures, were parted is supported.
 
-<sect id=odists>FAI for Suse, Redhat and Gentoo<p>
+<sect id=odists>FAI for Ubuntu, Suse, Redhat and Gentoo<p>
+All FAI packages are available in Ubuntu and are used by a large
+number of people since many version. 
+
 Many people are interested in FAI for other (mostly RPM based) Linux
 distributions. I made some research and it should not be much work to
 implement it. But I need more help to implement it. If you are
@@ -2598,9 +2601,7 @@ and <httpsite>www.sparc-boot.org/</httpsite>.
 .
 
 A success report is available at
-<httpsite>www.opossum.ch/</httpsite><httppath>fai/</httppath>
-and a HOWTO and a lot of examples can be found at
-<httpsite>toolbox.rutgers.edu/</httpsite><httppath>~amurphy/fai</httppath>.
+<httpsite>www.opossum.ch/</httpsite><httppath>fai/</httppath>.
 
 <sect id=solaris>FAI for Solaris<p>
 FAI has also been ported for use with SUN Solaris OS installations
@@ -2832,7 +2833,11 @@ the host key changes. You can use this:
 <example>
 ssh -o StrictHostKeyChecking=no root@installclient
 </example>
-<p>
+
+
+You can also delete the host entry on your install client in your
+<tt>~/.ssh/known_hosts</tt> file by unsing the <tt>ssh-keygen -R</tt>
+command.
 
 
 You can calculate the IP subnet adress (which is used in
