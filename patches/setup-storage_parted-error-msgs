@@ -1,0 +1,149 @@
+2008-09-30  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Exec.pm: recent versions of parted log errors to stdout
+		instead of stderr + adaption of error messages to current ones
+	* lib/setup-storage/Volumes.pm: Handle new error message in case of missing
+		disk label
+Index: trunk/lib/setup-storage/Exec.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Exec.pm
++++ trunk/lib/setup-storage/Exec.pm	
+@@ -52,13 +52,21 @@
+ $FAI::error_codes = [
+   {
+     error   => "parted_1",
+-    message => "Parted failed to remove the partition\n",
+-    stderr_regex => "Error: Could not stat device rm - No such file or directory",
++    message => "Parted failed to open the device\n",
++    stderr_regex => "Error: Could not stat device .* - No such file or directory",
+     stdout_regex => "",
+     program      => "parted",
+     response     => "die",
+   },
+   {
++    error   => "parted_1_new",
++    message => "Parted failed to open the device\n",
++    stderr_regex => "",
++    stdout_regex => "Error: Could not stat device .* - No such file or directory",
++    program      => "parted",
++    response     => "die",
++  },
++  {
+     error        => "parted_2",
+     message      => "Parted could not read a disk label\n",
+     stderr_regex => "Error: Unable to open .* - unrecognised disk label",
+@@ -67,67 +75,83 @@
+     response     => "warn",
+   },
+   {
+-    error   => "parted_3",
+-    message => "Parted failed to open the device\n",
+-    stderr_regex => "Error: Could not stat device .* - No such file or directory",
+-    stdout_regex => "",
++    error        => "parted_2_new",
++    message      => "Parted could not read a disk label\n",
++    stderr_regex => "",
++    stdout_regex => "Error: .* unrecognised disk label",
+     program      => "parted",
+-    response     => "die"
++    response     => "warn",
+   },
++  ## {
++  ##   error        => "parted_3",
++  ##   message      => "Parted was unable to create the partition\n",
++  ##   stderr_regex => "Warning: You requested a partition from .* to .*\\.\$",
++  ##   stdout_regex => "",
++  ##   program      => "parted",
++  ##   response     => \&FAI::restore_partition_table,
++  ## },
+   {
+-    error   => "parted_4",
+-    message => "parted not found\n",
+-    stderr_regex => "(parted: command not found|/sbin/parted: No such file or directory)",
++    error        => "parted_4",
++    message      => "Parted was unable to read the partition table\n",
++    stderr_regex => "No Implementation: Partition \\d+ isn't aligned to cylinder boundaries",
+     stdout_regex => "",
+     program      => "parted",
+-    response     => "die"
++    response     => "die",
++  },
++  {
++    error        => "parted_4_new",
++    message      => "Parted was unable to read the partition table\n",
++    stderr_regex => "",
++    stdout_regex => "No Implementation: Partition \\d+ isn't aligned to cylinder boundaries",
++    program      => "parted",
++    response     => "die",
+   },
+   {
+     error        => "parted_5",
+-    message      => "Parted was unable to create the partition\n",
+-    stderr_regex => "Warning: You requested a partition from .* to .*\\.\$",
++    message      => "Parted failed to resize due to a setup-storage internal error\n",
++    stderr_regex => "Error: Can't have overlapping partitions",
+     stdout_regex => "",
+     program      => "parted",
+-    response     => \&FAI::restore_partition_table,
++    response     => "die",
+   },
+   {
+-    error => "mkfs.xfs_1",
+-    message => "mkfs.xfs refused to create a filesystem. Probably you should add -f to the mkfs options in your disk_config file.\n",
+-    stderr_regex => "mkfs.xfs: /dev/.* appears to contain an existing filesystem",
+-    stdout_regex => "",
+-    program      => "mkfs.xfs",
++    error        => "parted_5_new",
++    message      => "Parted failed to resize due to a setup-storage internal error\n",
++    stderr_regex => "",
++    stdout_regex => "Error: Can't have overlapping partitions",
++    program      => "parted",
+     response     => "die",
+   },
+   {
+     error        => "parted_6",
+-    message      => "Parted was unable to read the partition table\n",
+-    stderr_regex => "No Implementation: Partition \\d+ isn't aligned to cylinder boundaries",
++    message      => "Parted failed to resize the partition (is it too small?)\n",
++    stderr_regex => "Error: Unable to satisfy all constraints on the partition",
+     stdout_regex => "",
+     program      => "parted",
+     response     => "die",
+   },
+   {
+-    error        => "parted_7",
+-    message      => "Parted doesn't support ntfs resizing\n",
+-    stderr_regex => "No Implementation: Support for opening ntfs file systems is not implemented yet",
+-    stdout_regex => "",
++    error        => "parted_6_new",
++    message      => "Parted failed to resize the partition (is it too small?)\n",
++    stderr_regex => "",
++    stdout_regex => "Error: Unable to satisfy all constraints on the partition",
+     program      => "parted",
+     response     => "die",
+   },
+   {
+-    error        => "parted_8",
+-    message      => "Parted failed to resize due to a setup-storage internal error\n",
+-    stderr_regex => "Error: Can't have overlapping partitions",
++    error   => "cmd_parted_1",
++    message => "parted not found\n",
++    stderr_regex => "(parted: command not found|/sbin/parted: No such file or directory)",
+     stdout_regex => "",
+     program      => "parted",
+-    response     => "die",
++    response     => "die"
+   },
+   {
+-    error        => "parted_9",
+-    message      => "Parted failed to resize the partition (is it too small?)\n",
+-    stderr_regex => "Error: Unable to satisfy all constraints on the partition",
++    error => "mkfs.xfs_1",
++    message => "mkfs.xfs refused to create a filesystem. Probably you should add -f to the mkfs options in your disk_config file.\n",
++    stderr_regex => "mkfs.xfs: /dev/.* appears to contain an existing filesystem",
+     stdout_regex => "",
+-    program      => "parted",
++    program      => "mkfs.xfs",
+     response     => "die",
+   },
+   {

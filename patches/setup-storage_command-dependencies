@@ -1,0 +1,134 @@
+2008-09-30  Michael Tautschnig  <mt@debian.org>
+
+	* bin/setup-storage: extended debug output of sorted commands
+	* lib/setup-storage/Commands.pm: Properly sort commands, fixed dependency
+		errors, use start_byte for new config instead of begin_byte
+Index: trunk/bin/setup-storage
+===================================================================
+--- trunk.orig/bin/setup-storage
++++ trunk/bin/setup-storage	
+@@ -163,7 +163,14 @@
+ 
+ # run all commands
+ # debugging only: print the command script
+-$FAI::debug and print "$_:" . $FAI::commands{$_}{cmd} . "\n" foreach (&numsort(keys %FAI::commands));
++if ($FAI::debug) {
++  foreach (&numsort(keys %FAI::commands)) {
++    defined($FAI::commands{$_}{cmd}) or &FAI::internal_error("Missing command entry for $_");
++    print "$_:" . $FAI::commands{$_}{cmd} . "\n";
++    defined($FAI::commands{$_}{pre}) and print "\tpre: " . $FAI::commands{$_}{pre} . "\n";
++    defined($FAI::commands{$_}{post}) and print "\tpost: " . $FAI::commands{$_}{post} . "\n";
++  }
++}
+ 
+ # run the commands (if $FAI::no_dry_run is set)
+ &FAI::execute_command($FAI::commands{$_}{cmd}) foreach (&numsort(keys %FAI::commands));
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -293,7 +293,7 @@
+     # create the volume group
+     my $pre_dev = join(",pv_done_", @devices);
+     $pre_dev =~ s/^,//;
+-    &FAI::push_command( "vgcreate $vg " . join (" ", @devices), "$pre_dev",
++    &FAI::push_command( "vgcreate $vg " . join (" ", @devices), "exist_$pre_dev",
+       "vg_created_$vg" );
+     # we are done
+     return;
+@@ -436,7 +436,14 @@
+     # set proper partition types for LVM
+     &FAI::set_partition_type_on_phys_dev($_, "lvm")
+       foreach (keys %{ $FAI::configs{$config}{devices} });
+-    my $type_pre = join(",type_lvm_", keys %{ $FAI::configs{$config}{devices} });
++    my $type_pre = "";
++    foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
++      if ((&FAI::phys_dev($d))[0]) {
++        $type_pre .= ",type_lvm_$d"
++      } else {
++        $type_pre .= ",exist_$d"
++      }
++    }
+     $type_pre =~ s/^,//;
+     # wait for udev to set up all devices
+     &FAI::push_command( "udevsettle --timeout=10", "$type_pre",
+@@ -622,15 +629,14 @@
+     $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id} = $part_nr;
+ 
+     my $post = "run_udev_" . &FAI::make_device_name($disk, $part_nr);
+-    $post = "rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
++    $post .= ",rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
+       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
+     # build a parted command to create the partition
+     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
+       "cleared1_$disk", $post );
+     &FAI::push_command( "udevsettle --timeout=10", "run_udev_" . 
+       &FAI::make_device_name($disk, $part_nr), "exist_" .
+-      &FAI::make_device_name($disk, $part_nr) ) if 
+-      $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
++      &FAI::make_device_name($disk, $part_nr) );
+   }
+ }
+ 
+@@ -693,7 +699,7 @@
+       # get the intermediate partition id
+       my $p_other = $FAI::current_config{$disk}{partitions}{$mapped_id_other}{new_id};
+       # check for overlap
+-      next if($part->{begin_byte} >
++      next if($part->{start_byte} >
+         $FAI::current_config{$disk}{partitions}{$mapped_id_other}{end_byte});
+       next if($part->{end_byte} <
+         $FAI::current_config{$disk}{partitions}{$mapped_id_other}{begin_byte});
+@@ -701,7 +707,7 @@
+       # special care, even though this does not catch all cases (sometimes it
+       # will fail nevertheless
+       if ($part->{size}->{extended} && $part_other > 4) {
+-        if($part->{begin_byte} >
++        if($part->{start_byte} >
+           $FAI::current_config{$disk}{partitions}{$mapped_id_other}{begin_byte}) {
+           $deps .= ",resized_" . &FAI::make_device_name($disk, $p_other);
+         }
+@@ -711,7 +717,7 @@
+         }
+       }
+       elsif ($part_id > 4 && $part_other_ref->{size}->{extended}) {
+-        if($part->{begin_byte} <
++        if($part->{start_byte} <
+           $FAI::current_config{$disk}{partitions}{$mapped_id_other}{begin_byte}) {
+           $deps .= ",resized_" . &FAI::make_device_name($disk, $p_other);
+         }
+@@ -753,7 +759,7 @@
+         &FAI::make_device_name($disk, $p) );
+     } else {
+       &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
+-        "rebuilt_" . &FAI::make_device_name($disk, $p), "resized_" .
++        "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps, "resized_" .
+         &FAI::make_device_name($disk, $p) );
+     }
+ 
+@@ -911,10 +917,13 @@
+ 
+   while ($i < $FAI::n_c_i) {
+     my $all_matched = 1;
+-    foreach (split(/,/, $FAI::commands{$i}{pre})) {
+-      next if scalar(grep(m{^$_$}, @pre_deps));
+-      $all_matched = 0;
+-      last;
++    if (defined($FAI::commands{$i}{pre})) {
++      foreach (split(/,/, $FAI::commands{$i}{pre})) {
++        my $cur = $_;
++        next if scalar(grep(m{^$cur$}, @pre_deps));
++        $all_matched = 0;
++        last;
++      }
+     }
+     if ($all_matched) {
+       defined($FAI::commands{$i}{post}) and push @pre_deps, split(/,/, $FAI::commands{$i}{post});
+@@ -932,6 +941,7 @@
+     &FAI::push_command( $FAI::commands{$i}{cmd}, $FAI::commands{$i}{pre},
+       $FAI::commands{$i}{post} );
+     delete $FAI::commands{$i};
++    $i++;
+   }
+ }
+ 
