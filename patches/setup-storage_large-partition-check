@@ -1,0 +1,19 @@
+2008-10-01  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Sizes.pm: Immediately fail if partitions > 2TB are to be
+		created on msdos disk labels
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -668,6 +668,10 @@
+         ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
+           $config, $current_disk, $next_start, $min_req_total_space, \@worklist);
+ 
++        # msdos does not support partitions larger than 2TB
++        ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *
++            1024.0)) and die "msdos disklabel does not support partitions > 2TB, please use disklabel:gpt\n"
++          if ($FAI::configs{$config}{disklabel} eq "msdos");
+         # partition done
+         shift @worklist;
+       }
