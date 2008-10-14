@@ -66,7 +66,7 @@ sub get_current_disks {
 
     # parted_2 happens when the disk has no disk label, because parted then
     # provides no information about the disk
-    if ($error eq "parted_2") {
+    if ($error eq "parted_2" || $error eq "parted_2_new") {
       $FAI::no_dry_run or die 
         "Can't run on test-only mode on this system because there is no disklabel on $disk\n";
 
