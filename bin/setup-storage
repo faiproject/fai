@@ -163,7 +163,14 @@ $FAI::debug and print Dumper \%FAI::configs;
 
 # run all commands
 # debugging only: print the command script
-$FAI::debug and print "$_:" . $FAI::commands{$_}{cmd} . "\n" foreach (&numsort(keys %FAI::commands));
+if ($FAI::debug) {
+  foreach (&numsort(keys %FAI::commands)) {
+    defined($FAI::commands{$_}{cmd}) or &FAI::internal_error("Missing command entry for $_");
+    print "$_:" . $FAI::commands{$_}{cmd} . "\n";
+    defined($FAI::commands{$_}{pre}) and print "\tpre: " . $FAI::commands{$_}{pre} . "\n";
+    defined($FAI::commands{$_}{post}) and print "\tpost: " . $FAI::commands{$_}{post} . "\n";
+  }
+}
 
 # run the commands (if $FAI::no_dry_run is set)
 &FAI::execute_command($FAI::commands{$_}{cmd}) foreach (&numsort(keys %FAI::commands));

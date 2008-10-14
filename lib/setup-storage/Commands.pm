@@ -291,9 +291,10 @@ sub create_volume_group {
     &FAI::push_command( "pvcreate $_", "pv_sigs_removed,exist_$_",
       "pv_done_$_" ) foreach (@devices);
     # create the volume group
-    my $pre_dev = join(",pv_done_", @devices);
+    my $pre_dev = "";
+    $pre_dev .= ",pv_done_$_" foreach (@devices);
     $pre_dev =~ s/^,//;
-    &FAI::push_command( "vgcreate $vg " . join (" ", @devices), "$pre_dev",
+    &FAI::push_command( "vgcreate $vg " . join (" ", @devices), "exist_$pre_dev",
       "vg_created_$vg" );
     # we are done
     return;
@@ -315,7 +316,8 @@ sub create_volume_group {
   &FAI::push_command( "pvcreate $_", "exist_$_", "pv_done_$_" ) foreach (@new_devices);
 
   # extend the volume group by the new devices (includes the current ones)
-  my $pre_dev = join(",pv_done_", @new_devices);
+  my $pre_dev = "";
+  $pre_dev .= ",pv_done_$_" foreach (@new_devices);
   $pre_dev =~ s/^,//;
   &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
     "vg_extended_$vg" );
@@ -329,7 +331,8 @@ sub create_volume_group {
 
   # run vgreduce to get them removed
   if (scalar (keys %rm_devs)) {
-    $pre_dev = join(",pv_done_", keys %rm_devs);
+    $pre_dev = "";
+    $pre_dev .= ",pv_done_$_" foreach (keys %rm_devs);
     &FAI::push_command( "vgreduce $vg " . join (" ", keys %rm_devs),
       "vg_extended_$vg$pre_dev", "vg_created_$vg" );
   } else {
@@ -436,7 +439,14 @@ sub build_lvm_commands {
     # set proper partition types for LVM
     &FAI::set_partition_type_on_phys_dev($_, "lvm")
       foreach (keys %{ $FAI::configs{$config}{devices} });
-    my $type_pre = join(",type_lvm_", keys %{ $FAI::configs{$config}{devices} });
+    my $type_pre = "";
+    foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
+      if ((&FAI::phys_dev($d))[0]) {
+        $type_pre .= ",type_lvm_$d"
+      } else {
+        $type_pre .= ",exist_$d"
+      }
+    }
     $type_pre =~ s/^,//;
     # wait for udev to set up all devices
     &FAI::push_command( "udevsettle --timeout=10", "$type_pre",
@@ -622,15 +632,14 @@ sub rebuild_preserved_partitions {
     $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id} = $part_nr;
 
     my $post = "run_udev_" . &FAI::make_device_name($disk, $part_nr);
-    $post = "rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
+    $post .= ",rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
     # build a parted command to create the partition
     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
       "cleared1_$disk", $post );
-    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" . 
+    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" .
       &FAI::make_device_name($disk, $part_nr), "exist_" .
-      &FAI::make_device_name($disk, $part_nr) ) if 
-      $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
+      &FAI::make_device_name($disk, $part_nr) );
   }
 }
 
@@ -693,7 +702,7 @@ sub setup_partitions {
       # get the intermediate partition id
       my $p_other = $FAI::current_config{$disk}{partitions}{$mapped_id_other}{new_id};
       # check for overlap
-      next if($part->{begin_byte} >
+      next if($part->{start_byte} >
         $FAI::current_config{$disk}{partitions}{$mapped_id_other}{end_byte});
       next if($part->{end_byte} <
         $FAI::current_config{$disk}{partitions}{$mapped_id_other}{begin_byte});
@@ -701,7 +710,7 @@ sub setup_partitions {
       # special care, even though this does not catch all cases (sometimes it
       # will fail nevertheless
       if ($part->{size}->{extended} && $part_other > 4) {
-        if($part->{begin_byte} >
+        if($part->{start_byte} >
           $FAI::current_config{$disk}{partitions}{$mapped_id_other}{begin_byte}) {
           $deps .= ",resized_" . &FAI::make_device_name($disk, $p_other);
         }
@@ -711,7 +720,7 @@ sub setup_partitions {
         }
       }
       elsif ($part_id > 4 && $part_other_ref->{size}->{extended}) {
-        if($part->{begin_byte} <
+        if($part->{start_byte} <
           $FAI::current_config{$disk}{partitions}{$mapped_id_other}{begin_byte}) {
           $deps .= ",resized_" . &FAI::make_device_name($disk, $p_other);
         }
@@ -753,7 +762,7 @@ sub setup_partitions {
         &FAI::make_device_name($disk, $p) );
     } else {
       &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
-        "rebuilt_" . &FAI::make_device_name($disk, $p), "resized_" .
+        "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps, "resized_" .
         &FAI::make_device_name($disk, $p) );
     }
 
@@ -911,10 +920,13 @@ sub order_commands {
 
   while ($i < $FAI::n_c_i) {
     my $all_matched = 1;
-    foreach (split(/,/, $FAI::commands{$i}{pre})) {
-      next if scalar(grep(m{^$_$}, @pre_deps));
-      $all_matched = 0;
-      last;
+    if (defined($FAI::commands{$i}{pre})) {
+      foreach (split(/,/, $FAI::commands{$i}{pre})) {
+        my $cur = $_;
+        next if scalar(grep(m{^$cur$}, @pre_deps));
+        $all_matched = 0;
+        last;
+      }
     }
     if ($all_matched) {
       defined($FAI::commands{$i}{post}) and push @pre_deps, split(/,/, $FAI::commands{$i}{post});
@@ -932,6 +944,7 @@ sub order_commands {
     &FAI::push_command( $FAI::commands{$i}{cmd}, $FAI::commands{$i}{pre},
       $FAI::commands{$i}{post} );
     delete $FAI::commands{$i};
+    $i++;
   }
 }
 
