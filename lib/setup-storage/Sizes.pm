@@ -294,6 +294,13 @@ sub do_partition_preserve {
   ($next_start > $curr_part->{begin_byte})
     and die "Previous partitions overflow begin of preserved partition $part_id\n";
 
+  # get what the user desired
+  my ($start, $end) = &FAI::make_range($part->{size}->{range},
+    $current_disk->{size} . "B");
+  ($start > $curr_part->{count_byte} || $end < $curr_part->{count_byte})
+    and warn "Preserved partition $part_id retains size " .
+      $curr_part->{count_byte} . "\n";
+
   # set the effective size to the value known already
   $part->{size}->{eff_size} = $curr_part->{count_byte};
 
@@ -320,6 +327,11 @@ sub do_partition_preserve {
     # add one head of disk usage if this is a logical partition
     $min_req_total_space += $current_disk->{bios_sectors_per_track} *
       $current_disk->{sector_size} if ($part_id > 4);
+
+    # make sure we don't change extended partitions to ordinary ones and
+    # vice-versa
+    ($part->{size}->{extended} == $curr_part->{is_extended})
+      or die "Preserved partition $part_id can't change extended/normal setting\n";
 
     # extended partitions consume no space
     if ($part->{size}->{extended}) {
