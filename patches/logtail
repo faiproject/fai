@@ -33,23 +33,24 @@ Index: trunk/lib/subroutines
 ===================================================================
 --- trunk.orig/lib/subroutines
 +++ trunk/lib/subroutines	
-@@ -82,7 +82,6 @@
- }
+@@ -83,7 +83,11 @@
  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  save_dmesg() {
--
-     dmesg > $LOGDIR/dmesg.log
+ 
+-    dmesg > $LOGDIR/dmesg.log
++    if [ -r /var/run/fai/kern.log.offset ] ; then
++      logtail -t -f /var/log/kern.log -o /var/run/fai/kern.log.offset > $LOGDIR/dmesg.log
++    else
++      dmesg > $LOGDIR/dmesg.log
++    fi
  }
  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-@@ -416,6 +415,11 @@
- # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- task_savelog() {
+ wait_for_jobs() {
+@@ -418,6 +422,7 @@
  
-+    if [ -r /var/run/fai/kern.log.offset ] ; then
-+      logtail -f /var/log/kern.log -o /var/run/fai/kern.log.offset > $LOGDIR/dmesg.log
-+      rm /var/run/fai/kern.log.offset
-+    fi
-+
      mkdir -p $FAI_ROOT/var/lib/fai
      mkdir -p $FAI_ROOT/var/log/fai
++    rm -f /var/run/fai/kern.log.offset
      fai-savelog -l
+     [ -f $LOGDIR/FAI_CLASSES ] && cp -pu $LOGDIR/FAI_CLASSES $FAI_ROOT/var/lib/fai
+     [ -f $LOGDIR/disk_var.sh ] && cp -pu $LOGDIR/disk_var.sh $FAI_ROOT/var/lib/fai
