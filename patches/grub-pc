@@ -1,0 +1,66 @@
+2008-10-16  Michael Tautschnig  <mt@debian.org>
+
+	* simple example: Added class GRUB_PC that installs and uses grub-pc instead
+		of grub, following the suggestions of Jean Spirat <jeanspirat@squirk.org>.
+		This is untested.
+	* Makefile: Make sure that all example scripts are executable
+Index: trunk/Makefile
+===================================================================
+--- trunk.orig/Makefile
++++ trunk/Makefile	
+@@ -45,6 +45,7 @@
+ 	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
+ 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
+ 	cp -a examples $(DOCDIR)
++	chmod -R a+x $(DOCDIR)/examples/simple/scripts/
+ 	cp -a utils $(DOCDIR)/examples
+ 
+ .PHONY: clean veryclean
+Index: trunk/examples/simple/package_config/DEFAULT
+===================================================================
+--- trunk.orig/examples/simple/package_config/DEFAULT
++++ trunk/examples/simple/package_config/DEFAULT	
+@@ -14,7 +14,10 @@
+ dhcp3-client
+ 
+ PACKAGES aptitude GRUB
+-grub lilo-
++grub lilo- grub-pc-
+ 
+ PACKAGES aptitude LILO
+-lilo grub-
++lilo grub- grub-pc-
++
++PACKAGES aptitude GRUB
++grub-pc grub- lilo-
+Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
+@@ -0,0 +1,26 @@
++#! /bin/bash
++
++error=0 ; trap "error=$((error|1))" ERR
++
++set -a
++
++# during softupdate use this file
++[ -r $LOGDIR/disk_var.sh ] && . $LOGDIR/disk_var.sh
++
++# if class NOMBR is defined, write boot loader into root partition, not into mbr
++ifclass NOMBR && BOOT_DEVICE=$BOOT_PARTITION
++
++[ -z "$BOOT_DEVICE" ]    && exit 701
++[ -z "$BOOT_PARTITION" ] && exit 702
++
++$ROOTCMD grub-mkimage --output=/boot/grub/core.img ext2 pc gpt biosdisk lvm
++grub_dev=$(device2grub $BOOT_DEVICE)
++if [ -z "$grub_dev" ] ; then
++  grub_dev=$(echo $BOOT_DEVICE | sed 's#^/dev/##')
++fi
++$ROOTCMD /usr/sbin/grub-install "($grub_dev)"
++$ROOTCMD /usr/sbin/grub-setup   "($grub_dev)"
++$ROOTCMD /usr/sbin/update-grub
++
++exit $error
++
