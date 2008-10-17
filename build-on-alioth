@@ -20,21 +20,30 @@ mangle_version_number() {
 build_changelog() {
   dh_testdir || exit 3
   mv debian/changelog debian/changelog.orig
-  echo "fai ($(<$storage/LATEST_BUILD)) unstable; urgency=low" > debian/changelog
-  echo >> debian/changelog
-  echo "  * Experimental FAI based on SVN r$REV" >> debian/changelog
+  echo "fai ($(<$storage/LATEST_BUILD)) unstable; urgency=low" > debian/changelog.new
+  echo >> debian/changelog.new
+  echo "  * Experimental FAI based on SVN r$REV" >> debian/changelog.new
   for i in `quilt series` ; do 
     author="`quilt header $i | sed -n 1p | sed 's/^[[:digit:] -]*//'`"
     quilt header $i | sed '/^[[:space:]]*$/d' | sed '/^[^[:space:]]/d' | \
       sed "s/^[[:space:]]*\*/  [ $author ]\n&/" | \
       sed 's/^[[:space:]]\+/    /' | sed 's/^[[:space:]]*\[/  [/' | \
-      sed 's/^[[:space:]]*\*/  */' >> debian/changelog
+      sed 's/^[[:space:]]*\*/  */' >> debian/changelog.new
   done
-  echo >> debian/changelog
-  echo " -- FAI Developers <linux-fai-devel@uni-koeln.de>  `date -R`" >> debian/changelog
-  echo >> debian/changelog
+  echo >> debian/changelog.new
+  echo " -- FAI Developers <linux-fai-devel@uni-koeln.de>  `date -R`" >> debian/changelog.new
+  echo >> debian/changelog.new
+  cat debian/changelog.new | perl -n -e '
+    if(/^  (\[.*\])$/) {
+      if($1 ne $author) {
+        $author=$1;
+      } else {
+        next;
+      }
+    }
+    print "$_";' > debian/changelog
   cat debian/changelog.orig >> debian/changelog
-  rm debian/changelog.orig
+  rm debian/changelog.orig debian/changelog.new
 }
 
 REPOS="$1"
