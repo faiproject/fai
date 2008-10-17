@@ -1,0 +1,29 @@
+2008-10-17  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Sizes.pm: Fail early, if a non-existing device is used in
+		a volume group.
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -115,7 +115,7 @@
+     # the size is known from the current configuration on disk, return it
+     defined ($FAI::current_config{$disk}{partitions}{$part_no}{count_byte})
+       and return $FAI::current_config{$disk}{partitions}{$part_no}{count_byte} /
+-      (1024 * 1024);
++      (1024 * 1024) unless defined ($FAI::configs{"PHY_$disk"}{partitions});
+ 
+     # the size is not known (yet?)
+     warn "Cannot determine size of $dev\n";
+@@ -197,7 +197,10 @@
+ 
+       # $dev may be a partition, an entire disk or a RAID device; otherwise we
+       # cannot deal with it
+-      $vg_size += &FAI::estimate_size($dev);
++      my $cur_size = &FAI::estimate_size($dev);
++      ($cur_size > 0)
++        or die "Size of device $dev in volume group $vg cannot be determined\n";
++      $vg_size += $cur_size;
+     }
+ 
+     # now subtract 1% of overhead
