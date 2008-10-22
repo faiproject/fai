@@ -292,9 +292,9 @@ sub create_volume_group {
       "pv_done_$_" ) foreach (@devices);
     # create the volume group
     my $pre_dev = "";
-    $pre_dev .= ",pv_done_$_" foreach (@devices);
+    $pre_dev .= ",exist_$_,pv_done_$_" foreach (@devices);
     $pre_dev =~ s/^,//;
-    &FAI::push_command( "vgcreate $vg " . join (" ", @devices), "exist_$pre_dev",
+    &FAI::push_command( "vgcreate $vg " . join (" ", @devices), "$pre_dev",
       "vg_created_$vg" );
     # we are done
     return;
