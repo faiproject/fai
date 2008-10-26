@@ -1,0 +1,166 @@
+2008-10-26  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Commands.pm: Properly handle existing volume groups and
+		only extend them if the underlying devices are preserved, otherwise create
+		them anew.
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -115,7 +115,7 @@
+ 
+   # encryption requested, rewrite the device name
+   my $enc_dev_name = $device;
+-  $enc_dev_name =~ s#/#_#g;
++  $enc_dev_name =~ "s#/#_#g";
+   my $enc_dev_short_name = "crypt$enc_dev_name";
+   $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
+   my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
+@@ -124,13 +124,11 @@
+   &FAI::push_command( 
+     "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
+     "", "keyfile_$device" );
++
+   # prepare encryption
+   &FAI::push_command(
+-    "dd if=/dev/urandom of=$device",
+-    "exist_$device", "random_init_$device" );
+-  &FAI::push_command(
+     "yes YES | cryptsetup luksFormat $device $keyfile -c aes-cbc-essiv:sha256 -s 256",
+-    "random_init_$device,keyfile_$device", "crypt_format_$device" );
++    "exist_$device,keyfile_$device", "crypt_format_$device" );
+   &FAI::push_command(
+     "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
+     "crypt_format_$device", "encrypted_$device" );
+@@ -220,15 +218,26 @@
+           $pre_req .= ",exist_$d";
+         }
+       }
++      my $pre_req_no_comma = $pre_req;
++      $pre_req_no_comma =~ s/^,//;
++      # wait for udev to set up all devices
++      &FAI::push_command( "udevsettle --timeout=10", $pre_req_no_comma,
++        "settle_for_mdadm_create$id" );
+ 
+       # create the command
+-      $pre_req = "exist_/dev/md" . ( $id - 1 ) . $pre_req if (0 != $id);
+-      $pre_req =~ s/^,//;
++      if (0 == $id) {
++        $pre_req = "settle_for_mdadm_create$id$pre_req";
++      } else {
++        $pre_req = "settle_for_mdadm_create$id,exist_/dev/md" . ( $id - 1 ) . $pre_req;
++      }
+       &FAI::push_command(
+         "yes | mdadm --create /dev/md$id --level=$level --force --run --raid-devices="
+           . scalar(@eff_devs) . " --spare-devices=" . scalar(@spares) . " "
+           . join(" ", @eff_devs) . " " . join(" ", @spares),
+-        "$pre_req", "exist_/dev/md$id" );
++        "$pre_req", "run_udev_/dev/md$id" );
++
++      &FAI::push_command( "udevsettle --timeout=10", "run_udev_/dev/md$id",
++        "exist_/dev/md$id" );
+ 
+       # create the filesystem on the volume
+       &FAI::build_mkfs_commands("/dev/md$id",
+@@ -274,8 +283,26 @@
+   ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
+   my $vg = $1; # the actual volume group
+ 
++  my $vg_exists = 0;
++  if (defined ($FAI::current_lvm_config{$vg})) {
++    $vg_exists = 1;
++    foreach my $dev (@{ $FAI::current_lvm_config{$vg}{"physical_volumes"} }) {
++      my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
++      # if this is not a physical disk, just assume that the volume group will
++      # not exist anymore
++      if ($i_p_d) {
++        defined ($FAI::configs{"PHY_$disk"}) or next;
++        defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}) and
++          ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve}) and
++          next;
++      }
++      $vg_exists = 0;
++      last;
++    }
++  }
++
+   # create the volume group, if it doesn't exist already
+-  if (!defined ($FAI::current_lvm_config{$vg})) {
++  if (!$vg_exists) {
+     # create all the devices
+     my @devices = keys %{ $FAI::configs{$config}{devices} };
+     &FAI::erase_lvm_signature(\@devices);
+@@ -399,7 +426,9 @@
+ 
+     # create a new volume
+     &FAI::push_command( "lvcreate -n $lv -L " . $lv_size->{eff_size} . " $vg",
+-      "vg_enabled_$vg,$lv_rm_pre", "exist_/dev/$vg/$lv" );
++      "vg_enabled_$vg,$lv_rm_pre", "run_udev_/dev/$vg/$lv" );
++    &FAI::push_command( "udevsettle --timeout=10", "run_udev_/dev/$vg/$lv",
++      "exist_/dev/$vg/$lv" );
+ 
+     # create the filesystem on the volume
+     &FAI::build_mkfs_commands("/dev/$vg/$lv",
+@@ -436,12 +465,16 @@
+         $type_pre .= ",exist_$d"
+       }
+     }
++    $type_pre =~ s/^,//;
++    # wait for udev to set up all devices
++    &FAI::push_command( "udevsettle --timeout=10", "$type_pre",
++      "settle_for_vgchange_$vg" );
+ 
+     # create the volume group or add/remove devices
+     &FAI::create_volume_group($config);
+     # enable the volume group
+     &FAI::push_command( "vgchange -a y $vg",
+-      "vg_created_$vg$type_pre", "vg_enabled_$vg" );
++      "settle_for_vgchange_$vg,vg_created_$vg", "vg_enabled_$vg" );
+ 
+     # perform all necessary operations on the underlying logical volumes
+     &FAI::setup_logical_volumes($config);
+@@ -616,12 +649,15 @@
+     $part_nr++;
+     $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id} = $part_nr;
+ 
+-    my $post = "exist_" . &FAI::make_device_name($disk, $part_nr);
++    my $post = "run_udev_" . &FAI::make_device_name($disk, $part_nr);
+     $post .= ",rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
+       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
+     # build a parted command to create the partition
+     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
+       "cleared1_$disk", $post );
++    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" .
++      &FAI::make_device_name($disk, $part_nr), "exist_" .
++      &FAI::make_device_name($disk, $part_nr) );
+   }
+ }
+ 
+@@ -731,9 +767,13 @@
+       # ntfsresize requires device names
+       my $eff_size = $part->{size}->{eff_size};
+ 
++      # wait for udev to set up all devices
++      &FAI::push_command( "udevsettle --timeout=10", "rebuilt_" .
++        &FAI::make_device_name($disk, $p) . $deps, "settle_for_resize_" .
++        &FAI::make_device_name($disk, $p) );
+       &FAI::push_command( "yes | ntfsresize -s $eff_size " .
+-        &FAI::make_device_name($disk, $p), "rebuilt_" .
+-        &FAI::make_device_name($disk, $p) . $deps, "ntfs_ready_for_rm_" .
++        &FAI::make_device_name($disk, $p), "settle_for_resize_" .
++        &FAI::make_device_name($disk, $p), "ntfs_ready_for_rm_" .
+         &FAI::make_device_name($disk, $p) );
+       &FAI::push_command( "parted -s $disk rm $p", "ntfs_ready_for_rm_" .
+         &FAI::make_device_name($disk, $p), "resized_" .
+@@ -789,7 +829,10 @@
+     $pre = ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
+     # build a parted command to create the partition
+     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
+-      "cleared2_$disk$pre", "exist_" . &FAI::make_device_name($disk, $part_id) );
++      "cleared2_$disk$pre", "run_udev_" . &FAI::make_device_name($disk, $part_id) );
++    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" .
++      &FAI::make_device_name($disk, $part_id), "exist_" .
++      &FAI::make_device_name($disk, $part_id) );
+     $prev_id = $part_id;
+   }
+ 
