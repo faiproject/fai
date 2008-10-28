@@ -202,7 +202,7 @@ sub get_error {
 }
 ################################################################################
 #
-# @brief execute a /bin/bash command, given as string. also catch stderr and
+# @brief execute a shell command, given as string. also catch stderr and
 # stdout, to be passed to the caller function, and also used for error
 # recognition. This execute function does execute the in the error struct
 # defined action, when an error occurs.
@@ -237,7 +237,27 @@ sub execute_command {
   }
   return "";
 }
+################################################################################
+#
+# @brief Execute a command as in execute_command, but prefix it with udevsettle
+#
+# @return the identifier of the error
+#
+################################################################################
+sub execute_with_udevsettle {
+  my ($command, $stdout, $stderr) = @_;
+  return &execute_command("udevsettle --timeout 10 && $command", $stdout,
+    $stderr);
+}
 
+################################################################################
+#
+# @brief Execute a command that is known to be read-only and thus acceptable to
+# be run despite dry_run mode
+#
+# @return the identifier of the error
+#
+################################################################################
 sub execute_ro_command {
   my ($command, $stdout, $stderr) = @_;
 

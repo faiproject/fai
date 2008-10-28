@@ -218,26 +218,15 @@ sub build_raid_commands {
           $pre_req .= ",exist_$d";
         }
       }
-      my $pre_req_no_comma = $pre_req;
-      $pre_req_no_comma =~ s/^,//;
-      # wait for udev to set up all devices
-      &FAI::push_command( "udevsettle --timeout=10", $pre_req_no_comma,
-        "settle_for_mdadm_create$id" );
 
       # create the command
-      if (0 == $id) {
-        $pre_req = "settle_for_mdadm_create$id$pre_req";
-      } else {
-        $pre_req = "settle_for_mdadm_create$id,exist_/dev/md" . ( $id - 1 ) . $pre_req;
-      }
+      $pre_req = "exist_/dev/md" . ( $id - 1 ) . $pre_req if (0 != $id);
+      $pre_req =~ s/^,//;
       &FAI::push_command(
         "yes | mdadm --create /dev/md$id --level=$level --force --run --raid-devices="
           . scalar(@eff_devs) . " --spare-devices=" . scalar(@spares) . " "
           . join(" ", @eff_devs) . " " . join(" ", @spares),
-        "$pre_req", "run_udev_/dev/md$id" );
-
-      &FAI::push_command( "udevsettle --timeout=10", "run_udev_/dev/md$id",
-        "exist_/dev/md$id" );
+        "$pre_req", "exist_/dev/md$id" );
 
       # create the filesystem on the volume
       &FAI::build_mkfs_commands("/dev/md$id",
@@ -408,9 +397,7 @@ sub setup_logical_volumes {
 
     # create a new volume
     &FAI::push_command( "lvcreate -n $lv -L " . $lv_size->{eff_size} . " $vg",
-      "vg_enabled_$vg,$lv_rm_pre", "run_udev_/dev/$vg/$lv" );
-    &FAI::push_command( "udevsettle --timeout=10", "run_udev_/dev/$vg/$lv",
-      "exist_/dev/$vg/$lv" );
+      "vg_enabled_$vg,$lv_rm_pre", "exist_/dev/$vg/$lv" );
 
     # create the filesystem on the volume
     &FAI::build_mkfs_commands("/dev/$vg/$lv",
@@ -447,16 +434,12 @@ sub build_lvm_commands {
         $type_pre .= ",exist_$d"
       }
     }
-    $type_pre =~ s/^,//;
-    # wait for udev to set up all devices
-    &FAI::push_command( "udevsettle --timeout=10", "$type_pre",
-      "settle_for_vgchange_$vg" );
 
     # create the volume group or add/remove devices
     &FAI::create_volume_group($config);
     # enable the volume group
     &FAI::push_command( "vgchange -a y $vg",
-      "settle_for_vgchange_$vg,vg_created_$vg", "vg_enabled_$vg" );
+      "vg_created_$vg$type_pre", "vg_enabled_$vg" );
 
     # perform all necessary operations on the underlying logical volumes
     &FAI::setup_logical_volumes($config);
@@ -631,15 +614,12 @@ sub rebuild_preserved_partitions {
     $part_nr++;
     $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id} = $part_nr;
 
-    my $post = "run_udev_" . &FAI::make_device_name($disk, $part_nr);
+    my $post = "exist_" . &FAI::make_device_name($disk, $part_nr);
     $post .= ",rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
     # build a parted command to create the partition
     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
       "cleared1_$disk", $post );
-    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" .
-      &FAI::make_device_name($disk, $part_nr), "exist_" .
-      &FAI::make_device_name($disk, $part_nr) );
   }
 }
 
@@ -749,13 +729,9 @@ sub setup_partitions {
       # ntfsresize requires device names
       my $eff_size = $part->{size}->{eff_size};
 
-      # wait for udev to set up all devices
-      &FAI::push_command( "udevsettle --timeout=10", "rebuilt_" .
-        &FAI::make_device_name($disk, $p) . $deps, "settle_for_resize_" .
-        &FAI::make_device_name($disk, $p) );
       &FAI::push_command( "yes | ntfsresize -s $eff_size " .
-        &FAI::make_device_name($disk, $p), "settle_for_resize_" .
-        &FAI::make_device_name($disk, $p), "ntfs_ready_for_rm_" .
+        &FAI::make_device_name($disk, $p), "rebuilt_" .
+        &FAI::make_device_name($disk, $p) . $deps, "ntfs_ready_for_rm_" .
         &FAI::make_device_name($disk, $p) );
       &FAI::push_command( "parted -s $disk rm $p", "ntfs_ready_for_rm_" .
         &FAI::make_device_name($disk, $p), "resized_" .
@@ -811,10 +787,7 @@ sub setup_partitions {
     $pre = ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
     # build a parted command to create the partition
     &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
-      "cleared2_$disk$pre", "run_udev_" . &FAI::make_device_name($disk, $part_id) );
-    &FAI::push_command( "udevsettle --timeout=10", "run_udev_" . 
-      &FAI::make_device_name($disk, $part_id), "exist_" . 
-      &FAI::make_device_name($disk, $part_id) );
+      "cleared2_$disk$pre", "exist_" . &FAI::make_device_name($disk, $part_id) );
     $prev_id = $part_id;
   }
 
