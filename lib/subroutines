@@ -370,7 +370,7 @@ task_defvar() {
     local odir=$(pwd)
     cd $FAI/class
     for class in $classes ; do
-	if [ -f $class.var ]; then
+	if [ -f $class.var -a -r $class.var ]; then
 	    [ "$verbose" ] && echo "Executing $class.var"
 	    # show only lines with ++, we cannot use a pipe, since it would call
 	    # _devfar in a subprocess. Then, variables are not defined 
@@ -382,7 +382,7 @@ task_defvar() {
 
     # /fai/class/S* scripts or hooks can write variable definitions
     # to additonal.var. now source these definitions
-    if [ -f $LOGDIR/additional.var ]; then
+    if [ -f $LOGDIR/additional.var -a -r $LOGDIR/additional.var ]; then
 	_defvar $LOGDIR/additional.var > $svar 2>&1
 	grep ^++ $svar
 	rm $svar
