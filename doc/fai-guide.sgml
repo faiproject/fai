@@ -319,7 +319,7 @@ The clients need one of these daemons to obtain boot information.</item>
 	  booting from network card with a boot PROM.</item>
 	  <tag>NFS-Root:<item> It is a directory which contains the whole
 	  file system for the install clients during installation. It
-	  must me exported via NFS, so the install clients can mount
+	  must be exported via NFS, so the install clients can mount
 	  it. It will
 	  be created during the setup of the FAI package and is also
 	  called <strong>nfsroot</strong>.</item>
@@ -330,7 +330,7 @@ The clients need one of these daemons to obtain boot information.</item>
 	  <tag>Configuration space:<item> This directory tree, which
 	  contains the configuration data, is mounted via NFS by
 	  default. But you can also get this directory from a revision
-	  control system like CVS or subversion.
+	  control system like CVS, subversion or Git.
 	</taglist>
 <p>
 The NFS server will be enabled automatically when
@@ -790,7 +790,7 @@ comma.
 If you do not have full control over the BOOTP or DHCP daemon (because
 this service is managed by a central service group) you can also
 define the variable <var>FAI_ACTION</var> in
-the <file>/fai/class/*.var</file> scripts.
+the <file>$FAI/class/*.var</file> scripts.
 
 When you have created your <file>bootptab</file> file, you have to
 enable the BOOTP daemon once. It's installed but Debian does not enable it
@@ -1031,7 +1031,7 @@ detail in <ref id="hooks">.
 The installation time is determined by the amount of software but also
 by the speed of the processor and hard disk. Here are some sample
 times. All install clients have a 100Mbit network card installed.
-Using a 10 Mbit LAN does not increase the installation time
+Using a 10 Mbit LAN does not decrease the installation time
 considerably, so the network will not be the bottleneck when
 installing several clients simultaneously.
 
@@ -1087,15 +1087,15 @@ sequence of tasks for FAI. No other scripts in
 <file>/etc/init.d/</file> are executed.
 <p>
 Additional parameters are received from the BOOTP or DHCP
-daemon and the configuration space if
-mounted via NFS from the install server to <file>/fai</file>. The
+daemon and the configuration space is
+made available via the configured method (an NFS mount by default) from the install server to <file>$FAI</file>. The
 setup is finished after additional virtual terminals are created and
 the secure shell daemon for remote access is started on demand.
 
 <sect id=iclass>Defining classes, variables and loading kernel modules<p>
 
 Now the script <manref name="fai-class" section="1"> is used to define
-classes. Therefore several scripts in <file>/fai/class/</file> are
+classes. Therefore several scripts in <file>$FAI/class/</file> are
 executed to define classes. All scripts matching <tt>[0-9][0-9]*</tt>
 (they start with two digits)
 are executed in alphabetical order. Every word that these scripts
@@ -1128,7 +1128,7 @@ others. By default, <var>FAI_ACTION</var> is defined via the command
 <sect id=ipartition>Partitioning local disks, creating file systems<p>
 
 For disk partitioning exactly one disk configuration file from
-<file>/fai/disk_config</file> is selected using classes. This file
+<file>$FAI/disk_config</file> is selected using classes. This file
 describes how all the local disks will be partitioned, where
 file systems should be created (and their types like ext2, ext3,
 reiserfs), and how they are mounted. It's also possible to preserve
@@ -1166,7 +1166,7 @@ required package.
 <p>
 
 Classes are also used when selecting the configuration files in
-<file>/fai/package_config/</file> for software installation. The
+<file>$FAI/package_config/</file> for software installation. The
 format of the configuration files is described in <ref
 id="packageconfig">.
 
@@ -1176,8 +1176,8 @@ After all requested software packages are installed, the system is
 nearly ready to go. But not all default configurations of the software
 packages will meet your site-specific needs. So you can call arbitrary
 scripts which adjust the system configuration. Therefore scripts which
-match a class name in <file>/fai/scripts</file> will be executed. If
-<file>/fai/scripts/</file><var>classname/</var> is a directory, all
+match a class name in <file>$FAI/scripts</file> will be executed. If
+<file>$FAI/scripts/</file><var>classname/</var> is a directory, all
 scripts that match <tt>[0-9][0-9]*</tt> in this directory are executed. So
 it is possible to have several scripts of different types (shell,
 cfengine, ...) to be executed for one class. FAI comes with some
@@ -1296,8 +1296,8 @@ install a computer. The central configuration space for all install
 clients is located on the install server in <file>/srv/fai/config</file>
 and its subdirectories. This will be mounted by the install clients to
 <file>/var/lib/fai/config</file>. It's also possible to receive all the
-configuration data from a <manref name="cvs" section="1"> or
-subversion (<manref name="svn" section="1">) repository.
+configuration data from a <manref name="cvs" section="1">,
+subversion (<manref name="svn" section="1">) or Git (<manref name="git" section="1">) repository.
 The following subdirectories are present and include
 several files:
 
@@ -1325,9 +1325,9 @@ several files:
 	   Most files are located in a subtree structure
 	   which reflects the ordinary directory tree. For example, the
 	   templates for <file>nsswitch.conf</file> are located in
-	   <file>/fai/files/etc/nsswitch.conf</file> and are named
+	   <file>$FAI/files/etc/nsswitch.conf</file> and are named
 	  according to the classes that they should match:
-	  <file>/fai/files/etc/nsswitch.conf/NIS</file> is the version
+	  <file>$FAI/files/etc/nsswitch.conf/NIS</file> is the version
 	  of <file>/etc/nsswitch.conf</file> to use for the NIS class.
           Note that the
 	  contents of the files directory are not automatically copied
@@ -1430,7 +1430,7 @@ configuration space. See section <ref id="isetup"> for how to set the variable.
 <!--MT: config is also mounted/checked out in this task-->
 <p>
 After that, the file
-<file>/fai/hooks/subroutines</file> is sourced if it exists. Using
+<file>$FAI/hooks/subroutines</file> is sourced if it exists. Using
 this file, you can define your own subroutines or override the
 definition of FAI's subroutines.
 
@@ -1441,11 +1441,11 @@ definition of FAI's subroutines.
 
      <tag>defclass</tag> <item><p>Calls <manref name="fai-class"
       section="1"> to define classes using scripts and
-      files in <file>/fai/class</file> and classes from
+      files in <file>$FAI/class</file> and classes from
       <file>/tmp/fai/additional-classes</file>.</p> </item>
 
      <tag>defvar</tag> <item><p>Sources all files
-      <file>/fai/class/*.var</file> for every defined class. If a hook
+      <file>$FAI/class/*.var</file> for every defined class. If a hook
       has written some variable definitions to the file
       <file>/tmp/fai/additional.var</file>, this file is also
       sourced.</p></item>
@@ -1456,7 +1456,7 @@ definition of FAI's subroutines.
       <tt>sysinfo</tt>, <tt>install</tt> and <tt>softupdate</tt>.
       If <var>$FAI_ACTION</var>
       has another value, a user defined action is called if a file
-      <file>/fai/hooks/$FAI_ACTION</file> exists. So you
+      <file>$FAI/hooks/$FAI_ACTION</file> exists. So you
       can easily define your own actions.<p>
 
 
@@ -1519,10 +1519,10 @@ definition of FAI's subroutines.
 
       <tag>instsoft</tag> <item><p>Installs the desired software
       packages using class files in
-      <file>/fai/package_config/</file>.</p> </item>
+      <file>$FAI/package_config/</file>.</p> </item>
 
 	<tag>configure</tag> <item><p>Calls scripts in
-      <file>/fai/scripts/</file> and its subdirectories for every
+      <file>$FAI/scripts/</file> and its subdirectories for every
       defined class.</p> </item>
 
       <tag>finish</tag> <item><p>Unmounts all file systems in the
@@ -1689,7 +1689,7 @@ among several hosts.
 
 The task <em>defclass</em> calls the script <manref
 name="fai-class" section="1"> to define classes. Therefore, scripts
-matching <tt>[0-9][0-9]*</tt> in <tt>/fai/class</tt> are
+matching <tt>[0-9][0-9]*</tt> in <tt>$FAI/class</tt> are
 executed. Additionally, a file with the host name may contain a list of
 classes. 
 For more information on defining class, read the manual pages for <manref
@@ -1789,9 +1789,9 @@ description of the new format.
 
 The script <prgn>setup_harddisks</prgn> partitions and formats
 the local disks. It uses all configuration files in
-<file>/fai/disk_config/</file> which are also defined as classes.
+<file>$FAI/disk_config/</file> which are also defined as classes.
 Lines beginning with # are comments. The config file
-<file>/fai/disk_config/FAIBASE</file> is a generic description for
+<file>$FAI/disk_config/FAIBASE</file> is a generic description for
 one hard disk (IDE or SCSI), which most installations should be able to adapt. If you
 can't partition your hard disk using this script <footnote><p>Currently
 this script uses the command <tt>sfdisk(8)</tt>, which isn't available
@@ -1981,7 +1981,7 @@ containing the information about boot partition and boot device to
     and don't list them otherwise
 -->
 The script <manref name="install_packages" section="8"> installs the selected software
-packages. It uses all configuration files in <file>/fai/package_config</file>
+packages. It uses all configuration files in <file>$FAI/package_config</file>
 whose file name matches a defined class. The syntax is very
 simple.
 
@@ -2093,9 +2093,9 @@ If you specify a package that does not exist this package will be
 removed from the installation list when the command <tt>install</tt>
 is used.
 
-<sect id=cscripts>Scripts in <tt>/fai/scripts</tt><p>
+<sect id=cscripts>Scripts in <tt>$FAI/scripts</tt><p>
 
-The default set of scripts in <file>/fai/scripts</file> is only an example. But
+The default set of scripts in <file>$FAI/scripts</file> is only an example. But
 they should do a reasonable job for your installation. You can edit them
 or add new scripts to match your local needs.
 <p>
@@ -2192,7 +2192,7 @@ example <file>partition.DISKLESS</file> skips some default tasks.
 <p>
 
 
-The directory <file>/fai/hooks/</file> contains all hooks. The file
+The directory <file>$FAI/hooks/</file> contains all hooks. The file
 name of a hook consists of a task name as a prefix and a class name,
 separated by a dot. The prefix describes the time when the hook is
 called, if the class is defined for the install client. For example,
@@ -2213,9 +2213,9 @@ redefine variables for the installation scripts.
 <p>
 
 In the first part of FAI, all hooks with prefix <tt>confdir</tt> are called.
-Since the configuration directory <file>/fai</file> is mounted in the
+Since the configuration directory <file>$FAI</file> is mounted in the
 default task <tt>confdir</tt>, the hooks for this task are the only
-hooks located in <var>$nfsroot</var><file>/fai/hooks</file> on the
+hooks located in <var>$nfsroot</var><file>$FAI/hooks</file> on the
 install server. All other hooks are found in
 <file>$FAI_CONFIGDIR/hooks</file> on the install server.
 <!--MT: what about softupdate?-->
@@ -2233,7 +2233,7 @@ hookexample.DEFAULT:
 
 # skip DEFAULT hook if a hook for $HOSTNAME exists
 scriptname=$(basename $0 .DEFAULT)
-[-f /fai/hooks/$scriptname.$HOSTNAME ] && exit
+[-f $FAI/hooks/$scriptname.$HOSTNAME ] && exit
 # here follows the actions for class DEFAULT
 .
 .
@@ -2252,7 +2252,7 @@ compressed archive via HTTP and extract it into a
 new RAM disk, then redefine <var>$FAI_LOCATION</var>.</p></item>
 
 <item> <p>Load kernel modules before classes are defined
-in <file>/fai/class</file>. </p></item>
+in <file>$FAI/class</file>. </p></item>
 
 <item> <p>Send an email to the administrator if the installation is finished.</p></item>
 
