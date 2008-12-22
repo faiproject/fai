@@ -90,7 +90,7 @@ Index: trunk/lib/setup-storage/Commands.pm
      # create all the devices
      my @devices = keys %{ $FAI::configs{$config}{devices} };
      &FAI::erase_lvm_signature(\@devices);
-@@ -399,7 +426,9 @@
+@@ -401,7 +428,9 @@
  
      # create a new volume
      &FAI::push_command( "lvcreate -n $lv -L " . $lv_size->{eff_size} . " $vg",
@@ -101,7 +101,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  
      # create the filesystem on the volume
      &FAI::build_mkfs_commands("/dev/$vg/$lv",
-@@ -436,12 +465,16 @@
+@@ -438,12 +467,16 @@
          $type_pre .= ",exist_$d"
        }
      }
@@ -119,7 +119,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  
      # perform all necessary operations on the underlying logical volumes
      &FAI::setup_logical_volumes($config);
-@@ -616,12 +649,15 @@
+@@ -618,12 +651,15 @@
      $part_nr++;
      $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id} = $part_nr;
  
@@ -136,7 +136,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    }
  }
  
-@@ -731,9 +767,13 @@
+@@ -738,9 +774,13 @@
        # ntfsresize requires device names
        my $eff_size = $part->{size}->{eff_size};
  
@@ -152,7 +152,7 @@ Index: trunk/lib/setup-storage/Commands.pm
          &FAI::make_device_name($disk, $p) );
        &FAI::push_command( "parted -s $disk rm $p", "ntfs_ready_for_rm_" .
          &FAI::make_device_name($disk, $p), "resized_" .
-@@ -789,7 +829,10 @@
+@@ -796,7 +836,10 @@
      $pre = ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
      # build a parted command to create the partition
      &FAI::push_command( "parted -s $disk mkpart $part_type $fs ${start}B ${end}B",
