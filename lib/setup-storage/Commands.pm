@@ -370,6 +370,7 @@ sub setup_logical_volumes {
     if ($lv_size->{preserve}) {
       defined ($FAI::current_lvm_config{$vg}{volumes}{$lv})
         or die "Preserved volume $vg/$lv does not exist\n";
+      warn "$vg/$lv will be preserved\n";
       next;
     }
 
@@ -377,6 +378,7 @@ sub setup_logical_volumes {
     if ($lv_size->{resize}) {
       defined ($FAI::current_lvm_config{$vg}{volumes}{$lv})
         or die "Resized volume $vg/$lv does not exist\n";
+      warn "$vg/$lv will be resized\n";
 
       if ($lv_size->{eff_size} <
         $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
@@ -665,7 +667,12 @@ sub setup_partitions {
     # anything to be done?
     $pre_all_resize .= ",exist_" . &FAI::make_device_name($disk, $p) unless
       $part->{size}->{resize};
-    next unless $part->{size}->{resize};
+    if ($part->{size}->{resize}) {
+      warn &FAI::make_device_name($disk, $p) . " will be resized\n";
+    } else {
+      warn &FAI::make_device_name($disk, $p) . " will be preserved\n";
+      next;
+    }
 
     $pre_all_resize .= ",resized_" . &FAI::make_device_name($disk, $p);
     my $deps = "";
