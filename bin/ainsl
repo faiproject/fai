@@ -6,7 +6,7 @@
 # ainsl -- AppendIfNoSuchLine written in Perl
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2006-2008 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2006-2009 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -27,7 +27,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-my $version = "Version 1.2, 18-june-2008";
+my $version = "Version 1.2.1, 3-february-2009";
 
 use Getopt::Std;
 our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q);
@@ -38,7 +38,7 @@ sub usage {
   print << "EOF";
 ainsl, AppendIfNoSuchLine written in Perl. $version
 
-   Copyright (C) 2006-2008 by Thomas Lange
+   Copyright (C) 2006-2009 by Thomas Lange
 
 Usage: ainsl [OPTION] FILE LINE [PATTERN]
 
@@ -104,7 +104,8 @@ print "ainsl: newpattern: $pattern\n" if $debug;
 print "ainsl: newline: $line\n" if $debug;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # check if pattern already included in file
-open (INFILE, "<$filename") or die "Can't open $filename $!";
+-f $filename || die "ainsl: target file $filename does not exist.\n";
+open (INFILE, "<$filename") or die "ainsl: Can't open $filename $!\n";
 while (<INFILE>) {
   if (/$pattern/o) {
     print "aisnl: Pattern found. Nothing to append.\n" if $debug;
