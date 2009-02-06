@@ -1,0 +1,157 @@
+2009-02-06  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Volumes.pm, lib/setup-storage/Parser.pm: Always write a
+		new disklabel, if no partition on the disk must be preserved
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -117,6 +117,7 @@
+     disklabel  => "msdos",
+     bootable   => -1,
+     fstabkey   => "device",
++    preserveparts => 0,
+     partitions => {}
+   };
+ }
+@@ -414,18 +415,21 @@
+         {
+           # set the preserve flag for all ids in all cases
+           $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split (",", $1));
++          $FAI::configs{$FAI::device}{preserveparts} = 1;
+         }
+         | /^preserve_reinstall:(\d+(,\d+)*)/
+         {
+           # set the preserve flag for all ids if $FAI::reinstall is set
+           if ($FAI::reinstall) {
+             $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split(",", $1));
++            $FAI::configs{$FAI::device}{preserveparts} = 1;
+           }
+         }
+         | /^resize:(\d+(,\d+)*)/
+         {
+           # set the resize flag for all ids
+           $FAI::configs{$FAI::device}{partitions}{$_}{size}{resize} = 1 foreach (split(",", $1));
++          $FAI::configs{$FAI::device}{preserveparts} = 1;
+         }
+         | /^disklabel:(msdos|gpt)/
+         {
+@@ -573,7 +577,10 @@
+           # enter the range into the hash
+           $FAI::partition_pointer->{size}->{range} = $range;
+           # set the resize flag, if required
+-          defined ($4) and $FAI::partition_pointer->{size}->{resize} = 1;
++          if (defined ($4)) {
++            $FAI::partition_pointer->{size}->{resize} = 1;
++            $FAI::configs{$FAI::device}{preserveparts} = 1;
++          }
+         }
+         | /^(-\d+[kMGTP%]?)(:resize)?\s+/
+         {
+@@ -587,7 +594,10 @@
+           # enter the range into the hash
+           $FAI::partition_pointer->{size}->{range} = $range;
+           # set the resize flag, if required
+-          defined( $2 ) and $FAI::partition_pointer->{size}->{resize} = 1;
++          if (defined ($2)) {
++            $FAI::partition_pointer->{size}->{resize} = 1;
++            $FAI::configs{$FAI::device}{preserveparts} = 1;
++          }
+         }
+         | <error: invalid partition size near "$text">
+ 
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -51,36 +51,33 @@
+ 
+     # make sure, $disk is a proper block device
+     (-b $disk) or die "$disk is not a block special device!\n";
+-    &FAI::push_command( "true", "", "exist_$disk" );
+-
+-    # initialise the hash
+-    $FAI::current_config{$disk}{partitions} = {};
+-
+-    # the list to hold the output of parted commands as parsed below
+-    my @parted_print = ();
+ 
+     # try to obtain the partition table for $disk
+     # it might fail with parted_2 in case the disk has no partition table
+     my $error =
+-      &FAI::execute_ro_command("parted -s $disk unit TiB print", \@parted_print, 0);
++        &FAI::execute_ro_command("parted -s $disk unit TiB print", \@parted_print, 0);
++
++    # possible problems
++    if (!defined($FAI::configs{"PHY_$disk"}) && $error ne "") {
++      warn "Could not determine size and contents of $disk, skipping\n";
++      next;
++    } elsif (defined($FAI::configs{"PHY_$disk"}) &&
++      $FAI::configs{"PHY_$disk"}{preserveparts} == 1 && $error ne "") {
++      die "Failed to determine size and contents of $disk, but partitions should have been preserved\n";
++    }
++
++    # parted_2 happens when the disk has no disk label, parted_4 means unaligned
++    # partitions
++    if ($error eq "parted_2" || $error eq "parted_2_new" ||
++      $error eq "parted_4" || $error eq "parted_4_new") {
+ 
+-    # parted_2 happens when the disk has no disk label, because parted then
+-    # provides no information about the disk
+-    if ($error eq "parted_2" || $error eq "parted_2_new") {
+       $FAI::no_dry_run or die 
+         "Can't run on test-only mode on this system because there is no disklabel on $disk\n";
+ 
+-      # if there is no disk configuration, write an msdos disklabel
+-      if (!defined ($FAI::configs{"PHY_$disk"}{disklabel})) {
+-
+-        # write the disk label as configured
+-        $error = &FAI::execute_command("parted -s $disk mklabel msdos");
+-      } else {
+-
+-        # write the disk label as configured
+-        $error = &FAI::execute_command("parted -s $disk mklabel " 
+-          . $FAI::configs{"PHY_$disk"}{disklabel});
+-      }
++      # write the disk label as configured
++      $error = &FAI::execute_command("parted -s $disk mklabel "
++        . $FAI::configs{"PHY_$disk"}{disklabel});
++      ($error eq "") or die "Failed to write disk label\n";
+       # retry partition-table print
+       $error =
+         &FAI::execute_ro_command("parted -s $disk unit TiB print", \@parted_print, 0);
+@@ -88,6 +85,16 @@
+ 
+     ($error eq "") or die "Failed to read the partition table from $disk\n";
+ 
++    # disk is usable
++    &FAI::push_command( "true", "", "exist_$disk" );
++
++    # initialise the hash
++    $FAI::current_config{$disk}{partitions} = {};
++
++    # the list to hold the output of parted commands as parsed below
++    my @parted_print = ();
++
++
+ # the following code parses the output of parted print, using various units
+ # (TiB, B, chs)
+ # the parser is capable of reading the output of parted version 1.7.1, which
+@@ -375,6 +382,7 @@
+ 
+   if (1 == $i_p_d && defined($FAI::configs{"PHY_$disk"}{partitions}{$part_no})) {
+     $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve} = 1;
++    $FAI::configs{"PHY_$disk"}{preserveparts} = 1;
+   } elsif ($device_name =~ m{^/dev/md(\d+)$}) {
+     my $vol = $1;
+     if (defined($FAI::configs{RAID}{volumes}{$vol}) && 
+@@ -415,7 +423,8 @@
+       # check for logical volumes that need to be preserved and preserve the
+       # underlying devices recursively
+       foreach my $l (keys %{ $FAI::configs{$config}{volumes} }) {
+-        next unless ($FAI::configs{$config}{volumes}{$l}{size}{preserve} == 1);
++        next unless ($FAI::configs{$config}{volumes}{$l}{size}{preserve} == 1 ||
++          $FAI::configs{$config}{volumes}{$l}{size}{resize} == 1);
+         &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{devices} });
+         last;
+       }
