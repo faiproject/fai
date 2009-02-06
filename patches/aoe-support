@@ -1,0 +1,39 @@
+2009-02-06  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Init.pm, lib/disk-info: Added AOE etherd/ device names to
+		regular expressions (thanks Jean Spirat)
+Index: trunk/lib/disk-info
+===================================================================
+--- trunk.orig/lib/disk-info
++++ trunk/lib/disk-info	
+@@ -21,6 +21,6 @@
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ # echo a space separated list of devices and their block size
+-egrep ' i2o/hd.\b| cciss/c.d.\b| ida/c.d.\b| rd/c.d.\b| hd.\b| sd[a-z]{1,2}\b|/disc\b| vd.\b' /proc/partitions | diskandsize
++egrep ' etherd/e[[:digit:]]+\.[[:digit:]]+\b| i2o/hd.\b| cciss/c.d.\b| ida/c.d.\b| rd/c.d.\b| hd.\b| sd[a-z]{1,2}\b|/disc\b| vd.\b' /proc/partitions | diskandsize
+ 
+ 
+Index: trunk/lib/setup-storage/Init.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Init.pm
++++ trunk/lib/setup-storage/Init.pm	
+@@ -168,7 +168,8 @@
+     defined($2) or return (1, "/dev/$1", -1);
+     return (1, "/dev/$1", $2);
+   }
+-  elsif ($dev =~ m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d)p(\d+)?$})
++  elsif ($dev =~
++    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)p(\d+)?$})
+   {
+     defined($2) or return (1, "/dev/$1", -1);
+     return (1, "/dev/$1", $2);
+@@ -190,7 +191,7 @@
+ sub make_device_name {
+   my ($dev, $p) = @_;
+   $dev .= "p" if ($dev =~
+-    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d)$});
++    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)$});
+   $dev .= $p;
+   internal_error("Invalid device $dev") unless (&FAI::phys_dev($dev))[0];
+   return $dev;

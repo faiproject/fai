@@ -1,0 +1,29 @@
+2009-02-06  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Commands.pm: If the disk config is marked virtual, create
+		dummy commands to tell later commands that the devices exist (closes: #508247)
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -843,8 +843,18 @@
+     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
+     my $disk = $1; # the device to be configured
+ 
+-    # create partitions on non-virtual configs
+-    &FAI::setup_partitions($config) unless ($FAI::configs{$config}{virtual});
++    if ($FAI::configs{$config}{virtual}) {
++      foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
++        # reference to the current partition
++        my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
++        # virtual disks always exist
++        &FAI::push_command( "true", "",
++          "exist_" . &FAI::make_device_name($disk, $part_id) );
++      }
++    } else {
++      # create partitions on non-virtual configs
++      &FAI::setup_partitions($config);
++    }
+ 
+     # generate the commands for creating all filesystems
+     foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
