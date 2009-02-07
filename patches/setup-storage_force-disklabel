@@ -64,7 +64,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Volumes.pm
 +++ trunk/lib/setup-storage/Volumes.pm	
-@@ -51,36 +51,33 @@
+@@ -51,10 +51,6 @@
  
      # make sure, $disk is a proper block device
      (-b $disk) or die "$disk is not a block special device!\n";
@@ -72,10 +72,10 @@ Index: trunk/lib/setup-storage/Volumes.pm
 -
 -    # initialise the hash
 -    $FAI::current_config{$disk}{partitions} = {};
--
--    # the list to hold the output of parted commands as parsed below
--    my @parted_print = ();
  
+     # the list to hold the output of parted commands as parsed below
+     my @parted_print = ();
+@@ -62,25 +58,29 @@
      # try to obtain the partition table for $disk
      # it might fail with parted_2 in case the disk has no partition table
      my $error =
@@ -120,7 +120,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
        # retry partition-table print
        $error =
          &FAI::execute_ro_command("parted -s $disk unit TiB print", \@parted_print, 0);
-@@ -88,6 +85,16 @@
+@@ -88,6 +88,13 @@
  
      ($error eq "") or die "Failed to read the partition table from $disk\n";
  
@@ -129,9 +129,6 @@ Index: trunk/lib/setup-storage/Volumes.pm
 +
 +    # initialise the hash
 +    $FAI::current_config{$disk}{partitions} = {};
-+
-+    # the list to hold the output of parted commands as parsed below
-+    my @parted_print = ();
 +
 +
  # the following code parses the output of parted print, using various units
