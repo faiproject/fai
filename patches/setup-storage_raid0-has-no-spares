@@ -8,14 +8,14 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -232,7 +232,7 @@
-       }
+@@ -226,7 +226,7 @@
+       $pre_req =~ s/^,//;
        &FAI::push_command(
          "yes | mdadm --create /dev/md$id --level=$level --force --run --raid-devices="
 -          . scalar(@eff_devs) . " --spare-devices=" . scalar(@spares) . " "
 +          . scalar(@eff_devs) . (scalar(@spares) !=0 ? " --spare-devices=" . scalar(@spares) : "") . " "
            . join(" ", @eff_devs) . " " . join(" ", @spares),
-         "$pre_req", "run_udev_/dev/md$id" );
+         "$pre_req", "exist_/dev/md$id" );
  
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
