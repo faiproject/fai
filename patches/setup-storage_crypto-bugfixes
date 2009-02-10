@@ -25,7 +25,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    my $enc_dev_short_name = "crypt$enc_dev_name";
    $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
    my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
-@@ -124,11 +124,13 @@
+@@ -124,14 +124,16 @@
    &FAI::push_command( 
      "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
      "", "keyfile_$device" );
@@ -40,7 +40,11 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    "random_init_$device,keyfile_$device", "crypt_format_$device" );
    &FAI::push_command(
      "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
-     "crypt_format_$device", "encrypted_$device" );
+-    "crypt_format_$device", "encrypted_$device" );
++    "crypt_format_$device", "encrypted_$enc_dev_name" );
+ 
+   # add entries to crypttab
+   push @FAI::crypttab, "$enc_dev_short_name\t$device\t$keyfile\tluks";
 Index: trunk/lib/setup-storage/Fstab.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Fstab.pm
