@@ -1,0 +1,80 @@
+2009-02-13  Michael Tautschnig  <mt@debian.org>
+
+	* lib/setup-storage/Parser.pm, lib/setup-storage/Commands.pm: Make random
+	initialization of encrypted partitions configurable
+	* man/setup-storage.8: Document new encryption possibilities
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -125,12 +125,16 @@
+     "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
+     "", "keyfile_$device" );
+   # prepare encryption
+-  &FAI::push_command(
+-    "dd if=/dev/urandom of=$device",
+-    "exist_$device", "random_init_$device" );
++  my $prepare_deps = "keyfile_$device";
++  if ($partition->{encrypt} > 1) {
++    &FAI::push_command(
++      "dd if=/dev/urandom of=$device",
++      "exist_$device", "random_init_$device" );
++    $prepare_deps = "random_init_$device,$prepare_deps";
++  }
+   &FAI::push_command(
+     "yes YES | cryptsetup luksFormat $device $keyfile -c aes-cbc-essiv:sha256 -s 256",
+-    "random_init_$device,keyfile_$device", "crypt_format_$device" );
++    $prepare_deps, "crypt_format_$device" );
+   &FAI::push_command(
+     "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
+     "crypt_format_$device", "encrypted_$enc_dev_name" );
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -510,7 +510,7 @@
+           $FAI::partition_pointer = (\%FAI::configs)->{$FAI::device}->{volumes}->{$2};
+         }
+ 
+-    mountpoint: m{^(-|swap|/[^\s\:]*)(:encrypt)?}
++    mountpoint: m{^(-|swap|/[^\s\:]*)(:encrypt(:randinit)?)?}
+         {
+           # set the mount point, may include encryption-request
+           $FAI::partition_pointer->{mountpoint} = $1;
+@@ -518,6 +518,7 @@
+           if (defined($2)) {
+             &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
+             $FAI::partition_pointer->{encrypt} = 1;
++            ++$FAI::partition_pointer->{encrypt} if (defined($3));
+           } else {
+             $FAI::partition_pointer->{encrypt} = 0;
+           }
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -264,19 +264,15 @@
+ .br
+ 
+ 
+-mountpoint ::= -
++mountpoint ::= (-|swap|/[^\:[:space:]]*)(:encrypt(:randinit)?)?
+ .br
+-               /* do not mount */
++               /* do not mount, mount as swap, or mount at fully qualified path;
+ .br
+-               | swap
+-.br
+-               /* swap space */
+-.br
+-               | /[^[:space:]]*(:encrypt)?
++                * if :encrypt is given the partition will be encrypted, the key
+ .br
+-               /* fully qualified path; if :encrypt is given the partition
++                * is generated automatically; :randinit adds random
+ .br
+-                * will be encrypted, the key is generated automatically */
++                * initialization of the partition  */
+ .br
+ 
+ 
