@@ -1,0 +1,17 @@
+2009-02-13  Michael Tautschnig  <mt@debian.org>
+
+	* lib/subroutines-linux: Don't rely on ' as a field separator when parsing
+		boot.log, use = and strip off any quotes (closes: #439250)
+Index: trunk/lib/subroutines-linux
+===================================================================
+--- trunk.orig/lib/subroutines-linux
++++ trunk/lib/subroutines-linux	
+@@ -288,7 +288,7 @@
+     local frsh
+     local doexit=0
+     local hostname=$(hostname)
+-    local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d\' -f2)
++    local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d'=' -f2 | sed "s/'//g")
+     local remotesh
+ 
+     case "$FAI_LOGPROTO" in

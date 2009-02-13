@@ -1,0 +1,57 @@
+2009-02-13  Michael Tautschnig  <mt@debian.org>
+
+	* bin/fai: Added -u|--hostname to usage info and enabled use of -u|--hostname
+    in all cases where $do_init_tasks != 1 (closes: #456978)
+Index: trunk/bin/fai
+===================================================================
+--- trunk.orig/bin/fai
++++ trunk/bin/fai	
+@@ -119,11 +119,12 @@
+ 	Usage: $0 [options] [action]
+        
+ 	Options:
+-	   -v|--verbose      display more information during the update
+-	   -h|--help         display this help message
+-	   -N|--new          renew list of classes
+-	   -c|--class        comma separated list of classes
+-	   -C|--cfdir CFDIR  Use CFDIR for  reading the config files
++	   -v|--verbose         display more information during the update
++	   -h|--help            display this help message
++	   -N|--new             renew list of classes
++	   -c|--class           comma separated list of classes
++	   -C|--cfdir CFDIR     use CFDIR for reading the config files
++	   -u|--hostname HNAME  set hostname to be used
+ 
+ EOF
+     exit 0
+@@ -266,15 +267,12 @@
+ [ -f /proc/version ] || mount -n -t proc proc /proc # ubuntu initrd does not mount /proc
+ export start_seconds=$(cut -d . -f 1 /proc/uptime)
+ 
+-if [ X$action = Xdirinstall -a -n "$newhostname" ]; then
+-    export HOSTNAME=$newhostname
+-fi
+-
+ if [ $do_init_tasks -eq 1 ]; then
+     # we are running an initial installation
+     export LOGDIR=/tmp/fai
+     mkdir -p $LOGDIR
+ else
++    [ -n "$newhostname" ] && export HOSTNAME=$newhostname
+     export fai_rundate=$(date +'%Y%m%d_%H%M%S')
+     export LOGDIR=/var/log/fai/$HOSTNAME/$action-$fai_rundate
+     mkdir -p $LOGDIR
+@@ -289,9 +287,12 @@
+ chmod 0750 $LOGDIR
+ 
+ fai_init
+-if [ X$action = Xdirinstall ]; then
++if [ $do_init_tasks -ne 1 ]; then
+     [ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
+     unset newhostname
++fi
++
++if [ X$action = Xdirinstall ]; then
+     skiptask confdir
+     export FAI=$FAI_CONFIGDIR
+     set -a
