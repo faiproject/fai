@@ -125,12 +125,16 @@ sub encrypt_device {
     "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
     "", "keyfile_$device" );
   # prepare encryption
-  &FAI::push_command(
-    "dd if=/dev/urandom of=$device",
-    "exist_$device", "random_init_$device" );
+  my $prepare_deps = "keyfile_$device";
+  if ($partition->{encrypt} > 1) {
+    &FAI::push_command(
+      "dd if=/dev/urandom of=$device",
+      "exist_$device", "random_init_$device" );
+    $prepare_deps = "random_init_$device,$prepare_deps";
+  }
   &FAI::push_command(
     "yes YES | cryptsetup luksFormat $device $keyfile -c aes-cbc-essiv:sha256 -s 256",
-    "random_init_$device,keyfile_$device", "crypt_format_$device" );
+    $prepare_deps, "crypt_format_$device" );
   &FAI::push_command(
     "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
     "crypt_format_$device", "encrypted_$enc_dev_name" );
@@ -226,7 +230,7 @@ sub build_raid_commands {
       $pre_req =~ s/^,//;
       &FAI::push_command(
         "yes | mdadm --create /dev/md$id --level=$level --force --run --raid-devices="
-          . scalar(@eff_devs) . " --spare-devices=" . scalar(@spares) . " "
+          . scalar(@eff_devs) . (scalar(@spares) !=0 ? " --spare-devices=" . scalar(@spares) : "") . " "
           . join(" ", @eff_devs) . " " . join(" ", @spares),
         "$pre_req", "exist_/dev/md$id" );
 
@@ -274,8 +278,26 @@ sub create_volume_group {
   ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
   my $vg = $1; # the actual volume group
 
+  my $vg_exists = 0;
+  if (defined ($FAI::current_lvm_config{$vg})) {
+    $vg_exists = 1;
+    foreach my $dev (@{ $FAI::current_lvm_config{$vg}{"physical_volumes"} }) {
+      my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
+      # if this is not a physical disk, just assume that the volume group will
+      # not exist anymore
+      if ($i_p_d) {
+        defined ($FAI::configs{"PHY_$disk"}) or next;
+        defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}) and
+          ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve}) and
+          next;
+      }
+      $vg_exists = 0;
+      last;
+    }
+  }
+
   # create the volume group, if it doesn't exist already
-  if (!defined ($FAI::current_lvm_config{$vg})) {
+  if (!$vg_exists) {
     # create all the devices
     my @devices = keys %{ $FAI::configs{$config}{devices} };
     &FAI::erase_lvm_signature(\@devices);
@@ -670,9 +692,9 @@ sub setup_partitions {
     $pre_all_resize .= ",exist_" . &FAI::make_device_name($disk, $p) unless
       $part->{size}->{resize};
     if ($part->{size}->{resize}) {
-      warn &FAI::make_device_name($disk, $p) . " will be resized\n";
+      warn &FAI::make_device_name($disk, $mapped_id) . " will be resized\n";
     } else {
-      warn &FAI::make_device_name($disk, $p) . " will be preserved\n";
+      warn &FAI::make_device_name($disk, $mapped_id) . " will be preserved\n";
       next;
     }
 
@@ -825,8 +847,18 @@ sub build_disk_commands {
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
     my $disk = $1; # the device to be configured
 
-    # create partitions on non-virtual configs
-    &FAI::setup_partitions($config) unless ($FAI::configs{$config}{virtual});
+    if ($FAI::configs{$config}{virtual}) {
+      foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
+        # reference to the current partition
+        my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
+        # virtual disks always exist
+        &FAI::push_command( "true", "",
+          "exist_" . &FAI::make_device_name($disk, $part_id) );
+      }
+    } else {
+      # create partitions on non-virtual configs
+      &FAI::setup_partitions($config);
+    }
 
     # generate the commands for creating all filesystems
     foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
@@ -901,6 +933,11 @@ sub order_commands {
   my $pushed = -1;
 
   while ($i < $FAI::n_c_i) {
+    if ($FAI::debug) {
+      print "Trying to add CMD: " . $FAI::commands{$i}{cmd} . "\n";
+      defined($FAI::commands{$i}{pre}) and print "PRE: " .  $FAI::commands{$i}{pre} . "\n";
+      defined($FAI::commands{$i}{post}) and print "POST: " .  $FAI::commands{$i}{post} . "\n";
+    }
     my $all_matched = 1;
     if (defined($FAI::commands{$i}{pre})) {
       foreach (split(/,/, $FAI::commands{$i}{pre})) {

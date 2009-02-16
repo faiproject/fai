@@ -168,7 +168,8 @@ sub phys_dev {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $2);
   }
-  elsif ($dev =~ m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d)p(\d+)?$})
+  elsif ($dev =~
+    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)p(\d+)?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $2);
@@ -190,7 +191,7 @@ sub phys_dev {
 sub make_device_name {
   my ($dev, $p) = @_;
   $dev .= "p" if ($dev =~
-    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d)$});
+    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)$});
   $dev .= $p;
   internal_error("Invalid device $dev") unless (&FAI::phys_dev($dev))[0];
   return $dev;

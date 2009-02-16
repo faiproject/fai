@@ -117,6 +117,7 @@ sub init_disk_config {
     disklabel  => "msdos",
     bootable   => -1,
     fstabkey   => "device",
+    preserveparts => 0,
     partitions => {}
   };
 }
@@ -414,18 +415,21 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           # set the preserve flag for all ids in all cases
           $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split (",", $1));
+          $FAI::configs{$FAI::device}{preserveparts} = 1;
         }
         | /^preserve_reinstall:(\d+(,\d+)*)/
         {
           # set the preserve flag for all ids if $FAI::reinstall is set
           if ($FAI::reinstall) {
             $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split(",", $1));
+            $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
         }
         | /^resize:(\d+(,\d+)*)/
         {
           # set the resize flag for all ids
           $FAI::configs{$FAI::device}{partitions}{$_}{size}{resize} = 1 foreach (split(",", $1));
+          $FAI::configs{$FAI::device}{preserveparts} = 1;
         }
         | /^disklabel:(msdos|gpt)/
         {
@@ -506,27 +510,16 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{$FAI::device}->{volumes}->{$2};
         }
 
-    mountpoint: '-'
-        {
-          # this partition should not be mounted
-          $FAI::partition_pointer->{mountpoint} = "-";
-          $FAI::partition_pointer->{encrypt} = 0;
-        }
-        | 'swap'
-        {
-          # this partition is swap space, not mounted
-          $FAI::partition_pointer->{mountpoint} = "none";
-          $FAI::partition_pointer->{encrypt} = 0;
-        }
-        | m{^/\S*}
+    mountpoint: m{^(-|swap|/[^\s\:]*)(:encrypt(:randinit)?)?}
         {
           # set the mount point, may include encryption-request
-          if ($item[ 1 ] =~ m{^(/[^:]*):encrypt$}) {
+          $FAI::partition_pointer->{mountpoint} = $1;
+          $FAI::partition_pointer->{mountpoint} = "none" if ($1 eq "swap");
+          if (defined($2)) {
             &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
-            $FAI::partition_pointer->{mountpoint} = $1;
             $FAI::partition_pointer->{encrypt} = 1;
+            ++$FAI::partition_pointer->{encrypt} if (defined($3));
           } else {
-            $FAI::partition_pointer->{mountpoint} = $item[ 1 ];
             $FAI::partition_pointer->{encrypt} = 0;
           }
         }
@@ -573,7 +566,10 @@ $FAI::Parser = Parse::RecDescent->new(
           # enter the range into the hash
           $FAI::partition_pointer->{size}->{range} = $range;
           # set the resize flag, if required
-          defined ($4) and $FAI::partition_pointer->{size}->{resize} = 1;
+          if (defined ($4)) {
+            $FAI::partition_pointer->{size}->{resize} = 1;
+            $FAI::configs{$FAI::device}{preserveparts} = 1;
+          }
         }
         | /^(-\d+[kMGTP%]?)(:resize)?\s+/
         {
@@ -587,7 +583,10 @@ $FAI::Parser = Parse::RecDescent->new(
           # enter the range into the hash
           $FAI::partition_pointer->{size}->{range} = $range;
           # set the resize flag, if required
-          defined( $2 ) and $FAI::partition_pointer->{size}->{resize} = 1;
+          if (defined ($2)) {
+            $FAI::partition_pointer->{size}->{resize} = 1;
+            $FAI::configs{$FAI::device}{preserveparts} = 1;
+          }
         }
         | <error: invalid partition size near "$text">
 
@@ -622,6 +621,8 @@ $FAI::Parser = Parse::RecDescent->new(
                 ($2 =~ /spare/) and $spare = 1;
                 ($2 =~ /missing/) and $missing = 1;
               }
+              (($spare == 1 || $missing == 1) && $FAI::partition_pointer->{mode} == 0)
+                and die "RAID-0 does not support spares or missing devices\n";
               if ($missing) {
                 die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) > 1);
                 $dev = $candidates[0] if (scalar(@candidates) == 1);

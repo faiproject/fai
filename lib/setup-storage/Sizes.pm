@@ -73,6 +73,8 @@ sub make_range {
     $end = $end * 1024.0 * 1024.0;
   }
 
+  # the user may have specified a partition that is larger than the entire disk
+  ($start <= $size_b) or die "Lower bound of partition size is greater than disk size\n";
   # make sure that $end >= $start
   ($end >= $start) or &FAI::internal_error("end < start");
 
@@ -115,7 +117,7 @@ sub estimate_size {
     # the size is known from the current configuration on disk, return it
     defined ($FAI::current_config{$disk}{partitions}{$part_no}{count_byte})
       and return $FAI::current_config{$disk}{partitions}{$part_no}{count_byte} /
-      (1024 * 1024);
+      (1024 * 1024) unless defined ($FAI::configs{"PHY_$disk"}{partitions});
 
     # the size is not known (yet?)
     warn "Cannot determine size of $dev\n";
@@ -197,7 +199,10 @@ sub compute_lv_sizes {
 
       # $dev may be a partition, an entire disk or a RAID device; otherwise we
       # cannot deal with it
-      $vg_size += &FAI::estimate_size($dev);
+      my $cur_size = &FAI::estimate_size($dev);
+      ($cur_size > 0)
+        or die "Size of device $dev in volume group $vg cannot be determined\n";
+      $vg_size += $cur_size;
     }
 
     # now subtract 1% of overhead
