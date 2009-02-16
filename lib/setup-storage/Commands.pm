@@ -80,7 +80,7 @@ sub build_mkfs_commands {
   ($fs eq "swap") and $create_tool = "mkswap";
   ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
   my $pre_encrypt = "exist_$device";
-  $pre_encrypt = "encrypt_$device" if ($partition->{encrypt});
+  $pre_encrypt = "encrypted_$device" if ($partition->{encrypt});
   &FAI::push_command( "$create_tool $create_options $device", $pre_encrypt,
     "has_fs_$device" );
 
@@ -115,7 +115,7 @@ sub encrypt_device {
 
   # encryption requested, rewrite the device name
   my $enc_dev_name = $device;
-  $enc_dev_name =~ "s#/#_#g";
+  $enc_dev_name =~ s#/#_#g;
   my $enc_dev_short_name = "crypt$enc_dev_name";
   $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
   my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
@@ -124,14 +124,16 @@ sub encrypt_device {
   &FAI::push_command( 
     "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
     "", "keyfile_$device" );
-
   # prepare encryption
   &FAI::push_command(
+    "dd if=/dev/urandom of=$device",
+    "exist_$device", "random_init_$device" );
+  &FAI::push_command(
     "yes YES | cryptsetup luksFormat $device $keyfile -c aes-cbc-essiv:sha256 -s 256",
-    "exist_$device,keyfile_$device", "crypt_format_$device" );
+    "random_init_$device,keyfile_$device", "crypt_format_$device" );
   &FAI::push_command(
     "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
-    "crypt_format_$device", "encrypted_$device" );
+    "crypt_format_$device", "encrypted_$enc_dev_name" );
 
   # add entries to crypttab
   push @FAI::crypttab, "$enc_dev_short_name\t$device\t$keyfile\tluks";

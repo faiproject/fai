@@ -99,6 +99,10 @@ sub init_disk_config {
   # test, whether the device name starts with a / and prepend /dev/, if
   # appropriate
   ($disk =~ m{^/}) or $disk = "/dev/$disk";
+  my @candidates = glob($disk);
+  die "Failed to resolve $disk to a unique device name\n" if (scalar(@candidates) > 1);
+  $disk = $candidates[0] if (scalar(@candidates) == 1);
+  die "Device name $disk could not be substituted\n" if ($disk =~ m{[\*\?\[\{\~]});
 
   # prepend PHY_
   $FAI::device = "PHY_$disk";
@@ -606,6 +610,8 @@ $FAI::Parser = Parse::RecDescent->new(
                 $dev = "/dev/$dev";
               }
             }
+            my @candidates = glob($dev);
+
             # options are only valid for RAID
             defined ($2) and ($FAI::device ne "RAID") and die "Option $2 invalid in a non-RAID context\n";
             if ($FAI::device eq "RAID") {
@@ -616,6 +622,13 @@ $FAI::Parser = Parse::RecDescent->new(
                 ($2 =~ /spare/) and $spare = 1;
                 ($2 =~ /missing/) and $missing = 1;
               }
+              if ($missing) {
+                die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) > 1);
+                $dev = $candidates[0] if (scalar(@candidates) == 1);
+              } else {
+                die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
+                $dev = $candidates[0];
+              }
               # each device may only appear once
               defined ($FAI::partition_pointer->{devices}->{$dev}) and 
                 die "$dev is already part of the RAID volume\n";
@@ -625,6 +638,8 @@ $FAI::Parser = Parse::RecDescent->new(
                 "missing" => $missing
               };
             } else {
+              die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
+              $dev = $candidates[0];
               # create an empty hash for each device
               $FAI::configs{$FAI::device}{devices}{$dev} = {};
             }

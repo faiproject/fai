@@ -163,7 +163,7 @@ sub generate_fstab {
         my $device_name = &FAI::make_device_name($device, $p_ref->{number});
         if ($p_ref->{encrypt}) {
           # encryption requested, rewrite the device name
-          $device_name =~ "s#/#_#g";
+          $device_name =~ s#/#_#g;
           $device_name = "/dev/mapper/crypt$device_name";
         }
 
@@ -213,7 +213,7 @@ sub generate_fstab {
         my $device_name = "/dev/$device/$l";
         if ($l_ref->{encrypt}) {
           # encryption requested, rewrite the device name
-          $device_name =~ "s#/#_#g";
+          $device_name =~ s#/#_#g;
           $device_name = "/dev/mapper/crypt$device_name";
         } else {
           $device_name = $fstab_key[0];
@@ -247,7 +247,7 @@ sub generate_fstab {
         my $device_name = "/dev/md$r";
         if ($r_ref->{encrypt}) {
           # encryption requested, rewrite the device name
-          $device_name =~ "s#/#_#g";
+          $device_name =~ s#/#_#g;
           $device_name = "/dev/mapper/crypt$device_name";
         } 
 

@@ -680,6 +680,10 @@ sub compute_partition_sizes
         ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
           $config, $current_disk, $next_start, $min_req_total_space, \@worklist);
 
+        # msdos does not support partitions larger than 2TB
+        ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *
+            1024.0)) and die "msdos disklabel does not support partitions > 2TB, please use disklabel:gpt\n"
+          if ($FAI::configs{$config}{disklabel} eq "msdos");
         # partition done
         shift @worklist;
       }

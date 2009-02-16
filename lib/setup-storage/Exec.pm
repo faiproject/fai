@@ -246,7 +246,7 @@ sub execute_command {
 ################################################################################
 sub execute_with_udevsettle {
   my ($command, $stdout, $stderr) = @_;
-  return &execute_command("udevsettle --timeout 10 && $command", $stdout,
+  return &execute_command("udevsettle --timeout=10 && $command", $stdout,
     $stderr);
 }
 
