@@ -1,0 +1,21 @@
+#! /bin/bash
+
+error=0 ; trap "error=$((error|1))" ERR
+
+not_up2date() {
+  if [ $# -eq 0 ] ; then
+    echo "No package name given!"
+    return 127
+  fi
+
+  egrep -q "(^Unpacking $1 |^Unpacking replacement $1 )" $LOGDIR/*.log
+  return $?
+}
+
+if [ `not_up2date lvm2` -o `not_up2date mdadm` ] ; then
+  $ROOTCMD update-initramfs -k all -u
+fi
+
+
+exit $error
+
