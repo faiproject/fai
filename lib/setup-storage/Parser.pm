@@ -375,7 +375,7 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           # set the preserve flag for all ids in all cases
           foreach (split (",", $1)) {
-            (m{^([^/,\s\-]+)-([^/,\s\-]+)\s+}) or 
+            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
               die &FAI::internal_error("VG re-parse failed");
             $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1 
           }
@@ -385,7 +385,7 @@ $FAI::Parser = Parse::RecDescent->new(
           # set the preserve flag for all ids if $FAI::reinstall is set
           if ($FAI::reinstall) {
             foreach (split (",", $1)) {
-              (m{^([^/,\s\-]+)-([^/,\s\-]+)\s+}) or 
+              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
                 die &FAI::internal_error("VG re-parse failed");
               $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1 
             }
@@ -395,7 +395,7 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           # set the resize flag for all ids
           foreach (split (",", $1)) {
-            (m{^([^/,\s\-]+)-([^/,\s\-]+)\s+}) or 
+            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
               die &FAI::internal_error("VG re-parse failed");
             $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1 
           }
