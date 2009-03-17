@@ -1,11 +1,46 @@
-2009-03-05  Michael Tautschnig  <mt@debian.org>
+2009-03-17  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage/Parser.pm, setup-storage/Sizes.pm: Added pseudo-disklabel
-		gpt-bios to support GPT on systems with BIOS instead of EFI.
+  * setup-storage/Parser.pm, setup-storage/Sizes.pm, setup-storage/Volumes.pm:
+    Added pseudo-disklabel gpt-bios to support GPT on systems with BIOS instead
+    of EFI.
 Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
+@@ -665,16 +665,17 @@
+   # the list of partitions that must be preserved
+   my @to_preserve = &FAI::get_preserved_partitions($config);
+ 
++  my $label = $FAI::configs{$config}{disklabel};
++  $label = "gpt" if ($label eq "gpt-bios");
+   # A new disk label may only be written if no partitions need to be
+   # preserved
+-  (($FAI::configs{$config}{disklabel} eq
+-      $FAI::current_config{$disk}{disklabel})
++  (($label eq $FAI::current_config{$disk}{disklabel})
+     || (scalar (@to_preserve) == 0)) 
+     or die "Can't change disklabel, partitions are to be preserved\n";
+ 
+   # write the disklabel to drop the previous partition table
+-  &FAI::push_command( "parted -s $disk mklabel " .
+-    $FAI::configs{$config}{disklabel}, "exist_$disk", "cleared1_$disk" );
++  &FAI::push_command( "parted -s $disk mklabel $label", "exist_$disk",
++    "cleared1_$disk" );
+ 
+   &FAI::rebuild_preserved_partitions($config, \@to_preserve);
+ 
+@@ -777,9 +778,8 @@
+ 
+   # write the disklabel again to drop the partition table and create a new one
+   # that has the proper ids
+-  &FAI::push_command( "parted -s $disk mklabel " .
+-    $FAI::configs{$config}{disklabel}, "cleared1_$disk$pre_all_resize",
+-    "cleared2_$disk" );
++  &FAI::push_command( "parted -s $disk mklabel $label",
++    "cleared1_$disk$pre_all_resize", "cleared2_$disk" );
+ 
+   my $prev_id = -1;
+   # generate the commands for creating all partitions
 @@ -824,8 +824,10 @@
  
    # set the bootable flag, if requested at all
@@ -87,3 +122,19 @@ Index: trunk/man/setup-storage.8
  .br
             /* write a disklabel - default is msdos */
  .br
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -78,8 +78,9 @@
+         "Can't run on test-only mode on this system because there is no disklabel on $disk\n";
+ 
+       # write the disk label as configured
+-      $error = &FAI::execute_command("parted -s $disk mklabel "
+-        . $FAI::configs{"PHY_$disk"}{disklabel});
++      my $label = $FAI::configs{"PHY_$disk"}{disklabel};
++      $label = "gpt" if ($label eq "gpt-bios");
++      $error = &FAI::execute_command("parted -s $disk mklabel $label");
+       ($error eq "") or die "Failed to write disk label\n";
+       # retry partition-table print
+       $error =
