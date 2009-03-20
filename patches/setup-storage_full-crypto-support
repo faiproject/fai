@@ -1,0 +1,184 @@
+2009-03-20  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Init.pm, setup-storage/Fstab.pm, setup-storage/Commands.pm:
+		Use the mangled device name for all devices marked "encrypt" to also support
+		encryption in case of RAID or LVM devices.
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -52,6 +52,9 @@
+     or &FAI::internal_error("filesystem is undefined");
+   my $fs = $partition->{filesystem};
+ 
++  # check for encryption requests
++  $device = &FAI::encrypt_device($device, $partition);
++
+   return if ($fs eq "-");
+ 
+   my ($create_options) = $partition->{createopts};
+@@ -63,16 +66,11 @@
+   print "$partition->{mountpoint} FS create_options: $create_options\n" if ($FAI::debug && $create_options);
+   print "$partition->{mountpoint} FS tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
+ 
+-  # check for encryption requests
+-  $device = &FAI::encrypt_device($device, $partition);
+-
+   # create the file system with options
+   my $create_tool = "mkfs.$fs";
+   ($fs eq "swap") and $create_tool = "mkswap";
+   ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
+-  my $pre_encrypt = "exist_$device";
+-  $pre_encrypt = "encrypted_$device" if ($partition->{encrypt});
+-  &FAI::push_command( "$create_tool $create_options $device", $pre_encrypt,
++  &FAI::push_command( "$create_tool $create_options $device", "exist_$device",
+     "has_fs_$device" );
+ 
+   # possibly tune the file system - this depends on whether the file system
+@@ -128,7 +126,7 @@
+     $prepare_deps, "crypt_format_$device" );
+   &FAI::push_command(
+     "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
+-    "crypt_format_$device", "encrypted_$enc_dev_name" );
++    "crypt_format_$device", "exist_$enc_dev_name" );
+ 
+   # add entries to crypttab
+   push @FAI::crypttab, "$enc_dev_short_name\t$device\t$keyfile\tluks";
+@@ -203,11 +201,12 @@
+           next if $vol->{devices}{$d}{missing};
+         } else {
+           if ($vol->{devices}->{$d}->{spare}) {
+-            push @spares, $d;
++            push @spares, &FAI::enc_name($d);
+           } else {
+-            push @eff_devs, $d;
++            push @eff_devs, &FAI::enc_name($d);
+           }
+         }
++        $d = &FAI::enc_name($d);
+         &FAI::set_partition_type_on_phys_dev($d, "raid");
+         if ((&FAI::phys_dev($d))[0]) {
+           $pre_req .= ",type_raid_$d";
+@@ -301,7 +300,8 @@
+   # create the volume group, if it doesn't exist already
+   if (!$vg_exists) {
+     # create all the devices
+-    my @devices = keys %{ $FAI::configs{$config}{devices} };
++    my @devices = ();
++    push @devices, &FAI::enc_name($_) foreach (keys %{ $FAI::configs{$config}{devices} });
+     &FAI::erase_lvm_signature(\@devices);
+     &FAI::push_command( "pvcreate $pv_create_options $_",
+       "pv_sigs_removed,exist_$_", "pv_done_$_") foreach (@devices);
+@@ -323,7 +323,8 @@
+   # create an undefined entry for each new device
+   @new_devs{ keys %{ $FAI::configs{$config}{devices} } } = ();
+ 
+-  my @new_devices = keys %new_devs;
++  my @new_devices = ();
++  push @new_devices, &FAI::enc_name($_) foreach (keys %new_devs);
+ 
+   # &FAI::erase_lvm_signature( \@new_devices );
+ 
+@@ -462,6 +463,7 @@
+       foreach (keys %{ $FAI::configs{$config}{devices} });
+     my $type_pre = "";
+     foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
++      $d = &FAI::enc_name($d);
+       if ((&FAI::phys_dev($d))[0]) {
+         $type_pre .= ",type_lvm_$d"
+       } else {
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -160,12 +160,8 @@
+         # skip extended partitions and entries without a mountpoint
+         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
+ 
+-        my $device_name = &FAI::make_device_name($device, $p_ref->{number});
+-        if ($p_ref->{encrypt}) {
+-          # encryption requested, rewrite the device name
+-          $device_name =~ s#/#_#g;
+-          $device_name = "/dev/mapper/crypt$device_name";
+-        }
++        my $device_name = &FAI::enc_name(
++          &FAI::make_device_name($device, $p_ref->{number}));
+ 
+         # if the mount point is / or /boot, the variables should be set, unless
+         # they are already
+@@ -212,9 +208,7 @@
+ 
+         my $device_name = "/dev/$device/$l";
+         if ($l_ref->{encrypt}) {
+-          # encryption requested, rewrite the device name
+-          $device_name =~ s#/#_#g;
+-          $device_name = "/dev/mapper/crypt$device_name";
++          $device_name = &FAI::enc_name($device_name);
+         } else {
+           $device_name = $fstab_key[0];
+         }
+@@ -244,12 +238,7 @@
+         # skip entries without a mountpoint
+         next if ($r_ref->{mountpoint} eq "-");
+ 
+-        my $device_name = "/dev/md$r";
+-        if ($r_ref->{encrypt}) {
+-          # encryption requested, rewrite the device name
+-          $device_name =~ s#/#_#g;
+-          $device_name = "/dev/mapper/crypt$device_name";
+-        } 
++        my $device_name = &FAI::enc_name("/dev/md$r");
+ 
+         # according to http://grub.enbug.org/LVMandRAID, this should work...
+         # if the mount point is / or /boot, the variables should be set, unless
+Index: trunk/lib/setup-storage/Init.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Init.pm
++++ trunk/lib/setup-storage/Init.pm	
+@@ -177,6 +177,46 @@
+   return (0, "", -2);
+ }
+ 
++
++################################################################################
++#
++# @brief Compute the nave of $dev considering possible encryption
++#
++# @param $dev Device string
++#
++# @return $dev iff $dev is not encrypted, otherwise /dev/mapper/<mangled name>
++#
++################################################################################
++sub enc_name {
++  my ($dev) = @_;
++
++  my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
++  if ($i_p_d) {
++    defined ($FAI::configs{"PHY_$disk"}) or return $dev;
++    defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}) or return $dev;
++    return $dev unless
++      ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{encrypt});
++  } elsif ($dev =~ /^\/dev\/md(\d+)$/) {
++    defined ($FAI::configs{RAID}) or return $dev;
++    defined ($FAI::configs{RAID}{volumes}{$1}) or return $dev;
++    return $dev unless ($FAI::configs{RAID}{volumes}{$1}{encrypt});
++  } elsif ($dev =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
++    defined ($FAI::configs{"VG_$1"}) or return $dev;
++    defined ($FAI::configs{"VG_$1"}{volumes}{$2}) or return $dev;
++    return $dev unless ($FAI::configs{"VG_$1"}{volumes}{$2}{encrypt});
++  } else {
++    return $dev;
++  }
++
++  # encryption requested, rewrite the device name
++  my $enc_dev_name = $dev;
++  $enc_dev_name =~ s#/#_#g;
++  my $enc_dev_short_name = "crypt$enc_dev_name";
++  $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
++
++  return $enc_dev_name;
++}
++
+ ################################################################################
+ #
+ # @brief Convert a device name and a partition id to a proper device name,
