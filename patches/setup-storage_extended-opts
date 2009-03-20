@@ -1,0 +1,209 @@
+2009-03-20  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm, setup-storage/Commands.pm: Added support for
+		optional (pv|vg|lv|md)createopts and moved parsing of createopts,tuneopts to
+		Parser.pm
+	* man/setup-storage.8: Documented new options
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -54,23 +54,14 @@
+ 
+   return if ($fs eq "-");
+ 
+-  my ($create_options) = $partition->{fs_options} =~ m/createopts="([^"]+)"/;
+-  my ($tune_options)   = $partition->{fs_options} =~ m/tuneopts="([^"]+)"/;
+-
+-  # this enables the use of all remaining options as create option if
+-  # you did not specify createopts= Example: -m0 -i0 will then be used
+-  # as createopts. This fails if you do only specify tuneopts without
+-  # using createopts. Therefore is disable this feature. IMO this
+-  # special behaviour is also not documented in setup-storage.8
+-  # T.Lange
+-  # $create_options = $partition->{fs_options} unless $create_options;
+-
++  my ($create_options) = $partition->{createopts};
++  my ($tune_options)   = $partition->{tuneopts};
+   # prevent warnings of uninitialized variables
+   $create_options = '' unless $create_options;
+   $tune_options   = '' unless $tune_options;
+ 
+-  print "$partition->{mountpoint} create_options: $create_options\n" if ($FAI::debug && $create_options);
+-  print "$partition->{mountpoint} tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
++  print "$partition->{mountpoint} FS create_options: $create_options\n" if ($FAI::debug && $create_options);
++  print "$partition->{mountpoint} FS tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
+ 
+   # check for encryption requests
+   $device = &FAI::encrypt_device($device, $partition);
+@@ -225,11 +216,15 @@
+         }
+       }
+ 
++      my ($create_options) = $FAI::configs{$config}{volumes}{$id}{mdcreateopts};
++      # prevent warnings of uninitialized variables
++      $create_options = '' unless $create_options;
++      print "/dev/md$id MD create_options: $create_options\n" if ($FAI::debug && $create_options);
+       # create the command
+       $pre_req = "exist_/dev/md" . ( $id - 1 ) . $pre_req if (0 != $id);
+       $pre_req =~ s/^,//;
+       &FAI::push_command(
+-        "yes | mdadm --create /dev/md$id --level=$level --force --run --raid-devices="
++        "yes | mdadm --create $create_options /dev/md$id --level=$level --force --run --raid-devices="
+           . scalar(@eff_devs) . (scalar(@spares) !=0 ? " --spare-devices=" . scalar(@spares) : "") . " "
+           . join(" ", @eff_devs) . " " . join(" ", @spares),
+         "$pre_req", "exist_/dev/md$id" );
+@@ -296,19 +291,26 @@
+     }
+   }
+ 
++  my ($pv_create_options) = $FAI::configs{$config}{pvcreateopts};
++  my ($vg_create_options) = $FAI::configs{$config}{vgcreateopts};
++  # prevent warnings of uninitialized variables
++  $pv_create_options = '' unless $pv_create_options;
++  $vg_create_options = '' unless $vg_create_options;
++  print "/dev/$vg PV create_options: $pv_create_options\n" if ($FAI::debug && $pv_create_options);
++  print "/dev/$vg VG create_options: $vg_create_options\n" if ($FAI::debug && $vg_create_options);
+   # create the volume group, if it doesn't exist already
+   if (!$vg_exists) {
+     # create all the devices
+     my @devices = keys %{ $FAI::configs{$config}{devices} };
+     &FAI::erase_lvm_signature(\@devices);
+-    &FAI::push_command( "pvcreate $_", "pv_sigs_removed,exist_$_",
+-      "pv_done_$_" ) foreach (@devices);
++    &FAI::push_command( "pvcreate $pv_create_options $_",
++      "pv_sigs_removed,exist_$_", "pv_done_$_") foreach (@devices);
+     # create the volume group
+     my $pre_dev = "";
+     $pre_dev .= ",exist_$_,pv_done_$_" foreach (@devices);
+     $pre_dev =~ s/^,//;
+-    &FAI::push_command( "vgcreate $vg " . join (" ", @devices), "$pre_dev",
+-      "vg_created_$vg" );
++    &FAI::push_command( "vgcreate $vg_create_options $vg " . join (" ",
++        @devices), "$pre_dev", "vg_created_$vg" );
+     # we are done
+     return;
+   }
+@@ -326,7 +328,8 @@
+   # &FAI::erase_lvm_signature( \@new_devices );
+ 
+   # create all the devices
+-  &FAI::push_command( "pvcreate $_", "exist_$_", "pv_done_$_" ) foreach (@new_devices);
++  &FAI::push_command( "pvcreate $pv_create_options $_", "exist_$_", "pv_done_$_"
++    ) foreach (@new_devices);
+ 
+   # extend the volume group by the new devices (includes the current ones)
+   my $pre_dev = "";
+@@ -421,9 +424,14 @@
+       next;
+     }
+ 
++    my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
++    # prevent warnings of uninitialized variables
++    $create_options = '' unless $create_options;
++  print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
+     # create a new volume
+-    &FAI::push_command( "lvcreate -n $lv -L " . $lv_size->{eff_size} . " $vg",
+-      "vg_enabled_$vg,$lv_rm_pre", "exist_/dev/$vg/$lv" );
++    &FAI::push_command( "lvcreate $create_options -n $lv -L " .
++      $lv_size->{eff_size} . " $vg", "vg_enabled_$vg,$lv_rm_pre",
++      "exist_/dev/$vg/$lv" );
+ 
+     # create the filesystem on the volume
+     &FAI::build_mkfs_commands("/dev/$vg/$lv",
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -457,7 +457,7 @@
+           $FAI::configs{$FAI::device}{fstabkey} = $1;
+         }
+ 
+-    volume: /^vg\s+/ name devices
++    volume: /^vg\s+/ name devices vgcreateopt(s?)
+         | /^raid([0156])\s+/
+         {
+           # make sure that this is a RAID configuration
+@@ -474,8 +474,8 @@
+           # the reference is used by all further processing of this config line
+           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
+         }
+-        mountpoint devices filesystem mount_options fs_options
+-        | type mountpoint size filesystem mount_options fs_options
++        mountpoint devices filesystem mount_options mdcreateopts
++        | type mountpoint size filesystem mount_options lv_or_fsopts
+ 
+     type: 'primary'
+         {
+@@ -669,9 +669,42 @@
+           $FAI::partition_pointer->{filesystem} = $item[ 1 ];
+         }
+ 
+-    fs_options: /[^;\n]*/
++    vgcreateopt: /pvcreateopts="([^"]*)"/
+         {
+-          $FAI::partition_pointer->{fs_options} = $item[ 1 ];
++          $FAI::configs{$FAI::device}{pvcreateopts} = $1 if (defined($1));
++          # make sure this line is part of an LVM configuration
++          ($FAI::device =~ /^VG_/) or
++            die "pvcreateopts is invalid in a non LVM-context.\n";
++        }
++        | /vgcreateopts="([^"]*)"/
++        {
++          $FAI::configs{$FAI::device}{vgcreateopts} = $1 if (defined($1));
++          # make sure this line is part of an LVM configuration
++          ($FAI::device =~ /^VG_/) or
++            die "vgcreateopts is invalid in a non LVM-context.\n";
++        }
++
++    mdcreateopts: /mdcreateopts="([^"]*)"/ createtuneopt(s?)
++        {
++          $FAI::partition_pointer->{mdcreateopts} = $1;
++        }
++        | createtuneopt(s?)
++
++    lv_or_fsopts: /lvcreateopts="([^"]*)"/ createtuneopt(s?)
++        {
++          $FAI::partition_pointer->{lvcreateopts} = $1;
++          ($FAI::device =~ /^VG_/) or
++            die "lvcreateopts is invalid in a non LVM-context.\n";
++        }
++        | createtuneopt(s?)
++
++    createtuneopt: /createopts="([^"]*)"/
++        {
++          $FAI::partition_pointer->{createopts} = $1;
++        }
++        | /tuneopts="([^"]*)"/
++        {
++          $FAI::partition_pointer->{tuneopts} = $1;
+         }
+ }
+ );
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -240,7 +240,7 @@
+ 
+ volume ::= <type> <mountpoint> <size> <filesystem> <mount_options> <fs_options>
+ .br
+-           | vg <name> <size>
++           | vg <name> <size> <fs_options>
+ .br
+            /* lvm vg */
+ .br
+@@ -318,11 +318,11 @@
+ .br
+ 
+ 
+-fs_options ::= (createopts=".*"|tuneopts=".*")*
++fs_options ::= (createopts=".*"|tuneopts=".*"|(pv|vg|lv|md)createopts=".*")*
+ .br
+                /* options to append to mkfs.xxx and to the filesystem-specific
+ .br
+-                * tuning tool */
++                * tuning tool, pvcreate, vgcreate, lvcreate or mdadm */
+ .br
+ .SH MIGRATION FROM SETUP_HARDDISKS
+ The major differences to the prior configuration syntax are:
