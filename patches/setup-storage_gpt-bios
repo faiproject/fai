@@ -1,8 +1,9 @@
-2009-03-17  Michael Tautschnig  <mt@debian.org>
+2009-03-25  Michael Tautschnig  <mt@debian.org>
 
   * setup-storage/Parser.pm, setup-storage/Sizes.pm, setup-storage/Volumes.pm:
     Added pseudo-disklabel gpt-bios to support GPT on systems with BIOS instead
-    of EFI.
+    of EFI. Also installs an additional partition to store whatever doesn't fit
+    into MBR.
 Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
@@ -41,18 +42,21 @@ Index: trunk/lib/setup-storage/Commands.pm
  
    my $prev_id = -1;
    # generate the commands for creating all partitions
-@@ -824,8 +824,10 @@
- 
-   # set the bootable flag, if requested at all
-   if ($FAI::configs{$config}{bootable} > -1) {
-+    my $flag = "boot";
-+    $flag = "bios_grub" if ($FAI::configs{$config}{disklabel} eq "gpt-bios");
-     &FAI::push_command( "parted -s $disk set " .
--      $FAI::configs{$config}{bootable} . " boot on", "exist_" .
-+      $FAI::configs{$config}{bootable} . " $flag on", "exist_" .
+@@ -829,6 +829,14 @@
        &FAI::make_device_name($disk, $FAI::configs{$config}{bootable}),
        "boot_set_$disk" );
    }
++
++  # set the bios_grub flag on BIOS compatible GPT tables
++  if ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
++    &FAI::push_command( "parted -s $disk set " .
++      $FAI::configs{$config}{gpt_bios_part} . " bios_grub on", "exist_" .
++      &FAI::make_device_name($disk, $FAI::configs{$config}{gpt_bios_part}),
++      "bios_grub_set_$disk" );
++  }
+ }
+ 
+ 
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
@@ -90,17 +94,54 @@ Index: trunk/lib/setup-storage/Sizes.pm
      $end_byte -=
        ($end_byte + 1) % $current_disk->{sector_size};
    }
-@@ -629,7 +631,8 @@
-     }
+@@ -618,18 +620,17 @@
+     # the start byte for the next partition
+     my $next_start = 0;
  
-     # on GPT disk labels the first 34 and last 34 sectors must be left alone
+-    # on msdos disk labels, the first partitions starts at head #1
+     if ($FAI::configs{$config}{disklabel} eq "msdos") {
++      # on msdos disk labels, the first partitions starts at head #1
+       $next_start = $current_disk->{bios_sectors_per_track} *
+         $current_disk->{sector_size};
+ 
+       # the MBR requires space, too
+       $min_req_total_space += $current_disk->{bios_sectors_per_track} *
+         $current_disk->{sector_size};
+-    }
+ 
+-    # on GPT disk labels the first 34 and last 34 sectors must be left alone
 -    if ($FAI::configs{$config}{disklabel} eq "gpt") {
-+    if ($FAI::configs{$config}{disklabel} eq "gpt" ||
-+      $FAI::configs{$config}{disklabel} eq "gpt-bios") {
++    } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
++      # on GPT-EFI disk labels the first 34 and last 34 sectors must be left alone
        $next_start = 34 * $current_disk->{sector_size};
  
        # modify the disk to claim the space for the second partition table
-@@ -687,7 +690,7 @@
+@@ -637,6 +638,24 @@
+ 
+       # the space required by the GPTs
+       $min_req_total_space += 2 * 34 * $current_disk->{sector_size};
++
++    } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
++      # on BIOS-style disk labels, the first partitions starts at head #1
++      $next_start = $current_disk->{bios_sectors_per_track} *
++        $current_disk->{sector_size};
++
++      # the MBR requires space, too
++      $min_req_total_space += $current_disk->{bios_sectors_per_track} *
++        $current_disk->{sector_size};
++
++      # on gpt-bios we'll need an additional partition to store what doesn't fit
++      # in the MBR
++      $FAI::device = $config;
++      $FAI::init_part_config("primary");
++      $FAI::configs{$config}{gpt_bios_part} = $FAI::partition_pointer->{number};
++      my $s = &FAI::convert_unit("120k");
++      # enter the range into the hash
++      $FAI::partition_pointer->{size}->{range} = "$s-$s";
+     }
+ 
+     # the list of partitions that we need to find start and end bytes for
+@@ -687,7 +706,7 @@
  
          # msdos does not support partitions larger than 2TB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *
