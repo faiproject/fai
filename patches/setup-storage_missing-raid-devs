@@ -1,0 +1,36 @@
+2009-04-01  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: $2 doesn't refer to the original expression
+		anymore, store earlier $2 as $opts.
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -600,6 +600,8 @@
+               &FAI::internal_error("PARSER ERROR");
+             # redefine the device string
+             $dev = $1;
++            # store the options
++            my $opts = $2;
+             # make $dev a full path name; can't validate device name yet as it
+             # might be created later on
+             unless ($dev =~ m{^/}) {
+@@ -612,14 +614,14 @@
+             my @candidates = glob($dev);
+ 
+             # options are only valid for RAID
+-            defined ($2) and ($FAI::device ne "RAID") and die "Option $2 invalid in a non-RAID context\n";
++            defined ($opts) and ($FAI::device ne "RAID") and die "Option $opts invalid in a non-RAID context\n";
+             if ($FAI::device eq "RAID") {
+               # parse all options
+               my $spare = 0;
+               my $missing = 0;
+-              if (defined ($2)) {
+-                ($2 =~ /spare/) and $spare = 1;
+-                ($2 =~ /missing/) and $missing = 1;
++              if (defined ($opts)) {
++                ($opts =~ /spare/) and $spare = 1;
++                ($opts =~ /missing/) and $missing = 1;
+               }
+               (($spare == 1 || $missing == 1) && $FAI::partition_pointer->{mode} == 0)
+                 and die "RAID-0 does not support spares or missing devices\n";
