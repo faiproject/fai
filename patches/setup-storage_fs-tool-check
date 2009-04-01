@@ -1,0 +1,28 @@
+2009-04-01  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: Only test for mkfs.X if such a filesystem is to be
+		created (i.e., it will not be preserved).
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -666,9 +666,17 @@
+         }
+         | /^\S+/
+         {
+-          &FAI::in_path("mkfs.$item[1]") or 
+-            die "unknown/invalid filesystem type $item[1] (mkfs.$item[1] not found in PATH)\n";
+           $FAI::partition_pointer->{filesystem} = $item[ 1 ];
++          my $to_be_preserved = 0;
++          if ($FAI::device eq "RAID") {
++            $to_be_preserved = $FAI::partition_pointer->{preserve};
++          } else {
++            $to_be_preserved = $FAI::partition_pointer->{size}->{preserve};
++          }
++          if (0 == $to_be_preserved) {
++            &FAI::in_path("mkfs.$item[1]") or
++              die "unknown/invalid filesystem type $item[1] (mkfs.$item[1] not found in PATH)\n";
++          }
+         }
+ 
+     vgcreateopt: /pvcreateopts="([^"]*)"/
