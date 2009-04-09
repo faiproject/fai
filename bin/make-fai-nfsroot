@@ -470,12 +470,13 @@ trap "bad_exit" ERR
 # just install a new kernel to the nfsroot
 [ -n "$kinstall" ] && {
     trap "true" EXIT
-    echo "Installing new kernel into the nfsroot."
+    echo "Upgrading nfsroot and installing new packages into the nfsroot."
     if [ $divert = 1 ]; then
 	fdivert /usr/sbin/update-initramfs
 	ln -s /bin/true $NFSROOT/usr/sbin/fai
     fi
     $ROOTCMD apt-get update
+    $ROOTCMD apt-get -y dist-upgrade
     LC_ALL=C add_packages_nfsroot
     kernel_install
     run_hooks
