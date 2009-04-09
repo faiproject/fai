@@ -457,7 +457,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
 
-    volume: /^vg\s+/ name devices
+    volume: /^vg\s+/ name devices vgcreateopt(s?)
         | /^raid([0156])\s+/
         {
           # make sure that this is a RAID configuration
@@ -474,8 +474,8 @@ $FAI::Parser = Parse::RecDescent->new(
           # the reference is used by all further processing of this config line
           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
         }
-        mountpoint devices filesystem mount_options fs_options
-        | type mountpoint size filesystem mount_options fs_options
+        mountpoint devices filesystem mount_options mdcreateopts
+        | type mountpoint size filesystem mount_options lv_or_fsopts
 
     type: 'primary'
         {
@@ -669,9 +669,42 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer->{filesystem} = $item[ 1 ];
         }
 
-    fs_options: /[^;\n]*/
+    vgcreateopt: /pvcreateopts="([^"]*)"/
         {
-          $FAI::partition_pointer->{fs_options} = $item[ 1 ];
+          $FAI::configs{$FAI::device}{pvcreateopts} = $1 if (defined($1));
+          # make sure this line is part of an LVM configuration
+          ($FAI::device =~ /^VG_/) or
+            die "pvcreateopts is invalid in a non LVM-context.\n";
+        }
+        | /vgcreateopts="([^"]*)"/
+        {
+          $FAI::configs{$FAI::device}{vgcreateopts} = $1 if (defined($1));
+          # make sure this line is part of an LVM configuration
+          ($FAI::device =~ /^VG_/) or
+            die "vgcreateopts is invalid in a non LVM-context.\n";
+        }
+
+    mdcreateopts: /mdcreateopts="([^"]*)"/ createtuneopt(s?)
+        {
+          $FAI::partition_pointer->{mdcreateopts} = $1;
+        }
+        | createtuneopt(s?)
+
+    lv_or_fsopts: /lvcreateopts="([^"]*)"/ createtuneopt(s?)
+        {
+          $FAI::partition_pointer->{lvcreateopts} = $1;
+          ($FAI::device =~ /^VG_/) or
+            die "lvcreateopts is invalid in a non LVM-context.\n";
+        }
+        | createtuneopt(s?)
+
+    createtuneopt: /createopts="([^"]*)"/
+        {
+          $FAI::partition_pointer->{createopts} = $1;
+        }
+        | /tuneopts="([^"]*)"/
+        {
+          $FAI::partition_pointer->{tuneopts} = $1;
         }
 }
 );
