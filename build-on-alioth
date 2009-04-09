@@ -122,8 +122,10 @@ fi
 
 # is this a commit to experimental?
 if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; then
+  rm -f $storage/trunk-w-exp/debian/source.lintian-overrides
   svn revert $storage/trunk-w-exp/debian/rules
   svn revert $storage/trunk-w-exp/debian/changelog
+  svn revert $storage/trunk-w-exp/debian/control
   svn up -r $REV $storage/trunk-w-exp
   svn up -r $REV $storage/trunk-w-exp/debian/patches
   cd $storage
@@ -133,6 +135,8 @@ if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; 
   export QUILT_PATCHES=$PWD/debian/patches
   mangle_version_number
   patch -p0 < $tmppatch
+  perl -p -i -e 's/^(Build-Depends:.*)$/$1, quilt/' debian/control
+  echo "fai source: patch-modifying-debian-files" >> debian/source.lintian-overrides
   build_changelog
   dpkg-buildpackage -uc -us -d -I.svn -rfakeroot && dpkg_exit=$? || dpkg_exit=$?
   debian/rules clean
