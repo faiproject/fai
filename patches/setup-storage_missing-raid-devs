@@ -1,12 +1,24 @@
-2009-04-01  Michael Tautschnig  <mt@debian.org>
+2009-04-10  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage/Parser.pm: $2 doesn't refer to the original expression
 		anymore, store earlier $2 as $opts.
+	* setup-storage/Sizes.pm: Properly deal with missing (as in RAID specs) or
+		non-existing (user error) devices in estimate_size.
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
 +++ trunk/lib/setup-storage/Parser.pm	
-@@ -600,6 +600,8 @@
+@@ -470,6 +470,9 @@
+           $FAI::configs{RAID}{volumes}{$vol_id}{mode} = $1;
+           # initialise the hash of devices
+           $FAI::configs{RAID}{volumes}{$vol_id}{devices} = {};
++          # initialise the preserve flag
++          defined($FAI::configs{RAID}{volumes}{$vol_id}{preserve}) or
++            $FAI::configs{RAID}{volumes}{$vol_id}{preserve} = 0;
+           # set the reference to the current volume
+           # the reference is used by all further processing of this config line
+           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
+@@ -600,6 +603,8 @@
                &FAI::internal_error("PARSER ERROR");
              # redefine the device string
              $dev = $1;
@@ -15,7 +27,7 @@ Index: trunk/lib/setup-storage/Parser.pm
              # make $dev a full path name; can't validate device name yet as it
              # might be created later on
              unless ($dev =~ m{^/}) {
-@@ -612,14 +614,14 @@
+@@ -612,14 +617,14 @@
              my @candidates = glob($dev);
  
              # options are only valid for RAID
@@ -34,3 +46,94 @@ Index: trunk/lib/setup-storage/Parser.pm
                }
                (($spare == 1 || $missing == 1) && $FAI::partition_pointer->{mode} == 0)
                  and die "RAID-0 does not support spares or missing devices\n";
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -99,8 +99,9 @@
+   # this should be caught later on
+   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
+   if (1 == $i_p_d && -1 == $part_no) {
+-    defined ($FAI::current_config{$dev}{end_byte})
+-      or die "$dev is not a valid block device\n";
++    (defined ($FAI::current_config{$dev}) &&
++      defined ($FAI::current_config{$dev}{end_byte}))
++        or die "$dev is not a valid block device\n";
+ 
+     # the size is known, return it
+     return ($FAI::current_config{$dev}{end_byte} -
+@@ -110,14 +111,16 @@
+   # try a partition
+   elsif (1 == $i_p_d && $part_no > -1) {
+     # the size is configured, return it
+-    defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size})
+-      and return $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size} /
+-      (1024 * 1024);
++    defined ($FAI::configs{"PHY_$disk"}) and
++      defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size})
++        and return $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size} /
++        (1024 * 1024);
+ 
+     # the size is known from the current configuration on disk, return it
+-    defined ($FAI::current_config{$disk}{partitions}{$part_no}{count_byte})
+-      and return $FAI::current_config{$disk}{partitions}{$part_no}{count_byte} /
+-      (1024 * 1024) unless defined ($FAI::configs{"PHY_$disk"}{partitions});
++    defined ($FAI::current_config{$disk}) and
++      defined ($FAI::current_config{$disk}{partitions}{$part_no}{count_byte})
++        and return $FAI::current_config{$disk}{partitions}{$part_no}{count_byte} /
++        (1024 * 1024) unless defined ($FAI::configs{"PHY_$disk"}{partitions});
+ 
+     # the size is not known (yet?)
+     warn "Cannot determine size of $dev\n";
+@@ -133,23 +136,34 @@
+     # the raid level, like raid0, raid5, linear, etc.
+     my $level = "";
+ 
++    # the number of devices in the volume
++    my $dev_count = 0;
++
+     # let's see, whether there is a configuration of this volume
+-    if (defined ($FAI::configs{RAID}{volumes}{$1}{devices})) {
+-      @devs  = keys %{ $FAI::configs{RAID}{volumes}{$1}{devices} };
++    if (defined ($FAI::configs{RAID}{volumes}{$1})) {
++      my @devcands = keys %{ $FAI::configs{RAID}{volumes}{$1}{devices} };
++      $dev_count = scalar(@devcands);
++      # we can only estimate the sizes of existing volumes, assume the missing
++      # ones aren't smaller
++      foreach (@devcands) {
++        next if ($FAI::configs{RAID}{volumes}{$1}{devices}{$_}{options}{missing});
++        push @devs, $_;
++      }
+       $level = $FAI::configs{RAID}{volumes}{$1}{mode};
+-    } elsif (defined ($FAI::current_raid_config{$1}{devices})) {
++    } elsif (defined ($FAI::current_raid_config{$1})) {
+       @devs  = $FAI::current_raid_config{$1}{devices};
++      $dev_count = scalar(@devs);
+       $level = $FAI::current_raid_config{$1}{mode};
+     } else {
+       die "$dev is not a known RAID device\n";
+     }
+ 
++    # make sure there is at least one non-missing device
++    (scalar(@devs) > 0) or die "No devices available in /dev/md$1\n";
++
+     # prepend "raid", if the mode is numeric-only
+     $level = "raid$level" if ($level =~ /^\d+$/);
+ 
+-    # the number of devices in the volume
+-    my $dev_count = scalar (@devs);
+-
+     # now do the mode-specific size estimations
+     if ($level =~ /^raid[015]$/) {
+       my $min_size = &estimate_size(shift @devs);
+@@ -158,9 +172,8 @@
+         $min_size = $s if ($s < $min_size);
+       }
+ 
+-      return $min_size * POSIX::floor($dev_count / 2)
+-        if ($level eq "raid1");
+       return $min_size * $dev_count if ($level eq "raid0");
++      return $min_size * POSIX::floor($dev_count / 2) if ($level eq "raid1");
+       return $min_size * ($dev_count - 1) if ($level eq "raid5");
+     } else {
+ 
