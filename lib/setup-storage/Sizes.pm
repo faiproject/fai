@@ -323,11 +323,14 @@ sub do_partition_preserve {
   if ($FAI::configs{$config}{disklabel} eq "msdos") {
 
     # make sure the partition ends at a cylinder boundary
+    # maybe we should make this a warning if ($curr_part->{filesystem} eq
+    # "ntfs")) only, but for now just a warning for everyone; well, it might
+    # also be safe to ignore this, don't know for sure.
     (0 == ($curr_part->{end_byte} + 1)
         % ($current_disk->{sector_size} *
           $current_disk->{bios_sectors_per_track} *
           $current_disk->{bios_heads})) or 
-      die "Preserved partition $part_id does not end at a cylinder boundary\n";
+      warn "Preserved partition $part_id does not end at a cylinder boundary, parted may fail to restore the partition!\n";
 
     # add one head of disk usage if this is a logical partition
     $min_req_total_space += $current_disk->{bios_sectors_per_track} *
