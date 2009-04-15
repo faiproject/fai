@@ -26,7 +26,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-version="version 1.6.3, 9-apr-2009"
+version="version 1.6.4, 15-apr-2009"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -86,10 +86,10 @@ do_script() {
 
     # may be remove some day
     case $file in
-	*~) [ "$debug" ] && echo "Skipping backup file $file";	 return ;;
-	*.dpkg-old) [ "$debug" ] && echo "Skipping file $file";	 return ;;
-	*.dpkg-new) [ "$debug" ] && echo "Skipping file $file";	 return ;;
-	*.dpkg-inst) [ "$debug" ] && echo "Skipping file $file"; return ;;
+	*~) [ X$debug = X1 ] && echo "Skipping backup file $file";	 return ;;
+	*.dpkg-old)  [ X$debug = X1 ] && echo "Skipping file $file";	 return ;;
+	*.dpkg-new)  [ X$debug = X1 ] && echo "Skipping file $file";	 return ;;
+	*.dpkg-inst) [ X$debug = X1 ] && echo "Skipping file $file"; return ;;
     esac
 
     name=$(basename $file)
@@ -107,9 +107,9 @@ do_script() {
     shelldebug=
     case $filetype in
 	*"POSIX shell script"*|*"Bourne shell script"*)
-	    [ "$debug" ] && shelldebug="sh -x" ;;
+	    [ X$debug = X1 ] && shelldebug="sh -x" ;;
 	*"Bourne-Again shell script"*)
-	    [ "$debug" ] && shelldebug="bash -x" ;;
+	    [ X$debug = X1 ] && shelldebug="bash -x" ;;
     esac
 
     case $filetype in
@@ -184,7 +184,7 @@ if [ "x$classes" = "x" ]; then
     exit 9
 fi
 
-[ "$debug" ] && cfagentdebug=-v
+[ X$debug = X1 ] && cfagentdebug=-v
 
 call_conf $1
 # move error number from child scripts to 100+x if any error happened
