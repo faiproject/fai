@@ -74,16 +74,6 @@ task_confdir() {
         create_resolv_conf
     fi
     define_fai_flags
-    get-config-dir || {
-	echo "Problems accessing the config space."
-	die ""
-    }
-    # now you have enough time to make changes to the config space
-    if [ -n "$flag_wait" ]; then
-	echo "Sleeping. Now you may change the config space in $FAI."
-	echo "Continue after killall sleep."
-	sleep 50000
-    fi
 
     # check if monitor server is available
     [ -z "$monserver" ] && monserver=$SERVER
@@ -95,9 +85,21 @@ task_confdir() {
     sendhostname=$HOSTNAME # save current hostname
     if sendmon check; then
 	echo "Monitoring to server $monserver enabled."
+	sendmon "TASKBEGIN confdir"
     else
 	faimond=0
 	echo "Can't connect to monserver on $monserver port 4711. Monitoring disabled."
+    fi
+
+    get-config-dir || {
+	echo "Problems accessing the config space."
+	die ""
+    }
+    # now you have enough time to make changes to the config space
+    if [ -n "$flag_wait" ]; then
+	echo "Sleeping. Now you may change the config space in $FAI."
+	echo "Continue after killall sleep."
+	sleep 50000
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
