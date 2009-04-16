@@ -14,7 +14,7 @@ Index: trunk/bin/fai-setup
  	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_rsa_key.pub )
  	    # determine all IP addresses, and their host names
 -	    ips=$(LC_ALL=C ifconfig| perl -ne '/addr:([\d.]+)/ && print"$1\n"'|grep -v 127.0.0.1)
-+	    ips=$(ip addr | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
++	    ips=$(ip addr | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | grep -v 127.0.0.1)
  	    for ip in $ips; do
  		hname=$(getent hosts $ip| tr -s ' ' ',')
  		[ -z "$hname" ] && hname=$ip
@@ -56,7 +56,7 @@ Index: trunk/debian/control
  Package: fai-client
  Architecture: all
  Section: admin
--Depends: perl, file, libapt-pkg-perl, libparse-recdescent-perl, liblinux-lvm-perl
+-Depends: perl, file, libapt-pkg-perl, libparse-recdescent-perl, liblinux-lvm-perl, net-tools
 +Depends: perl, file, libapt-pkg-perl, libparse-recdescent-perl, liblinux-lvm-perl, iproute
  Recommends: debconf-utils, cfengine2
  Suggests: ntfsprogs, dmsetup, cryptsetup, logtail
@@ -108,7 +108,7 @@ Index: trunk/lib/subroutines-linux
 ===================================================================
 --- trunk.orig/lib/subroutines-linux
 +++ trunk/lib/subroutines-linux	
-@@ -268,7 +268,7 @@
+@@ -270,7 +270,7 @@
  
      if [ $do_init_tasks -eq 1 ] ; then
  	# show some local information
