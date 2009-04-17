@@ -118,13 +118,14 @@ usage() {
     cat <<-EOF
 	fai $FAI_VERSION. Copyright (C) 1999-2009 Thomas Lange
 	Usage: $0 [options] [action]
-       
+
 	Options:
-	   -v|--verbose      display more information during the update
-	   -h|--help         display this help message
-	   -N|--new          renew list of classes
-	   -c|--class        comma separated list of classes
-	   -C|--cfdir CFDIR  Use CFDIR for  reading the config files
+	   -v|--verbose         display more information during the update
+	   -h|--help            display this help message
+	   -N|--new             renew list of classes
+	   -c|--class           comma separated list of classes
+	   -C|--cfdir CFDIR     Use CFDIR for  reading the config files
+           -u|--hostname HNAME  set hostname to be used
 
 EOF
     exit 0
@@ -267,9 +268,7 @@ fi
 [ -f /proc/version ] || mount -n -t proc proc /proc # ubuntu initrd does not mount /proc
 export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
-if [ X$action = Xdirinstall -a -n "$newhostname" ]; then
-    export HOSTNAME=$newhostname
-fi
+[ -n "$newhostname" ] && export HOSTNAME=$newhostname
 
 if [ $do_init_tasks -eq 1 ]; then
     # we are running an initial installation
@@ -287,9 +286,9 @@ chgrp adm  $LOGDIR
 chmod 0750 $LOGDIR
 
 fai_init
+[ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
+unset newhostname
 if [ X$action = Xdirinstall ]; then
-    [ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
-    unset newhostname
     skiptask confdir
     export FAI=$FAI_CONFIGDIR
     set -a
