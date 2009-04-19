@@ -6,7 +6,7 @@
 # mount2dir -- mount partitions to a directory using a fstab file
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2001-2007 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2001-2009 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -87,6 +87,9 @@ while read device mountpoint fstype mopt dummy; do
 	    # should we fsck the partition first?
 	    [ "$fscheck" = 1 ] && fsck -nt $fstype $device
 	    mount -t $fstype -o noatime $mopt $device $target$mountpoint
+	    if [ "$mountpoint" = "/" ] ; then
+	      mkdir -p $target/var/lock $target/var/run 2>/dev/null
+	    fi
     esac
 done
 
