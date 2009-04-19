@@ -6,7 +6,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2008 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2009 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -502,10 +502,20 @@ task_install() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_dirinstall() {
 
-    echo $$ > $stamp
-
     mkdir -p $FAI_ROOT
     FAI_ROOT=$(cd $FAI_ROOT;pwd)
+    xstamp= ${FAI_ROOT//\//=}
+    stamp=/var/run/fai/dirinstall-$xstamp
+    unset xstamp
+
+    [ -f "$stamp" ] && {
+       echo -n "fai dirinstall into directory $FAI_ROOT already running or was aborted before. PID: "
+       cat $stamp
+       echo "You may remove $stamp and try again."
+       exit 1
+    }
+
+    echo $$ > $stamp
     echo "Installing into directory $FAI_ROOT"
     task extrbase
     [ -f $target/etc/fstab ] || touch $target/etc/fstab
