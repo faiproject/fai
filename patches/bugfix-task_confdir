@@ -1,0 +1,28 @@
+2009-04-22  Michael Tautschnig  <mt@debian.org>
+
+	* subroutines-linux: get-config-dir was never run if -z $monserver, which may
+		be the case when no DHCP was done (dirinstall, softupdates, or install using
+		fixed IP); problem was introduced by patch in r5338.
+Index: trunk/lib/subroutines-linux
+===================================================================
+--- trunk.orig/lib/subroutines-linux
++++ trunk/lib/subroutines-linux	
+@@ -79,8 +79,8 @@
+     [ -z "$monserver" ] && monserver=$SERVER
+     if [ -z "$monserver" ]; then
+ 	echo "No monitor daemon defined."
+-	return
+-    fi
++  faimond=0
++    else
+     faimond=1
+     sendhostname=$HOSTNAME # save current hostname
+     if sendmon check; then
+@@ -90,6 +90,7 @@
+ 	faimond=0
+ 	echo "Can't connect to monserver on $monserver port 4711. Monitoring disabled."
+     fi
++    fi
+ 
+     get-config-dir || {
+ 	echo "Problems accessing the config space."
