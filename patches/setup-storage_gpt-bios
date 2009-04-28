@@ -116,7 +116,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
        $next_start = 34 * $current_disk->{sector_size};
  
        # modify the disk to claim the space for the second partition table
-@@ -640,6 +641,28 @@
+@@ -640,6 +641,35 @@
  
        # the space required by the GPTs
        $min_req_total_space += 2 * 34 * $current_disk->{sector_size};
@@ -129,6 +129,13 @@ Index: trunk/lib/setup-storage/Sizes.pm
 +      # the MBR requires space, too
 +      $min_req_total_space += $current_disk->{bios_sectors_per_track} *
 +        $current_disk->{sector_size};
++
++      # apparently parted insists in having some space left at the end too
++      # modify the disk to claim the space for the second partition table
++      $current_disk->{end_byte} -= 34 * $current_disk->{sector_size};
++
++      # the space required by the GPTs
++      $min_req_total_space += 34 * $current_disk->{sector_size};
 +
 +      # on gpt-bios we'll need an additional partition to store what doesn't fit
 +      # in the MBR
@@ -145,7 +152,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      }
  
      # the list of partitions that we need to find start and end bytes for
-@@ -690,7 +713,7 @@
+@@ -690,7 +720,7 @@
  
          # msdos does not support partitions larger than 2TB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *
