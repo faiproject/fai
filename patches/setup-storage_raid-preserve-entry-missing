@@ -1,0 +1,21 @@
+2009-04-28  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: Ensure that RAID volumes marked preserve don't
+		count as extra RAID volumes being defined.
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -465,7 +465,11 @@
+           # initialise RAID entry, if it doesn't exist already
+           defined ($FAI::configs{RAID}) or $FAI::configs{RAID}{volumes} = {};
+           # compute the next available index - the size of the entry
+-          my $vol_id = scalar (keys %{ $FAI::configs{RAID}{volumes} });
++          my $vol_id = 0;
++          foreach my $ex_vol_id (&numsort(keys %{ $FAI::configs{RAID}{volumes} })) {
++            defined ($FAI::configs{RAID}{volumes}{$ex_vol_id}{mode}) or last;
++            $vol_id++;
++          }
+           # set the RAID type of this volume
+           $FAI::configs{RAID}{volumes}{$vol_id}{mode} = $1;
+           # initialise the hash of devices
