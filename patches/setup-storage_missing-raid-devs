@@ -1,9 +1,10 @@
-2009-04-10  Michael Tautschnig  <mt@debian.org>
+2009-04-28  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage/Parser.pm: $2 doesn't refer to the original expression
 		anymore, store earlier $2 as $opts.
 	* setup-storage/Sizes.pm: Properly deal with missing (as in RAID specs) or
-		non-existing (user error) devices in estimate_size.
+		non-existing (user error) devices in estimate_size; don't do stupid divide
+		by 2 in RAID1 setup. (closes: #525138)
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
@@ -133,7 +134,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -      return $min_size * POSIX::floor($dev_count / 2)
 -        if ($level eq "raid1");
        return $min_size * $dev_count if ($level eq "raid0");
-+      return $min_size * POSIX::floor($dev_count / 2) if ($level eq "raid1");
++      return $min_size if ($level eq "raid1");
        return $min_size * ($dev_count - 1) if ($level eq "raid5");
      } else {
  
