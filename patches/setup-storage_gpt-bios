@@ -1,4 +1,4 @@
-2009-03-25  Michael Tautschnig  <mt@debian.org>
+2009-04-28  Michael Tautschnig  <mt@debian.org>
 
   * setup-storage/Parser.pm, setup-storage/Sizes.pm, setup-storage/Volumes.pm:
     Added pseudo-disklabel gpt-bios to support GPT on systems with BIOS instead
@@ -116,7 +116,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
        $next_start = 34 * $current_disk->{sector_size};
  
        # modify the disk to claim the space for the second partition table
-@@ -640,6 +641,24 @@
+@@ -640,6 +641,28 @@
  
        # the space required by the GPTs
        $min_req_total_space += 2 * 34 * $current_disk->{sector_size};
@@ -138,10 +138,14 @@ Index: trunk/lib/setup-storage/Sizes.pm
 +      my $s = &FAI::convert_unit("120k");
 +      # enter the range into the hash
 +      $FAI::partition_pointer->{size}->{range} = "$s-$s";
++      # set proper defaults
++      $FAI::partition_pointer->{encrypt} = 0;
++      $FAI::partition_pointer->{filesystem} = "-";
++      $FAI::partition_pointer->{mountpoint} = "-";
      }
  
      # the list of partitions that we need to find start and end bytes for
-@@ -690,7 +709,7 @@
+@@ -690,7 +713,7 @@
  
          # msdos does not support partitions larger than 2TB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *
