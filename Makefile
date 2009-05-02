@@ -41,6 +41,7 @@ install:
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
 	install -m644 conf/fai_modules_off $(DESTDIR)/etc/modutils
+	install -m644 conf/menu.lst.boot-only $(DESTDIR)/usr/share/fai/menu.lst
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
 	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
