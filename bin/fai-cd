@@ -30,10 +30,11 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 3.3.8, 9-apr-2009"
+version="fai-cd 4.0, 3-may-2009"
 
 forceremoval=0;
 burn=0
+bootonly=0
 keep=0
 makeiso=1
 makeusb=0
@@ -45,11 +46,12 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/shar
 usage() {
 
     cat <<-EOF
-	$version. Copyright (C) 2004-2008 Thomas Lange
+	$version. Copyright (C) 2004-2009 Thomas Lange
 	Report bugs to <fai@informatik.uni-koeln.de>.
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
-	Create a fai CD, a bootable CD that performs the FAI.
+	Usage: fai-cd [OPTIONS] -B ISONAME
+	Create a FAI CD, a bootable CD that performs the FAI.
 	Read the man pages pages fai-cd(8).
 EOF
 exit 0
@@ -66,13 +68,18 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub_image() {
 
-    mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
+    mkdir -p $tmp/boot/grub $nfsrootdir
 
     [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
     [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
     cp $grub_config $tmp/boot/grub/menu.lst
     # insert date into grub menu
-    perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
+    if [ $bootonly -eq 1 ]; then
+	echo "Using kernel version $kernelversion"
+	perl -pi -e "s/_VERSIONSTRING_/   Kernel : $kernelversion     /" $tmp/boot/grub/menu.lst
+    else
+	perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
+    fi
     cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
     cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
@@ -223,7 +230,7 @@ rsync=0
 [ -x $(which rsync) ] && rsync=1
 
 # Parse commandline options
-while getopts "nkfhg:bm:C:u:" opt ; do
+while getopts "nkfhg:bBm:C:u:" opt ; do
     case "$opt" in
         C)  cdir=$OPTARG ;;
 	f)  forceremoval=1 ;;
@@ -233,6 +240,7 @@ while getopts "nkfhg:bm:C:u:" opt ; do
 	m)  mirrordir="$OPTARG" ;;
 	n)  makeiso=0 ;;
 	b)  burn=1 ;;
+	B)  bootonly=1 ;;
 	u)  usbdir="$OPTARG"
 	    makeusb=1
 	    makeiso=0
@@ -245,12 +253,16 @@ shift $(($OPTIND - 1))
 isoname=$1
 
 [ $makeiso -eq 1 -a "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
-[ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
-[ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
-[ -z "$(ls $mirrordir)" ] && die 18 "No mirror found in $mirrordir. Empty directory."
+if [ $bootonly -eq 0 ]; then
+    [ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
+    [ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
+    [ -z "$(ls $mirrordir)" ] && die 18 "No mirror found in $mirrordir. Empty directory."
+fi
 [ -f "$isoname" ]     && [ $forceremoval -eq 1 ] && rm $isoname
 [ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it or use -f."
-[ $(id -u) != "0" ]   && die 9 "Run this program as root."
+if [ $bootonly -eq 0 ]; then
+    [ $(id -u) != "0" ]   && die 9 "Run this program as root."
+fi
 
 if [ $makeiso -eq 1 ]; then
     [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
@@ -277,14 +289,22 @@ NFSROOT="$NFSROOT/live/filesystem.dir"
 
 # if -g is a file name, add prefix
 
-[ -z "$grub_config" ] && grub_config="$cfdir/menu.lst" # set default if undefined
+if [ -z "$grub_config" ]; then
+    if [ $bootonly -eq 1 ]; then
+	grub_config="/usr/share/fai/menu.lst" # default for boot-only CD
+    else
+	grub_config="$cfdir/menu.lst" # set default if undefined
+    fi
+fi
 # if grub_config contains / do not change it, else add prefix $cfdir
 echo $grub_config | grep -q '/' || grub_config="$cfdir/$grub_config"
 [ -f "$grub_config" ] || die 13 "Grub menu file $grub_config not found."
 
-[ -z "$FAI_CONFIGDIR" ]  && die 14 "Variable \$FAI_CONFIG not set."
-[ -d $FAI_CONFIGDIR ] || die 15 "Can't find config space $FAI_CONFIGDIR."
-[ -d $FAI_CONFIGDIR/class ] || die 16 "Config space $FAI_CONFIGDIR seems to be empty."
+if [ $bootonly -eq 0 ]; then
+    [ -z "$FAI_CONFIGDIR" ]  && die 14 "Variable \$FAI_CONFIG not set."
+    [ -d $FAI_CONFIGDIR ] || die 15 "Can't find config space $FAI_CONFIGDIR."
+    [ -d $FAI_CONFIGDIR/class ] || die 16 "Config space $FAI_CONFIGDIR seems to be empty."
+fi
 
 tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
 nfsrootdir=$tmp/live/filesystem.dir
@@ -297,8 +317,15 @@ aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
 create_grub_image
 
-trap "unhide_dirs;umount_dirs" EXIT ERR
-create_iso
+if [ $bootonly -eq 1 ]; then
+    rm -rf $tmp/live
+    mkiso
+    mkusb
+else
+    trap "unhide_dirs;umount_dirs" EXIT ERR
+    create_iso
+fi
+
 rm -rf $tmp
 [ "$burn" -eq 1 ] && burniso
 exit 0
