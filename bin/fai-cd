@@ -131,37 +131,37 @@ sleep_now() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkiso() {
 
-    if [ $makeiso -eq 1 ]; then
-	echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-	mkisofs --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
-	echo -n "ISO image size and filename: "; du -h $isoname
-    fi
+    [ $makeiso -eq 0 ] && return
+
+    echo "Writing FAI CD-ROM image to $isoname. This may need some time."
+    mkisofs --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
+    echo -n "ISO image size and filename: "; du -h $isoname
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkusb(){
 
-    if [ $makeusb -eq 1 ]; then
-	# TODO: If usbdir is a device (matches /dev/) mount it
-	[ -d $usbdir ] || die 17 "$usbdir does not exist."
-	if [ $rsync -eq 1 ]; then
-	    echo "Syncing FAI data to USB device $usbdir"
-	    rsync --delete -av $tmp/live $tmp/boot $usbdir || true
-	else
-	    echo "Writing FAI data to USB device $usbdir"
-	    cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
-	fi
-	echo $isoversion > $usbdir/.FAI-CD-VERSION
+    [ $makeusb -eq 0 ] && return
 
-	# now make the USB device bootable
-	rootpartition=$(find_fai_data)
-	usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
-	echo "Root partition is $rootpartition, device is: $usbdev"
-	if [ -n "$rootpartition" -a -n "$usbdev" ]; then
-	    echo "Installing grub."
-	    echo -e "root $rootpartition\n setup $usbdev" | grub --batch >/dev/null
-	else
-	    echo "Device could not be detemined. Installing grub will be skipped."
-	fi
+    # TODO: If usbdir is a device (matches /dev/) mount it
+    [ -d $usbdir ] || die 17 "$usbdir does not exist."
+    if [ $rsync -eq 1 ]; then
+	echo "Syncing FAI data to USB device $usbdir"
+	rsync --delete -av $tmp/live $tmp/boot $usbdir || true
+    else
+	echo "Writing FAI data to USB device $usbdir"
+	cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
+    fi
+    echo $isoversion > $usbdir/.FAI-CD-VERSION
+
+    # now make the USB device bootable
+    rootpartition=$(find_fai_data)
+    usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
+    echo "Root partition is $rootpartition, device is: $usbdev"
+    if [ -n "$rootpartition" -a -n "$usbdev" ]; then
+	echo "Installing grub."
+	echo -e "root $rootpartition\n setup $usbdev" | grub --batch >/dev/null
+    else
+	echo "Device could not be detemined. Installing grub will be skipped."
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
