@@ -76,7 +76,7 @@ create_grub_image() {
     # insert date into grub menu
     if [ $bootonly -eq 1 ]; then
 	echo "Using kernel version $kernelversion"
-	perl -pi -e "s/_VERSIONSTRING_/   Kernel : $kernelversion     /" $tmp/boot/grub/menu.lst
+	perl -pi -e "s/_VERSIONSTRING_/Kernel : $kernelversion/" $tmp/boot/grub/menu.lst
     else
 	perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
     fi
@@ -146,10 +146,12 @@ mkusb(){
     [ -d $usbdir ] || die 17 "$usbdir does not exist."
     if [ $rsync -eq 1 ]; then
 	echo "Syncing FAI data to USB device $usbdir"
-	rsync --delete -av $tmp/live $tmp/boot $usbdir || true
+	rsync --delete -av $tmp/boot $usbdir || true
+	[ -d $tmp/live ] && rsync --delete -av $tmp/live $usbdir || true
     else
 	echo "Writing FAI data to USB device $usbdir"
-	cp -a $tmp/live $tmp/boot $usbdir 2>/dev/null || true
+	cp -a $tmp/boot $usbdir 2>/dev/null || true
+	[ -d $tmp/live ] && cp -a $tmp/live $usbdir 2>/dev/null || true
     fi
     echo $isoversion > $usbdir/.FAI-CD-VERSION
 
@@ -260,7 +262,8 @@ if [ $bootonly -eq 0 ]; then
 fi
 [ -f "$isoname" ]     && [ $forceremoval -eq 1 ] && rm $isoname
 [ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it or use -f."
-if [ $bootonly -eq 0 ]; then
+
+if [ $bootonly -eq 0 -o $makeusb -eq 1 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
 
