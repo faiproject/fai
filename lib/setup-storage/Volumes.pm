@@ -78,8 +78,9 @@ sub get_current_disks {
         "Can't run on test-only mode on this system because there is no disklabel on $disk\n";
 
       # write the disk label as configured
-      $error = &FAI::execute_command("parted -s $disk mklabel "
-        . $FAI::configs{"PHY_$disk"}{disklabel});
+      my $label = $FAI::configs{"PHY_$disk"}{disklabel};
+      $label = "gpt" if ($label eq "gpt-bios");
+      $error = &FAI::execute_command("parted -s $disk mklabel $label");
       ($error eq "") or die "Failed to write disk label\n";
       # retry partition-table print
       $error =

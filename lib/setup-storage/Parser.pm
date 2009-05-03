@@ -431,7 +431,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{partitions}{$_}{size}{resize} = 1 foreach (split(",", $1));
           $FAI::configs{$FAI::device}{preserveparts} = 1;
         }
-        | /^disklabel:(msdos|gpt)/
+        | /^disklabel:(msdos|gpt-bios|gpt)/
         {
           # set the disk label - actually not only the above, but all types 
           # supported by parted could be allowed, but others are not implemented

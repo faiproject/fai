@@ -673,16 +673,17 @@ sub setup_partitions {
   # the list of partitions that must be preserved
   my @to_preserve = &FAI::get_preserved_partitions($config);
 
+  my $label = $FAI::configs{$config}{disklabel};
+  $label = "gpt" if ($label eq "gpt-bios");
   # A new disk label may only be written if no partitions need to be
   # preserved
-  (($FAI::configs{$config}{disklabel} eq
-      $FAI::current_config{$disk}{disklabel})
+  (($label eq $FAI::current_config{$disk}{disklabel})
     || (scalar (@to_preserve) == 0)) 
     or die "Can't change disklabel, partitions are to be preserved\n";
 
   # write the disklabel to drop the previous partition table
-  &FAI::push_command( "parted -s $disk mklabel " .
-    $FAI::configs{$config}{disklabel}, "exist_$disk", "cleared1_$disk" );
+  &FAI::push_command( "parted -s $disk mklabel $label", "exist_$disk",
+    "cleared1_$disk" );
 
   &FAI::rebuild_preserved_partitions($config, \@to_preserve);
 
@@ -785,9 +786,8 @@ sub setup_partitions {
 
   # write the disklabel again to drop the partition table and create a new one
   # that has the proper ids
-  &FAI::push_command( "parted -s $disk mklabel " .
-    $FAI::configs{$config}{disklabel}, "cleared1_$disk$pre_all_resize",
-    "cleared2_$disk" );
+  &FAI::push_command( "parted -s $disk mklabel $label",
+    "cleared1_$disk$pre_all_resize", "cleared2_$disk" );
 
   my $prev_id = -1;
   # generate the commands for creating all partitions
@@ -836,6 +836,14 @@ sub setup_partitions {
       $FAI::configs{$config}{bootable} . " boot on", "exist_" .
       &FAI::make_device_name($disk, $FAI::configs{$config}{bootable}),
       "boot_set_$disk" );
+  }
+
+  # set the bios_grub flag on BIOS compatible GPT tables
+  if ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
+    &FAI::push_command( "parted -s $disk set " .
+      $FAI::configs{$config}{gpt_bios_part} . " bios_grub on", "exist_" .
+      &FAI::make_device_name($disk, $FAI::configs{$config}{gpt_bios_part}),
+      "bios_grub_set_$disk" );
   }
 }
 
