@@ -77,6 +77,7 @@ create_grub_image() {
     if [ $bootonly -eq 1 ]; then
 	echo "Using kernel version $kernelversion"
 	perl -pi -e "s/_VERSIONSTRING_/Kernel : $kernelversion/" $tmp/boot/grub/menu.lst
+	perl -pi -e "s#_NFSROOT_#nfsroot=$servernfsroot#"        $tmp/boot/grub/menu.lst
     else
 	perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
     fi
@@ -286,6 +287,7 @@ fi
 [ "$verbose" ] && echo "Using configuration files from $cfdir"
 . $cfdir/fai.conf
 export NFSROOT=$(source $cfdir/make-fai-nfsroot.conf; echo $NFSROOT)
+servernfsroot=$NFSROOT
 NFSROOT="$NFSROOT/live/filesystem.dir"
 
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling make-fai-nfsroot or fai-setup."
