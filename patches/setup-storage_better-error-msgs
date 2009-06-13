@@ -3,6 +3,9 @@
 	* setup-storage, setup-storage/Sizes.pm: Properly handle -h, early check for
 		unset (but necessary) environment variables, print full device names in
 		several error/warning messages instead of the partition id only.
+	* setup-storage/Fstab.pm: Be more verbose if obtaining the UUID fails (may be
+		caused by earlier use in RAID array, tell the user how to solve the
+		problem).
 Index: trunk/bin/setup-storage
 ===================================================================
 --- trunk.orig/bin/setup-storage
@@ -185,3 +188,18 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
          # msdos does not support partitions larger than 2TB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -99,7 +99,9 @@
+   # every device must have a uuid, otherwise this is an error (unless we
+   # are testing only)
+   ($FAI::no_dry_run == 0 || scalar (@uuid) == 1)
+-    or die "Failed to obtain UUID for $device_name\n";
++    or die "Failed to obtain UUID for $device_name.\n
++      This may happen if the device was part of a RAID array in the past;\n
++      in this case run mdadm --zero-superblock $device_name and retry\n";
+ 
+   # get the label -- this is likely empty
+   my @label = ();
