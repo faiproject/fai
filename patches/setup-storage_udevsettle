@@ -1,7 +1,7 @@
 2009-06-13  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage: auto-detect a proper way to tell udev to settle (udevsettle
-		is used in etch, udevadm settle for sid; thanks
+	* setup-storage, setup-storage/Exec.pm: auto-detect a proper way to tell udev
+		to settle (udevsettle is used in etch, udevadm settle for sid; thanks
 		matrix.systems@matrix.msu.edu for a first patch). (closes: #530656)
 Index: trunk/bin/setup-storage
 ===================================================================
@@ -42,3 +42,17 @@ Index: trunk/lib/setup-storage/Init.pm
  # @brief The lists of disks of the system
  #
  ################################################################################
+Index: trunk/lib/setup-storage/Exec.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Exec.pm
++++ trunk/lib/setup-storage/Exec.pm	
+@@ -246,7 +246,8 @@
+ ################################################################################
+ sub execute_with_udevsettle {
+   my ($command, $stdout, $stderr) = @_;
+-  return &execute_command("udevsettle --timeout=10 && $command", $stdout,
++  defined ($FAI::udev_settle) or &FAI::internal_error("udev settle command not defined");
++  return &execute_command("$FAI::udev_settle && $command", $stdout,
+     $stderr);
+ }
+ 
