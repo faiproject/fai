@@ -1,10 +1,13 @@
-2009-04-28  Michael Tautschnig  <mt@debian.org>
+2009-06-13  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage/Parser.pm: $2 doesn't refer to the original expression
-		anymore, store earlier $2 as $opts.
+	* setup-storage/Parser.pm: RAID device parsing: $2 doesn't refer to the
+		original expression anymore, store earlier $2 as $opts; don't use options
+		sub-hash (thanks Andreas Schockenhoff for lots of testing and feedback).
 	* setup-storage/Sizes.pm: Properly deal with missing (as in RAID specs) or
 		non-existing (user error) devices in estimate_size; don't do stupid divide
 		by 2 in RAID1 setup. (closes: #525138)
+	* setup-storage/Commands.pm: Proper use of hash reference when checking for
+		"missing" option.
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
@@ -47,6 +50,15 @@ Index: trunk/lib/setup-storage/Parser.pm
                }
                (($spare == 1 || $missing == 1) && $FAI::partition_pointer->{mode} == 0)
                  and die "RAID-0 does not support spares or missing devices\n";
+@@ -640,7 +645,7 @@
+               defined ($FAI::partition_pointer->{devices}->{$dev}) and 
+                 die "$dev is already part of the RAID volume\n";
+               # set the options
+-              $FAI::partition_pointer->{devices}->{$dev}->{options} = {
++              $FAI::partition_pointer->{devices}->{$dev} = {
+                 "spare" => $spare,
+                 "missing" => $missing
+               };
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
@@ -102,7 +114,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
 +      # we can only estimate the sizes of existing volumes, assume the missing
 +      # ones aren't smaller
 +      foreach (@devcands) {
-+        next if ($FAI::configs{RAID}{volumes}{$1}{devices}{$_}{options}{missing});
++        next if ($FAI::configs{RAID}{volumes}{$1}{devices}{$_}{missing});
 +        push @devs, $_;
 +      }
        $level = $FAI::configs{RAID}{volumes}{$1}{mode};
@@ -138,3 +150,24 @@ Index: trunk/lib/setup-storage/Sizes.pm
        return $min_size * ($dev_count - 1) if ($level eq "raid5");
      } else {
  
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -191,14 +191,14 @@
+ 
+       # set proper partition types for RAID
+       foreach my $d (@devs) {
+-        if ($vol->{devices}{$d}{missing}) {
++        if ($vol->{devices}->{$d}->{missing}) {
+           if ($vol->{devices}->{$d}->{spare}) {
+             push @spares, "missing";
+           } else {
+             push @eff_devs, "missing";
+           }
+           # skip devices marked missing
+-          next if $vol->{devices}{$d}{missing};
++          next;
+         } else {
+           if ($vol->{devices}->{$d}->{spare}) {
+             push @spares, &FAI::enc_name($d);

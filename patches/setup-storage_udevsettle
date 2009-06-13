@@ -1,0 +1,44 @@
+2009-06-13  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage: auto-detect a proper way to tell udev to settle (udevsettle
+		is used in etch, udevadm settle for sid; thanks
+		matrix.systems@matrix.msu.edu for a first patch). (closes: #530656)
+Index: trunk/bin/setup-storage
+===================================================================
+--- trunk.orig/bin/setup-storage
++++ trunk/bin/setup-storage	
+@@ -177,11 +177,15 @@
+ }
+ 
+ # run the commands (if $FAI::no_dry_run is set)
++# first find the proper way to tell udev to settle
++$FAI::udev_settle = "udevadm settle --timeout=10" if (&FAI::in_path("udevadm"));
++$FAI::udev_settle = "udevsettle --timeout=10" if (&FAI::in_path("udevsettle"));
++defined($FAI::udev_settle) or die "Failed to find determine a proper way to tell udev to settle; is udev installed?";
+ &FAI::execute_with_udevsettle($FAI::commands{$_}{cmd}) foreach (&numsort(keys %FAI::commands));
+ 
+ # generate the proposed fstab contents
+ # wait for udev to set up all devices
+-`udevsettle --timeout=10`;
++&FAI::execute_with_udevsettle("true");
+ my @fstab = &FAI::generate_fstab(\%FAI::configs);
+ 
+ # print fstab
+Index: trunk/lib/setup-storage/Init.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Init.pm
++++ trunk/lib/setup-storage/Init.pm	
+@@ -48,6 +48,13 @@
+ 
+ ################################################################################
+ #
++# @brief The command to tell udev to settle (udevsettle or udevadm settle)
++#
++################################################################################
++$FAI::udev_settle = undef;
++
++################################################################################
++#
+ # @brief The lists of disks of the system
+ #
+ ################################################################################
