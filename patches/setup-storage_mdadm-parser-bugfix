@@ -1,0 +1,37 @@
+2009-06-25  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Volumes.pm: Updated mdadm --scan output parser to work with
+		current mdadm versions.
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -357,17 +357,27 @@
+ #    devices=/dev/hda1,/dev/hda2
+ # ARRAY /dev/md1 level=raid0 num-devices=2 UUID=50d7a6ec:4207f0db:b110d941:ce79a4f6
+ #    devices=/dev/md0,/dev/hda3
++# or (newer version of mdadm?)
++# kueppers[~]# mdadm --detail --scan --verbose -c partitions
++# ARRAY /dev/md0 level=raid0 num-devices=3 metadata=00.90
++# UUID=a4553444:0baf31ae:135399f0:a895f15f
++#    devices=/dev/sdf2,/dev/sdd2,/dev/sde2
++# ARRAY /dev/md1 level=raid0 num-devices=3 metadata=00.90
++# UUID=77a22e9f:83fd1276:135399f0:a895f15f
++#    devices=/dev/sde3,/dev/sdf3,/dev/sdd3
++
+ 
+   # the id of the RAID
+   my $id;
+ 
+   # parse the output line by line
+   foreach my $line (@mdadm_print) {
+-    if ($line =~ /^ARRAY \/dev\/md(\d+) level=(\S+) num-devices=\d+ UUID=/) {
++    if ($line =~ /^ARRAY \/dev\/md(\d+) level=(\S+) num-devices=\d+(\s+|$)/) {
+       $id = $1;
+       $FAI::current_raid_config{$id}{mode} = $2;
+       &FAI::push_command( "true", "", "exist_/dev/md$id" );
+     } elsif ($line =~ /^\s*devices=(\S+)$/) {
++      defined($id) or &FAI::internal_error("mdadm ARRAY line not yet seen");
+       @{ $FAI::current_raid_config{$id}{devices} } = split (",", $1);
+     }
+   }

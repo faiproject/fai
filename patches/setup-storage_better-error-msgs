@@ -1,11 +1,11 @@
-2009-06-13  Michael Tautschnig  <mt@debian.org>
+2009-06-25  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage, setup-storage/Sizes.pm: Properly handle -h, early check for
 		unset (but necessary) environment variables, print full device names in
 		several error/warning messages instead of the partition id only.
 	* setup-storage/Fstab.pm: Be more verbose if obtaining the UUID fails (may be
 		caused by earlier use in RAID array, tell the user how to solve the
-		problem).
+		problem). Ignore exit code 3 of vol_id -l.
 Index: trunk/bin/setup-storage
 ===================================================================
 --- trunk.orig/bin/setup-storage
@@ -192,7 +192,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Fstab.pm
 +++ trunk/lib/setup-storage/Fstab.pm	
-@@ -99,7 +99,9 @@
+@@ -99,12 +99,16 @@
    # every device must have a uuid, otherwise this is an error (unless we
    # are testing only)
    ($FAI::no_dry_run == 0 || scalar (@uuid) == 1)
@@ -201,5 +201,14 @@ Index: trunk/lib/setup-storage/Fstab.pm
 +      This may happen if the device was part of a RAID array in the past;\n
 +      in this case run mdadm --zero-superblock $device_name and retry\n";
  
-   # get the label -- this is likely empty
+-  # get the label -- this is likely empty
++  # get the label -- this is likely empty; exit code 3 if no label, but that is
++  # ok here
    my @label = ();
+   &FAI::execute_ro_command(
+-    "/lib/udev/vol_id -l $device_name", \@label, 0);
++    "( /lib/udev/vol_id -l $device_name ; exc=\$? ; if [ \$exc -eq 3 ] ;" .
++    " then exit 0 ; else exit \$exc ; fi )", \@label, 0);
+ 
+   # using the fstabkey value the desired device entry is defined
+   if ($key_type eq "uuid") {
