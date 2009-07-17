@@ -27,10 +27,15 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-my $version = "Version 1.2.2, 16-april-2009";
+my $version = "Version 1.3, 17-july-2009";
+
+use strict;
 
 use Getopt::Std;
 our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q);
+
+my $filename;
+my $verbose;
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
@@ -71,19 +76,19 @@ getopts('aDhsvnQq') || usage(3);
 
 $opt_h && usage(0);
 $verbose = $opt_v || $ENV{verbose} || 0;
-$debug   = $opt_D || $ENV{debug}   || 0;
+my $debug   = $opt_D || $ENV{debug}   || 0;
 
 $filename = shift;
-$line     = shift;
-$optpattern  = shift;
-$found = 0;
+my $line     = shift;
+my $optpattern  = shift;
+my $found = 0;
 usage(3) unless defined $line;
 
-print "FILE: $filename\nLINE: $line\nPATTERN: $pattern\n" if $debug;
+print "FILE: $filename\nLINE: $line\nPATTERN: $optpattern\n" if $debug;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 $opt_a && autocreate;
 
-$pattern = (defined $optpattern) ? $optpattern: $line;
+my $pattern = (defined $optpattern) ? $optpattern: $line;
 # process pattern and line
 # remove ^ and $ in line (only at start and end), but still use it for pattern
 # in no explicit pattern was given
