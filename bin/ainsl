@@ -36,6 +36,7 @@ our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q);
 
 my $filename;
 my $verbose;
+my $debug;
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
@@ -66,6 +67,17 @@ EOF
 sub autocreate {
 
   -f $filename && return;
+
+  # create missing parts of a path. Could be replaced by File::Path
+  my $path;
+  while ($filename =~ m#([^/]+)/#g) {
+    $path.="/$1";
+    -d $path && next;
+    print "ainsl: create $path\n" if $debug;
+    $opt_n && next;
+    mkdir $path || die "ainsl: can't create $path $!";
+  }
+
   print "ainsl: create $filename\n" if $verbose;
   $opt_n && return;
   open (FILE,">$filename") || die "ainsl: can't create $filename $!";
@@ -76,7 +88,7 @@ getopts('aDhsvnQq') || usage(3);
 
 $opt_h && usage(0);
 $verbose = $opt_v || $ENV{verbose} || 0;
-my $debug   = $opt_D || $ENV{debug}   || 0;
+$debug   = $opt_D || $ENV{debug}   || 0;
 
 $filename = shift;
 my $line     = shift;
