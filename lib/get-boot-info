@@ -41,14 +41,14 @@ timeout=30 # bootpc timeout
 netdevice_info() {
 
     # devices that are running
-    netdevices_up=$(ifconfig | perl -anF'\s+' -e 'print "$F[0]\n" if $F[0];' | grep -v "^lo" | sort | uniq)
+    netdevices_up=$(ip link | grep "^[1-9$]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -v "^lo" | sort | uniq)
     # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
 
     # some network driver do not echo eth0,..; they are not detected
     netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/')
-    tmp=$(ifconfig -a | awk '/^eth/ { print $1 }')
+    tmp=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep "^eth")
     netdevices_all="$netdevices_all $tmp"
     netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq)
 
