@@ -364,6 +364,7 @@ upgrade_nfsroot() {
 	cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
     fi
     mount -t proc /proc $NFSROOT/proc
+    mount -t sysfs /sys $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
@@ -403,6 +404,7 @@ umount_dirs() {
        LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /sbin/discover-modprobe
     cd /
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
+    [ -d $NFSROOT/sys/class ] && umount $NFSROOT/sys
     [ -d $NFSROOT/proc/self ] && die "/proc still mounted inside the nfsroot."
     umount $NFSROOT/dev/pts 2> /dev/null || true
 
