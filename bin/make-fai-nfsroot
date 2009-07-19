@@ -223,7 +223,7 @@ copy_fai_files() {
 
     # copy to nfsroot
     echo "root:$FAI_ROOTPW" | $ROOTCMD chpasswd --encrypted
-    cp -Rpv $cfdir/* $NFSROOT/etc/fai
+    cp -RLpv $cfdir/* $NFSROOT/etc/fai
     # append additional variables to fai.conf for the install clients
     [ -z "$FAI_CONFIG_SRC" ] && echo "FAI_CONFIG_SRC=nfs://`hostname`$FAI_CONFIGDIR" >> $NFSROOT/etc/fai/fai.conf
 
@@ -304,7 +304,7 @@ create_nfsroot() {
     > etc/raidtab
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
-    cp -a $cfdir/apt $NFSROOT/etc
+    cp -La $cfdir/apt $NFSROOT/etc
 
     ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
     ainsl     $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
@@ -321,7 +321,7 @@ EOF
 
     # overwrite default live.conf
     if [ -f $cfdir/live.conf ]; then
-	cp -p $cfdir/live.conf etc/live.conf
+	cp -Lp $cfdir/live.conf etc/live.conf
     else
 	cat > etc/live.conf <<EOF
 # UNIONTYPE=aufs # if unionfs is broken
@@ -360,8 +360,8 @@ EOF
 upgrade_nfsroot() {
 
     if [ -f /etc/resolv.conf ]; then
-	cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
-	cp -p $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
+	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
+	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
     fi
     mount -t proc /proc $NFSROOT/proc
     mount -t sysfs /sys $NFSROOT/sys
