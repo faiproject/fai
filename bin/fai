@@ -52,6 +52,8 @@ fai_init() {
 	exit 6
     fi
     [ -f $FAI_ETC_DIR/fai.conf ] && . $FAI_ETC_DIR/fai.conf
+    [ -n "$cspace" ] && FAI_CONFIG_SRC=$cspace
+    unset cspace
 
     if [ -f /etc/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
 	umount /initrd
@@ -147,7 +149,7 @@ fstart() {
 # Main routine
 
 # Parse commandline options
-TEMP=$(getopt -o u:Nhvc:C: --long hostname:,new,help,verbose,class:,cfdir: -n "$0" -- "$@")
+TEMP=$(getopt -o su:Nhvc:C: --long cspace:,hostname:,new,help,verbose,class:,cfdir: -n "$0" -- "$@")
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -182,6 +184,10 @@ while true ; do
 	    export cmdlineclasses=$1
 	    shift
 	    cmdlineclasses=${cmdlineclasses//,/ }
+	    ;;
+	-s|--cspace)
+	    shift
+	    cspace=$1
 	    ;;
 	-u|--hostname)
 	    shift
