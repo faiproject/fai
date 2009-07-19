@@ -285,26 +285,30 @@ sub compute_lv_sizes {
 ################################################################################
 sub do_partition_preserve {
 
-  my ($part_id, $config, $current_disk, $next_start, $min_req_total_space) = @_;
+  my ($part_id, $config, $disk, $next_start, $min_req_total_space) = @_;
+  # reference to the current disk config
+  my $current_disk = $FAI::current_config{$disk};
 
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
+  # full device name
+  my $part_dev_name = &FAI::make_device_name($disk, $part_id);
 
   # a partition that should be preserved must exist already
   defined($current_disk->{partitions}->{$part_id})
-    or die "$part_id can't be preserved, it does not exist.\n";
+    or die "$part_dev_name can't be preserved, it does not exist.\n";
 
   my $curr_part = $current_disk->{partitions}->{$part_id};
 
   ($next_start > $curr_part->{begin_byte})
-    and die "Previous partitions overflow begin of preserved partition $part_id\n";
+    and die "Previous partitions overflow begin of preserved partition $part_dev_name\n";
 
   # get what the user desired
   my ($start, $end) = &FAI::make_range($part->{size}->{range},
     $current_disk->{size} . "B");
   ($start > $curr_part->{count_byte} || $end < $curr_part->{count_byte})
-    and warn "Preserved partition $part_id retains size " .
-      $curr_part->{count_byte} . "\n";
+    and warn "Preserved partition $part_dev_name retains size " .
+      $curr_part->{count_byte} . "B\n";
 
   # set the effective size to the value known already
   $part->{size}->{eff_size} = $curr_part->{count_byte};
@@ -330,7 +334,7 @@ sub do_partition_preserve {
         % ($current_disk->{sector_size} *
           $current_disk->{bios_sectors_per_track} *
           $current_disk->{bios_heads})) or 
-      warn "Preserved partition $part_id does not end at a cylinder boundary, parted may fail to restore the partition!\n";
+      warn "Preserved partition $part_dev_name does not end at a cylinder boundary, parted may fail to restore the partition!\n";
 
     # add one head of disk usage if this is a logical partition
     $min_req_total_space += $current_disk->{bios_sectors_per_track} *
@@ -339,7 +343,7 @@ sub do_partition_preserve {
     # make sure we don't change extended partitions to ordinary ones and
     # vice-versa
     ($part->{size}->{extended} == $curr_part->{is_extended})
-      or die "Preserved partition $part_id can't change extended/normal setting\n";
+      or die "Preserved partition $part_dev_name can't change extended/normal setting\n";
 
     # extended partitions consume no space
     if ($part->{size}->{extended}) {
@@ -357,7 +361,7 @@ sub do_partition_preserve {
     $FAI::configs{$config}{disklabel} eq "gpt-bios") {
     (0 == ($current_disk->{partitions}{$part_id}{end_byte} + 1)
         % $current_disk->{sector_size})
-      or die "Preserved partition $part_id does not end at a sector boundary\n";
+      or die "Preserved partition $part_dev_name does not end at a sector boundary\n";
   }
 
   return ($next_start, $min_req_total_space);
@@ -425,8 +429,9 @@ sub do_partition_extended {
 ################################################################################
 sub do_partition_real {
 
-  my ($part_id, $config, $current_disk, $next_start, $min_req_total_space,
-    $worklist) = @_;
+  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $worklist) = @_;
+  # reference to the current disk config
+  my $current_disk = $FAI::current_config{$disk};
 
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
@@ -496,7 +501,8 @@ sub do_partition_real {
 
     # the next boundary is closer than the minimal space that we need
     ($available_space < $min_req_space)
-      and die "Insufficient space available for partition $part_id\n";
+      and die "Insufficient space available for partition " .
+        &FAI::make_device_name($disk, $part_id) . "\n";
 
     # the new size
     my $scaled_size = $end;
@@ -686,7 +692,7 @@ sub compute_partition_sizes
       # the partition $part_id must be preserved
       if ($part->{size}->{preserve}) {
         ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id, 
-          $config, $current_disk, $next_start, $min_req_total_space);
+          $config, $disk, $next_start, $min_req_total_space);
 
         # partition done
         shift @worklist;
@@ -716,7 +722,7 @@ sub compute_partition_sizes
         shift @worklist;
       } else {
         ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
-          $config, $current_disk, $next_start, $min_req_total_space, \@worklist);
+          $config, $disk, $next_start, $min_req_total_space, \@worklist);
 
         # msdos does not support partitions larger than 2TB
         ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *

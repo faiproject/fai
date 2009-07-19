@@ -56,8 +56,10 @@ my $version = "1.0.5";
 
 # command line parameter handling
 use Getopt::Std;
+$main::VERSION = $version;
+$Getopt::Std::STANDARD_HELP_VERSION = 1;
 our ($opt_X, $opt_f, $opt_h, $opt_d); # the variables for getopt
-&getopts('Xf:hd') || die <<EOF;
+(&getopts('Xf:hd') && !$opt_h) || die <<EOF;
 setup-storage version $version
 
 USAGE: [-X]                     no test, your harddisks will be formated
@@ -67,17 +69,19 @@ USAGE: [-X]                     no test, your harddisks will be formated
        [-h]                     print this help message
 EOF
 
-# $disklist must be provided by the environment
-defined ($ENV{disklist}) or die "Environment variable disklist is not set\n";
-
 ################################################################################
 #
 # @brief Really write any changes to disk
 #
 ################################################################################
-$FAI::no_dry_run = 0;
-$opt_X and $FAI::no_dry_run = 1;
-$opt_X or warn "setup-harddisks is running in test-only mode\n";
+if ($opt_X) {
+  # we use $ENV{LOGDIR} later on, make sure it is actually set
+  defined ($ENV{LOGDIR}) or die "Environment variable LOGDIR is not set\n";
+  $FAI::no_dry_run = 1;
+} else {
+  warn "setup-harddisks is running in test-only mode\n";
+  $FAI::no_dry_run = 0;
+}
 
 # include all subparts, which are part of the FAI perl package
 use lib "/usr/share/fai/setup-storage/";
@@ -92,11 +96,18 @@ use Exec;
 # enable debug mode, if requested using -d
 $opt_d and $FAI::debug = 1;
 
+# $disklist must be provided by the environment
+defined ($ENV{disklist}) or die "Environment variable disklist is not set\n";
+@FAI::disks = split( /\n/, $ENV{disklist} );
+print "disklist was: $ENV{disklist}\n" if ($FAI::debug);
+
 # the config source file
 my $config_file = undef;
 # use the config file, if given
 open($config_file, $opt_f) or die "Failed to open config file $opt_f\n" if ($opt_f);
 unless ($opt_f) {
+  defined ($ENV{classes}) or
+    die "Environment variable classes is not set and -f was not given\n";
   # see which class file to use
   foreach my $classfile (reverse split(/\s+/, $ENV{classes})) {
     next unless (-r "$ENV{FAI}/disk_config/$classfile");

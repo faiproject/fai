@@ -58,8 +58,7 @@ $FAI::udev_settle = undef;
 # @brief The lists of disks of the system
 #
 ################################################################################
-@FAI::disks = split( /\n/, $ENV{disklist} );
-( $FAI::debug > 0 ) and print "disklist was: $ENV{disklist}\n";
+@FAI::disks = ();
 
 ################################################################################
 #

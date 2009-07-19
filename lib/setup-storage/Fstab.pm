@@ -99,12 +99,16 @@ sub get_fstab_key {
   # every device must have a uuid, otherwise this is an error (unless we
   # are testing only)
   ($FAI::no_dry_run == 0 || scalar (@uuid) == 1)
-    or die "Failed to obtain UUID for $device_name\n";
+    or die "Failed to obtain UUID for $device_name.\n
+      This may happen if the device was part of a RAID array in the past;\n
+      in this case run mdadm --zero-superblock $device_name and retry\n";
 
-  # get the label -- this is likely empty
+  # get the label -- this is likely empty; exit code 3 if no label, but that is
+  # ok here
   my @label = ();
   &FAI::execute_ro_command(
-    "/lib/udev/vol_id -l $device_name", \@label, 0);
+    "( /lib/udev/vol_id -l $device_name ; exc=\$? ; if [ \$exc -eq 3 ] ;" .
+    " then exit 0 ; else exit \$exc ; fi )", \@label, 0);
 
   # using the fstabkey value the desired device entry is defined
   if ($key_type eq "uuid") {
