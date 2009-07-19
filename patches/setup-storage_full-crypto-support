@@ -45,7 +45,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    # add entries to crypttab
    push @FAI::crypttab, "$enc_dev_short_name\t$device\t$keyfile\tluks";
 @@ -203,11 +201,12 @@
-           next if $vol->{devices}{$d}{missing};
+           next;
          } else {
            if ($vol->{devices}->{$d}->{spare}) {
 -            push @spares, $d;
@@ -91,7 +91,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Fstab.pm
 +++ trunk/lib/setup-storage/Fstab.pm	
-@@ -160,12 +160,8 @@
+@@ -164,12 +164,8 @@
          # skip extended partitions and entries without a mountpoint
          next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
  
@@ -106,7 +106,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
  
          # if the mount point is / or /boot, the variables should be set, unless
          # they are already
-@@ -212,9 +208,7 @@
+@@ -216,9 +212,7 @@
  
          my $device_name = "/dev/$device/$l";
          if ($l_ref->{encrypt}) {
@@ -117,7 +117,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
          } else {
            $device_name = $fstab_key[0];
          }
-@@ -244,12 +238,7 @@
+@@ -248,12 +242,7 @@
          # skip entries without a mountpoint
          next if ($r_ref->{mountpoint} eq "-");
  
@@ -135,7 +135,7 @@ Index: trunk/lib/setup-storage/Init.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Init.pm
 +++ trunk/lib/setup-storage/Init.pm	
-@@ -184,6 +184,46 @@
+@@ -183,6 +183,46 @@
    return (0, "", -2);
  }
  
