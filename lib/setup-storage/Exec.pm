@@ -246,7 +246,8 @@ sub execute_command {
 ################################################################################
 sub execute_with_udevsettle {
   my ($command, $stdout, $stderr) = @_;
-  return &execute_command("udevsettle --timeout=10 && $command", $stdout,
+  defined ($FAI::udev_settle) or &FAI::internal_error("udev settle command not defined");
+  return &execute_command("$FAI::udev_settle && $command", $stdout,
     $stderr);
 }
 

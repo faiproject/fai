@@ -177,11 +177,15 @@ if ($FAI::debug) {
 }
 
 # run the commands (if $FAI::no_dry_run is set)
+# first find the proper way to tell udev to settle
+$FAI::udev_settle = "udevadm settle --timeout=10" if (&FAI::in_path("udevadm"));
+$FAI::udev_settle = "udevsettle --timeout=10" if (&FAI::in_path("udevsettle"));
+defined($FAI::udev_settle) or die "Failed to find determine a proper way to tell udev to settle; is udev installed?";
 &FAI::execute_with_udevsettle($FAI::commands{$_}{cmd}) foreach (&numsort(keys %FAI::commands));
 
 # generate the proposed fstab contents
 # wait for udev to set up all devices
-`udevsettle --timeout=10`;
+&FAI::execute_with_udevsettle("true");
 my @fstab = &FAI::generate_fstab(\%FAI::configs);
 
 # print fstab
