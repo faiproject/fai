@@ -7,7 +7,7 @@ Index: trunk/bin/fai-mirror
 ===================================================================
 --- trunk.orig/bin/fai-mirror
 +++ trunk/bin/fai-mirror	
-@@ -151,6 +151,8 @@
+@@ -123,6 +123,8 @@
  }
  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  delete_base_packages() {
@@ -16,7 +16,7 @@ Index: trunk/bin/fai-mirror
  
      # now delete all packages that are already included in base.tgz
      local p
-@@ -162,14 +164,18 @@
+@@ -134,14 +136,18 @@
      fi
      echo "Removing packages that are already included in base.tgz"
      for p in $(cat $NFSROOT/var/tmp/base-pkgs.lis); do
@@ -39,7 +39,7 @@ Index: trunk/bin/fai-mirror
      done
  }
  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-@@ -225,7 +231,8 @@
+@@ -197,7 +203,8 @@
  verbose=0
  add=1
  qflag=-qq
@@ -49,7 +49,7 @@ Index: trunk/bin/fai-mirror
      case "$opt" in
  	B) add=0 ;;
  	C) cfdir=$OPTARG ;;
-@@ -234,6 +241,7 @@
+@@ -206,6 +213,7 @@
  	c) cclasses="$OPTARG";;
  	p) preserve=1;;
  	v) verbose=1; vflag=-v; qflag='';;
@@ -57,7 +57,7 @@ Index: trunk/bin/fai-mirror
  	?) die 1 "Unknown option";;
      esac
  done
-@@ -291,17 +299,26 @@
+@@ -263,16 +271,25 @@
  # TODO: use -p to preserve sources.list
  perl -p -e 's/file:/copy:/' $cfdir/apt/sources.list > $aptcache/etc/apt/sources.list
  
@@ -76,7 +76,6 @@ Index: trunk/bin/fai-mirror
 +    echo "Downloading packages for classes:" $classes
 +    FAI=$FAI_CONFIGDIR install_packages -d $vflag
 +    [ $add -eq 1 ] && add_base_packages
-+    get_addpackages
 +    umount_dirs
 +    trap "" EXIT ERR
 +    [ $add -eq 0 ] && delete_base_packages $arch
@@ -85,7 +84,6 @@ Index: trunk/bin/fai-mirror
 -echo "Downloading packages for classes:" $classes
 -FAI=$FAI_CONFIGDIR install_packages -d $vflag
 -[ $add -eq 1 ] && add_base_packages
--get_addpackages
 -umount_dirs
 -trap "" EXIT ERR
 -[ $add -eq 0 ] && delete_base_packages
@@ -94,7 +92,7 @@ Index: trunk/bin/fai-mirror
  
  # create mirror directory structure
  echo "Calling apt-move"
-@@ -316,21 +333,55 @@
+@@ -287,21 +304,55 @@
  PKGCOMP='none gzip'
  EOF
  apt-move $qflag -c $aptmovefile update
