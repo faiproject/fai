@@ -522,6 +522,12 @@ $FAI::Parser = Parse::RecDescent->new(
           } else {
             $FAI::partition_pointer->{encrypt} = 0;
           }
+          if ($FAI::device =~ /^PHY_(.+)$/ &&
+            -1 == $FAI::configs{$FAI::device}{bootable} &&
+            $FAI::partition_pointer->{mountpoint} eq "/") {
+            $FAI::configs{$FAI::device}{bootable} =
+              $FAI::partition_pointer->{number};
+          }
         }
 
     name: m{^([^/,\s\-]+)}
