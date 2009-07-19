@@ -458,18 +458,25 @@ $FAI::Parser = Parse::RecDescent->new(
         }
 
     volume: /^vg\s+/ name devices vgcreateopt(s?)
-        | /^raid([0156])\s+/
+        | /^raid([0156]|10)\s+/
         {
           # make sure that this is a RAID configuration
           ($FAI::device eq "RAID") or die "RAID entry invalid in this context\n";
           # initialise RAID entry, if it doesn't exist already
           defined ($FAI::configs{RAID}) or $FAI::configs{RAID}{volumes} = {};
           # compute the next available index - the size of the entry
-          my $vol_id = scalar (keys %{ $FAI::configs{RAID}{volumes} });
+          my $vol_id = 0;
+          foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{RAID}{volumes} })) {
+            defined ($FAI::configs{RAID}{volumes}{$ex_vol_id}{mode}) or last;
+            $vol_id++;
+          }
           # set the RAID type of this volume
           $FAI::configs{RAID}{volumes}{$vol_id}{mode} = $1;
           # initialise the hash of devices
           $FAI::configs{RAID}{volumes}{$vol_id}{devices} = {};
+          # initialise the preserve flag
+          defined($FAI::configs{RAID}{volumes}{$vol_id}{preserve}) or
+            $FAI::configs{RAID}{volumes}{$vol_id}{preserve} = 0;
           # set the reference to the current volume
           # the reference is used by all further processing of this config line
           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
@@ -606,6 +613,8 @@ $FAI::Parser = Parse::RecDescent->new(
               &FAI::internal_error("PARSER ERROR");
             # redefine the device string
             $dev = $1;
+            # store the options
+            my $opts = $2;
             # make $dev a full path name; can't validate device name yet as it
             # might be created later on
             unless ($dev =~ m{^/}) {
@@ -618,14 +627,14 @@ $FAI::Parser = Parse::RecDescent->new(
             my @candidates = glob($dev);
 
             # options are only valid for RAID
-            defined ($2) and ($FAI::device ne "RAID") and die "Option $2 invalid in a non-RAID context\n";
+            defined ($opts) and ($FAI::device ne "RAID") and die "Option $opts invalid in a non-RAID context\n";
             if ($FAI::device eq "RAID") {
               # parse all options
               my $spare = 0;
               my $missing = 0;
-              if (defined ($2)) {
-                ($2 =~ /spare/) and $spare = 1;
-                ($2 =~ /missing/) and $missing = 1;
+              if (defined ($opts)) {
+                ($opts =~ /spare/) and $spare = 1;
+                ($opts =~ /missing/) and $missing = 1;
               }
               (($spare == 1 || $missing == 1) && $FAI::partition_pointer->{mode} == 0)
                 and die "RAID-0 does not support spares or missing devices\n";
@@ -640,7 +649,7 @@ $FAI::Parser = Parse::RecDescent->new(
               defined ($FAI::partition_pointer->{devices}->{$dev}) and 
                 die "$dev is already part of the RAID volume\n";
               # set the options
-              $FAI::partition_pointer->{devices}->{$dev}->{options} = {
+              $FAI::partition_pointer->{devices}->{$dev} = {
                 "spare" => $spare,
                 "missing" => $missing
               };

@@ -193,14 +193,14 @@ sub build_raid_commands {
 
       # set proper partition types for RAID
       foreach my $d (@devs) {
-        if ($vol->{devices}{$d}{missing}) {
+        if ($vol->{devices}->{$d}->{missing}) {
           if ($vol->{devices}->{$d}->{spare}) {
             push @spares, "missing";
           } else {
             push @eff_devs, "missing";
           }
           # skip devices marked missing
-          next if $vol->{devices}{$d}{missing};
+          next;
         } else {
           if ($vol->{devices}->{$d}->{spare}) {
             push @spares, $d;

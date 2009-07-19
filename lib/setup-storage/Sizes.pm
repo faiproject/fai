@@ -99,8 +99,9 @@ sub estimate_size {
   # this should be caught later on
   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
   if (1 == $i_p_d && -1 == $part_no) {
-    defined ($FAI::current_config{$dev}{end_byte})
-      or die "$dev is not a valid block device\n";
+    (defined ($FAI::current_config{$dev}) &&
+      defined ($FAI::current_config{$dev}{end_byte}))
+        or die "$dev is not a valid block device\n";
 
     # the size is known, return it
     return ($FAI::current_config{$dev}{end_byte} -
@@ -110,14 +111,16 @@ sub estimate_size {
   # try a partition
   elsif (1 == $i_p_d && $part_no > -1) {
     # the size is configured, return it
-    defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size})
-      and return $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size} /
-      (1024 * 1024);
+    defined ($FAI::configs{"PHY_$disk"}) and
+      defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size})
+        and return $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{eff_size} /
+        (1024 * 1024);
 
     # the size is known from the current configuration on disk, return it
-    defined ($FAI::current_config{$disk}{partitions}{$part_no}{count_byte})
-      and return $FAI::current_config{$disk}{partitions}{$part_no}{count_byte} /
-      (1024 * 1024) unless defined ($FAI::configs{"PHY_$disk"}{partitions});
+    defined ($FAI::current_config{$disk}) and
+      defined ($FAI::current_config{$disk}{partitions}{$part_no}{count_byte})
+        and return $FAI::current_config{$disk}{partitions}{$part_no}{count_byte} /
+        (1024 * 1024) unless defined ($FAI::configs{"PHY_$disk"}{partitions});
 
     # the size is not known (yet?)
     warn "Cannot determine size of $dev\n";
@@ -133,35 +136,48 @@ sub estimate_size {
     # the raid level, like raid0, raid5, linear, etc.
     my $level = "";
 
+    # the number of devices in the volume
+    my $dev_count = 0;
+
     # let's see, whether there is a configuration of this volume
-    if (defined ($FAI::configs{RAID}{volumes}{$1}{devices})) {
-      @devs  = keys %{ $FAI::configs{RAID}{volumes}{$1}{devices} };
+    if (defined ($FAI::configs{RAID}{volumes}{$1})) {
+      my @devcands = keys %{ $FAI::configs{RAID}{volumes}{$1}{devices} };
+      $dev_count = scalar(@devcands);
+      # we can only estimate the sizes of existing volumes, assume the missing
+      # ones aren't smaller
+      foreach (@devcands) {
+        $dev_count-- if ($FAI::configs{RAID}{volumes}{$1}{devices}{$_}{spare});
+        next if ($FAI::configs{RAID}{volumes}{$1}{devices}{$_}{missing});
+        push @devs, $_;
+      }
       $level = $FAI::configs{RAID}{volumes}{$1}{mode};
-    } elsif (defined ($FAI::current_raid_config{$1}{devices})) {
+    } elsif (defined ($FAI::current_raid_config{$1})) {
       @devs  = $FAI::current_raid_config{$1}{devices};
+      $dev_count = scalar(@devs);
       $level = $FAI::current_raid_config{$1}{mode};
     } else {
       die "$dev is not a known RAID device\n";
     }
 
+    # make sure there is at least one non-missing device
+    (scalar(@devs) > 0) or die "No devices available in /dev/md$1\n";
+
     # prepend "raid", if the mode is numeric-only
     $level = "raid$level" if ($level =~ /^\d+$/);
 
-    # the number of devices in the volume
-    my $dev_count = scalar (@devs);
-
     # now do the mode-specific size estimations
-    if ($level =~ /^raid[015]$/) {
+    if ($level =~ /^raid([0156]|10)$/) {
       my $min_size = &estimate_size(shift @devs);
       foreach (@devs) {
         my $s = &FAI::estimate_size($_);
         $min_size = $s if ($s < $min_size);
       }
 
-      return $min_size * POSIX::floor($dev_count / 2)
-        if ($level eq "raid1");
       return $min_size * $dev_count if ($level eq "raid0");
+      return $min_size if ($level eq "raid1");
       return $min_size * ($dev_count - 1) if ($level eq "raid5");
+      return $min_size * ($dev_count - 2) if ($level eq "raid6");
+      return $min_size * ($dev_count/2) if ($level eq "raid10");
     } else {
 
       # probably some more should be implemented
