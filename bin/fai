@@ -61,9 +61,6 @@ fai_init() {
 	FAI_CONFIG_SRC="file://$FAI"   # on a fai-cd the config space is already available
     fi
 
-    # some variables from are not needed any more
-    #unset FAI_CONFIGDIR
-
     # read subroutine definitions
     local sub=/usr/lib/fai/subroutines
     [ -f $sub ] && . $sub
@@ -290,6 +287,9 @@ fai_init
 unset newhostname
 if [ X$action = Xdirinstall ]; then
     skiptask confdir
+    # dirinstall still uses FAI_CONFIGDIR, which is wrnog IMO. It
+    # should use FAI_CONFIG_SRC
+    FAI_CONFIGDIR=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $FAI_CONFIGDIR)
     export FAI=$FAI_CONFIGDIR
     set -a
 fi

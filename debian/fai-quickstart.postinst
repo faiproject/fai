@@ -16,7 +16,14 @@ set -e
 
 case "$1" in
     configure)
-	. /etc/fai/fai.conf
+
+	# for upgrades from 3.2.20 to newer versions.
+	if egrep -q ^FAI_CONFIGDIR= /etc/fai/fai.conf; then
+	    echo "The variable \$FAI_CONFIGDIR is still defined in /etc/fai/fai.conf."
+	    echo "Please move it to /etc/fai/make-fai-nfsroot.conf."
+	fi
+
+	. /etc/fai/make-fai-nfsroot.conf
 	if [ ! -d $FAI_CONFIGDIR/class ]; then
 	    mkdir -p $FAI_CONFIGDIR
 	    cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR

@@ -20,7 +20,13 @@ set -e
 
 # nothing to do during upgrade
 case "$1" in
-    upgrade) exit 0 ;;
+    upgrade)
+	if egrep -q ^FAI_CONFIGDIR= /etc/fai/fai.conf; then
+	    echo "The variable \$FAI_CONFIGDIR is still defined in /etc/fai/fai.conf."
+	    echo "Please move it to /etc/fai/make-fai-nfsroot.conf."
+	fi
+	exit 0
+	;;
 esac
 
 . /etc/fai/fai.conf
