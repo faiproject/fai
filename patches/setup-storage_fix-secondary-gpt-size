@@ -1,0 +1,38 @@
+2009-07-19  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Sizes.pm: Secondary GPT only requires 33 sectors.
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -633,14 +633,14 @@
+         $current_disk->{sector_size};
+ 
+     } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
+-      # on GPT-EFI disk labels the first 34 and last 34 sectors must be left alone
++      # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
+       $next_start = 34 * $current_disk->{sector_size};
+ 
+       # modify the disk to claim the space for the second partition table
+-      $current_disk->{end_byte} -= 34 * $current_disk->{sector_size};
++      $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
+ 
+       # the space required by the GPTs
+-      $min_req_total_space += 2 * 34 * $current_disk->{sector_size};
++      $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
+ 
+     } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
+       # on BIOS-style disk labels, the first partitions starts at head #1
+@@ -653,10 +653,10 @@
+ 
+       # apparently parted insists in having some space left at the end too
+       # modify the disk to claim the space for the second partition table
+-      $current_disk->{end_byte} -= 34 * $current_disk->{sector_size};
++      $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
+ 
+       # the space required by the GPTs
+-      $min_req_total_space += 34 * $current_disk->{sector_size};
++      $min_req_total_space += 33 * $current_disk->{sector_size};
+ 
+       # on gpt-bios we'll need an additional partition to store what doesn't fit
+       # in the MBR
