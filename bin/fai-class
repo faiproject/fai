@@ -27,7 +27,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-version="version 1.5.7, 11-may-2009"
+version="version 1.5.8, 20-july-2009"
 
 # import variables: $LOGDIR $verbose $debug
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -77,7 +77,7 @@ usage() {
 
     ex=$1
     cat <<-EOF
-	fai-class $version. Copyright (C) 2002-2005 Thomas Lange
+	fai-class $version. Copyright (C) 2002-2009 Thomas Lange
 	Report bugs to <fai@informatik.uni-koeln.de>.
 
 	Usage: fai-class [OPTION] DIRECTORY CLASSFILE
@@ -185,8 +185,12 @@ done
 
 if [ -f $LOGDIR/additional-classes ]; then
     cat $LOGDIR/additional-classes | addclass
-    rm -f $LOGDIR/additional-classes
-    # remove the file after it was used. Do not use the same file more than once.
+    if [ "$debug" ]; then
+	mv $LOGDIR/additional-classes $LOGDIR/additional-classes.used
+    else
+        # remove the file after it was used. Do not use the same file more than once.
+	rm -f $LOGDIR/additional-classes
+    fi
 fi
 
 # add all classes which are listed in a file with the hostname
