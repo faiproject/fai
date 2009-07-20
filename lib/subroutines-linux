@@ -41,6 +41,14 @@ eval_cmdline() {
     echo -n "Kernel parameters: "; cat /proc/cmdline
     for word in $(cat /proc/cmdline) ; do
 	case $word in
+	    FAI_CLASSES=*)
+                eval "$word"
+		for class in ${FAI_CLASSES//,/ }; do
+		    echo $class >>/tmp/l
+		done
+		unset FAI_CLASSES
+		;;
+
 	    [a-zA-Z]*=*)
 		eval "export $word"
 		;;
