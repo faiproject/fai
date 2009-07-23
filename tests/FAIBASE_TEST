@@ -1,0 +1,44 @@
+#! /usr/bin/perl
+
+use strict;
+use warnings;
+use Faitest;
+package FAITEST;
+
+setup_test();
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+# now comes the test itself
+
+my $dev = &getDevByMount("/target/home");
+&checkE2fsAttribute($dev,"Filesystem volume name","home");
+&checkE2fsAttribute($dev,"Maximum mount count","-1");
+&checkE2fsAttribute($dev,"Check interval","0 (<none>)");
+
+exit printresult();
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+__END__
+
+=head1 NAME
+
+FAIBASE_TEST - regression test for setup-storage disk layout FAIBASE
+
+=head1 SYNOPSIS
+
+FAIBASE_TEST checks some important aspects of setup-storage. The
+disk_config/FAIBASE tunes some filesystem parameters upon creation. We
+check only the last partition since we expect prior errors to make
+creation of the last partition fail.
+
+ Options:
+ -help          simple help
+ -verbose=n     increase verbosity of test script
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-help>
+simple help
+
+=item B<-verbose>
+increase verbosity of test script
