@@ -1,0 +1,43 @@
+#! /usr/bin/perl
+
+use strict;
+use warnings;
+use Faitest;
+package FAITEST;
+
+setup_test();
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+# now comes the test itself
+
+&checkE2fsAttribute("/dev/mapper/volg1-es","Filesystem features","has_journal needs_recovery");
+&checkE2fsAttribute("/dev/mapper/volg1-hl","Filesystem features","has_journal resize_inode dir_index filetype needs_recovery sparse_super large_file");
+&checkE2fsAttribute("/dev/mapper/volg1-v","Filesystem features","has_journal filetype needs_recovery sparse_super");
+&checkMdStat("md0","active raid1 sda5[1] sda7[0]");
+&checkMdStat("md1","active raid1 sda8[1] sda6[0]");
+
+exit printresult();
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+__END__
+
+=head1 NAME
+
+DSK_TEST_4 - regression test for setup-storage disk layout DSK_TEST_4
+
+=head1 SYNOPSIS
+
+DSK_TEST_4 checks some important aspects of setup-storage. The DSK_TEST_4 disk layout uses RAID and LVM for most partitions and
+makes use of setup-storage ability to customize filesystem creation.
+
+ Options:
+ -help          simple help
+ -verbose=n     increase verbosity of test script
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-help>
+simple help
+
+=item B<-verbose>
+increase verbosity of test script

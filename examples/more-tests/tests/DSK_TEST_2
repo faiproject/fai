@@ -1,0 +1,51 @@
+#! /usr/bin/perl
+
+use strict;
+use warnings;
+use Faitest;
+package FAITEST;
+
+setup_test();
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+# now comes the test itself
+
+my $dev = &getDevByMount("/target/home");
+&checkE2fsAttribute($dev,"Filesystem volume name","home");
+&checkE2fsAttribute($dev,"Maximum mount count","-1");
+&checkE2fsAttribute($dev,"Reserved block count","0");
+&checkE2fsAttribute($dev,"Default mount options","user_xattr acl");
+
+system("md5sum --check /target/home/test.md5");
+unless ($? == 0) {
+  $FAITEST::errors++;
+  # was printed to STDERR
+  print $FAITEST::LOGFILE "md5sum failed: you either did not finish DSK_TEST_1 or preserve partition did not work.\n";
+}
+
+exit printresult("DSK_TEST_3");
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+__END__
+
+=head1 NAME
+
+DSK_TEST_2 - regression test for setup-storage disk layout DSK_TEST_2
+
+=head1 SYNOPSIS
+
+DSK_TEST_2 checks some important aspects of setup-storage. DSK_TEST_2 depends on succesful completion of DSK_TEST_1.
+In particular, DSK_TEST_2 checks the preserve partition feature on the file /target/home/test.data that is created
+by DSK_TEST_1.
+
+ Options:
+ -help          simple help
+ -verbose=n     increase verbosity of test script
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-help>
+simple help
+
+=item B<-verbose>
+increase verbosity of test script
