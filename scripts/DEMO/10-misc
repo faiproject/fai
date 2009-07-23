@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2001-2007, lange@debian.org
+# (c) Thomas Lange, 2001-2009, lange@debian.org
 
 ifclass XORG && {
     fcopy -M /etc/X11/xorg.conf
@@ -10,5 +10,7 @@ ifclass XORG && {
 }
 
 # add a demo user account
-$ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
-echo "demo:$ROOTPW" | $ROOTCMD chpasswd --encrypted
+if ! $ROOTCMD getent passwd demo ; then
+    $ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
+    echo "demo:$ROOTPW" | $ROOTCMD chpasswd --encrypted
+fi
