@@ -252,8 +252,15 @@ EOF
 task_updatebase() {
 
     # maybe the base system is not up to date
-    echo "Updating base"
-    updatebase
+
+    if [ "$verbose" ]; then
+	echo "Updating base"
+	updatebase </dev/null 2>&1 | tee -a $LOGDIR/software.log
+        task_error 474 ${PIPESTATUS[0]}
+    else
+        updatebase </dev/null >> $LOGDIR/software.log 2>&1
+        task_error 474 $?
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_instsoft() {
