@@ -6,7 +6,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2007 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2009 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -29,7 +29,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-my $version = "Version 2.3, 22-october-2008";
+my $version = "Version 2.3.1, 31-july-2009";
 
 use strict;
 use File::Copy;
@@ -338,7 +338,7 @@ sub read_status {
   my $n = my @status_files=split(/,/,$opt_update);
   ($n != 2) && die "fcopy: need both log and changes file\n";
 
-  open(LASTLOG,$status_files[0]);
+  open(LASTLOG,$status_files[0]) || die "Can't open status file $status_files[0]\n";
   while (<LASTLOG>) {
     s/\#.*//g;
     chomp;
@@ -350,7 +350,7 @@ sub read_status {
 
   $_=$source; /([^\/]+)$/;
   my $source_base = $1;
-  open(CHANGES,$status_files[1]);
+  open(CHANGES,$status_files[1]) || die "Can't open status file $status_files[1]\n";
   while (<CHANGES>) {
     s/\#.*//g;
     chomp;
@@ -428,7 +428,7 @@ chomp $source; # since pwd contains a newline
 $target  = $opt_t || $ENV{FAI_ROOT} || $ENV{target};
 $target eq "/" or $ENV{'ROOTCMD'}="chroot $target";
 $logfile = $opt_L || $ENV{LOGDIR} && "$ENV{LOGDIR}/fcopy.log" || 0;
-$logfile and (open(LOGFILE,">> $logfile") || die("can't open logfile: $!"));
+$logfile and (open(LOGFILE,">> $logfile") || die "can't open logfile: $!");
 $backupdir = $opt_b || $ENV{FAI_BACKUPDIR};
 
 if ($opt_U && -f "/var/run/fai/fai_softupdate_is_running" ) {
