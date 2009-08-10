@@ -1,45 +1,50 @@
-docname = fai-guide
-fdocname = $(docname).sgml
+#!/bin/make -s
+
+DOC = fai-guide
 MISC_DOC = classes_description.txt links.html changelog.old
 
-%.html: %.sgml
-	debiandoc2html $<
+free:	text html ps pdf
+#	echo "`grep -c FIXME $(DOC).txt` FIXMEs left to fix:"
+#	grep FIXME $(DOC).txt
 
-%.pdf: %.sgml
-	debiandoc2latexpdf $<
+html:
+	a2x --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f xhtml $(DOC).txt
 
-%.ps: %.sgml
-	debiandoc2latexps $<
+pdf:	
+	a2x --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
+	rm -f $(DOC).xml $(DOC).fo
 
-%.txt: %.sgml
-	debiandoc2text $<
+ps:	
+	a2x --icons -a toc -a toclevels=3 -f ps $(DOC).txt
+	rm -f $(DOC).xml $(DOC).fo
 
-postscript: fai-guide.ps
+# a2x uses lynx, maybe use w3m instead
+# which texwidth for text output?
+# asciidoc --doctype=article  -a "toc" -a "toclevels=3" -f /etc/asciidoc/text.conf -b html4 -o - "f-guide.txt" | lynx -dump -stdin >"./f-guide.text"
+text:	
+	a2x --icons -a toc -a toclevels=3 -f text $(DOC).txt
 
-pdf: fai-guide.pdf
+# for openoffice
+doc:	html
+	unoconv --show >/dev/null 2>&1 || exit "Please install the unoconv package." 
+	unoconv -f doc $(DOC).html
 
-html: fai-guide.html
-
-dvi: test
-	debiandoc2latexdvi $(fdocname)
-
-text: fai-guide.txt
-
-test:
-	nsgmls -wall -E20 -gues $(fdocname)
-
-clean:
-	rm -rf $(docname).txt $(docname).dvi $(docname).pdf $(docname).html $(docname).sasp* *~ $(docname).texinfo $(docname).ps $(docname).out $(docname).tpt $(docname).tex
-	rm -f body.tmp head.tmp thb*.png *.log
-
-print: dvi
-	dvips -f $(docname) | lpr
+all:	free
 
 install:
-	rm -f $(docname).tpt $(docname).out
-	cp -dRp $(docname)* $(DOCDIR)
+	cp -dRp $(DOC)* $(DOCDIR)
 	cp -p $(MISC_DOC) $(DOCDIR)
 
-all: test pdf text html postscript
+clean: 
+	rm -rf .a2x-icons
+	rm -f $(DOC).text $(DOC).html $(DOC).doc $(DOC).pdf $(DOC).xml $(DOC).ps docbook-xsl.css
 
-.PHONY: all dvi text html pdf test clean print postscript
+test:
+	asciidoc --version > /dev/null 2>&1 || exit "Please install the asciidoc package." 
+
+
+.PHONY: all test clean
+
+
+
+
