@@ -27,7 +27,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.1.7, 24-july-2009";
+my $version = "Version 4.1.8, 27-august-2009";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -374,18 +374,21 @@ sub mkpackagelist {
   # nothing to do, when no Debian types/commands are used at all
   unless ($hasdebian) {
     @known = @complete;
+    writepackages();
     return;
   }
 
   # no package name checking when using smart
   if ($atype eq "smarti" || $atype eq "smartr") {
     @known=@complete;
+    writepackages();
     return;
   }
 
   # no package name checking when -N was given
   if ($opt_N) {
     @known=@complete;
+    writepackages();
     return;
   }
 
@@ -407,6 +410,7 @@ sub mkpackagelist {
   # is used. This is because we can't check task names, which are supported by aptitude
   if ($atype eq "aptitude") {
     @known=@orig;
+    writepackages();
     return;
   }
 
@@ -446,7 +450,19 @@ sub mkpackagelist {
       push @unknown, $pack;
     }
   }
+
+  writepackages();
   warn "WARNING: These unknown packages are removed from the installation list: " . join(' ',sort @unknown) . "\n" if @unknown;
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub writepackages {
+
+  # write package list to log file
+  open(LIST,"> $FAI_ROOT/tmp/packages.list") || warn "ERROR $0: Can't write package list file: $!\n";
+  print LIST "# List of all packages that will be installed\n";
+  for (@known) { print LIST "$_\n"; }
+  close(LIST);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
