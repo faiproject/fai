@@ -21,37 +21,6 @@ Index: trunk/examples/simple/files/boot/grub/menu.lst/postinst
  
  # if class NOMBR is defined, write boot loader into root partition, not into mbr
  ifclass NOMBR && BOOT_DEVICE=$BOOT_PARTITION
-Index: trunk/examples/simple/class/20-hwdetect.source
-===================================================================
---- trunk.orig/examples/simple/class/20-hwdetect.source
-+++ trunk/examples/simple/class/20-hwdetect.source	
-@@ -5,7 +5,8 @@
- # NOTE: Files named *.source will be evaluated, but their output ignored. Instead
- # the contents of $newclasses will be added to the list of defined classes.
- 
--[ "$action" = "dirinstall" ] && return 0 # Do not execute when doing dirinstall
-+# Do not execute when doing dirinstall or softupdate
-+[ "$action" = "dirinstall" -o "$action" = "softupdate" ] && return 0
- 
- echo 0 > /proc/sys/kernel/printk
- 
-Index: trunk/examples/simple/scripts/DEMO/10-misc
-===================================================================
---- trunk.orig/examples/simple/scripts/DEMO/10-misc
-+++ trunk/examples/simple/scripts/DEMO/10-misc	
-@@ -9,6 +9,9 @@
- #    perl -pi.orig -pe "s/%%VIDEODRIVER%%/$VIDEODRIVER/" $target/etc/X11/xorg.conf
- }
- 
--# add a demo user account
--$ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
--echo "demo:$ROOTPW" | $ROOTCMD chpasswd --encrypted
-+if ! $ROOTCMD getent passwd demo ; then
-+  # add a demo user account
-+  $ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
-+  echo "demo:$ROOTPW" | $ROOTCMD chpasswd --encrypted
-+fi
-+
 Index: trunk/examples/simple/scripts/FAIBASE/30-interface
 ===================================================================
 --- trunk.orig/examples/simple/scripts/FAIBASE/30-interface
@@ -78,32 +47,6 @@ Index: trunk/examples/simple/scripts/FAIBASE/30-interface
  fcopy -iM /etc/network/interfaces /etc/networks
  
  exit $error
-Index: trunk/examples/simple/scripts/FAISERVER/10-conffiles
-===================================================================
---- trunk.orig/examples/simple/scripts/FAISERVER/10-conffiles
-+++ trunk/examples/simple/scripts/FAISERVER/10-conffiles	
-@@ -5,10 +5,16 @@
- 
- #/etc/fai/fai.conf /etc/fai/make-fai-nfsroot.conf
- fcopy /etc/apt-proxy/apt-proxy-v2.conf /etc/fai/apt/sources.list
--# use the same sources.list for the server itself and the clients
--cp -a $target/etc/fai/apt $target/etc/
- 
--rm -f $target/etc/resolv.conf
-+# Michael T: actually I absolutely don't understand the following, but I guess
-+# it must not happen on softupdates
-+if [ $FAI_ACTION != "softupdate" ] ; then
-+  # use the same sources.list for the server itself and the clients
-+  cp -a $target/etc/fai/apt $target/etc/
-+
-+  rm -f $target/etc/resolv.conf
-+
-+  # create some host entries
-+  perl -e 'for (1..25) {printf "192.168.1.%s atom%02s\n",$_,$_;}' >> $target/etc/hosts
-+fi
- 
--# create some host entries
--perl -e 'for (1..25) {printf "192.168.1.%s atom%02s\n",$_,$_;}' >> $target/etc/hosts
 Index: trunk/examples/simple/scripts/GRUB/10-setup
 ===================================================================
 --- trunk.orig/examples/simple/scripts/GRUB/10-setup
@@ -117,16 +60,3 @@ Index: trunk/examples/simple/scripts/GRUB/10-setup
  
  exit $error
  
-Index: trunk/examples/simple/scripts/LAST/50-misc
-===================================================================
---- trunk.orig/examples/simple/scripts/LAST/50-misc
-+++ trunk/examples/simple/scripts/LAST/50-misc	
-@@ -11,7 +11,7 @@
- done
- 
- [ "$FAI_DEBMIRROR" ] && 
--echo "#$FAI_DEBMIRROR $MNTPOINT nfs ro 0 0" >> $target/etc/fstab
-+ainsl $target/etc/fstab "#$FAI_DEBMIRROR $MNTPOINT nfs ro 0 0"
- 
- # set bios clock
- if [ $do_init_tasks -eq 1 ] ; then
