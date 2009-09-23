@@ -9,6 +9,7 @@
 # (c) 2000-2009, Thomas Lange, lange@informatik.uni-koeln.de
 # (c) 2003-2004, Henning Glawe, glaweh@physik.fu-berlin.de
 # (c) 2004     , Jonas Hoffmann, jhoffman@physik.fu-berlin.de
+# PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -27,7 +28,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.1.8, 27-august-2009";
+my $version = "Version 4.1.9, 23-september-2009";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -38,7 +39,6 @@ use Getopt::Std;
 # global variables
 our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p);
 my $listonly; # flag, that indicates that only a list of packages will be printed
-our @commands;
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
 my $dryrun=0;
@@ -60,15 +60,15 @@ my $cache;  # instance of AptPkg::Cache
 my @unknown; # unknown packages
 my @known;   # list of all known packages
 my $execerrors; # counts execution errors
+my $use_aptpkg=0;
+my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 
-# PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
-
 $| = 1;
-# order of commands to execute
 
-my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
-@commands = qw/y2i y2r yast rpmr urpmi urpme yumgroup yumi yumr smarti smartr hold taskrm taskinst clean-internal aptitude aptitude-r install unpack remove dselect-upgrade/;
+
+# @commands is the order of the commands that are executed
+our @commands = qw/y2i y2r yast rpmr urpmi urpme yumgroup yumi yumr smarti smartr hold taskrm taskinst clean-internal aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
     "inst-internal" => "apt-get $aptopt --fix-missing -s install",
@@ -93,14 +93,13 @@ my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-
 	     "y2r"  => "y2pmsh remove",
 	     "yast" => "yast -i",
 	     "rpmr" => "rpm -e",
-             smarti => "smart install -y",
-             smartr => "smart remove -y",
+           "smarti" => "smart install -y",
+           "smartr" => "smart remove -y",
   "smartc-internal" => "smart clean",
 );
 
 getopts('dhHvlLm:p:nN');
 
-my $use_aptpkg=0;
 $opt_N || check_aptpkg(); # do not use AptPkg when -N is given
 
 $listonly = $opt_l || $opt_L;
@@ -132,20 +131,20 @@ if ($use_aptpkg) {
 }
 
 warn "$0: reading config files from directory $classpath\n";
-# read all package config files
 foreach (@classes) {
-  &readconfig($classpath,$_) if -f "$classpath/$_";
+  &readconfig($classpath,$_) if -f "$classpath/$_"; # read all package config files
 }
 
 # check if any Debian related commands/types are used in package_config
 my @debiantypes= qw/taskinst aptitude aptitude-r install remove dselect-upgrade smarti/;
 foreach my $dt (@debiantypes) {
   $types{$dt} and $hasdebian=1;
-  if ($types{$dt} eq 'smarti') {
-    $command{'clean-internal'} = $command{'smartc-internal'};
-    $command{'pending-internal'} = "true";
-    $command{'dpkgc-internal'} = "true";
-  }
+}
+
+if ($types{'smarti'}) {  # smarti is used in a packages_config file
+  $command{'clean-internal'} = $command{'smartc-internal'};
+  $command{'pending-internal'} = "true";
+  $command{'dpkgc-internal'} = "true";
 }
 
 # get files which must exist before installing packages
@@ -433,7 +432,6 @@ sub mkpackagelist {
       } else {
 	push @unknown, $pack;
       }
-
     }
 
     # simulate APTs and aptitudes understanding of "special" package names
