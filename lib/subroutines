@@ -606,3 +606,342 @@ catnc() {
     egrep -v "^#" $@
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    $device_size $disklist
+# Requires-Var:
+# Short-Description: create list of available disks and their sizes
+### END SUBROUTINE INFO
+
+set_disk_info() {
+
+    # the variable holds a space separated list of devices and their block size
+    device_size=$(disk-info)
+
+    # a list of all local disks, without size
+    disklist=$(list_disks $device_size | sort)
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+eval_cmdline() {
+
+    # parse kernel parameters and define variables
+    local word
+
+    echo -n "Kernel currently running: "
+    uname -rsmo
+    echo -n "Kernel parameters: "; cat /proc/cmdline
+    for word in $(cat /proc/cmdline) ; do
+	case $word in
+	    FAI_CLASSES=*)
+                eval "$word"
+		for class in ${FAI_CLASSES//,/ }; do
+		    echo $class >>/tmp/l
+		done
+		unset FAI_CLASSES
+		;;
+
+	    [a-zA-Z]*=*)
+		eval "export $word"
+		;;
+	esac
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    $faimond $sendhostname
+# Requires-Var:    $LOGDIR $FAI
+# Suggests-Var:    $monserver
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+task_confdir() {
+
+    if [ $do_init_tasks -eq 1 ] ; then
+        eval_cmdline
+
+        get-boot-info
+        echo "Reading $LOGDIR/boot.log"
+        . $LOGDIR/boot.log
+        unset T170 T171 T172 ROOT_PATH BOOTFILE
+
+	printk=${printk:-6}
+	echo $printk > /proc/sys/kernel/printk
+	rsyslogd -c3
+
+        create_resolv_conf
+    fi
+    define_fai_flags
+
+    # check if monitor server is available
+    [ -z "$monserver" ] && monserver=$SERVER
+    if [ -z "$monserver" ]; then
+	echo "No monitor daemon defined."
+	faimond=0
+    else
+	faimond=1
+	sendhostname=$HOSTNAME # save current hostname
+	if sendmon check; then
+	    echo "Monitoring to server $monserver enabled."
+	    sendmon "TASKBEGIN confdir"
+	else
+	    faimond=0
+	    echo "Can't connect to monserver on $monserver port 4711. Monitoring disabled."
+	fi
+    fi
+
+    get-config-dir || {
+	echo "Problems accessing the config space."
+	die ""
+    }
+
+    # now you have enough time to make changes to the config space
+    # only for debugging
+    if [ -n "$flag_wait" ]; then
+	echo "Sleeping. Now you may change the config space in $FAI."
+	echo "Continue after killall sleep."
+	sleep 50000
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    $BOOT_DEVICE $ROOT_PARTITION $BOOT_PARTITION $SWAPLIST
+# Requires-Var:    $LOGDIR $LOGDIR/disk_var.sh
+# Short-Description: partition local hard disk
+### END SUBROUTINE INFO
+
+task_partition() {
+
+    if [ X$USE_SETUP_STORAGE = X1 ]; then
+	echo "Partitioning local harddisks using setup-storage"
+	[ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X 2>&1 | tee $LOGDIR/format.log
+    else
+	echo "Partitioning local harddisks using setup_harddisks"
+	[ ! -s $LOGDIR/disk_var.sh ] && setup_harddisks -d -X 2>&1 | tee $LOGDIR/format.log
+    fi
+
+    # partitioning tool must create $LOGDIR/disk_var.sh file
+    if [ ! -s $LOGDIR/disk_var.sh ]; then
+	task_error 710
+	cat $LOGDIR/format.log
+	sendmon "TASKERROR partition 21"
+	die "Partitioning tool did not create $LOGDIR/disk_var.sh file."
+    fi
+    # now define variable for root and boot partition and boot device
+    . $LOGDIR/disk_var.sh
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    none
+# Requires-Var:    $NFSROOT
+# Suggests-Var:
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+call_debootstrap() {
+
+    local dversion=$(dpkg -l debootstrap | grep debootstrap | cut -f7 -d' ')
+    echo "Creating base system using debootstrap version $dversion"
+    echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2"
+    LC_ALL=C debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    none
+# Requires-Var:    $FAI_ROOT $do_init_tasks $NFSROOT $LOGDIR
+# Suggests-Var:    $FAI_DEBOOTSTRAP
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+task_extrbase() {
+
+    local fs=$FAI_ROOT/etc/fstab
+    local basefile=/var/tmp/base.tgz
+
+    echo "Unpacking Debian base archive"
+    # copy the base file class based if it exists
+    [ -d $FAI/basefiles ] && ftar -1v -s $FAI/basefiles /
+    if [ $? -ne 0 ]; then
+	[ $do_init_tasks -eq 0 ] && basefile=$NFSROOT/live/filesystem.dir/var/tmp/base.tgz
+	if [ -f $basefile ]; then
+	    # extract the tar file which was the result of debootstrap
+	    echo "Extracting $basefile"
+	    gzip -dc $basefile | tar -C $FAI_ROOT -xpf -
+	else
+	    echo "No base.tgz found. Calling debootstrap."
+	    [ -z "$FAI_DEBOOTSTRAP" ] && die "$FAI_DEBOOTSTRAP undefined. Aborting"
+	    call_debootstrap $FAI_DEBOOTSTRAP
+	    task_error 801 $?
+	fi
+    fi
+    # now we can copy fstab
+    [ -f $fs ] && mv $fs $fs.old
+    [ -f $LOGDIR/fstab ] && cp -p $LOGDIR/fstab $fs
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_ROOT $MNTPOINT $romountopt
+# Suggests-Var:    $FAI_DEBMIRROR $debug
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+task_mirror() {
+
+    # mount debian mirror directory
+    [ "$FAI_DEBMIRROR" ] || return   # nothing to do
+    mkdir -p ${FAI_ROOT}${MNTPOINT}
+    if mount $romountopt $FAI_DEBMIRROR ${FAI_ROOT}${MNTPOINT}; then
+      [ "$debug" ] && echo "Mirror mounted from $FAI_DEBMIRROR to ${FAI_ROOT}${MNTPOINT}"
+    else
+      sendmon "TASKERROR mirror $?"
+      die "Can't mount $FAI_DEBMIRROR"
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_debconf () {
+
+    if [ ! -d $FAI/debconf ]; then
+	echo "Can't find debconf directory $FAI/debconf. Skipping preseeding."
+	task_error 2
+	return
+    fi
+    fai-debconf $FAI/debconf
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    none
+# Requires-Var:    $FAI_ROOT $FAI_ETC_DIR
+# Suggests-Var:    $IPADDR $DOMAIN
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+task_prepareapt () {
+
+    # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
+    # think about using fcopy for these two files
+    [ -f /etc/resolv.conf ] && cp /etc/resolv.conf $FAI_ROOT/etc
+    [ -f /etc/hosts ] && cp /etc/hosts $FAI_ROOT/etc
+    # set hostname in $FAI_ROOT
+    if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
+      echo $HOSTNAME >$FAI_ROOT/etc/hostname
+      if [ -n "$IPADDR" ]; then
+	  ainsl -s $FAI_ROOT/etc/hosts "$IPADDR $HOSTNAME.$DOMAIN $HOSTNAME"
+      fi
+    fi
+
+    if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
+	cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
+APT::Get::AllowUnauthenticated "true";
+Aptitude::CmdLine::Ignore-Trust-Violations yes;
+EOF
+    fi
+    # during normal installation, we need sources.list from /etc/apt
+    [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
+    [ -d $FAI_ETC_DIR/apt ] && cp -r $FAI_ETC_DIR/apt/* $FAI_ROOT/etc/apt/
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_updatebase() {
+
+    # maybe the base system is not up to date
+
+    if [ "$verbose" ]; then
+	echo "Updating base"
+	updatebase </dev/null 2>&1 | tee -a $LOGDIR/software.log
+        task_error 474 ${PIPESTATUS[0]}
+    else
+        updatebase </dev/null >> $LOGDIR/software.log 2>&1
+        task_error 474 $?
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_instsoft() {
+
+    echo "Installing software may take a while"
+    if [ "$debug" ]; then
+	install_packages | tee -a $LOGDIR/software.log
+	task_error 471 ${PIPESTATUS[0]}
+    elif [ "$verbose" ]; then
+	install_packages </dev/null 2>&1 | tee -a $LOGDIR/software.log
+	task_error 471 ${PIPESTATUS[0]}
+    else
+	install_packages </dev/null >> $LOGDIR/software.log 2>&1
+	task_error 471 $?
+    fi
+    # This almost indicates an error
+    egrep "^E:" $LOGDIR/software.log && task_error 472
+    grep "Couldn't find any package whose name or description matched" $LOGDIR/software.log && task_error 321
+    grep -q "E: Sub-process /usr/bin/dpkg returned an error code" $LOGDIR/software.log && task_error 620
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_finish() {
+
+    if [ $do_init_tasks -eq 1 ] ; then
+	# show some local information
+	ip -s link show up; df
+	# umount swap space
+	swapoff -a
+    fi
+    # undo fake of all programs made by fai
+    fai-divert -R
+    rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
+    date
+    echo "The $FAI_ACTION took $[$(cut -d . -f 1 /proc/uptime)-$start_seconds] seconds."
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_chboot() {
+
+    # the whole subroutine may be an externel script
+
+    [ -z "$LOGUSER" ] && return # silently return from subroutine
+
+    local frsh remotesh
+    local doexit=0
+    local hostname=$(hostname)
+    local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d= -f2 | sed "s/'//g")
+    local nexttest=$(egrep -s ^NEXTTEST= $LOGDIR/test.log | cut -d= -f2)
+
+    case "$FAI_LOGPROTO" in
+	ftp) remotesh=ssh ;;
+	ssh) remotesh=ssh ;;
+	rsh) remotesh=rsh ;;
+    esac
+    frsh="$remotesh -l $LOGUSER ${SERVER}"
+
+    if [ -z "$SERVER" ] ; then
+	echo "SERVER not defined. Can't change network boot configuration"
+	task_error 2
+	doexit=1
+    fi
+    [ $doexit -eq 1 ] && return
+
+    if dmesg | grep -q "Sending BOOTP requests"; then
+        # change boot device (local disk or network) when using bootp
+	[ "$LOGUSER" -a "$TFTPLINK" ] &&
+	    $frsh "cd /srv/tftp/fai; rm -f $hostname; ln -s $TFTPLINK $hostname"
+    else
+        # change boot device (local disk or network) when using PXE
+        # first test if rsh to server works
+	$frsh true >/dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    task_error 3
+	    echo "WARNING: $frsh failed. Can't call fai-chboot on the install server."
+	else
+	    if [ -n "$nexttest" ]; then
+		# for test sequences, we want the system to reinstall immediately with
+		# with different class setup
+		$frsh /usr/sbin/fai-chboot -k ADDCLASSES=$nexttest -FIv $ipaddr
+	    else
+		# remove pxe config, so host will use default and boot from local disk
+		$frsh /usr/sbin/fai-chboot -vd $ipaddr
+	    fi
+	fi
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sendmon() {
+
+    # send message to monitor daemon
+    [ "$faimond" -eq 0 ] && return 0
+    echo "$sendhostname $*" | nc -w 8 $monserver 4711 2>/dev/null
+    return $?
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
