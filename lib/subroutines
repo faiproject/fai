@@ -21,7 +21,7 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # A copy of the GNU General Public License is available as
 # `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
 # or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
@@ -77,13 +77,19 @@ ifclass() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rwmount() {
 
-    # remount partition read/write
+    # remount partition read/write, for interactive use only
     mount -o rw,remount $1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
 
     dmesg > $LOGDIR/dmesg.log
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+jobsrunning() {
+
+    # test if jobs are running
+    ps r | egrep -qv "ps r|TIME COMMAND|rcS"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
@@ -154,7 +160,7 @@ task() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
-# Provides-Var:      
+# Provides-Var:
 # Required-Var:      $classes $debug
 # Short-Description: call a hook, hook.source can define additional variables
 ### END SUBROUTINE INFO
@@ -198,7 +204,7 @@ skiptask() {
     local task
 
     for task in "$@"; do
-	> $LOGDIR/skip.$task
+	echo > $LOGDIR/skip.$task # create file with size != 0
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -228,17 +234,6 @@ task_setup() {
     # source user specific subroutines
     [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
 
-    # warn user if cdrom has DMA not enabled
-    if [ -f /etc/RUNNING_FROM_FAICD ]; then
-	local cdrom=$(mount| awk '/dev.+on \/ /{print $1}')
-	if [ -n "$cdrom" ]; then
-	    hdparm -d $cdrom | grep -q off 2>/dev/null
-	    if [ $? -eq 0 ]; then
-		echo "WARNING: CD-ROM does not use DMA mode. The installation will be sloooow."
-	    fi
-	fi
-    fi
-
     define_fai_flags
 
     # this may be moved to an external script
@@ -252,7 +247,7 @@ task_setup() {
 	    openvt -c2 /bin/bash ; openvt -c3 /bin/bash
 	    trap 'echo "You can reboot with faireboot";bash' INT QUIT
         }
-    
+
         # start secure shell daemon for remote access
         mkdir -p /var/run/sshd # ubuntu fix for 9.10
 	[ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
@@ -275,11 +270,11 @@ task_action() {
 	echo "No action in \$FAI_ACTION defined."
 	sendmon "TASKERROR action 21"
 	task_faiend
-	exit 
+	exit
     fi
+
     echo "FAI_ACTION: $FAI_ACTION"
     case $FAI_ACTION in
-
 	install)
 	    if [ $do_init_tasks -eq 0 ]; then
 		echo "Cowardly refusing to run a FAI installation on a running system."
@@ -329,7 +324,7 @@ task_defclass() {
 
     if [ ! -d $FAI/class ]; then
 	sendmon "TASKERROR defclass 21"
-	echo "Directory $FAI/class not found. Following subdirectories are found:"
+	echo "Subdirectory $FAI/class missing in config space. Following subdirectories are found:"
 	find $FAI -maxdepth 1 -type d -printf "%p\n"
 	die "Aborting."
     fi
@@ -360,7 +355,7 @@ _defvar() {
 
     local showvar=1 # TODO: new FAI_FLAG or always set when verbose is used
     [ "$showvar" ] && set -x
-    . $1 </dev/null 
+    . $1 </dev/null
     [ "$showvar" ] && set +x
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -373,14 +368,14 @@ task_defvar() {
 	if [ -f $class.var -a -r $class.var ]; then
 	    [ "$verbose" ] && echo "Executing $class.var"
 	    # show only lines with ++, we cannot use a pipe, since it would call
-	    # _devfar in a subprocess. Then, variables are not defined 
+	    # _devfar in a subprocess. Then, variables are not defined
 	    _defvar $class.var > $svar 2>&1
 	    grep ^++ $svar
 	    rm $svar
 	fi
     done
 
-    # /fai/class/S* scripts or hooks can write variable definitions
+    # /fai/class/* scripts or hooks can write variable definitions
     # to additonal.var. now source these definitions
     if [ -f $LOGDIR/additional.var -a -r $LOGDIR/additional.var ]; then
 	_defvar $LOGDIR/additional.var > $svar 2>&1
@@ -426,8 +421,7 @@ task_tests() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_savelog() {
 
-    mkdir -p $FAI_ROOT/var/lib/fai
-    mkdir -p $FAI_ROOT/var/log/fai
+    mkdir -p $FAI_ROOT/var/{lib,log}/fai
     fai-savelog -l
     [ -f $LOGDIR/FAI_CLASSES ] && cp -pu $LOGDIR/FAI_CLASSES $FAI_ROOT/var/lib/fai
     [ -f $LOGDIR/disk_var.sh ] && cp -pu $LOGDIR/disk_var.sh $FAI_ROOT/var/lib/fai
@@ -496,8 +490,7 @@ task_install() {
     task chboot
 
     rm -f $stamp
-    # save again, because new messages could be created
-    save_dmesg
+    save_dmesg    # save again, because new messages could be created
     task savelog
 
     if [ -f $stamp ]; then
@@ -574,7 +567,7 @@ task_softupdate() {
     # the following copy operation is required to make $LOGDIR a reliable source
     # for disk_var.sh
     # use the last disk_var during update if available
-    [ -f /var/lib/fai/disk_var.sh ] && cp -p /var/lib/fai/disk_var.sh $LOGDIR 
+    [ -f /var/lib/fai/disk_var.sh ] && cp -p /var/lib/fai/disk_var.sh $LOGDIR
 
     defnop wait_for_jobs
     save_dmesg

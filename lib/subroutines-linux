@@ -12,7 +12,7 @@
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $device_size $disklist
-# Requires-Var:    
+# Requires-Var:
 # Short-Description: create list of available disks and their sizes
 ### END SUBROUTINE INFO
 
@@ -23,12 +23,6 @@ set_disk_info() {
 
     # a list of all local disks, without size
     disklist=$(list_disks $device_size | sort)
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-jobsrunning() {
-
-    # test if jobs are running
-    ps r | egrep -qv "ps r|TIME COMMAND|rcS"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 eval_cmdline() {
@@ -66,13 +60,11 @@ eval_cmdline() {
 task_confdir() {
 
     if [ $do_init_tasks -eq 1 ] ; then
-        local bootlog
         eval_cmdline
 
-        bootlog=$LOGDIR/boot.log
         get-boot-info
-        echo "Reading $bootlog"
-        . $bootlog
+        echo "Reading $LOGDIR/boot.log"
+        . $LOGDIR/boot.log
         unset T170 T171 T172 ROOT_PATH BOOTFILE
 
 	printk=${printk:-6}
@@ -104,7 +96,9 @@ task_confdir() {
 	echo "Problems accessing the config space."
 	die ""
     }
+
     # now you have enough time to make changes to the config space
+    # only for debugging
     if [ -n "$flag_wait" ]; then
 	echo "Sleeping. Now you may change the config space in $FAI."
 	echo "Continue after killall sleep."
@@ -122,7 +116,7 @@ task_partition() {
 
     if [ X$USE_SETUP_STORAGE = X1 ]; then
 	echo "Partitioning local harddisks using setup-storage"
-	[ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X 2>&1 | tee $LOGDIR/format.log 
+	[ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X 2>&1 | tee $LOGDIR/format.log
     else
 	echo "Partitioning local harddisks using setup_harddisks"
 	[ ! -s $LOGDIR/disk_var.sh ] && setup_harddisks -d -X 2>&1 | tee $LOGDIR/format.log
@@ -142,12 +136,12 @@ task_partition() {
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    none
 # Requires-Var:    $NFSROOT
-# Suggests-Var:    
+# Suggests-Var:
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
 
 call_debootstrap() {
-    
+
     local dversion=$(dpkg -l debootstrap | grep debootstrap | cut -f7 -d' ')
     echo "Creating base system using debootstrap version $dversion"
     echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2"
@@ -188,7 +182,7 @@ task_extrbase() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
-# Provides-Var:    
+# Provides-Var:
 # Requires-Var:    $FAI_ROOT $MNTPOINT $romountopt
 # Suggests-Var:    $FAI_DEBMIRROR $debug
 # Short-Description: <task desc.>
@@ -303,11 +297,10 @@ task_chboot() {
 
     [ -z "$LOGUSER" ] && return # silently return from subroutine
 
-    local frsh
+    local frsh remotesh
     local doexit=0
     local hostname=$(hostname)
     local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d= -f2 | sed "s/'//g")
-    local remotesh
     local nexttest=$(egrep -s ^NEXTTEST= $LOGDIR/test.log | cut -d= -f2)
 
     case "$FAI_LOGPROTO" in
