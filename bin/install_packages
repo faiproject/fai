@@ -28,7 +28,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.1.9, 23-september-2009";
+my $version = "Version 4.2, 23-september-2009";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -63,6 +63,7 @@ my $execerrors; # counts execution errors
 my $use_aptpkg=0;
 my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
+my $debsourcesdir='/var/tmp';
 
 $| = 1;
 
@@ -461,6 +462,10 @@ sub writepackages {
   print LIST "# List of all packages that will be installed\n";
   for (@known) { print LIST "$_\n"; }
   close(LIST);
+
+  # download debian source packages if $ENV{'FAI_DEBSOURCESDIR'} is defined
+  execute("$rootcmd (cd $debsourcesdir ; apt-get sources @known)");
+  execute("mv $FAI_ROOT/$debsourcesdir/*.deb $ENV{'FAI_DEBSOURCESDIR'}");
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
