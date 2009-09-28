@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# (c) 2002-2006 Henning Glawe <glaweh@debian.org>
+# (c) 2007 Holger Levsen <holger@layer-acht.org> for the modifications to use git
+# (c) 2009 Darshaka Pathirana <dpat@syn-net.org> for the modifications to use hg
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_CONFIG_SRC $FAI $LOGDIR
+# Suggests-Var:
+# Short-Description: get $FAI from a mercurial (hg) repository.
+### END SUBROUTINE INFO
+
+# matched string: "hg://hgpath"
+protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
+hgpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^[:space:]]\+\)')
+
+case $protocol in
+ 	hg+http)
+ 		echo hg+http
+ 		hgurl="http://$hgpath"
+ 		;;
+	*)
+		echo "get-config-dir-hg: protocol $protocol not implemented"
+		exit 1
+		;;
+esac
+		
+if [ -d "$FAI/.hg" ] ; then
+   echo "Updating hg copy in $FAI"
+   cd $FAI
+   hg pull
+   task_error 701 $?
+else 
+   echo "Checking out from hg"
+   # cloning into an existing directory is not allowed
+   if [ -d $FAI ]; then rmdir $FAI; fi
+   hg clone $hgurl $FAI 
+   task_error 702 $?
+fi
