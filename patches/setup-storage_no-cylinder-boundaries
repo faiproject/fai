@@ -1,0 +1,69 @@
+2009-10-14  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Sizes.pm: Align partition sizes to sectors on all disk labels,
+		dropping DOS cylinder-alignment.
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -559,23 +559,9 @@
+   $FAI::configs{$config}{partitions}{$part_id}{start_byte} =
+     $next_start;
+ 
+-  # the end may need some alignment, depending on the disk label
++  # partitions must end at sector boundary
+   my $end_byte = $next_start + $start - 1;
+-
+-  # on msdos, ensure that the partition ends at a cylinder boundary
+-  if ($FAI::configs{$config}{disklabel} eq "msdos") {
+-    $end_byte -=
+-      ($end_byte + 1) % ($current_disk->{sector_size} *
+-        $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{bios_heads});
+-  }
+-
+-  # on gpt, ensure that the partition ends at a sector boundary
+-  if ($FAI::configs{$config}{disklabel} eq "gpt" ||
+-    $FAI::configs{$config}{disklabel} eq "gpt-bios") {
+-    $end_byte -=
+-      ($end_byte + 1) % $current_disk->{sector_size};
+-  }
++  $end_byte -= ($end_byte + 1) % $current_disk->{sector_size};
+ 
+   # set $start and $end to the effective values
+   $start = $end_byte - $next_start + 1;
+@@ -646,13 +632,9 @@
+     my $next_start = 0;
+ 
+     if ($FAI::configs{$config}{disklabel} eq "msdos") {
+-      # on msdos disk labels, the first partitions starts at head #1
+-      $next_start = $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{sector_size};
+-
+       # the MBR requires space, too
+-      $min_req_total_space += $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{sector_size};
++      $next_start = $current_disk->{sector_size};
++      $min_req_total_space += $current_disk->{sector_size};
+ 
+     } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
+       # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
+@@ -665,13 +647,12 @@
+       $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
+ 
+     } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
+-      # on BIOS-style disk labels, the first partitions starts at head #1
+-      $next_start = $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{sector_size};
+-
+       # the MBR requires space, too
+-      $min_req_total_space += $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{sector_size};
++      $next_start = $current_disk->{sector_size};
++      $min_req_total_space += $current_disk->{sector_size};
++      # not too sure whether this is needed: standard GPT partition table space
++      $next_start += 33 * $current_disk->{sector_size};
++      $min_req_total_space += 33 * $current_disk->{sector_size};
+ 
+       # apparently parted insists in having some space left at the end too
+       # modify the disk to claim the space for the second partition table
