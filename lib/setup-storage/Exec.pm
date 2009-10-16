@@ -237,19 +237,6 @@ sub execute_command {
   }
   return "";
 }
-################################################################################
-#
-# @brief Execute a command as in execute_command, but prefix it with udevsettle
-#
-# @return the identifier of the error
-#
-################################################################################
-sub execute_with_udevsettle {
-  my ($command, $stdout, $stderr) = @_;
-  defined ($FAI::udev_settle) or &FAI::internal_error("udev settle command not defined");
-  return &execute_command("$FAI::udev_settle && $command", $stdout,
-    $stderr);
-}
 
 ################################################################################
 #

@@ -655,14 +655,14 @@ sub compute_partition_sizes
         $current_disk->{sector_size};
 
     } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
-      # on GPT-EFI disk labels the first 34 and last 34 sectors must be left alone
+      # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
       $next_start = 34 * $current_disk->{sector_size};
 
       # modify the disk to claim the space for the second partition table
-      $current_disk->{end_byte} -= 34 * $current_disk->{sector_size};
+      $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
 
       # the space required by the GPTs
-      $min_req_total_space += 2 * 34 * $current_disk->{sector_size};
+      $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
 
     } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
       # on BIOS-style disk labels, the first partitions starts at head #1
@@ -675,10 +675,10 @@ sub compute_partition_sizes
 
       # apparently parted insists in having some space left at the end too
       # modify the disk to claim the space for the second partition table
-      $current_disk->{end_byte} -= 34 * $current_disk->{sector_size};
+      $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
 
       # the space required by the GPTs
-      $min_req_total_space += 34 * $current_disk->{sector_size};
+      $min_req_total_space += 33 * $current_disk->{sector_size};
 
       # on gpt-bios we'll need an additional partition to store what doesn't fit
       # in the MBR

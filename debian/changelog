@@ -83,11 +83,10 @@ fai (3.2.23~beta18) unstable; urgency=low
   * dhcpd.conf: change path of pxelinux.0    
   
   [ Michael Tautschnig ]
-  * setup-storage/Parser.pm: Set the boot flag on partition mounted at /, if
-    bootable is not explicitly set.
   * setup-storage, setup-storage/Exec.pm: auto-detect a proper way to tell
-    udev to settle (udevsettle is used in etch, udevadm settle for sid; thanks
-    matrix.systems@matrix.msu.edu for a first patch). (closes: #530656)
+    udev to settle, hide udevsettle call (udevsettle is used in etch, udevadm
+    settle for sid; thanks matrix.systems@matrix.msu.edu for a first patch).
+    (closes: #530656)
   * setup-storage/Volumes.pm: Updated mdadm --scan output parser to work with
     current mdadm versions.
   * setup-storage/Volumes.pm: Ignore another line of output from parted
@@ -95,9 +94,11 @@ fai (3.2.23~beta18) unstable; urgency=low
   * setup-storage, setup-storage/Sizes.pm: Properly handle -h, early check for
     unset (but necessary) environment variables, print full device names in
     several error/warning messages instead of the partition id only.
+  * fai-vol_id: New wrapper around udev's vol_id or blkid, whichever is
+    available
   * setup-storage/Fstab.pm: Be more verbose if obtaining the UUID fails (may
     be caused by earlier use in RAID array, tell the user how to solve the
-    problem). Ignore exit code 3 of vol_id -l.
+    problem). Ignore exit code 3 of vol_id -l, use fai-vol_id wrapper.
   * setup-storage/Parser.pm: RAID device parsing: $2 doesn't refer to the
     original expression anymore, store earlier $2 as $opts; don't use options
     sub-hash (thanks Andreas Schockenhoff for lots of testing and feedback).
@@ -113,7 +114,10 @@ fai (3.2.23~beta18) unstable; urgency=low
   * setup-storage/Volumes.pm: Fixed perl syntax error, properly handle
     existing empty volume groups (thanks Brian Kroth and Cajus Pollmeier for
     debugging this).  (closes: #532321)
-  * Bumped setup-storage version number to 1.1.
+  * man/setup-storage.8: Document possible problems with previous software
+    RAID partitions and missing bootable flags.
+  * setup-storage/Sizes.pm: Secondary GPT only requires 33 sectors.
+  * Bumped setup-storage version number to 1.1.1.
  
   [ Holger Levsen ]
   * update to standards version 3.8.2, no changes needed

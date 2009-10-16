@@ -52,7 +52,7 @@ use warnings FATAL => qw(uninitialized);
 
 package FAI;
 
-my $version = "1.1";
+my $version = "1.1.1";
 
 # command line parameter handling
 use Getopt::Std;
@@ -192,11 +192,15 @@ if ($FAI::debug) {
 $FAI::udev_settle = "udevadm settle --timeout=10" if (&FAI::in_path("udevadm"));
 $FAI::udev_settle = "udevsettle --timeout=10" if (&FAI::in_path("udevsettle"));
 defined($FAI::udev_settle) or die "Failed to find determine a proper way to tell udev to settle; is udev installed?";
-&FAI::execute_with_udevsettle($FAI::commands{$_}{cmd}) foreach (&numsort(keys %FAI::commands));
+foreach (&numsort(keys %FAI::commands)) {
+  `$FAI::udev_settle`;
+  next if ($FAI::commands{$_}{cmd} eq "true");
+  &FAI::execute_command($FAI::commands{$_}{cmd});
+}
 
 # generate the proposed fstab contents
 # wait for udev to set up all devices
-&FAI::execute_with_udevsettle("true");
+`$FAI::udev_settle`;
 my @fstab = &FAI::generate_fstab(\%FAI::configs);
 
 # print fstab

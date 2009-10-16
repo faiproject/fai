@@ -416,6 +416,22 @@ my_pv-_root	/	2048	ext3	rw
 .sp
 .fi
 .PP
+.SH CAVEATS
+.IP \(bu
+Partition UUID cannot be obtained: In case a partition was previously used as
+part of a software RAID volume and now is intended as swap space, udev fails
+when asked for a UUID. This happens because mkswap does not overwrite the
+previous RAID superblock. You can remove it using mdadm --zero-superblock
+<device>.
+.IP \(bu
+Machine does not boot because not partition is marked as bootable: If the
+bootable option is not specified, not partition will be marked as such. Modern
+BIOSes don't seem to require such markers anymore, but for some systems it may
+still be necessary. Previous versions of setup-storage by default marked the
+partition mounting / as bootable, but this is not a sane default for all cases.
+If you want to be sure not boot failures happen because of a missing bootable
+marker, explicitly set the bootable option. Of course, there are lots of other
+reasons why a system may fail to boot.
 .SH SEE ALSO
 This program is part of FAI (Fully Automatic Installation).
 The FAI homepage is http://www.informatik.uni-koeln.de/fai.

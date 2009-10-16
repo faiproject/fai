@@ -94,7 +94,7 @@ sub get_fstab_key {
   # or labels, use these if available
   my @uuid = ();
   &FAI::execute_ro_command(
-    "/lib/udev/vol_id -u $device_name", \@uuid, 0);
+    "fai-vol_id -u $device_name", \@uuid, 0);
 
   # every device must have a uuid, otherwise this is an error (unless we
   # are testing only)
@@ -107,8 +107,7 @@ sub get_fstab_key {
   # ok here
   my @label = ();
   &FAI::execute_ro_command(
-    "( /lib/udev/vol_id -l $device_name ; exc=\$? ; if [ \$exc -eq 3 ] ;" .
-    " then exit 0 ; else exit \$exc ; fi )", \@label, 0);
+    "fai-vol_id -l $device_name", \@label, 0);
 
   # using the fstabkey value the desired device entry is defined
   if ($key_type eq "uuid") {
