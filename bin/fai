@@ -135,6 +135,12 @@ fstart() {
     [ $do_init_tasks -eq 1 ] || echo "Using configuration files from $FAI_ETC_DIR"
     unset etc_message
     task confdir
+    # if the config space is a local directory, reset $FAI
+    local method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
+    if [ $method = "file" ]; then
+	local localpath=$(expr match "$FAI_CONFIG_SRC" '.*://\(/.*\)')
+	export FAI=$localpath
+    fi
     task setup
     task defclass
     unset cmdlineclasses renewclass

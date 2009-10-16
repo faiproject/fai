@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # (c) 2006 Henning Glawe <glaweh@debian.org>
+# (c) 2009 Thomas Lange  <lange@debian.org>
 
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:
@@ -34,7 +35,12 @@ else
 	exit 22
 fi
 
-ln -s $FAI /var/run/fai/current_config
+if [ $method = "file" ]; then
+    localpath=$(expr match "$FAI_CONFIG_SRC" '.*://\(/.*\)')
+    export FAI=$localpath
+fi
+
+ln -sf $FAI /var/run/fai/current_config
 if [ ! -d $FAI/class ]; then
 	echo "WARNING: directory $FAI/class not found."
 	sendmon "TASKERROR get_fai_dir 23"
