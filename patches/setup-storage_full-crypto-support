@@ -182,3 +182,44 @@ Index: trunk/lib/setup-storage/Init.pm
  ################################################################################
  #
  # @brief Convert a device name and a partition id to a proper device name,
+Index: trunk/lib/subroutines
+===================================================================
+--- trunk.orig/lib/subroutines
++++ trunk/lib/subroutines	
+@@ -780,6 +780,8 @@
+     # now we can copy fstab
+     [ -f $fs ] && mv $fs $fs.old
+     [ -f $LOGDIR/fstab ] && cp -p $LOGDIR/fstab $fs
++    # copy crypttab, if setup-storage created one
++    [ -f $LOGDIR/crypttab ] && cp -p $LOGDIR/crypttab $FAI_ROOT/etc/crypttab
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ ### BEGIN SUBROUTINE INFO
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -270,9 +270,9 @@
+ .br
+                 * if :encrypt is given the partition will be encrypted, the key
+ .br
+-                * is generated automatically; :randinit adds random
++                * is generated automatically; :randinit causes random
+ .br
+-                * initialization of the partition  */
++                * initialization of the partition by setup-storage */
+ .br
+ 
+ 
+@@ -432,6 +432,11 @@
+ If you want to be sure not boot failures happen because of a missing bootable
+ marker, explicitly set the bootable option. Of course, there are lots of other
+ reasons why a system may fail to boot.
++.IP \(bu
++Crypto support requires some site-specific changes: If you use :encrypt on some
++of your volumes, a crypttab file and key files for all such volumes will be
++created. The key files are left in /tmp/fai; you will want to copy these to some
++removable media or even replace them with /dev/urandom for tmp and swap.
+ .SH SEE ALSO
+ This program is part of FAI (Fully Automatic Installation).
+ The FAI homepage is http://www.informatik.uni-koeln.de/fai.
