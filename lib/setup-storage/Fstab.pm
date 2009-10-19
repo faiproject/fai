@@ -109,6 +109,10 @@ sub get_fstab_key {
   &FAI::execute_ro_command(
     "fai-vol_id -l $device_name", \@label, 0);
 
+  # print uuid and label to console
+  warn "$device_name UUID=$uuid[0]" if @uuid;
+  warn "$device_name LABEL=$label[0]" if @label;
+
   # using the fstabkey value the desired device entry is defined
   if ($key_type eq "uuid") {
     chomp ($uuid[0]);
