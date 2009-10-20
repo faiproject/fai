@@ -136,12 +136,10 @@ fstart() {
     unset etc_message
     task confdir
     # if the config space is a local directory, reset $FAI
-    if [ -n "$FAI_CONFIG_SRC" ]; then
-	local method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
-	if [ $method = "file" ]; then
-	    local localpath=$(expr match "$FAI_CONFIG_SRC" '.*://\(/.*\)')
-	    export FAI=$localpath
-	fi
+    local method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
+    if [ $method = "file" ]; then
+	local localpath=$(expr match "$FAI_CONFIG_SRC" '.*://\(/.*\)')
+	export FAI=$localpath
     fi
     task setup
     task defclass
@@ -302,15 +300,6 @@ chmod 0750 $LOGDIR
 fai_init
 [ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
 unset newhostname
-if [ X$action = Xdirinstall ]; then
-    skiptask confdir
-    # dirinstall still uses FAI_CONFIGDIR, which is wrong IMO. It
-    # should use FAI_CONFIG_SRC
-    FAI_CONFIGDIR=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $FAI_CONFIGDIR)
-    export FAI=$FAI_CONFIGDIR
-    # TODO: add a check here if we have a lcoation/URL for the config space
-    set -a
-fi
 
 # remove this crap, use old thing
 mkfifo $LOGDIR/logfifo
