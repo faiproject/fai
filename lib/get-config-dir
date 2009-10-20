@@ -26,6 +26,13 @@ echo "FAI_CONFIG_SRC is set to $FAI_CONFIG_SRC"
 # the "major" protocol name is the one up to the first "+", if it exists
 method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
 
+if [ -z "$method" ]; then
+	sendmon "TASKERROR get_fai_dir 22"
+	echo "Error in get-config-dir: scheme undefined."
+	exit 24
+    echo
+fi
+
 # run get-config-dir-$method script if it exists
 if which get-config-dir-$method &>/dev/null ; then
 	get-config-dir-$method
