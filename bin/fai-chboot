@@ -28,7 +28,7 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 3.4.6 21-july-2009";
+$version="version 3.5 21-october-2009";
 
 use Socket;
 use Net::hostent;
@@ -361,7 +361,7 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:C:D:edhnvlLiIpf:Fk:Ss:to') || usage;
+getopts('gBc:C:D:edhnvlLiIpf:Fk:Ss:tu:o') || usage;
 $opt_h and usage;
 defined @ARGV or usage;
 
@@ -433,7 +433,6 @@ if ($opt_i) {
   # create config so host will boot the install kernel
   $kernelname = "kernel vmlinuz-$kernelsuffix";
   $initrd     = "initrd=initrd.img-$kernelsuffix";
-#  $rootfs     = "root=/dev/nfs nfsroot=$nfsroot,v3,tcp,rsize=32768,wsize=32768 boot=live";
   $rootfs     = "root=/dev/nfs nfsroot=$nfsroot boot=live";
   $bootprot   = "ip=dhcp ";
 
@@ -451,8 +450,9 @@ if ($opt_i) {
 $opt_F and $opt_f="verbose,sshd,createvt";
 $opt_B and $opt_f="verbose,sshd,reboot";
 $opt_f and $flags="FAI_FLAGS=$opt_f";
+$opt_u and $flags.=" FAI_CONFIG_SRC=$opt_u"; # set -u as FAI_CONFIG_SRC
 warn "Booting $kernelname\n" if $verbose;
-warn " append $initrd $bootprot $opt_k $flags\n\n" if $verbose;
+warn " append $initrd $bootprot $opt_k\n    $flags\n\n" if $verbose;
 $opt_k && print "Kernel parameters: $opt_k\n";
 
 die "No host specified.\n" unless @ARGV;
