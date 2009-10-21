@@ -409,10 +409,12 @@ task_tests() {
     if [ -d $FAI/tests ]; then
 	fai-do-scripts $FAI/tests  # always returns 0 atm
 	# check if any test failed
-	if grep -q "FAILED with " $LOGDIR/test.log; then
-	    sendmon "TASKERROR tests 312"
-	    task_error 312
-	    return 1
+	if [ -f $LOGDIR/test.log ]; then
+	    if grep -q "FAILED with " $LOGDIR/test.log; then
+		sendmon "TASKERROR tests 312"
+		task_error 312
+		return 1
+	    fi
 	fi
     else
 	echo "WARNING: Subdirectory tests/ not found. Cannot execute test scripts."
