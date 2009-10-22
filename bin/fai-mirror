@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.10, 19-july-2009"
+version="Version 1.11, 19-july-2009"
 
 # variables: NFSROOT, FAI_CONFIGDIR, FAI_ETC_DIR
 
@@ -69,7 +69,6 @@ excludeclass() {
     classes="$newclass"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
 
     [ "$FAI_DEBMIRROR" ] && umount $MNTPOINT 2>/dev/null 1>&2 || true
@@ -110,6 +109,10 @@ initialize() {
       -o Dir::Cache::Archives=$archivedir \
       -o Dir::Etc=$aptcache/etc/apt/ \
       -o Dir::State::Lists=$aptcache/var/lib/apt/lists/"
+
+    if [ -n "$arch" ]; then
+	aptoptions="$aptoptions -o APT::Architecture=$arch" # add architecture
+    fi
 
     # not needed
     # -o APT::Get::ReInstall
@@ -197,8 +200,9 @@ preserve=0
 verbose=0
 add=1
 qflag=-qq
-while getopts "Bvhx:pc:C:" opt ; do
+while getopts "a:Bvhx:pc:C:" opt ; do
     case "$opt" in
+	a) arch=$OPTARG ;;
 	B) add=0 ;;
 	C) cfdir=$OPTARG ;;
 	h) usage ;;
@@ -286,6 +290,7 @@ DELETE=no
 CONTENTS=no
 PKGCOMP='none gzip'
 EOF
+[ -n "$arch" ] && echo "ARCH=$arch" >> $aptmovefile # append architecture
 apt-move $qflag -c $aptmovefile update
 # since Packages.gz from apt-move does not include packages from my
 # repository, let's use apt-ftparchive for generiating correct index
