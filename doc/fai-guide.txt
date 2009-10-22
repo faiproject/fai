@@ -5,7 +5,7 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-1.1, Sun, 18 Oct 2009 00:43:15 +0200
+1.1, Thu, 22 Oct 2009 22:21:56 +0200
 
 
 :faiver:  3.3
@@ -2482,6 +2482,47 @@ you need to create specific config directories in '/etc' for fai, like
 ----
 faiserver#make-fai-nfsroot -c /etc/fai-sarge
 ----
+
+=== [[archcross]]How to install i386 systems from an amd64 system
+
+To install a computer with a 32bit i386 system, you need an i386 nfsroot.
+Creating this 32bit nfsroot on an install server runnning amd64 is
+quiet simple. Install and setup the fai packages. Then copy your fai
+config files to a new subdirectory.
+
+----
+faiserver# cp -a /etc/fai /etc/fai-i386
+----
+
+Edit the variable +$FAI_DEBOOTSTRAP_OPTS+ in
+'/etc/fai-i386/make-fai-nfsroot.conf' and add the option +--arch
+i386+. Also choose a different directory for your new nfsroot. Here 
+are the two lines after editing.
+
+----
+NFSROOT=/srv/fai/nfsroot-i386
+FAI_DEBOOTSTRAP_OPTS="--arch i386 --exclude=info"
+----
+
+Now call make-fai-nfsroot which creates the 32bit i386 nfsroot in
+'/srv/fai/nfsroot-i386'
+
+----
+faiserver# make-fai-nfsroot -v -C/etc/fai-i386
+----
+
+Creating a partitial mirror using `fai-mirror(1)` that is needed for
+a bootable CD or USB stick is also possible on a different architecture.
+Due to a bug in apt-move (#441231), you have to specify the
+architecture when calling fai-mirror.
+
+----
+$ export MAXPACKAGES=800
+$ fai-mirror -a i386 -v -cDEFAULT,FAIBASE,I386 /srv/mirror-i386
+----
+
+That's all!
+
 
 === [[powerpc]]FAI on PowerPC
 There's some stuff on http://www.layer-acht.org/fai.  Most notably
