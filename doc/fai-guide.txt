@@ -5,7 +5,7 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-1.1, Thu, 22 Oct 2009 22:21:56 +0200
+1.1, Thu, Fri, 23 Oct 2009 14:25:10 +0200
 
 
 :faiver:  3.3
@@ -1210,9 +1210,9 @@ This directory holds all `debconf(8)` data. The format is the same
 that is used by `debconf-set-selections(8)`.
 
 _package_config/_::
-File with
-lists of software
-packages to be installed or removed.
+Files with class names contain lists of software packages to be
+installed or removed. Files named '*.asc' are added to the key list of
+apt. 
 
 _scripts/_::
 Script for local site
@@ -1637,6 +1637,10 @@ Set the action fai should perform. Normally this is done by
 `fai-chboot(8)`. If you can't use this command, define it in the
 script 'LAST.var'.
 
+FAI_ALLOW_UNSIGNED::
+If set to 1, FAI allows the installation of packages from unsigned
+repositories.
+
 CONSOLEFONT::
 Is the font which is loaded during installation by `consolechars(8)`.
 
@@ -1867,6 +1871,18 @@ which commands belong to which package tools
 you say something about PRELOADRM and PRELOAD commands, but give no example
 and don't list them otherwise
 ////
+
+
+Before installing packages, fai will add the content of all files
+named _package_config/*.asc_ to the list of apt keys. If your local
+repository is signed by your keyid AB12CD34 you can easily add this key,
+so fai will use it during installation. Use this command for creating
+the '.asc' file:
+
+----
+faiserver$ gpg -a --export AB12CD34 > /srv/fai/config/package_config/myrepo.asc
+----
+
 
 The script `install_packages(8)` installs the selected software
 packages. It uses all configuration files in '$FAI/package_config'
