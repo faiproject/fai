@@ -830,6 +830,13 @@ task_prepareapt () {
       fi
     fi
 
+
+    # during normal installation, we need sources.list from /etc/apt
+    # currently /target/etc/apt gets overwritten by the contents of /etc/apt from inside the nfsroot
+    [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
+    [ -d $FAI_ETC_DIR/apt ] && cp -r $FAI_ETC_DIR/apt/* $FAI_ROOT/etc/apt/
+
+    rm -f $FAI_ROOT/etc/apt/apt.conf.d/10fai # disable AllowUnauthenticated, which was used in the nfsroot
     if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
 	cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
 APT::Get::AllowUnauthenticated "true";
@@ -843,10 +850,6 @@ EOF
 	echo -n "Loading APT key from $keyfile "
 	cat $FAI/package_config/$keyfile | $ROOTCMD apt-key add -
     done
-
-    # during normal installation, we need sources.list from /etc/apt
-    [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
-    [ -d $FAI_ETC_DIR/apt ] && cp -r $FAI_ETC_DIR/apt/* $FAI_ROOT/etc/apt/
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
