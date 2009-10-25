@@ -5,7 +5,7 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-1.1, Thu, Fri, 23 Oct 2009 14:25:10 +0200
+3.0, Sun, 25 Oct 2009 21:30:02 +0100
 
 
 :faiver:  3.3
@@ -1026,13 +1026,12 @@ mounted. It's also possible to preserve the disk layout or to preserve
 the data on certain partitions.
 
 The old tool for partitioning the hard disks is called
-`setup_harddisks`, which uses `sfdisk`. The format of the
-configuration file is described in <<diskconfig>>.  With FAI 3.2.8 a
+`setup_harddisks`. This tool is deprecated. With FAI 3.2.8 the
 new partitioning tool called `setup-storage(8)` was added to FAI. It
 uses `parted(8)` for editing the partition table and now has support
 for software RAID and LVM. This tool uses a slightly different format
-for the configuration files in 'disk_config'. Read the manual page for
-a detailed description of the new format. The variable
+for the configuration files in 'disk_config' than the old tool. Read
+the manual page for a detailed description of the new format. The variable
 _USE_SETUP_STORAGE_ now determines which tool to use. When set to 1 it
 uses the new tool which is now defined in 'FAIBASE.var' by default.
 
@@ -1366,7 +1365,7 @@ line interface, performs a softupdate.  See chapter <<softupdate>> for
 details.
 
 partition::
-Calls `setup_harddisk` or `setup-storage(8)` to partition the hard
+Calls `setup-storage(8)` to partition the hard
 disks and to create file systems. The task writes variable definitions
 for the root and boot partition and device (+$ROOT_PARTITION,
 $BOOT_PARTITION, $BOOT_DEVICE+) to '/tmp/fai/disk_var.sh' and creates
@@ -1672,195 +1671,11 @@ partitioning tool `setup-storage(8)` will be used. Otherwise the old
 `setup_harddisks` program is used.
 
 
-=== [[diskconfig]]Hard disk configuration (old tool)
+=== [[diskconfig]]Hard disk configuration
 
-This section describes the old format of the configuration files in
-_disk_config_ when `setup_harddisks` is used. Read the manual page of
-`setup-storage(8)` for a detailed description of the new format. This
-is used by default since FAI 3.2.8 or when setting the variable
-+$USE_SETUP_STORAGE+ to 1.
-
-The script `setup_harddisks` partitions and formats the local
-disks. It uses all configuration files in '$FAI/disk_config/' which
-are also defined as classes.  Lines beginning with # are comments. The
-config file '$FAI/disk_config/FAIBASE' is a generic description for
-one hard disk (IDE or SCSI), which most installations should be able
-to adapt. If you can't partition your hard disk using this script
-footnote:[Currently this script uses the command _sfdisk(8)_, which
-isn't available on SUN SPARC, IA64 and PowerPC.], use a hook
-instead. The hook should write the new partition table, create the
-file systems and create the files '/tmp/fai/fstab' and
-'/tmp/fai/disk_var.sh', which contains definitions of boot and root
-partitions.
-
-The following example is a configuration for the first IDE disk
-_disk1_ and for the second SCSI disk _disk2_ The numbering of the
-disks comes from the order in '/proc/partitions'.
-
-----
-# <type> <mount point> <size in MB> [mount options]  [;extra options]
-
-disk_config disk1
-
-primary   /          200        defaults,errors=remount-ro
-logical   /home      100-300
-logical   /scratch1  10-        defaults,nosuid ; -i 15000 -m 0
-
-
-disk_config disk2
-
-primary   /tmp       300-500    rw                ;ext2
-primary   /backup    preserve2  rw
-logical   swap       50-100
-logical   /scratch2  100-300    rw                ;-m 30
-logical   -          preserve7
-logical   /var       100                          ;-j
-logical   /var/tmp   preserve9                    ;format
-primary   /tmp/mytmp -300
------
-
-Every disk configuration starts with the command _disk_config_
-followed by _diskX_ where _X_ is the number of the HDD. The Linux
-device names '/dev/hda' and '/dev/sda' correspond to _disk1_, _disk2_
-corresponds to '/dev/hdb' and '/dev/sdb' and so on.
-
-After _disk_config_ one line containing the type, mount point and size
-is added for each partition on the hard disk. Mount options and
-additional parameters for `mke2fs` -- separated from the mount options
-by a semicolon -- can be added.
-
-Type::
-There are two types of partitions: primary and logical. Primary
-partitions are bootable, but there is a maximum of four primary
-partitions on each disk. The Linux root file system must be of this
-type.
-
-All other partitions are called logical. Because logical partitions
-are gathered internally in one big primary partition, only three
-primary partitions can be used if logical partitions are defined.
-Normally only one primary partition for the root file system is
-created and all others are logical, like _disk1_ in the example above.
-
-Mount point::
-The mount point is the full path (beginning with a slash) for the file
-system. The value _swap_ defines a Linux swap partition.  Both types
-will be automatically added to '/etc/fstab'.  A dash (_-_) indicates
-that the partition will not be mounted and can be used for other types
-of file systems (FAT, NTFS, UFS, MINIX, ...)
-
-Size::
-This is the size of the partition in megabytes. This value is rounded
-up to fit to a cylinder number. There are several ways of defining the
-size:
-
-====
-	"200" means about 200MB, no more no less
-	"100-300" sets a 100MB minimum and a 300MB maximum
-	"10-" sets a minimum of 10MB and a maximum of the disk size
-	"-300" sets a minimum of 1MB and a 300MB maximum
-====
-
-By default, a new file system (currently of type ext2 or swap) will be
-created, and all data on the partition is lost.  The meaning of
-_preserve<no>_ will be described later.
-
-Calculating the partition size: If an interval is defined for several
-partition sizes, the script maximizes the values by preserving the
-ratio between them.
-
-
-Mount options::
-The mount options will be copied to '/etc/fstab'. An empty field sets
-the option to _defaults_ (see `mount(8)`).
-
-
-Extra options::
-The last field is a space separated extra options list. The following
-options are known:
-
-----
-boot         : Make this partition the boot-partition (the
-               Linux root file system is the default).
--i <bytes>   : bytes per inode (ext2/3 only)
--m <blocks>  : reserved blocks percentage (ext2/3 only)
--j           : Create the file system with an ext3 journal.
--c           : Check for bad blocks.
-ext2         : Flag as ext2 instead of auto in /etc/fstab.
-ext3         : Flag as ext3 instead of auto in /etc/fstab.
-swap         : swap partition
-dosfat16     : DOS 16 bit FAT file system
-winfat32     : Win95 FAT32 file system
-reiser       : Create a ReiserFS file system, not an ext2.
-xfs          : XFS
-format       : Always format even if preserve is specified.
-writable     : Mounts a preserved partition writable.
-lazyformat   : Do not format if partition has not moved.
-----
-
-The order of the extra options is not relevant. For more information
-see `mke2fs(8)`.
-
-Thus, we have the following interactions between _-j_,
-_ext2_ and _ext3_ :
-
-----
-<no option> : An ext2 fs flagged as auto in the fstab
--j          : An ext3 fs flagged as auto in the fstab.
-ext2        : An ext2 fs flagged as ext2 in the fstab.
--j ext2     : An ext3 fs flagged as ext2 in the fstab.
--j ext3     : An ext3 fs flagged as ext3 in the fstab.
-ext3        : An ext2 fs flagged as ext3 in the fstab. !!BAD!!
-
-  Using _auto_ in the fstab for ext3 file systems enables a
-  non-ext3-enabled kernel or tool to cope with these partitions.
-----
-
-It is possible to preserve the size and even the existing data on a
-partition. To preserve only the partition size, the number of the
-partition must be unchanged and the size must be specified as
-_preserve<no>_ The number _<no>_ is the device number (as in
-'/dev/hda<no>', or see the output of `df`) of the partition. Primary
-partitions are numbered from one to four, the numbers for logical
-partitions begin at five.
-
-
-Problems were reported (February 2003) when using more than two
-primary partitions and trying to preserve a logical partition. If you
-have this problem, try to use only two primary partitions.
-
-In the following example, the partition numbers (= device number) are
-also shown for disk _disk2_:
-
-----
-primary   /tmp        300-500     #  1
-primary   /backup     preserve2   #  2
-logical   swap        50-100      # (3)   5
-logical   /scratch2   100-300     # (3)   6
-logical   -           preserve7   # (3)   7
-logical   /var        100         # (3)   8
-logical   /var/tmp    preserve9   # (3)   9
-primary   /tmp/mytmp  -300        #  4
-----
-
-The first two partitions are of type primary, so they get the numbers
-1 and 2. The logical partitions start at 5 and the last gets number
-9. All logical partitions define the primary partition 3, but this
-number is not used. So if you want to preserve '/dev/hda7' you have to
-insert a minimum of two logical partitions before it.
-
-Lazyformating partitions is another method to preserve partitions
-after they were formatted once. This is useful to design systems which
-can be reinstalled without loosing data on partitions like '/home' or
-'/var/log' or '/var/lib/mysql' or whatever. You can even lazyformat
-the swap partition to gain a minor installation speed improvement
-after the first installation!
-
-If you have a separate '/boot' partition, you must add the extra
-option _boot_ to make it your boot partition. Otherwise your system
-will not be bootable. By default (if no boot option was specified) the
-root partition ('/') will become the boot partition. `setup_harddisks`
-will write some variables containing the information about boot
-partition and boot device to '/tmp/fai/disk_var.sh'.
+Read the manual page of `setup-storage(8)` for a detailed description
+of the new format. This is used by default since FAI 3.2.8 or when
+setting the variable +$USE_SETUP_STORAGE+ to 1.
 
 
 === [[packageconfig]]Software package configuration
