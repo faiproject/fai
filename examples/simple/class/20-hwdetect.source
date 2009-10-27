@@ -12,7 +12,7 @@ echo 0 > /proc/sys/kernel/printk
 # load all IDE drivers
 
 # DMA does not work if we load all modules in drivers/ide, so only try pci modules
-mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci -type f | sed 's/\.o$//' | sed 's/\.ko$//' | sed 's/.*\///')
+mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci -type f | sed 's/\.ko$//' | sed 's/.*\///')
 for i in $mod; do
     modprobe $i 1>/dev/null 2>&1
 done
@@ -21,11 +21,10 @@ for d in $( echo /proc/ide/hd[a-z] 2>/dev/null); do
     [ -d $d ] && echo "using_dma:1" > $d/settings
 done
 
-# load additional kernel modules (from old 11modules.source)
-# this order should also enable DMA for all IDE drives
-kernelmodules="usbkbd ide-disk ide-cd"
+# load additional kernel modules
+kernelmodules="usbkbd ide-disk"
 case $(uname -r) in
-    2.6*) kernelmodules="$kernelmodules ohci-hcd usbhid usbmouse ide-generic mptspi ata_piix dm-mod md-mod aes dm-crypt" ;;
+    2.6*) kernelmodules="$kernelmodules mptspi dm-mod md-mod aes dm-crypt" ;;
 esac
 
 for mod in $kernelmodules; do
