@@ -47,5 +47,6 @@ install:
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
 	cp -a utils $(DOCDIR)/examples
+	find $(DOCDIR) -name .svn | xargs rm -rf
 
 .PHONY: clean veryclean
