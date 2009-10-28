@@ -30,7 +30,7 @@
 #*********************************************************************
 
 set -e 
-version="fai-cd 4.0.1, 19-july-2009"
+version="fai-cd 4.1, 28-october-2009"
 
 forceremoval=0;
 burn=0
@@ -147,8 +147,8 @@ mkusb(){
     [ -d $usbdir ] || die 17 "$usbdir does not exist."
     if [ $rsync -eq 1 ]; then
 	echo "Syncing FAI data to USB device $usbdir"
-	rsync --delete -av $tmp/boot $usbdir || true
-	[ -d $tmp/live ] && rsync --delete -av $tmp/live $usbdir || true
+	rsync --delete -avW $tmp/boot $usbdir || true
+	[ -d $tmp/live ] && rsync --delete -avW $tmp/live $usbdir || true
     else
 	echo "Writing FAI data to USB device $usbdir"
 	cp -a $tmp/boot $usbdir 2>/dev/null || true
@@ -233,11 +233,12 @@ rsync=0
 [ -x $(which rsync) ] && rsync=1
 
 # Parse commandline options
-while getopts "nkfhg:bBm:C:u:" opt ; do
+while getopts "nkfhHg:bBm:C:u:" opt ; do
     case "$opt" in
         C)  cdir=$OPTARG ;;
 	f)  forceremoval=1 ;;
 	h)  usage ;;
+	H)  hidedirs="" ;;
 	g)  grub_config="$OPTARG" ;;
 	k)  keep=1 ;;
 	m)  mirrordir="$OPTARG" ;;
