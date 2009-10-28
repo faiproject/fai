@@ -118,7 +118,7 @@ setup_fai_account() {
 	    ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | grep -v 127.0.0.1)
 	    for ip in $ips; do
 		hname=$(getent hosts $ip| tr -s ' ' ',')
-		[ -z "$hname" ] && hname=$ip
+		: ${hname:=$ip}
 		echo "Adding $hname to known_hosts."
 		[ -z "$DSASERVER" ] || echo "$hname $DSASERVER" >> $sshdir/known_hosts
 		[ -z "$RSASERVER" ] || echo "$hname $RSASERVER" >> $sshdir/known_hosts

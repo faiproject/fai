@@ -255,7 +255,7 @@ task_setup() {
     unset flag_createvt flag_sshd
 
     # when did FAI start, using localtime
-    [ -z "$fai_rundate" ] && fai_rundate=$(date +'%Y%m%d_%H%M%S')
+    : ${fai_rundate:=$(date +'%Y%m%d_%H%M%S')}
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -436,7 +436,7 @@ task_faiend() {
     [ $do_init_tasks -eq 0 ] && exit 0
     wait_for_jobs
     echo "Press <RETURN> to reboot."
-    [ -z "$flag_reboot" ] && : ${flag_reboot:=0}
+    : ${flag_reboot:=0}
     [ -s $LOGDIR/error.log -a "$flag_reboot" -gt "0" ] && sleep 10
     # reboot without prompting if FAI_FLAG reboot is set
     sendmon "TASKEND faiend 0"
@@ -674,7 +674,7 @@ task_confdir() {
     define_fai_flags
 
     # check if monitor server is available
-    [ -z "$monserver" ] && monserver=$SERVER
+    : ${monserver:=$SERVER}
     if [ -z "$monserver" ]; then
 	echo "No monitor daemon defined."
 	faimond=0
