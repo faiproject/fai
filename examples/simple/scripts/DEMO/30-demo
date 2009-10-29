@@ -1,0 +1,20 @@
+#! /usr/sbin/cfagent -f
+
+control:
+   any::
+   actionsequence = ( files editfiles )
+   EditFileSize = ( 30000 )
+
+files:
+   any::
+
+# floppy and cdroms are accessible for all
+        ${target}/dev include=fd* mode=666   action=fixall r=1
+        ${target}/dev include=sr* mode=444   action=fixall r=1
+
+editfiles:
+   any::
+
+	{ ${target}/etc/init.d/sysklogd
+	  ReplaceAll "^SYSLOGD=.*" With 'SYSLOGD="-m 360"'
+	}

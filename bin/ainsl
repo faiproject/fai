@@ -1,0 +1,123 @@
+#! /usr/bin/perl
+
+# $Id$
+#*********************************************************************
+#
+# ainsl -- AppendIfNoSuchLine written in Perl
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2006-2008 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# '/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+my $version = "Version 1.2, 18-june-2008";
+
+use Getopt::Std;
+our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q);
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub usage {
+
+  print << "EOF";
+ainsl, AppendIfNoSuchLine written in Perl. $version
+
+   Copyright (C) 2006-2008 by Thomas Lange
+
+Usage: ainsl [OPTION] FILE LINE [PATTERN]
+
+   -a         Autocreate file if not existing.
+   -D         Create debug output.
+   -h         Show summary of options.
+   -n         Print the actions, but do not execute them.
+   -Q         Quote all metacharacters in pattern. Uses perl\'s \\Q function.
+   -q         Quote * and + metacharacters in pattern.
+   -s         Convert blanks in line to '\\s+' regexp.
+   -v         Create verbose output.
+
+Report bugs to <lange\@informatik.uni-koeln.de>.
+EOF
+  exit 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub autocreate {
+
+  -f $filename && return;
+  print "ainsl: create $filename\n" if $verbose;
+  $opt_n && return;
+  open (FILE,">$filename") || die "ainsl: can't create $filename $!";
+  close (FILE);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+getopts('aDhsvnQq') || usage;
+
+$opt_h && usage;
+$verbose = $opt_v || $ENV{verbose} || 0;
+$debug   = $opt_D || $ENV{debug}   || 0;
+
+$filename = shift;
+$line     = shift;
+$optpattern  = shift;
+$found = 0;
+usage() unless defined $line;
+
+print "FILE: $filename\nLINE: $line\nPATTERN: $pattern\n" if $debug;
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+$opt_a && autocreate;
+
+$pattern = (defined $optpattern) ? $optpattern: $line;
+# process pattern and line
+# remove ^ and $ in line (only at start and end), but still use it for pattern
+# in no explicit pattern was given
+
+unless (defined $optpattern) {
+# remove special chars ^ and $ from line
+  $line =~ s/^\^//;
+  $line =~ s/\$$//;
+# escape '(' and ')' if no pattern was given and line is used
+  $pattern =~s/\(/\\(/g;
+  $pattern =~s/\)/\\)/g;
+  $pattern =~s/\+/\\+/g;
+}
+$opt_s && $pattern=~ s/\s+/\\s+/g;
+$opt_q && $pattern=~ s/\*/\\*/g;
+$opt_q && $pattern=~ s/\+/\+/g;
+$pattern="\Q$pattern\E" if $opt_Q;
+
+print "ainsl: newpattern: $pattern\n" if $debug;
+print "ainsl: newline: $line\n" if $debug;
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# check if pattern already included in file
+open (INFILE, "<$filename") or die "Can't open $filename $!";
+while (<INFILE>) {
+  if (/$pattern/o) {
+    print "aisnl: Pattern found. Nothing to append.\n" if $debug;
+    $found=1;
+    last;
+  }
+}
+close(INFILE);
+exit 0 if $found; # nothing to append
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Append line to file
+print "ainsl: appending to $filename: $line\n" if $verbose;
+exit 0 if $opt_n;
+open (INFILE, ">>$filename") or die "ainsl: can't open $filename for writing. $!";
+print INFILE $line,"\n";
+close(INFILE);

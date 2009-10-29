@@ -1,0 +1,31 @@
+#! /bin/sh
+
+set -e
+
+case "$1" in
+    purge)
+        . /etc/fai/fai.conf
+	if [ -z "$FAI_CONFIGDIR" ]; then
+	    echo "\$FAI_CONFIGDIR is not defined. Can't remove it."
+	else
+	    echo -n "Shall I do rm -rf $FAI_CONFIGDIR? " ; read answer
+	    case $answer in
+		y*|Y*)
+		    rm -rf $FAI_CONFIGDIR ;;
+		*)
+		    echo "$FAI_CONFIGDIR left untouched." ;;
+	    esac
+	fi
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear) ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+
+esac
+
+#DEBHELPER#
+
+exit 0

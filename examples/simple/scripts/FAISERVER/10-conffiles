@@ -1,0 +1,14 @@
+#! /bin/bash
+
+fcopy -Bv /etc/dhcp3/dhcpd.conf /etc/default/tftpd-hpa # not needed /etc/apache2/conf.d
+fcopy -Bvr /etc/fai
+
+#/etc/fai/fai.conf /etc/fai/make-fai-nfsroot.conf
+fcopy /etc/apt-proxy/apt-proxy-v2.conf /etc/fai/apt/sources.list
+# use the same sources.list for the server itself and the clients
+cp -a $target/etc/fai/apt $target/etc/
+
+rm -f $target/etc/resolv.conf
+
+# create some host entries
+perl -e 'for (1..25) {printf "192.168.1.%s atom%02s\n",$_,$_;}' >> $target/etc/hosts

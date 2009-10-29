@@ -1,0 +1,72 @@
+#! /bin/bash
+
+# copyright Thomas Lange 2001-2005, lange@debian.org
+# LILO support may be dropped in a future release
+
+FFLAGS=${FAI_FLAGS// /,}
+
+cd $target/boot && kernelversion=$(ls vmlinuz-*)
+
+# if class NOMBR is defined, write boot loader into root partition, not into mbr
+ifclass NOMBR && BOOT_DEVICE=$ROOT_PARTITION
+
+if ifclass LILO; then
+  fcopy /etc/lilo.conf || {
+    # if the installed kernel is using an initial ramdisk
+    if [ -L $target/initrd.img ]; then
+	initrdopt="initrd=/initrd.img"
+    fi
+    # write lilo.conf and install lilo to disk
+    echo "Creating lilo.conf for /vmlinuz"
+    cat > $target/etc/lilo.conf <<-EOF
+	boot=$BOOT_DEVICE
+	root=$ROOT_PARTITION
+	install=/boot/boot.b
+	map=/boot/map
+	vga=normal
+	delay=50
+
+	image=/vmlinuz
+	append="devfs=nomount $kappend"
+	$initrdopt
+	label=linux
+        read-only
+
+	image=/vmlinuz.old
+	label=linux.old
+	read-only
+	optional
+	$liloappend
+EOF
+  }
+fi
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ifclass FAI_BOOTPART && {
+
+    rev=`uname -r`
+    mkdir -p $target/fai-boot
+    cp -a /boot/vmlinuz-$rev $target/fai-boot
+
+    ifclass LILO && {
+    # write lilo.conf and install lilo to disk
+	echo "Add /fai-boot partition to lilo.conf"
+
+	cat >> $target/etc/lilo.conf <<-EOF
+	image=/fai-boot/boot/$kernelversion
+	$initrdopt
+	append="devfs=nomount"
+	label=FAI
+EOF
+	mkdir $target/fai-boot/etc
+	cp $target/etc/lilo.conf $target/fai-boot/etc
+    }
+
+}
+
+# now call lilo
+# you can also use this
+# $ROOTCMD lilo -v
+if ifclass LILO; then
+    $target/sbin/lilo -r $target
+fi

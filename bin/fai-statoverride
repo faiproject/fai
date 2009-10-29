@@ -1,0 +1,23 @@
+#! /bin/bash
+
+# override owner and mode of a file or directory
+# call dpkg-statoverride with multiple files, 
+# this command is idempotent
+
+# copyright Thomas Lange, Uni Koeln, 2005
+
+err=0
+
+owner=$1;shift
+group=$1;shift
+ mode=$1;shift
+
+for f in $* ;do
+    $ROOTCMD dpkg-statoverride --list | grep -q " $f"
+    if [ "$?" -eq 1 ]; then
+	echo "Overriding owner and mode: $owner $group $mode $f" 
+	$ROOTCMD dpkg-statoverride --update --add $owner $group $mode $f && err=1
+    fi
+done
+
+exit $err

@@ -1,0 +1,634 @@
+#! /bin/bash
+
+# $Id: subroutines 5224 2008-12-09 15:40:41Z lange $
+#*********************************************************************
+#
+# subroutines -- useful subroutines for FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2000-2008 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+# (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
+# Freie Universitaet Berlin
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+# source this file, then you have these function available in the shell
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    # echo comment and exit installation
+    task savelog
+    echo "$@"
+    if [ X$FAI_ACTION = Xinstall ]; then
+	exec bash -i
+    else
+	exit 99
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+defnop() {
+
+    # define given list of subroutine names as dummy function;
+    # this will fake unknown commands
+
+    local name
+    for name in "$@";do
+        eval "$name () { :;}"
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:      none
+# Required-Var:      $classes
+# Short-Description: test if class is defined
+### END SUBROUTINE INFO
+
+ifclass() {
+
+    [ "$debug" ] && echo "Test if class $1 is in $classes" >&2
+    # test if a class is defined
+    local cl
+    local ret=1
+
+    for cl in $classes; do
+	[ x$cl = x$1 ] && ret=0 && break
+    done
+    [ "$debug" ] && echo "ifclass returns $ret" >&2
+    return $ret
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+rwmount() {
+
+    # remount partition read/write
+    mount -o rw,remount $1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+save_dmesg() {
+
+    dmesg > $LOGDIR/dmesg.log
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+wait_for_jobs() {
+
+    # can be an extern script
+    # wait for running (background) jobs to finish (e.g. update-auctex-elisp)
+    local i=0
+    while jobsrunning; do
+	[ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
+	(( i += 1 ))
+	sleep 10
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+stop_fai_installation() {
+
+    # this subroutine should directly stop the installation process
+    echo "Traceback: $task_error_func"
+    die "FATAL ERROR. Installation stopped."
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:      $task_error_code
+# Required-Var:      $1 $2 $task_error_code
+# Short-Description: save the maximum error code,
+# Short-Description: $1 is the error that will be saved unless $2 is zero
+### END SUBROUTINE INFO
+
+task_error() {
+
+    [ X$2 = X0 ] && return
+    task_error_func=${FUNCNAME[*]}
+    [ $1 -gt $task_error_code ] && task_error_code=$1
+    [ $task_error_code -gt $STOP_ON_ERROR ] && stop_fai_installation
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:      $task_error_code
+# Required-Var:      $LOGDIR
+# Short-Description: call a certain task
+### END SUBROUTINE INFO
+
+task() {
+
+    # hooks are called before a task is called
+    # if a task is skipped, also its hooks are skipped
+    # a hook can set the flag, so the accociated task is skipped
+
+    local taskname=$1
+    shift
+
+    [ -f $LOGDIR/skip.$taskname ] || call_hook $taskname $@
+
+    if [ -f $LOGDIR/skip.$taskname ]; then
+        # skip task
+	rm $LOGDIR/skip.$taskname # TODO: remove skip files at the very end
+	[ "$verbose" ] && echo "Skiping task_$taskname"
+	sendmon "TASKSKIP $taskname"
+    else
+	echo "Calling task_$taskname"
+	sendmon "TASKBEGIN $taskname"
+	task_error_code=0   # task can set this variable to indicate an error
+	task_error_func=''
+	task_$taskname $@
+	sendmon "TASKEND $taskname $task_error_code"
+	[ "$task_error_code" -ne 0 ] && echo "Exit code task_$taskname: $task_error_code"
+    fi
+
+    # since the subroutine is not needed any more, we can undefine it, except
+    # if it's our error handler, which may be called multiple times
+    if [ "$taskname" != "error" ]; then
+	unset task_$taskname
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:      
+# Required-Var:      $classes $debug
+# Short-Description: call a hook, hook.source can define additional variables
+### END SUBROUTINE INFO
+
+call_hook() {
+
+    local hook=$1
+    shift
+
+    local cl dflag hfile
+    [ "$debug" ] && dflag="-d"
+
+    for cl in $classes; do
+	hfile=$FAI/hooks/$hook.$cl
+	if [ -f $hfile -a ! -x $hfile ]; then
+	    echo "WARNING: Skipping $hfile execustion because it's not executable."
+	    continue
+	fi
+	if [ -f $hfile.source -a ! -x $hfile.source ]; then
+	    echo "WARNING: Skipping $hfile.source execustion because it's not executable."
+	    continue
+	fi
+	if [ -x $hfile ]; then
+	    echo "Calling hook: $hook.$cl"
+	    sendmon "HOOK $hook.$cl"
+	    # execute the hook
+	    $hfile $dflag $@
+	    check_status $hook.$cl $?
+	fi
+	if [ -x $hfile.source ]; then
+	    echo "Source hook: $hook.$cl.source"
+	    sendmon "HOOK $hook.$cl.source"
+            # source this hook
+	    . $hfile.source $dflag $@
+	    check_status $hook.$cl.source $?
+	fi
+     done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+skiptask() {
+
+    # mark all given tasks, so they will be skipped
+    local task
+
+    for task in "$@"; do
+	> $LOGDIR/skip.$task
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+define_fai_flags() {
+
+    local flag
+
+    # FAI_FLAGS are comma separated, define all flags
+    FAI_FLAGS=${FAI_FLAGS//,/ }
+    echo "FAI_FLAGS: $FAI_FLAGS"
+    for flag in $FAI_FLAGS; do
+	# define this flag as 1
+	eval "flag_$flag=1"
+	case $flag in
+	shutdown|reboot) export FAI_ABORT=$flag ;;
+	esac
+    done
+    [ "$flag_verbose" ]  && verbose=1 # for backward compability
+    [ "$flag_debug" ]    && debug=1   # for backward compability
+    [ "$flag_shutdown" -o "$flag_reboot" ] && flag_nowait=1
+    if [ "$FAI_ABORT" = "shutdown" ]; then
+        unset flag_reboot
+        trap 'echo "Now shutting down";faishutdown' INT QUIT
+    else
+        unset flag_shutdown
+        trap 'echo "Now rebooting";faireboot' INT QUIT
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    $fai_rundate
+# Requires-Var:    $DOMAIN $do_init_tasks
+# Suggests-Var:    $flag_createvt $flag_sshd
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+task_setup() {
+
+    # source user specific subroutines
+    [ -f $FAI/hooks/subroutines ] && . $FAI/hooks/subroutines
+
+    # warn user if cdrom has DMA not enabled
+    if [ -f /etc/RUNNING_FROM_FAICD ]; then
+	local cdrom=$(mount| awk '/dev.+on \/ /{print $1}')
+	if [ -n "$cdrom" ]; then
+	    hdparm -d $cdrom | grep -q off 2>/dev/null
+	    if [ $? -eq 0 ]; then
+		echo "WARNING: CD-ROM does not use DMA mode. The installation will be sloooow."
+	    fi
+	fi
+    fi
+
+    define_fai_flags
+
+    # this may be moved to an external script
+    if [ $do_init_tasks -eq 1 ] ; then
+        # set the system time and date using rdate or/and ntpdate
+        [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
+        [ "$NTPSRVS_1" ]  && ntpdate -b $NTPSRVS
+        [ "$flag_createvt" ] && {
+	    # create two virtual terminals
+	    echo "Press ctrl-c to interrupt FAI and to get a shell"
+	    openvt -v /bin/bash 2>&1
+	    openvt -v /bin/bash 2>&1
+	    trap 'echo "You can reboot with faireboot";bash' INT QUIT
+        }
+    
+        # start secure shell daemon for remote access
+	[ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+    fi
+    unset flag_createvt flag_sshd
+
+    # when did FAI start, using localtime
+    [ -z "$fai_rundate" ] && fai_rundate=$(date +'%Y%m%d_%H%M%S')
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    none
+# Requires-Var:    $FAI_ACTION
+# Short-Description: call task depending on $FAI_ACTION
+### END SUBROUTINE INFO
+
+task_action() {
+
+    if [ -z "$FAI_ACTION" ]; then
+	echo "No action in \$FAI_ACTION defined."
+	sendmon "TASKERROR action 21"
+	task faiend
+	exit 
+    fi
+    echo "FAI_ACTION: $FAI_ACTION"
+    case $FAI_ACTION in
+
+	install)
+	    if [ $do_init_tasks -eq 0 ]; then
+		echo "Cowardly refusing to run a FAI installation on a running system."
+		return
+	    fi
+	    echo Performing FAI installation. All data may be overwritten!
+	    echo -ne "\a"; sleep 1
+	    echo -ne "\a"; sleep 1
+	    echo  -e "\a"; sleep 5
+	    task install
+	    task faiend
+	    ;;
+	dirinstall)
+	    task dirinstall
+	    task faiend
+	    ;;
+	softupdate)
+	    echo Performing FAI system update. All data may be overwritten!
+	    task softupdate
+	    task faiend
+	    ;;
+	sysinfo)
+	    echo Showing system information.
+	    task sysinfo
+	    task faiend
+	    die Now you have a shell.
+	    ;;
+	*)
+	    if [ -f $FAI/hooks/$FAI_ACTION ]; then
+		echo "Calling user defined action: $FAI_ACTION"
+		$FAI/hooks/$FAI_ACTION
+	    else
+		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found."
+		sendmon "TASKERROR action 22"
+		task faiend
+	    fi
+	    ;;
+	esac
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    $classes $cfclasses
+# Requires-Var:    $LOGDIR
+# Suggests-Var:    $renewclass
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+task_defclass() {
+
+    if [ ! -d $FAI/class ]; then
+	sendmon "TASKERROR defclass 21"
+	echo "Directory $FAI/class not found. Following subdirectories are found:"
+	find $FAI -maxdepth 1 -type d -printf "%p\n"
+	die "Aborting."
+    fi
+
+    # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
+    if [ $renewclass -eq 1 ]; then
+	# reevaluate new list of classes
+	fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
+	classes=$(< $LOGDIR/FAI_CLASSES)
+    elif [ -n "$cmdlineclasses" ]; then
+	classes=$cmdlineclasses
+    elif [ ! -f /var/lib/fai/FAI_CLASSES ]; then
+	# use classes defined at installation time
+	die "Try to read classes from /var/lib/fai/FAI_CLASSES. Failed. Aborting."
+    else
+	classes=$(< /var/lib/fai/FAI_CLASSES)
+    fi
+    echo "List of all classes: " $classes
+
+    # define classes as: a.b.c.d for cfengine -D
+    # this doesn't work without echo
+    cfclasses=$(echo $classes)
+    cfclasses=${cfclasses// /.}
+    [ "$debug" ] && echo "cfclasses: $cfclasses"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+_defvar() {
+
+    local showvar=1 # TODO: new FAI_FLAG or always set when verbose is used
+    [ "$showvar" ] && set -x
+    . $1 </dev/null 
+    [ "$showvar" ] && set +x
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_defvar() {
+
+    local svar=$LOGDIR/showvar.log
+    local odir=$(pwd)
+    cd $FAI/class
+    for class in $classes ; do
+	if [ -f $class.var -a -r $class.var ]; then
+	    [ "$verbose" ] && echo "Executing $class.var"
+	    # show only lines with ++, we cannot use a pipe, since it would call
+	    # _devfar in a subprocess. Then, variables are not defined 
+	    _defvar $class.var > $svar 2>&1
+	    grep ^++ $svar
+	    rm $svar
+	fi
+    done
+
+    # /fai/class/S* scripts or hooks can write variable definitions
+    # to additonal.var. now source these definitions
+    if [ -f $LOGDIR/additional.var -a -r $LOGDIR/additional.var ]; then
+	_defvar $LOGDIR/additional.var > $svar 2>&1
+	grep ^++ $svar
+	rm $svar
+    fi
+    unset class svar
+    # now all variables are defined. Dump them to variables.log
+    set | perl -ne 'print if /^\w\w+=/ and not /^(BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|rootpw|ROOTPW|HOME|PWD)/' > $LOGDIR/variables.log
+    cd $odir
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_mountdisks() {
+
+    [ ! -f $LOGDIR/fstab ] && die "No $LOGDIR/fstab created."
+    # mount swap space
+    local sd
+    for sd in $SWAPLIST; do
+	swapon -p1 $sd && [ "$verbose" ] && echo "Enable swap device $sd"
+    done
+    mount2dir $FAI_ROOT $LOGDIR/fstab
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_configure() {
+
+    fai-do-scripts $FAI/scripts
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_test() {
+
+    echo "Will be implemented soon"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_savelog() {
+
+    mkdir -p $FAI_ROOT/var/lib/fai
+    mkdir -p $FAI_ROOT/var/log/fai
+    fai-savelog -l
+    [ -f $LOGDIR/FAI_CLASSES ] && cp -pu $LOGDIR/FAI_CLASSES $FAI_ROOT/var/lib/fai
+    [ -f $LOGDIR/disk_var.sh ] && cp -pu $LOGDIR/disk_var.sh $FAI_ROOT/var/lib/fai
+    fai-savelog -r
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_faiend() {
+
+    local dir cdromdevice
+
+    # initialize empty flags
+    [ -z "${flag_faiend:=0}" ] && flag_faiend=0
+    [ -z "${flag_nowait:=0}" ] && flag_nowait=0
+
+    [ $do_init_tasks -eq 0 -a $flag_faiend -eq 0 ] && exit 0
+    wait_for_jobs
+    [ -s $LOGDIR/error.log -a "$flag_nowait" -gt "0" ] && sleep 10
+
+    # quit without prompting if FAI_FLAG nowait is set
+    if [ "$flag_nowait" -lt "1" ]; then
+      echo "Press <RETURN> to '${FAI_ABORT}'."
+      read
+    else
+      if [ "$FAI_ABORT" != "shutdown" ]; then
+	echo "Rebooting $HOSTNAME now"
+      else
+	echo "Shutting down $HOSTNAME now"
+      fi
+    fi
+
+    # inform faimond of last action
+    if [ "$FAI_ABORT" != "shutdown" ]; then
+      sendmon "TASKEND REBOOT 0"
+    else
+      sendmon "TASKEND SHUTDOWN 0"
+    fi
+
+    cd /
+    sync
+
+    [ $do_init_tasks -eq 1 ] && killall -q sshd udevd
+    if [ -f /etc/RUNNING_FROM_FAICD ]; then
+	cat > $target/tmp/rebootCD <<'EOF'
+#! /bin/bash
+ device=$1
+eject -m /dev/$device 2>/dev/null >/dev/null
+echo "Remove CDROM, close tray and press <RETURN> to continue $FAI_ABORT"
+read
+eject -t /dev/$device 2>/dev/null >/dev/null
+if [ "$FAI_ABORT" != "shutdown" ]; then
+  exec reboot -df
+else
+  exec poweroff -df
+fi
+EOF
+	chmod +x $target/tmp/rebootCD
+	sync
+	for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
+	    mount -o remount,ro $dir
+	done
+	cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
+	chroot $target /tmp/rebootCD $cdromdevice
+	# never reached, because chroot will reboot the machine
+	die "Internal error when calling /tmp/rebootCD."
+    fi
+
+    if [ $do_init_tasks -eq 1 ]; then
+      umount $FAI_ROOT/proc
+      umount -ar
+    fi
+    if [ "$FAI_ABORT" != "shutdown" ]; then
+      exec reboot -dfi
+    else
+      exec poweroff -dfi
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_install() {
+
+    echo $$ > $stamp
+
+    save_dmesg
+
+    task partition
+    task mountdisks
+    task extrbase
+    task mirror
+    task debconf
+    task prepareapt
+    task updatebase
+    task instsoft
+    task configure
+    task finish
+    task chboot
+
+    rm -f $stamp
+    # save again, because new messages could be created
+    save_dmesg
+    task test
+    task savelog
+
+    if [ -f $stamp ]; then
+	echo "Error while executing commands in subshell."
+	echo -n "$stamp was not removed. PID of running process: "
+	cat $stamp
+	sendmon "TASKERROR install 21"
+	die "Please look at the log files in $LOGDIR for errors."
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_dirinstall() {
+
+    echo $$ > $stamp
+
+    mkdir -p $FAI_ROOT
+    FAI_ROOT=$(cd $FAI_ROOT;pwd)
+    echo "Installing into directory $FAI_ROOT"
+    task extrbase
+    [ -f $target/etc/fstab ] || touch $target/etc/fstab
+    task mirror
+    task debconf
+    task prepareapt
+    task updatebase
+    task instsoft
+    task configure
+    task finish
+
+    rm -f $stamp
+    unset LOGUSER # so logfile are not saved to remote
+    task savelog
+
+    if [ -f $stamp ]; then
+	echo "Error while executing commands in subshell."
+	echo -n "$stamp was not removed. PID of running process: "
+	cat $stamp
+	sendmon "TASKERROR install 21"
+	die "Please look at the log files in $LOGDIR for errors."
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+task_softupdate() {
+
+    stamp=/var/run/fai/fai_softupdate_is_running
+
+    [ -f "$stamp" ] && die "Another fai softupdate is already running. Aborting."
+    echo $$ > $stamp
+    # if the system had been installed using fai < 3.0 disk_var.sh is found in /etc/fai
+    if [ ! -f /var/lib/fai/disk_var.sh -a -f /etc/fai/disk_var.sh ] ; then
+      mv /etc/fai/disk_var.sh /var/lib/fai/
+    fi
+    # the following copy operation is required to make $LOGDIR a reliable source
+    # for disk_var.sh
+    # use the last disk_var during update if available
+    [ -f /var/lib/fai/disk_var.sh ] && cp -p /var/lib/fai/disk_var.sh $LOGDIR 
+
+    defnop wait_for_jobs
+    save_dmesg
+
+    task mirror
+    task debconf
+    task updatebase
+    task instsoft
+    task configure
+    date
+    [ -f /proc/uptime ] && echo "The $FAI_ACTION took $[$(cut -d . -f 1 /proc/uptime)-$start_seconds] seconds."
+
+    rm -f $stamp
+    # save again, because new messages could be created
+    save_dmesg
+    task savelog
+
+    # umount config space if accessed via nfs
+    echo $FAI_CONFIG_SRC | grep -q ^nfs://
+    if [ $? -eq 0 ]; then
+	grep -q " $FAI nfs" /etc/mtab && umount $FAI
+    fi
+
+    if [ -f $stamp ]; then
+	echo "Error while executing commands in subshell."
+	echo -n "$stamp was not removed. PID of running process: "
+	cat $stamp
+	sendmon "TASKERROR softupdate 21"
+	die "Please look at the log files in $LOGDIR for errors."
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+catnc() {
+    # cat but no comment lines
+    egrep -v "^#" $@
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

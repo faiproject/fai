@@ -1,0 +1,32 @@
+#! /bin/bash
+
+# (c) Thomas Lange, 2001-2008, lange@debian.org
+
+error=0 ; trap "error=$((error|1))" ERR
+
+# a list of modules which are loaded at boot time
+fcopy -i /etc/modules
+for module in $MODULESLIST; do
+    ainsl -a $target/etc/modules "^$module$"
+done
+
+fcopy /etc/hostname || echo $HOSTNAME     > $target/etc/hostname
+echo $TIMEZONE    > $target/etc/timezone
+ln -fs /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
+
+fcopy -iM /etc/hosts /etc/motd
+
+# set root password
+echo "root:$ROOTPW" | $ROOTCMD chpasswd --encrypted
+# make /root accessible only by root
+chmod 0700 $target/root
+chown root:root $target/root
+# copy default dotfiles for root account
+fcopy -ir /root
+
+# create keyboard layout table
+$ROOTCMD bash -c "echo 'console-data console-data/keymap/full select $KEYMAP' | debconf-set-selections"
+$ROOTCMD install-keymap $KEYMAP || true
+# dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
+
+exit $error

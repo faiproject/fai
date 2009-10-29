@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# (c) 2002-2006 Henning Glawe <glaweh@debian.org>
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_CONFIG_SRC $FAI $LOGDIR
+# Suggests-Var:
+# Short-Description: get $FAI from an svn repository.
+### END SUBROUTINE INFO
+
+# matched string: "svn://user@host/svnpath"
+protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
+username=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^@]*\)@')
+svnpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://[^@]\+@\([^[:space:]]\+\)')
+
+case $protocol in
+	svn)
+		svnurl="svn://$svnpath"
+		;;
+	svn+file)
+		svnurl="file://$svnpath"
+		;;
+	svn+http)
+		svnurl="http://$svnpath"
+		;;
+	svn+https)
+		svnurl="https://$svnpath"
+		;;
+	svn+ssh)
+		svnurl="svn+ssh://$username@$svnpath"
+		# this is a bit hackish: if $username is empty, the path gets corrected below... 
+		# explaination: svn co -username foo svn+ssh://bar doesnt work as svn co svn+ssh://foo@bar
+		;;
+	*)
+		echo "get-config-dir-svn: protocol $protocol not implemented"
+		exit 1
+		;;
+esac
+		
+[ -n "$username" ] && user="--username $username"
+[ -z "$username" ] && svnurl=$FAI_CONFIG_SRC
+
+if [ -d "$FAI/.svn" ] ; then
+   echo "Updating SVN in $FAI"
+   cd $FAI
+   svn up $user | grep -v 'Updated to revision' > $LOGDIR/getconf.log
+   task error 701
+else 
+   echo "Checking out SVN"
+   svn co $user $svnurl $FAI | grep -v 'Checked out revision' > $LOGDIR/getconf.log
+   task error 702
+fi

@@ -1,0 +1,40 @@
+#! /bin/sh
+
+# $Id: mkdebmirror 5222 2008-12-09 12:15:53Z lange $
+# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001-2008
+
+# create partial debian mirror using command debmirror(1)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+update_from() {
+
+    # update local mirror from a host
+    host=$1
+    defopt="$allopt --host=$host --dist=$dist"
+
+    echo "------------------ create mirror for debian ------------------"
+    debmirror --getcontents $destdir/debian $defopt
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# main program
+#
+# here you have to adjust the hostnames of the mirror and the names of the distributions
+
+
+debug="$@"
+arch=i386
+dist=etch,etch-proposed-updates
+
+destdir=/files/scratch/debmirror
+
+allopt="$debug --ignore-missing-release --ignore-release-gpg --passive --nosource --arch=$arch --ignore=disks-$arch/"
+
+# first sync from a mirror near to you
+#update_from ftp.uni-koeln.de
+
+# since this mirror is not always up to date, sync the rest from an official mirror
+update_from ftp.de.debian.org
+
+# even one should not mirror the security site, but I will do it.
+echo "------------------ create mirror for debian-security ------------------"
+debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security  --section main,contrib,non-free -d etch/updates

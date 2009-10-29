@@ -1,0 +1,64 @@
+Description of the classes		Tue, 10 Jan 2006 18:02:19 +0100
+--------------------------
+
+If you want to find all files (except hostnames) that are classes try:
+   find /srv/fai/config -type f | egrep '/[[:upper:][:digit:]_]+$'
+
+In cfengine scripts you can find class names using:
+   egrep -r '[[:upper:][:digit:]_]+::' /srv/fai/config
+
+Shell scripts are using the commad ifclass. So use:
+   egrep -r 'ifclass[[:space:]]+[[:upper:][:digit:]_]+' /srv/fai/config
+
+
+Class name       used in  Description
+----------------------------------------------------
+	       CHVDPSF A	  
+
+DHCPC		   PS     do network configuration using dhcp-client
+
+GERMAN		   P	  packages for the german environment
+
+XFREE		   P      packages for xfree server, fonts,...
+
+LILO		    S	  create lilo.conf, install lilo
+
+GRUB		    S	  install and configure grub
+
+FAI_BOOTPART	    S     add fai boot menu to lilo.conf or grub's menu.lst
+
+LAST		    S 	  remove backup files of cfengine, link /tmp
+			  if necessary, add nfs location of debian
+			  mirror to fstab 
+
+FAIBASE	       C V PS     minimal software list, configure base stuff
+			  (TODO: describe in more detail)
+
+FAISERVER      DESFP	  setup install server with DHCP, TFTP,
+			  partial mirror, call fai-setup during
+			  first boot
+
+DEMO               PS	  more demo packages, add account demo (pw: fai)
+
+NOMBR		    S     install boot loader into root partition (not into MBR)
+
+Explanation of "used in":
+-------------------------
+C = /fai/class/
+V = used for *.var in /fai/class
+D = /fai/disk_config/
+E = /fai/debconf/
+P = /fai/package_config/
+S = /fai/scripts/
+F = /fai/files/ (used by fcopy)
+A = auto class (defined by a script)
+H = /fai/hooks
+
+The following classes should always be defined:
+
+LAST, DEFAULT (are defined by default)
+BOOT and maybe MBR
+
+Some classes depends on another class. For example, the class NTP is used
+in the script NETWORK. So both classes must be defined if the ntp
+configuration should be created.

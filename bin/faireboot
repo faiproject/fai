@@ -1,0 +1,56 @@
+#! /bin/bash
+
+# $Id: faireboot 4113 2006-10-26 19:13:12Z lange $
+# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000-2004
+
+faimond=0
+. /usr/lib/fai/subroutines
+. /usr/lib/fai/subroutines-`uname -s | tr A-Z a-z`
+
+[ -f /tmp/fai/variables.log ] && . /tmp/fai/variables.log
+
+while getopts s opt ; do
+        case "$opt" in
+        s) fai-savelog -r ;;
+        esac
+done
+
+name=`basename "$0"`
+action="reboot"
+[ "${name}" = "faishutdown" ] && action="shutdown"
+
+cd /
+killall -STOP rcS
+killall -q apt-get dpkg tar gzip yes cat syslogd 
+
+[ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ] && killall -q sshd
+
+fai-divert -R
+
+umount $FAI_ROOT/proc $FAI_ROOT/dev/pts
+umount -ar
+killall udevd
+
+sendmon "FAIREBOOT"
+if [ "$action" = "reboot" ]; then
+    echo "$HOSTNAME now rebooting"
+else
+    echo "$HOSTNAME now shutting down"
+fi
+
+if [ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ]; then
+    if [ "$action" = "reboot" ]; then
+        exec reboot -dfi
+    else
+        exec shutdown -dfi
+    fi
+else
+    killall -CONT rcS
+    killall rcS
+    if [ "$action" = "reboot" ]; then
+        init 6 &
+    else
+        init 0 &
+    fi
+fi
+
