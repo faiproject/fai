@@ -26,7 +26,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-version="version 1.6.5, 9-oct-2009"
+version="version 1.6.6, 29-oct-2009"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -69,7 +69,7 @@ call_conf() {
     for class in $classes ; do
 	[ -x $class -a -f $class ] && do_script $class
 	if [ -d $class ]; then
-	   for f in $(echo $class/{S,}[0-9][0-9]* ) ; do
+	   for f in $(echo $class/[0-9][0-9]* ) ; do
 	       [ -x $f -a -f $f ] && do_script $f
 	   done
 	fi
@@ -86,17 +86,13 @@ do_script() {
 
     # may be remove some day
     case $file in
-	*~) [ X$debug = X1 ] && echo "Skipping backup file $file";	 return ;;
-	*.dpkg-old)  [ X$debug = X1 ] && echo "Skipping file $file";	 return ;;
-	*.dpkg-new)  [ X$debug = X1 ] && echo "Skipping file $file";	 return ;;
+	*~) [ X$debug = X1 ] && echo "Skipping backup file $file";   return ;;
+	*.dpkg-old)  [ X$debug = X1 ] && echo "Skipping file $file"; return ;;
+	*.dpkg-new)  [ X$debug = X1 ] && echo "Skipping file $file"; return ;;
 	*.dpkg-inst) [ X$debug = X1 ] && echo "Skipping file $file"; return ;;
     esac
 
     name=${file##*/}  # basename function
-    case $name in
-	S[0-9][0-9]*) echo -e "WARNING: The script $name does not match [0-9][0-9]*.\nIt's not executed. Please rename it."; return ;;
-    esac
-
     filetype=$(file -b $file)
 
     if [ "$fake" ]; then
@@ -158,7 +154,7 @@ usage() {
     local ex
     ex=$1
     cat <<-EOF
-        fai-do-scripts $version. Copyright (C) 2003-2007 Thomas Lange
+        fai-do-scripts $version. Copyright (C) 2003-2009 Thomas Lange
         Read the manual page fai-do-scripts(1) for more information.
 
         Usage: fai-do-scripts [OPTION] DIRECTORY
