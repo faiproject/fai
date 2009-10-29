@@ -26,7 +26,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-version="version 1.6.6, 29-oct-2009"
+version="version 1.7, 29-oct-2009"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -36,12 +36,11 @@ version="version 1.6.6, 29-oct-2009"
 # If class is a directory, execute all $class/[0-9][0-9]* scripts in
 # it, but do not execute files ending in ~
     
-# TODO: -n only shows which scripts should be executed, but do not execute them
-
-maxstatus=0  # since maxstatus is set inside a pipe, the value is not available at the end
+maxstatus=0
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 savemaxstatus() {
 
+    $exitcode=$1 # set global variable
     # save the highest exit status
     [ $1 -gt $maxstatus ] && maxstatus=$1
 }
@@ -56,7 +55,6 @@ fc_check_status() {
 	res="OK."
     else
 	res="FAILED with exit code $st."
-	savemaxstatus $st
     fi
     # put result in the log file and write to stdout
     printf "%-20s $res\n" $cmd | tee -a $LOGDIR/status.log
@@ -114,35 +112,40 @@ do_script() {
 	    echo "Executing   $shelldebug shell: $file"
 	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
 	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
-	    fc_check_status $file $? | tee -a $LOGDIR/shell.log
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/shell.log
 	;;
 
 	*"cfagent"*)
 	    echo "Executing cfagent: $file"
 	    echo "=====   cfagent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
 	    ./$file $cfagentdebug -qKI -D${cfclasses} >> $LOGDIR/cfagent.log 2>&1
-	    fc_check_status $file $? | tee -a $LOGDIR/cfagent.log
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/cfagent.log
 	;;
 
 	*"cfengine script"*)
 	    echo "Executing cfengine: $file"
 	    echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
 	    ./$file -K -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
-	    fc_check_status $file $? | tee -a $LOGDIR/cfengine.log
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/cfengine.log
 	;;
 
 	*"perl"*"script"*)
 	    echo "Executing    perl: $file"
 	    echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
 	    ./$file >> $LOGDIR/perl.log 2>&1
-	    fc_check_status $file $? | tee -a $LOGDIR/perl.log
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/perl.log
 	;;
 
 	*"expect script"*)
 	    echo "Executing  expect: $file"
 	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
 	    ./$file >> $LOGDIR/expect.log 2>&1
-	    fc_check_status $file $? | tee -a $LOGDIR/expect.log
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/expect.log
 	;;
 
 	*) echo "File $file has unsupported type $filetype." ;;
@@ -184,6 +187,5 @@ fi
 
 call_conf $1
 # move error number from child scripts to 100+x if any error happened
-# this does not work atm, cause fc_check.. is called inside a pipe
-# [ $maxstatus -gt 0 ] && maxstatus=$((100+$maxstatus))
+[ $maxstatus -gt 0 ] && maxstatus=$((100+$maxstatus))
 exit $maxstatus
