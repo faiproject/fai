@@ -153,9 +153,10 @@ sub set_partition_type_on_phys_dev {
   # make sure this device really exists (we can't check for the partition
   # as that may be created later on
   (-b $disk) or die "Specified disk $disk does not exist in this system!\n";
-  # set the raid flag
-  &FAI::push_command( "parted -s $disk set $part_no $t on", "exist_$d",
-    "type_${t}_$d" );
+  # set the raid/lvm unless this is an entire disk flag
+  my $cmd = "parted -s $disk set $part_no $t on";
+  $cmd = "true" if ($part_no == -1);
+  &FAI::push_command( $cmd, "exist_$d", "type_${t}_$d" );
 }
 
 ################################################################################

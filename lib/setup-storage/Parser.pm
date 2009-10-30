@@ -614,6 +614,8 @@ $FAI::Parser = Parse::RecDescent->new(
             unless ($dev =~ m{^/}) {
               if ($dev =~ m/^disk(\d+)\.(\d+)/) {
                 $dev = &FAI::make_device_name("/dev/" . $FAI::disks[ $1 - 1 ], $2);
+              } elsif ($dev =~ m/^disk(\d+)/) {
+                $dev = "/dev/" . $FAI::disks[ $1 - 1 ];
               } else {
                 $dev = "/dev/$dev";
               }
