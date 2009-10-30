@@ -1,0 +1,35 @@
+2009-10-30  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: LVM volume groups or RAID arrays may now refer to
+		diskX to use the entire disk (thanks Mathieu Alorent).
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -614,6 +614,8 @@
+             unless ($dev =~ m{^/}) {
+               if ($dev =~ m/^disk(\d+)\.(\d+)/) {
+                 $dev = &FAI::make_device_name("/dev/" . $FAI::disks[ $1 - 1 ], $2);
++              } elsif ($dev =~ m/^disk(\d+)/) {
++                $dev = "/dev/" . $FAI::disks[ $1 - 1 ];
+               } else {
+                 $dev = "/dev/$dev";
+               }
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -151,9 +151,10 @@
+   # make sure this device really exists (we can't check for the partition
+   # as that may be created later on
+   (-b $disk) or die "Specified disk $disk does not exist in this system!\n";
+-  # set the raid flag
+-  &FAI::push_command( "parted -s $disk set $part_no $t on", "exist_$d",
+-    "type_${t}_$d" );
++  # set the raid/lvm unless this is an entire disk flag
++  my $cmd = "parted -s $disk set $part_no $t on";
++  $cmd = "true" if ($part_no == -1);
++  &FAI::push_command( $cmd, "exist_$d", "type_${t}_$d" );
+ }
+ 
+ ################################################################################
