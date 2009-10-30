@@ -892,13 +892,14 @@ Linux kernel has booted on the install clients.
 . Define variables
 . Partition local disks
 . Create and mount local file systems
+. Do debconf preseeding
 . Install software packages
 . Call site specific configuration scripts
 . Call tests if available
 . Save log files
 . Reboot the new installed system
 ////
-MT: debconf, update base missing
+MT update base missing
 ////
 
 You can also define additional programs or scripts which will be run
@@ -988,10 +989,6 @@ executed in alphabetical order. Every word that these scripts print to
 the standard output are interpreted as class names.  Scripts ending in
 _.source_ are sourced, so they can define new classes by adding these
 classes to the variable +$newclasses+.
-
-////
-MT: 20-hwdetect.source does not really use newclasses
-////
 
 The output of these scripts is ignored.  These classes are defined for
 the install client. You can also say this client belongs to these
@@ -1151,15 +1148,10 @@ installation by answering the following questions:
 * How should the local hard disks be partitioned?
 * Which applications will be run by the users?
 * Do the users need a queueing system?
-* MT: what is a queueing system?
 * What software should be installed?
 * Which daemons should be started, and what  should the configuration for these look like?
 * Which remote file systems should be mounted?
 * How should backups be performed?
-* Do you have sufficient power supply?
-* MT: not a problem of using FAI
-* How much heat do the cluster nodes produce and how are  they cooled?
-* MT: not a problem of using FAI
 
 You also have to think about user accounts, printers, a mail system,
 cron jobs, graphic cards, dual boot, NIS, NTP, timezone, keyboard
@@ -1416,12 +1408,7 @@ remotely on the install server.
 
 savelog::
 Saves log files to local disk and to the account +$LOGUSER+ on
-+$LOGSERVER+ (defaults to the install server). Currently the file
-'error.log' will not be copied to the log server.
-
-////
-MT: why is error.log not copied?
-////
++$LOGSERVER+ (defaults to the install server).
 
 faiend::
 Wait for background jobs to finish (e.g. emacs compiling lisp files)
@@ -2487,10 +2474,6 @@ different:
 * By default the old list of classes (created during the initial
 installation) is used, so `fai-class` is not called to define a new
 list of classes. This can be changed by calling _fai -N softupdate_.
-
-////
-MT: Is this still the current behavior?
-////
 
 * No partitioning and file system creation is performed.
 * The basesytem isn't bootstrapped.
