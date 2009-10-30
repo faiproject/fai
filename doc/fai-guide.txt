@@ -5,7 +5,7 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-3.0, Sun, 25 Oct 2009 21:30:02 +0100
+3.0, Fri, 30 Oct 2009 11:35:08 +0100
 
 
 :faiver:  3.3
@@ -33,7 +33,8 @@ This manual describes the Fully Automatic Installation package. This
 includes the installation of the package, planning and creating of the
 configuration and how to deal with errors.
 
-(c) 2000-2009 Thomas Lange +
+(c) 2000-2009 Thomas Lange
+
 (c) 2005 Henning Glawe
 
 
@@ -63,54 +64,46 @@ USA
   - mailinglists, IRC channel should be mentioned
 ////
 
-In 1999, I had to perform an installation of a Linux cluster with one
-server and 16 clients. Since I had much experience doing automatic
-installations of Solaris operating systems on SUN SPARC hardware, the
-idea to build an automatic installation for Debian was born. Solaris
-has an automatic installation feature called JumpStart
-
 
 === [[availability]]Availability
 
-////
-MT: put Motivation before Availability
-////
 
-The homepage of FAI is http://www.informatik.uni-koeln.de/fai.
-There's a wiki for FAI available at
-http://faiwiki.informatik.uni-koeln.de There you will find all
-information about FAI, for example the mailing list archives. The FAI
-packages are also available from
-http://www.informatik.uni-koeln.de/fai/download. They are also
-available from all Debian mirrors. To access the newest versions of
-the FAI packages, you can add the following line to your
-'/etc/apt/sources.list' file.
+Homepage::
+http://www.informatik.uni-koeln.de/fai
 
-----
-deb http://www.informatik.uni-koeln.de/fai/download lenny koeln
-----
+FAI wiki::
+http://faiwiki.informatik.uni-koeln.de
 
-User visible changes are listed in
-'/usr/share/doc/fai-doc/NEWS.Debian.gz'.
+Download::
+http://www.informatik.uni-koeln.de/fai/download
 
-Send any comments to mailto:fai@informatik.uni-koeln.de[]. You should
-use the Debian bug tracking system (BTS) http://bugs.debian.org for
+Entry for 'sources.list'::
+`http://www.informatik.uni-koeln.de/fai/download lenny koeln`
+
+Mailing list::
+https://lists.uni-koeln.de/mailman/listinfo/linux-fai
+
+Feedback::
+Send feedback and comment to mailto:fai@informatik.uni-koeln.de[] or
+to the mailing list.
+
+Bugs::
+Use the Debian bug tracking system (BTS) http://bugs.debian.org for
 reporting errors.
 
+User visible changes::
+http://www.informatik.uni-koeln.de/fai/NEWS
+
+Source tree::
 You can access the subversion repository containing the newest
-developer version of FAI from a Unix shell using the following
-commands.
+developer version of FAI using the following commands
+`svn co svn://svn.debian.org/svn/fai/trunk fai`
 
-----
-$ svn co svn://svn.debian.org/svn/fai/trunk fai
-----
-
-You can also use the web interface for the subversion repository at:
-http://svn.debian.org/wsvn/fai/.
+Source tree via http::
+http://svn.debian.org/wsvn/fai/
 
 Now read this manual, then enjoy the fully automatic installation and
 your saved time.
-
 
 === [[motivation]]Motivation
 
@@ -361,7 +354,7 @@ The script `mkdebmirror` footnote:[You can find the script in
 your own local Debian mirror. This script uses the script
 `debmirror(1)`. A partial Debian mirror only for i386 architecture for
 Debian 5.0 (aka lenny) without the source packages needs about
-{mirrorsize} of disk space. Accessing the mirror via HTTP will be the
+{mirrorsize}MB of disk space. Accessing the mirror via HTTP will be the
 default way in most cases. To see more output from the script call
 +mkdebmirror -v+. A root account is not necessary to create and
 maintain the Debian mirror.
@@ -463,7 +456,7 @@ git repository, host can be empty. Also supported is git+http.
 
 If +$FAI\_CONFIG\_SRC+ is undefined in 'fai.conf', then the default is
 to use an NFS mount from the fai install server onto the install
-client. It's the same as _nfs://\`hostname\`/$FAI\_CONFIGDIR_ with the
+client. It's the same as +nfs://\`hostname\`/$FAI\_CONFIGDIR+ with the
 host name determined on the install server. Remember that this
 directory must be exported to all install clients, so that all files
 can be read by root.
@@ -513,10 +506,9 @@ NFS server has problems exporting a directory and one of its
 subdirectories with different options.
 
 All install clients must belong to this netgroup, in order to mount
-these directories successfully. Netgroups are defined in
-'/etc/netgroup' or in the corresponding NIS map. An example for the
-netgroup file can be found in
-'/usr/share/doc/fai-doc/examples/etc/netgroup'. For more information,
+these directories successfully. Netgroups are defined in the file
+'/etc/netgroup' or in the corresponding NIS map. An example can be found in
+'/usr/share/doc/fai-doc/examples/etc/netgroup'. For more information, 
 read the manual pages `netgroup(5)` and the NIS HOWTO. After changing
 the netgroups, the NFS server has to reload its configuration. Use the
 following command:
@@ -612,7 +604,7 @@ Some network cards (e.g. on notebooks) have a fixed boot
 configuration, so they can only use the PXE boot protocol. This
 requires a PXE Linux boot loader and a special version of the _TFTP_
 daemon, which is available in the Debian package
-*tftpd-hpa*.
++tftpd-hpa+.
 
 First, install following additional needed packages:
 
@@ -867,10 +859,8 @@ faiserver:/srv/fai/config
 aufs               193464      2376    191243   2% /target/dev
 ----
 
-*This method can be used as a rescue environment!* In the future it
-will be possible to make backups or restore data to existing file
-systems. If you need a file system with read-write access use the
-`rwmount` command:
+*This method can be used as a rescue environment!* If you need a file
+system with read-write access use the `rwmount` command:
 
 ----
 demohost# rwmount /target/home
@@ -882,7 +872,7 @@ If the install client boots with action _sysinfo_, you can also check
 if all information from the DHCP daemon are received
 correctly. The received information is written to
 '/tmp/fai/boot.log'. An example of the result of a DHCP request can be
-found in <<s1>>.
+found in <<setuproutines>>.
 
 
 === [[reboot]]Rebooting the computer
@@ -965,7 +955,7 @@ writable using aufs. The package _live-initramfs_ is only needed
 inside the nfsroot and adds some initramfs hooks.
 
 
-=== [[isetup]]Set up FAI
+=== [[isetup]]Start and setup FAI
 
 ////
 MT: CVS, SVN missing
@@ -984,6 +974,10 @@ the configuration space is made available via the configured method
 (an NFS mount by default) from the install server to '$FAI'. The setup
 is finished after additional virtual terminals are created and the
 secure shell daemon for remote access is started on demand.
+
+The variable +$FAI_CONFIG_SRC+ is used to get the FAI
+configuration space, which is very important, since FAI cannot proceed
+without the config space.
 
 === [[iclass]]Defining classes, variables and loading kernel modules
 
@@ -1177,11 +1171,9 @@ can't do things you don't tell it to do.
 
 But you need not start from scratch. Look at all files and scripts in
 the configuration space. There are a lot of things you can use for
-your own installation.
-
-A good paper called "Bootstrapping an Infrastructure".  with more
-aspects of building an infrastructure is available at
-http://www.infrastructures.org/papers/bootstrap
+your own installation. A good paper called "Bootstrapping an
+Infrastructure" with more aspects of building an infrastructure is
+available at http://www.infrastructures.org/papers/bootstrap
 
 
 == [[config]]Installation details
@@ -1408,6 +1400,10 @@ configure::
 Calls scripts in '$FAI/scripts/' and its subdirectories for every
 defined class.
 
+tests::
+Calls test scripts in '$FAI/tests/' and its subdirectories for every
+defined class.
+
 finish::
 Unmounts all file systems in the new installed system and removes
 diversions of files using the command `fai-divert`.
@@ -1433,7 +1429,8 @@ and automatically reboots the install clients or waits for manual
 input before reboot.
 
 
-=== [[s1]]The setup routines of the install clients
+
+=== [[setuproutines]]The setup routines of the install clients
 
 After the subroutine `fai_init` has done some basic initialization
 (create RAM disk, read 'fai.conf' and all subroutines definitions, set
