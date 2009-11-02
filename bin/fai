@@ -302,23 +302,7 @@ fai_init
 [ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
 unset newhostname
 
-# remove this crap, use old thing
-mkfifo $LOGDIR/logfifo
-tee -a $LOGDIR/fai.log < $LOGDIR/logfifo &
-# in bash &> redirect stdout and stderr to file
-fstart &> $LOGDIR/logfifo
-rm $LOGDIR/logfifo
-sleep 1 # wait for tee to complete. One second should be ok
-# old code
-# {
-# # a bash group command with { does not work on sparc
-# task confdir
-# task setup
-# task defclass
-# task defvar
-# load_keymap_consolechars
-# set_disk_info
-# } > >( tee -a $LOGDIR/fai.log )  2>&1
+fstart > >( tee -a $LOGDIR/fai.log )  2>&1
 
 [ "$action" ] && export FAI_ACTION=$action
 unset action
