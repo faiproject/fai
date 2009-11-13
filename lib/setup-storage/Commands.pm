@@ -79,7 +79,7 @@ sub build_mkfs_commands {
   # supports tuning at all
   return unless $tune_options;
   my $tune_tool;
-  ($fs eq "ext2" || $fs eq "ext3") and $tune_tool = "tune2fs";
+  ($fs eq "ext2" || $fs eq "ext3" || $fs eq "ext4") and $tune_tool = "tune2fs";
   ($fs eq "reiserfs") and $tune_tool = "reiserfstune";
   die "Don't know how to tune $fs\n" unless $tune_tool;
 

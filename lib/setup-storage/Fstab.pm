@@ -58,8 +58,9 @@ sub create_fstab_line {
   push @fstab_line, ($d_ref->{mountpoint}, $d_ref->{filesystem},
     $d_ref->{mount_options}, 0, 2);
   # order of filesystem checks: the root filesystem gets a 1, the others
-  # got 2
+  # get 2, swap gets 0
   $fstab_line[-1] = 1 if ($d_ref->{mountpoint} eq "/");
+  $fstab_line[-1] = 0 if ($d_ref->{mountpoint} eq "swap");
 
   # set the ROOT_PARTITION variable, if this is the mountpoint for /
   $FAI::disk_var{ROOT_PARTITION} = $name
