@@ -92,9 +92,9 @@ fai_init() {
 
     if [ $do_init_tasks -eq 1 ]; then
 	eval_cmdline
-	mount -t sysfs sysfs /sys
+	[ -d /sys/kernel ] || mount -t sysfs sysfs /sys
 	# we really need to start udev
-	[ -x /etc/init.d/udev ] && /etc/init.d/udev start
+	[ -x /etc/init.d/udev ] && [ X$UPSTART_JOB != Xfai ] && /etc/init.d/udev start
 	mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
@@ -271,7 +271,7 @@ fi
 
 # are we called as an init substitute ?
 export do_init_tasks=0
-[ "$0" = "/etc/init.d/rcS" ] && do_init_tasks=1
+[ "$0" = "/etc/init.d/rcS" ] || [ X$UPSTART_JOB = Xfai ] && do_init_tasks=1
 if [ $do_init_tasks -eq 1 ]; then
     hostname $HOSTNAME
     renewclass=1 # always renew class list when installing
