@@ -10,6 +10,9 @@ free:	text html ps pdf
 html:
 	a2x --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f xhtml $(DOC).txt
 
+chunked:
+	a2x --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f chunked $(DOC).txt
+
 pdf:	
 	a2x --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
 	rm -f $(DOC).xml $(DOC).fo
