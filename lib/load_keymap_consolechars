@@ -9,4 +9,16 @@
 [ "$KEYMAP" ] || exit
 
 echo -n "Loading keymap(s) $KEYMAP ..."
-loadkeys -q $KEYMAP && echo "done."
+if [ -x /bin/setupcon ]; then
+
+    layout=$(echo $KEYMAP|cut -d - -f 1)
+    variant=$(echo $KEYMAP|cut -d - -f 3)
+    sed -e "s#^XKBLAYOUT=.*#XKBLAYOUT=\"$layout\"#" \
+        -e "s#^XKBVARIANT=.*#XKBVARIANT=\"$variant\"#" \
+	/etc/default/console-setup > /.console-setup
+    setupcon -k --force
+    echo "done."
+else
+    loadkeys -q $KEYMAP && echo "done."
+fi
+
