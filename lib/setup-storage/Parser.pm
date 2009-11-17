@@ -499,7 +499,7 @@ $FAI::Parser = Parse::RecDescent->new(
           # set $FAI::device to VG_$1
           $FAI::device = "VG_$1";
           # make sure, the volume group $1 has been defined before
-          defined ($FAI::configs{$FAI::device}) or 
+          defined ($FAI::configs{$FAI::device}{devices}) or
             die "Volume group $1 has not been declared yet.\n";
           # make sure, $2 has not been defined already
           defined ($FAI::configs{$FAI::device}{volumes}{$2}{size}{range}) and 
@@ -536,13 +536,15 @@ $FAI::Parser = Parse::RecDescent->new(
           # set the device name to VG_ and the name of the volume group
           $FAI::device = "VG_$1";
           # make sure, the volume group $1 not has been defined already
-          defined ($FAI::configs{$FAI::device}) and
+          defined ($FAI::configs{$FAI::device}{devices}) and
             die "Volume group $1 has been defined already.\n";
           # make sure this line is part of an LVM configuration
           ($FAI::device =~ /^VG_/) or
             die "vg is invalid in a non LVM-context.\n";
-          # initialise the new hash
-          $FAI::configs{$FAI::device}{volumes} = {};
+          # initialise the new hash unless some preserve/define already created
+          # it
+          defined($FAI::configs{$FAI::device}{volumes}) or
+            $FAI::configs{$FAI::device}{volumes} = {};
           # initialise the list of physical devices
           $FAI::configs{$FAI::device}{devices} = ();
           # the rule must not return undef
