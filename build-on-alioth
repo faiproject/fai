@@ -108,6 +108,9 @@ done
 # check arguments
 test -n "$REV" -a -n "$REPOS"
 
+# quilt must be available
+test -e /usr/bin/quilt
+
 # checkout the directories, if necessary
 if [ ! -d $storage/trunk-w-exp ] ; then
   svn co -r $REV file:///srv/svn.debian.org/svn/fai/trunk $storage/trunk-w-exp
@@ -125,7 +128,6 @@ if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; 
   rm -f $storage/trunk-w-exp/debian/source.lintian-overrides
   svn revert $storage/trunk-w-exp/debian/rules
   svn revert $storage/trunk-w-exp/debian/changelog
-  svn revert $storage/trunk-w-exp/debian/control
   svn up -r $REV $storage/trunk-w-exp
   svn up -r $REV $storage/trunk-w-exp/debian/patches
   cd $storage
@@ -135,8 +137,8 @@ if svnlook dirs-changed -r $REV $REPOS | grep '^people/michael/experimental/' ; 
   export QUILT_PATCHES=$PWD/debian/patches
   mangle_version_number
   patch -p0 < $tmppatch
-  perl -p -i -e 's/^(Build-Depends:.*)$/$1, quilt/' debian/control
   echo "fai source: patch-modifying-debian-files" >> debian/source.lintian-overrides
+  echo "fai source: missing-build-dependency quilt" >> debian/source.lintian-overrides
   build_changelog
   dpkg-buildpackage -uc -us -d -I.svn -rfakeroot && dpkg_exit=$? || dpkg_exit=$?
   debian/rules clean
