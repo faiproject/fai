@@ -7,7 +7,7 @@ Index: trunk/Makefile
 ===================================================================
 --- trunk.orig/Makefile
 +++ trunk/Makefile	
-@@ -46,6 +46,7 @@
+@@ -47,6 +47,7 @@
  	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
  	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
  	cp -a examples $(DOCDIR)
@@ -19,30 +19,30 @@ Index: trunk/examples/simple/package_config/DEFAULT
 ===================================================================
 --- trunk.orig/examples/simple/package_config/DEFAULT
 +++ trunk/examples/simple/package_config/DEFAULT	
-@@ -17,7 +17,10 @@
+@@ -17,10 +17,10 @@
  dhcp3-client
  
  PACKAGES aptitude GRUB
 -grub lilo-
 +grub lilo- grub-pc-
  
+ PACKAGES aptitude GRUB_PC
+ grub-pc grub- lilo-
+ 
  PACKAGES aptitude LILO
 -lilo grub-
 +lilo grub- grub-pc-
-+
-+PACKAGES aptitude GRUB_PC
-+grub-pc grub- lilo-
 Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
---- /dev/null	1970-01-01 00:00:00.000000000 +0000
+--- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
 +++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
-@@ -0,0 +1,26 @@
-+#! /bin/bash
-+
-+error=0 ; trap "error=$((error|1))" ERR
-+
-+set -a
-+
+@@ -2,8 +2,23 @@
+ 
+ error=0 ; trap "error=$((error|1))" ERR
+ 
+-$ROOTCMD grub-mkdevicemap -n -m /boot/grub/device.map
+-$ROOTCMD grub-mkconfig -o /boot/grub/grub.cfg
+-$ROOTCMD grub-install --no-floppy "(hd0)"
 +# during softupdate use this file
 +[ -r $LOGDIR/disk_var.sh ] && . $LOGDIR/disk_var.sh
 +
@@ -60,6 +60,6 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 +$ROOTCMD /usr/sbin/grub-install --modules="ext2 _chain pc gpt biosdisk lvm raid serial" "($grub_dev)"
 +$ROOTCMD /usr/sbin/grub-setup   "($grub_dev)"
 +$ROOTCMD /usr/sbin/update-grub
-+
-+exit $error
+ 
+ exit $error
 +

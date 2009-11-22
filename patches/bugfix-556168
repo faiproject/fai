@@ -1,0 +1,30 @@
+2009-11-22  Michael Tautschnig  <mt@debian.org>
+
+	* fai-vol_id: Use blkid by default, use vol_id -L to obtain volume label when
+		using vol_id (thanks Klaus Ethgen). (closes: #556168)
+Index: trunk/lib/fai-vol_id
+===================================================================
+--- trunk.orig/lib/fai-vol_id
++++ trunk/lib/fai-vol_id	
+@@ -21,7 +21,7 @@
+     exit $?
+   fi
+ 
+-  /lib/udev/vol_id -l $1
++  /lib/udev/vol_id -L $1
+   exitcode=$?
+   if [ $exitcode -eq 0 -o $exitcode -eq 3 ] ; then
+     exitcode=0
+@@ -32,9 +32,10 @@
+ 
+ # main program
+ 
+-if [ ! -e $udev_vol_id ] ; then
++if [ -e $udev_blkid ] ; then
+   udev_vol_id=""
+-  if [ ! -e $udev_blkid ] ; then
++else
++  if [ ! -e $udev_vol_id ] ; then
+     "Neither udev vol_id nor blkid found!"
+     exit 1
+   fi
