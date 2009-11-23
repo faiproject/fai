@@ -1,0 +1,654 @@
+2009-11-23  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage: Encryption is now configured via a separate cryptsetup
+		stanza, deprecated the previous :encrypt option (thanks Julien BLACHE for
+		the patch).
+	* setup-storage.8: Updated documentation, added cryptsetup example.
+Index: trunk/bin/setup-storage
+===================================================================
+--- trunk.orig/bin/setup-storage
++++ trunk/bin/setup-storage	
+@@ -174,6 +174,7 @@
+ &FAI::build_disk_commands;
+ &FAI::build_raid_commands;
+ &FAI::build_lvm_commands;
++&FAI::build_cryptsetup_commands;
+ &FAI::order_commands;
+ 
+ # run all commands
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -48,13 +48,13 @@
+ 
+   my ($device, $partition) = @_;
+ 
++  # check for old-style encryption requests
++  &FAI::handle_oldstyle_encrypt_device($device, $partition);
++
+   defined ($partition->{filesystem})
+     or &FAI::internal_error("filesystem is undefined");
+   my $fs = $partition->{filesystem};
+ 
+-  # check for encryption requests
+-  $device = &FAI::encrypt_device($device, $partition);
+-
+   return if ($fs eq "-");
+ 
+   my ($create_options) = $partition->{createopts};
+@@ -88,50 +88,43 @@
+ 
+ ################################################################################
+ #
+-# @brief Encrypt a device and change the device name before formatting it
++# @brief Check for encrypt option and prepare corresponding CRYPT entry
++#
++# If encrypt is set, a corresponding CRYPT entry will be created and filesystem
++# and mountpoint get set to -
+ #
+ # @param $device Original device name of the target partition
+ # @param $partition Reference to partition in the config hash
+ #
+-# @return Device name, may be the same as $device
+-#
+ ################################################################################
+-sub encrypt_device {
++sub is_oldstyle_encrypt_device {
+ 
+   my ($device, $partition) = @_;
+ 
+-  return $device unless $partition->{encrypt};
++  return unless ($partition->{encrypt});
+ 
+-  # encryption requested, rewrite the device name
+-  my $enc_dev_name = $device;
+-  $enc_dev_name =~ s#/#_#g;
+-  my $enc_dev_short_name = "crypt$enc_dev_name";
+-  $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
+-  my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
+-
+-  # generate a key for encryption
+-  &FAI::push_command( 
+-    "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
+-    "", "keyfile_$device" );
+-  # prepare encryption
+-  my $prepare_deps = "keyfile_$device";
+-  if ($partition->{encrypt} > 1) {
+-    &FAI::push_command(
+-      "dd if=/dev/urandom of=$device",
+-      "exist_$device", "random_init_$device" );
+-    $prepare_deps = "random_init_$device,$prepare_deps";
+-  }
+-  &FAI::push_command(
+-    "yes YES | cryptsetup luksFormat $device $keyfile -c aes-cbc-essiv:sha256 -s 256",
+-    $prepare_deps, "crypt_format_$device" );
+-  &FAI::push_command(
+-    "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
+-    "crypt_format_$device", "exist_$enc_dev_name" );
++  if (!defined($FAI::configs{CRYPT}{randinit})) {
++    $FAI::configs{CRYPT}{fstabkey} = "device";
++    $FAI::configs{CRYPT}{randinit} = 0;
++    $FAI::configs{CRYPT}{volumes} = {};
++  }
++
++  $FAI::configs{CRYPT}{randinit} = 1 if ($partition->{encrypt} > 1);
++
++  my $vol_id = scalar(keys %{ $FAI::configs{CRYPT}{volumes} });
++  $FAI::configs{CRYPT}{volumes}{$vol_id} = {
++    device => $device,
++    mode => "luks",
++    preserve => (defined($partition->{size}) ?
++        $partition->{size}->preserve : $partition->{preserve}),
++    mountpoint => $partition->{mountpoint},
++    filesystem => $partition->{filesystem},
++    createopts => $partition->{createopts},
++    tuneopts => $partition->{tuneopts}
++  };
+ 
+-  # add entries to crypttab
+-  push @FAI::crypttab, "$enc_dev_short_name\t$device\t$keyfile\tluks";
+-
+-  return $enc_dev_name;
++  $partition->{mountpoint} = "-";
++  $partition->{filesystem} = "-";
+ }
+ 
+ ################################################################################
+@@ -160,6 +153,79 @@
+ ################################################################################
+ #
+ # @brief Using the configurations from %FAI::configs, a list of commands is
++# built to create any encrypted devices
++#
++################################################################################
++sub build_cryptsetup_commands {
++  foreach my $config (keys %FAI::configs) { # loop through all configs
++    # no LVM or physical devices here
++    next if ($config ne "CRYPT");
++
++    # create all encrypted devices
++    foreach my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
++
++      # keep a reference to the current volume
++      my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
++      # the desired encryption mode
++      my $mode = $vol->{mode};
++
++      warn "cryptsetup support is incomplete - preserve is not supported\n"
++        if ($vol->{preserve});
++
++      # rewrite the device name
++      my $real_dev = $vol->{device};
++      my $enc_dev_name = &FAI::enc_name($real_dev);
++      my $enc_dev_short_name = $enc_dev_name;
++      $enc_dev_short_name =~ s#^/dev/mapper/##;
++
++      my $pre_dep = "exist_$real_dev";
++
++      if ($FAI::configs{$config}{randinit}) {
++        &FAI::push_command(
++          "dd if=/dev/urandom of=$real_dev",
++          $pre_dep, "random_init_$real_dev");
++        $pre_dep = "random_init_$real_dev";
++      }
++
++      if ($mode eq "luks") {
++        my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
++
++        # generate a key for encryption
++        &FAI::push_command(
++          "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
++          "", "keyfile_$real_dev" );
++        # encrypt
++        &FAI::push_command(
++          "yes YES | cryptsetup luksFormat $real_dev $keyfile -c aes-cbc-essiv:sha256 -s 256",
++          "$pre_dep,keyfile_$real_dev", "crypt_format_$real_dev" );
++        &FAI::push_command(
++          "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
++          "crypt_format_$real_dev", "exist_$enc_dev_name" );
++
++        # add entries to crypttab
++        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks";
++
++      } elsif ($mode eq "tmp" || $mode eq "swap") {
++        &FAI::push_command(
++          "cryptsetup --key-file=/dev/urandom create $enc_dev_short_name $real_dev",
++          $pre_dep, "exist_$enc_dev_name");
++
++        # add entries to crypttab
++        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t/dev/urandom\t$mode";
++
++      }
++
++      # create the filesystem on the volume
++      &FAI::build_mkfs_commands($enc_dev_name,
++        \%{ $FAI::configs{$config}{volumes}{$id} });
++    }
++  }
++
++}
++
++################################################################################
++#
++# @brief Using the configurations from %FAI::configs, a list of commands is
+ # built to create any RAID devices
+ #
+ ################################################################################
+@@ -167,7 +233,7 @@
+ 
+   foreach my $config (keys %FAI::configs) { # loop through all configs
+     # no LVM or physical devices here
+-    next if ($config =~ /^VG_./ || $config =~ /^PHY_./);
++    next if ($config eq "CRYPT" || $config =~ /^VG_./ || $config =~ /^PHY_./);
+     ($config eq "RAID") or &FAI::internal_error("Invalid config $config");
+ 
+     # create all raid devices
+@@ -453,8 +519,8 @@
+   # loop through all configs
+   foreach my $config (keys %FAI::configs) {
+ 
+-    # no physical devices or RAID here
+-    next if ($config =~ /^PHY_./ || $config eq "RAID");
++    # no physical devices, RAID or encrypted here
++    next if ($config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT");
+     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
+     next if ($1 eq "--ANY--");
+     my $vg = $1; # the volume group
+@@ -861,8 +927,8 @@
+ 
+   # loop through all configs
+   foreach my $config ( keys %FAI::configs ) {
+-    # no RAID or LVM devices here
+-    next if ($config eq "RAID" || $config =~ /^VG_./);
++    # no RAID, encrypted or LVM devices here
++    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^VG_./);
+     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
+     my $disk = $1; # the device to be configured
+ 
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -168,8 +168,7 @@
+         # skip extended partitions and entries without a mountpoint
+         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
+ 
+-        my $device_name = &FAI::enc_name(
+-          &FAI::make_device_name($device, $p_ref->{number}));
++        my $device_name = &FAI::make_device_name($device, $p_ref->{number});
+ 
+         # if the mount point is / or /boot, the variables should be set, unless
+         # they are already
+@@ -214,12 +213,7 @@
+         ($FAI::no_dry_run == 0 || -b $fstab_key[0]) 
+           or die "Failed to resolve /dev/$device/$l\n";
+ 
+-        my $device_name = "/dev/$device/$l";
+-        if ($l_ref->{encrypt}) {
+-          $device_name = &FAI::enc_name($device_name);
+-        } else {
+-          $device_name = $fstab_key[0];
+-        }
++        my $device_name = $fstab_key[0];
+ 
+         # according to http://grub.enbug.org/LVMandRAID, this should work...
+         # if the mount point is / or /boot, the variables should be set, unless
+@@ -246,7 +240,7 @@
+         # skip entries without a mountpoint
+         next if ($r_ref->{mountpoint} eq "-");
+ 
+-        my $device_name = &FAI::enc_name("/dev/md$r");
++        my $device_name = "/dev/md$r";
+ 
+         # according to http://grub.enbug.org/LVMandRAID, this should work...
+         # if the mount point is / or /boot, the variables should be set, unless
+@@ -262,6 +256,20 @@
+         push @fstab, &FAI::create_fstab_line($r_ref,
+           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
+       }
++    } elsif ($c eq "CRYPT") {
++      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
++        my $c_ref = $config->{$c}->{volumes}->{$v};
++
++        next if ($c_ref->{mountpoint} eq "-");
++
++        my $device_name = &FAI::enc_name($c_ref->{device});
++
++        ($c_ref->{mountpoint} eq "/boot" || ($c_ref->{mountpoint} eq "/" &&
++            !defined ($FAI::disk_var{BOOT_PARTITION}))) and
++          die "Boot partition cannot be encrypted\n";
++
++        push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
++      }
+     } else {
+       &FAI::internal_error("Unexpected key $c");
+     }
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -343,6 +343,15 @@
+           $FAI::configs{$FAI::device}{fstabkey} = "device";
+         }
+         raid_option(s?)
++        | 'cryptsetup'
++        {
++          &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
++          $FAI::device = "CRYPT";
++          $FAI::configs{$FAI::device}{fstabkey} = "device";
++          $FAI::configs{$FAI::device}{randinit} = 0;
++          $FAI::configs{$FAI::device}{volumes} = {};
++        }
++        cryptsetup_option(s?)
+         | /^lvm/
+         {
+ 
+@@ -394,6 +403,11 @@
+           $FAI::configs{$FAI::device}{fstabkey} = $1;
+         }
+ 
++    cryptsetup_option: /^randinit/
++        {
++          $FAI::configs{$FAI::device}{randinit} = 1;
++        }
++
+     lvm_option: m{^preserve_always:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+         {
+           # set the preserve flag for all ids in all cases
+@@ -501,7 +515,8 @@
+           ($FAI::device eq "RAID") or die "RAID entry invalid in this context\n";
+           # initialise RAID entry, if it doesn't exist already
+           defined ($FAI::configs{RAID}) or $FAI::configs{RAID}{volumes} = {};
+-          # compute the next available index - the size of the entry
++          # compute the next available index - the size of the entry or the
++          # first not fully defined entry
+           my $vol_id = 0;
+           foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{RAID}{volumes} })) {
+             defined ($FAI::configs{RAID}{volumes}{$ex_vol_id}{mode}) or last;
+@@ -519,6 +534,25 @@
+           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
+         }
+         mountpoint devices filesystem mount_options mdcreateopts
++        | /^(luks|tmp|swap)\s+/
++        {
++          ($FAI::device eq "CRYPT") or die "Encryted entry invalid in this context\n";
++          defined ($FAI::configs{CRYPT}) or &FAI::internal_error("CRYPT entry missing");
++
++          my $vol_id = 0;
++          foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{CRYPT}{volumes} })) {
++            defined ($FAI::configs{CRYPT}{volumes}{$ex_vol_id}{mode}) or last;
++            $vol_id++;
++          }
++
++          $FAI::configs{CRYPT}{volumes}{$vol_id}{mode} = $1;
++
++          # We don't do preserve for encrypted devices
++          $FAI::configs{CRYPT}{volumes}{$vol_id}{preserve} = 0;
++
++          $FAI::partition_pointer = (\%FAI::configs)->{CRYPT}->{volumes}->{$vol_id};
++        }
++        mountpoint devices filesystem mount_options lv_or_fsopts
+         | type mountpoint size filesystem mount_options lv_or_fsopts
+ 
+     type: 'primary'
+@@ -560,6 +594,7 @@
+           $FAI::partition_pointer->{mountpoint} = $1;
+           $FAI::partition_pointer->{mountpoint} = "none" if ($1 eq "swap");
+           if (defined($2)) {
++            warn "Old-style inline encrypt will be deprecated. Please add cryptsetup definitions (see man 8 setup-storage).\n";
+             &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
+             $FAI::partition_pointer->{encrypt} = 1;
+             ++$FAI::partition_pointer->{encrypt} if (defined($3));
+@@ -688,6 +723,10 @@
+                 "spare" => $spare,
+                 "missing" => $missing
+               };
++            } elsif ($FAI::device eq "CRYPT") {
++              die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
++              $FAI::partition_pointer->{device} = $candidates[0];
++              &FAI::mark_encrypted($candidates[0]);
+             } else {
+               die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
+               $dev = $candidates[0];
+@@ -716,7 +755,7 @@
+         {
+           $FAI::partition_pointer->{filesystem} = $item[ 1 ];
+           my $to_be_preserved = 0;
+-          if ($FAI::device eq "RAID") {
++          if ($FAI::device eq "RAID" or $FAI::device eq "CRYPT") {
+             $to_be_preserved = $FAI::partition_pointer->{preserve};
+           } else {
+             $to_be_preserved = $FAI::partition_pointer->{size}->{preserve};
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -201,8 +201,8 @@
+   # loop through all device configurations
+   foreach my $config (keys %FAI::configs) {
+ 
+-    # for RAID or physical disks there is nothing to be done here
+-    next if ($config eq "RAID" || $config =~ /^PHY_./);
++    # for RAID, encrypted or physical disks there is nothing to be done here
++    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^PHY_./);
+     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("invalid config entry $config");
+     next if ($1 eq "--ANY--");
+     my $vg = $1; # the volume group name
+@@ -597,8 +597,8 @@
+   # loop through all device configurations
+   foreach my $config (keys %FAI::configs) {
+ 
+-    # for RAID or LVM, there is nothing to be done here
+-    next if ($config eq "RAID" || $config =~ /^VG_./);
++    # for RAID, encrypted or LVM, there is nothing to be done here
++    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^VG_./);
+     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
+     # nothing to be done, if this is a configuration for a virtual disk
+     next if $FAI::configs{$config}{virtual};
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -459,6 +459,9 @@
+           "Can't preserve /dev/md$r because it is not defined in the current config\n";
+         &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} });
+       }
++    } elsif ($config eq "CRYPT") {
++      # We don't do preserve for encrypted partitions
++      next;
+     } else {
+       &FAI::internal_error("Unexpected key $config");
+     }
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -1,4 +1,4 @@
+-.TH setup-storage 8 "September 16, 2008" "Debian/GNU Linux"
++.TH setup-storage 8 "November 23, 2009" "Debian/GNU Linux"
+ .SH NAME
+ \fBsetup-storage\fP
+ \- automatically prepare storage devices
+@@ -136,6 +136,8 @@
+ .br
+            | disk_config raid( <raidoption>)*
+ .br
++           | disk_config cryptsetup( <cryptsetupoption>)*
++.br
+            | disk_config end 
+ .br
+            | disk_config disk[[:digit:]]+( <option>)*
+@@ -200,6 +202,14 @@
+ .br
+ 
+ 
++cryptsetupoption ::= /* empty */
++.br
++           | randinit
++.br
++           /* initialise all encrypted partitions with random data */
++.br
++
++
+ option ::= /* empty */
+ .br
+            | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
+@@ -270,21 +280,35 @@
+ .br
+          /* raid level */
+ .br
++         | luks
++.br
++         /* encrypted partition using LUKS */
++.br
++         | tmp
++.br
++         /* encrypted partition for /tmp usage, will be
++.br
++            recreated with a random key at each boot and
++.br
++            reformatted as ext2 */
++.br
++         | swap
++.br
++         /* encrypted partition for swap space usage, will
++.br
++            be recreated with a random key at each boot and
++.br
++            reformatted as swap space */
++.br
+          | [^/[:space:]]+-[^/[:space:]]+
+ .br
+          /* lvm logical volume: vg name and lv name*/
+ .br
+ 
+ 
+-mountpoint ::= (-|swap|/[^\:[:space:]]*)(:encrypt(:randinit)?)?
+-.br
+-               /* do not mount, mount as swap, or mount at fully qualified path;
+-.br
+-                * if :encrypt is given the partition will be encrypted, the key
++mountpoint ::= (-|swap|/[^\:[:space:]]*)
+ .br
+-                * is generated automatically; :randinit causes random
+-.br
+-                * initialization of the partition by setup-storage */
++               /* do not mount, mount as swap, or mount at fully qualified path */
+ .br
+ 
+ 
+@@ -365,7 +389,7 @@
+ .sp
+ .nf
+ .ta 10n 20n 30n 40n 50n
+-disk_config  hda	preserve_always:6,7	disklabel:msdos  bootable:3
++disk_config hda preserve_always:6,7 disklabel:msdos bootable:3
+ 
+ primary	/boot	20-100	ext3	rw
+ primary	swap	1000	swap	sw
+@@ -399,10 +423,10 @@
+ Create a softRAID
+ .sp
+ .nf
+-.ta 6n 9n 40n 45n
++.ta 6n 9n 43n 48n
+ disk_config raid
+ raid1	/	sda1,sdd1	ext2	rw,errors=remount-ro
+-raid0	-	disk2.2,sdc1,sde1:spare:missing	ext2  default
++raid0	-	disk2.2,sdc1,sde1:spare:missing	ext2	default
+ .sp
+ .fi
+ .PP
+@@ -418,22 +442,43 @@
+ .sp
+ .nf
+ .ta 15n 22n 30n 40n
+-disk_config sda  bootable:1
++disk_config sda bootable:1
+ primary	/boot	500	ext3	rw
+ primary	-	4096-	-	-
++
+ disk_config lvm
+-vg  my_pv  sda2
++vg	my_pv	sda2
+ my_pv-_swap	swap	2048	swap	sw
+ my_pv-_root	/	2048	ext3	rw
+ .sp
+ .fi
+ .PP
++
++.TP
++Crypt example
++.sp
++.nf
++.ta 10n 20n 30n 40n 50n
++disk_config /dev/sdb
++primary	/	21750	ext3	defaults,errors=remount-ro
++primary	/boot	250	ext3	defaults
++logical	-	4000	-	-
++logical	-	2000	-	-
++logical	-	10-	-	-
++
++disk_config cryptsetup
++swap	swap	/dev/sdb5	swap	defaults
++tmp	/tmp	/dev/sdb6	ext2	defaults
++luks	/local00	/dev/sdb7	ext3	defaults,errors=remount-ro	createopts="-m	0"
++.sp
++.fi
++.PP
+ .SH CAVEATS
+ .IP \(bu
+ Partition UUID cannot be obtained: In case a partition was previously used as
+ part of a software RAID volume and now is intended as swap space, udev fails
+ when asked for a UUID. This happens because mkswap does not overwrite the
+-previous RAID superblock. You can remove it using mdadm --zero-superblock
++previous RAID superblock. You can remove it using mdadm \-\-zero-superblock
+ <device>.
+ .IP \(bu
+ Machine does not boot because not partition is marked as bootable: If the
+@@ -445,10 +490,10 @@
+ marker, explicitly set the bootable option. Of course, there are lots of other
+ reasons why a system may fail to boot.
+ .IP \(bu
+-Crypto support requires some site-specific changes: If you use :encrypt on some
+-of your volumes, a crypttab file and key files for all such volumes will be
+-created. The key files are left in /tmp/fai; you will want to copy these to some
+-removable media or even replace them with /dev/urandom for tmp and swap.
++Crypto support requires some site-specific changes: If you use cryptsetup
++stanza, a crypttab file and key files for all luks volumes will be created. The
++key files are left in /tmp/fai; you will want to copy these to some removable
++media.
+ .SH SEE ALSO
+ This program is part of FAI (Fully Automatic Installation).
+ The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+Index: trunk/lib/setup-storage/Init.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Init.pm
++++ trunk/lib/setup-storage/Init.pm	
+@@ -130,6 +130,13 @@
+ 
+ ################################################################################
+ #
++# @brief Device alias names
++#
++################################################################################
++%FAI::dev_alias = ();
++
++################################################################################
++#
+ # @brief Add command to hash
+ #
+ # @param cmd Command
+@@ -183,10 +190,9 @@
+   return (0, "", -2);
+ }
+ 
+-
+ ################################################################################
+ #
+-# @brief Compute the nave of $dev considering possible encryption
++# @brief Compute the name of $dev considering possible encryption
+ #
+ # @param $dev Device string
+ #
+@@ -196,6 +202,9 @@
+ sub enc_name {
+   my ($dev) = @_;
+ 
++  return $FAI::dev_alias{$dev} if defined($FAI::dev_alias{$dev});
++
++  # handle old-style encryption entries
+   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
+   if ($i_p_d) {
+     defined ($FAI::configs{"PHY_$disk"}) or return $dev;
+@@ -214,13 +223,28 @@
+     return $dev;
+   }
+ 
++  &FAI::mark_encrypted($dev);
++
++  return $FAI::dev_alias{$dev};
++}
++
++################################################################################
++#
++# @brief Store mangled name for $dev
++#
++# @param $dev Device string
++#
++################################################################################
++sub mark_encrypted {
++  my ($dev) = @_;
++
+   # encryption requested, rewrite the device name
+   my $enc_dev_name = $dev;
+   $enc_dev_name =~ s#/#_#g;
+   my $enc_dev_short_name = "crypt$enc_dev_name";
+   $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
+ 
+-  return $enc_dev_name;
++  $FAI::dev_alias{$dev} = $enc_dev_name;
+ }
+ 
+ ################################################################################
