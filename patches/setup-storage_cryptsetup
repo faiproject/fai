@@ -1,4 +1,4 @@
-2009-11-23  Michael Tautschnig  <mt@debian.org>
+2009-11-30  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage: Encryption is now configured via a separate cryptsetup
 		stanza, deprecated the previous :encrypt option (thanks Julien BLACHE for
@@ -37,7 +37,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    return if ($fs eq "-");
  
    my ($create_options) = $partition->{createopts};
-@@ -88,50 +88,43 @@
+@@ -88,50 +88,44 @@
  
  ################################################################################
  #
@@ -54,7 +54,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 -#
  ################################################################################
 -sub encrypt_device {
-+sub is_oldstyle_encrypt_device {
++sub handle_oldstyle_encrypt_device {
  
    my ($device, $partition) = @_;
  
@@ -99,8 +99,9 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    device => $device,
 +    mode => "luks",
 +    preserve => (defined($partition->{size}) ?
-+        $partition->{size}->preserve : $partition->{preserve}),
++        $partition->{size}->{preserve} : $partition->{preserve}),
 +    mountpoint => $partition->{mountpoint},
++    mount_options => $partition->{mount_options},
 +    filesystem => $partition->{filesystem},
 +    createopts => $partition->{createopts},
 +    tuneopts => $partition->{tuneopts}
@@ -115,7 +116,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  }
  
  ################################################################################
-@@ -160,6 +153,79 @@
+@@ -160,6 +154,79 @@
  ################################################################################
  #
  # @brief Using the configurations from %FAI::configs, a list of commands is
@@ -195,7 +196,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  # built to create any RAID devices
  #
  ################################################################################
-@@ -167,7 +233,7 @@
+@@ -167,7 +234,7 @@
  
    foreach my $config (keys %FAI::configs) { # loop through all configs
      # no LVM or physical devices here
@@ -204,7 +205,7 @@ Index: trunk/lib/setup-storage/Commands.pm
      ($config eq "RAID") or &FAI::internal_error("Invalid config $config");
  
      # create all raid devices
-@@ -453,8 +519,8 @@
+@@ -453,8 +520,8 @@
    # loop through all configs
    foreach my $config (keys %FAI::configs) {
  
@@ -215,7 +216,7 @@ Index: trunk/lib/setup-storage/Commands.pm
      ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
      next if ($1 eq "--ANY--");
      my $vg = $1; # the volume group
-@@ -861,8 +927,8 @@
+@@ -861,8 +928,8 @@
  
    # loop through all configs
    foreach my $config ( keys %FAI::configs ) {
