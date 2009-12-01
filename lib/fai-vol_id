@@ -21,7 +21,7 @@ get_label() {
     exit $?
   fi
 
-  /lib/udev/vol_id -l $1
+  /lib/udev/vol_id -L $1
   exitcode=$?
   if [ $exitcode -eq 0 -o $exitcode -eq 3 ] ; then
     exitcode=0
@@ -32,9 +32,10 @@ get_label() {
 
 # main program
 
-if [ ! -e $udev_vol_id ] ; then
+if [ -e $udev_blkid ] ; then
   udev_vol_id=""
-  if [ ! -e $udev_blkid ] ; then
+else
+  if [ ! -e $udev_vol_id ] ; then
     "Neither udev vol_id nor blkid found!"
     exit 1
   fi
