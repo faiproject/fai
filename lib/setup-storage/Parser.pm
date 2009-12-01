@@ -68,21 +68,17 @@ sub in_path {
 }
 
 ################################################################################
+# @brief Determines a device's full path from a short name or number
 #
-# @brief Initialise a new entry in @ref $FAI::configs for a physical disk.
-#
-# Besides creating the entry in the hash, the fully path of the device is
-# computed (see @ref $disk) and it is tested, whether this is a block device.
-# The device name is then used to define @ref $FAI::device.
+# Resolves the device name (/dev/sda), short name (sda) or device number (0) to
+# a full device name (/dev/sda) and tests whether the device is a valid block
+# device.
 #
 # @param $disk Either an integer, occurring in the context of, e.g., disk2, or
 # a device name. The latter may be fully qualified, such as /dev/hda, or a short
 # name, such as sdb, in which case /dev/ is prepended.
-#
 ################################################################################
-sub init_disk_config {
-
-  # Initialise $disk
+sub resolve_disk_shortname {
   my ($disk) = @_;
 
   # test $disk for being numeric
@@ -103,6 +99,28 @@ sub init_disk_config {
   die "Failed to resolve $disk to a unique device name\n" if (scalar(@candidates) > 1);
   $disk = $candidates[0] if (scalar(@candidates) == 1);
   die "Device name $disk could not be substituted\n" if ($disk =~ m{[\*\?\[\{\~]});
+
+  return $disk;
+}
+
+################################################################################
+#
+# @brief Initialise a new entry in @ref $FAI::configs for a physical disk.
+#
+# Checks whether the specified device is valid, creates the entry in the hash
+# and sets @ref $FAI::device.
+#
+# @param $disk Either an integer, occurring in the context of, e.g., disk2, or
+# a device name. The latter may be fully qualified, such as /dev/hda, or a short
+# name, such as sdb, in which case /dev/ is prepended.
+#
+################################################################################
+sub init_disk_config {
+
+  # Initialise $disk
+  my ($disk) = @_;
+
+  $disk = &FAI::resolve_disk_shortname($disk);
 
   # prepend PHY_
   $FAI::device = "PHY_$disk";
@@ -325,6 +343,15 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{fstabkey} = "device";
         }
         raid_option(s?)
+        | 'cryptsetup'
+        {
+          &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
+          $FAI::device = "CRYPT";
+          $FAI::configs{$FAI::device}{fstabkey} = "device";
+          $FAI::configs{$FAI::device}{randinit} = 0;
+          $FAI::configs{$FAI::device}{volumes} = {};
+        }
+        cryptsetup_option(s?)
         | /^lvm/
         {
 
@@ -376,6 +403,11 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
 
+    cryptsetup_option: /^randinit/
+        {
+          $FAI::configs{$FAI::device}{randinit} = 1;
+        }
+
     lvm_option: m{^preserve_always:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
         {
           # set the preserve flag for all ids in all cases
@@ -410,6 +442,7 @@ $FAI::Parser = Parse::RecDescent->new(
           # the information preferred for fstab device identifieres
           $FAI::configs{"VG_--ANY--"}{fstabkey} = $1;
         }
+
 
     option: /^preserve_always:(\d+(,\d+)*)/
         {
@@ -456,6 +489,24 @@ $FAI::Parser = Parse::RecDescent->new(
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
+	| /^sameas:disk(\d+)/
+	{
+	  my $ref_dev = &FAI::resolve_disk_shortname($1);
+	  defined($FAI::configs{"PHY_" . $ref_dev}) or die "Reference device $ref_dev not found in config\n";
+
+	  use Storable qw(dclone);
+
+	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
+	}
+	| /^sameas:(\S+)/
+	{
+	  my $ref_dev = &FAI::resolve_disk_shortname($1);
+	  defined($FAI::configs{"PHY_" . $ref_dev}) or die "Reference device $ref_dev not found in config\n";
+
+	  use Storable qw(dclone);
+
+	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
+	}
 
     volume: /^vg\s+/ name devices vgcreateopt(s?)
         | /^raid([0156]|10)\s+/
@@ -464,7 +515,8 @@ $FAI::Parser = Parse::RecDescent->new(
           ($FAI::device eq "RAID") or die "RAID entry invalid in this context\n";
           # initialise RAID entry, if it doesn't exist already
           defined ($FAI::configs{RAID}) or $FAI::configs{RAID}{volumes} = {};
-          # compute the next available index - the size of the entry
+          # compute the next available index - the size of the entry or the
+          # first not fully defined entry
           my $vol_id = 0;
           foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{RAID}{volumes} })) {
             defined ($FAI::configs{RAID}{volumes}{$ex_vol_id}{mode}) or last;
@@ -482,6 +534,25 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
         }
         mountpoint devices filesystem mount_options mdcreateopts
+        | /^(luks|tmp|swap)\s+/
+        {
+          ($FAI::device eq "CRYPT") or die "Encryted entry invalid in this context\n";
+          defined ($FAI::configs{CRYPT}) or &FAI::internal_error("CRYPT entry missing");
+
+          my $vol_id = 0;
+          foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{CRYPT}{volumes} })) {
+            defined ($FAI::configs{CRYPT}{volumes}{$ex_vol_id}{mode}) or last;
+            $vol_id++;
+          }
+
+          $FAI::configs{CRYPT}{volumes}{$vol_id}{mode} = $1;
+
+          # We don't do preserve for encrypted devices
+          $FAI::configs{CRYPT}{volumes}{$vol_id}{preserve} = 0;
+
+          $FAI::partition_pointer = (\%FAI::configs)->{CRYPT}->{volumes}->{$vol_id};
+        }
+        mountpoint devices filesystem mount_options lv_or_fsopts
         | type mountpoint size filesystem mount_options lv_or_fsopts
 
     type: 'primary'
@@ -523,6 +594,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer->{mountpoint} = $1;
           $FAI::partition_pointer->{mountpoint} = "none" if ($1 eq "swap");
           if (defined($2)) {
+            warn "Old-style inline encrypt will be deprecated. Please add cryptsetup definitions (see man 8 setup-storage).\n";
             &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
             $FAI::partition_pointer->{encrypt} = 1;
             ++$FAI::partition_pointer->{encrypt} if (defined($3));
@@ -651,6 +723,10 @@ $FAI::Parser = Parse::RecDescent->new(
                 "spare" => $spare,
                 "missing" => $missing
               };
+            } elsif ($FAI::device eq "CRYPT") {
+              die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
+              $FAI::partition_pointer->{device} = $candidates[0];
+              &FAI::mark_encrypted($candidates[0]);
             } else {
               die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
               $dev = $candidates[0];
@@ -679,7 +755,7 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           $FAI::partition_pointer->{filesystem} = $item[ 1 ];
           my $to_be_preserved = 0;
-          if ($FAI::device eq "RAID") {
+          if ($FAI::device eq "RAID" or $FAI::device eq "CRYPT") {
             $to_be_preserved = $FAI::partition_pointer->{preserve};
           } else {
             $to_be_preserved = $FAI::partition_pointer->{size}->{preserve};

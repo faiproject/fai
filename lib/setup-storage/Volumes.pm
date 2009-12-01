@@ -459,6 +459,9 @@ sub propagate_and_check_preserve {
           "Can't preserve /dev/md$r because it is not defined in the current config\n";
         &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} });
       }
+    } elsif ($config eq "CRYPT") {
+      # We don't do preserve for encrypted partitions
+      next;
     } else {
       &FAI::internal_error("Unexpected key $config");
     }

@@ -130,6 +130,13 @@ $FAI::n_c_i = 1;
 
 ################################################################################
 #
+# @brief Device alias names
+#
+################################################################################
+%FAI::dev_alias = ();
+
+################################################################################
+#
 # @brief Add command to hash
 #
 # @param cmd Command
@@ -181,6 +188,63 @@ sub phys_dev {
     return (1, "/dev/$1", $2);
   }
   return (0, "", -2);
+}
+
+################################################################################
+#
+# @brief Compute the name of $dev considering possible encryption
+#
+# @param $dev Device string
+#
+# @return $dev iff $dev is not encrypted, otherwise /dev/mapper/<mangled name>
+#
+################################################################################
+sub enc_name {
+  my ($dev) = @_;
+
+  return $FAI::dev_alias{$dev} if defined($FAI::dev_alias{$dev});
+
+  # handle old-style encryption entries
+  my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
+  if ($i_p_d) {
+    defined ($FAI::configs{"PHY_$disk"}) or return $dev;
+    defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}) or return $dev;
+    return $dev unless
+      ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{encrypt});
+  } elsif ($dev =~ /^\/dev\/md(\d+)$/) {
+    defined ($FAI::configs{RAID}) or return $dev;
+    defined ($FAI::configs{RAID}{volumes}{$1}) or return $dev;
+    return $dev unless ($FAI::configs{RAID}{volumes}{$1}{encrypt});
+  } elsif ($dev =~ /^\/dev\/([^\/]+)\/([^\/]+)$/) {
+    defined ($FAI::configs{"VG_$1"}) or return $dev;
+    defined ($FAI::configs{"VG_$1"}{volumes}{$2}) or return $dev;
+    return $dev unless ($FAI::configs{"VG_$1"}{volumes}{$2}{encrypt});
+  } else {
+    return $dev;
+  }
+
+  &FAI::mark_encrypted($dev);
+
+  return $FAI::dev_alias{$dev};
+}
+
+################################################################################
+#
+# @brief Store mangled name for $dev
+#
+# @param $dev Device string
+#
+################################################################################
+sub mark_encrypted {
+  my ($dev) = @_;
+
+  # encryption requested, rewrite the device name
+  my $enc_dev_name = $dev;
+  $enc_dev_name =~ s#/#_#g;
+  my $enc_dev_short_name = "crypt$enc_dev_name";
+  $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
+
+  $FAI::dev_alias{$dev} = $enc_dev_name;
 }
 
 ################################################################################

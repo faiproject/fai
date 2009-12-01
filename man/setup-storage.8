@@ -1,4 +1,4 @@
-.TH setup-storage 8 "September 16, 2008" "Debian/GNU Linux"
+.TH setup-storage 8 "November 23, 2009" "Debian/GNU Linux"
 .SH NAME
 \fBsetup-storage\fP
 \- automatically prepare storage devices
@@ -136,6 +136,8 @@ config ::= disk_config lvm( <lvmoption>)*
 .br
            | disk_config raid( <raidoption>)*
 .br
+           | disk_config cryptsetup( <cryptsetupoption>)*
+.br
            | disk_config end 
 .br
            | disk_config disk[[:digit:]]+( <option>)*
@@ -200,6 +202,14 @@ raidoption ::= /* empty */
 .br
 
 
+cryptsetupoption ::= /* empty */
+.br
+           | randinit
+.br
+           /* initialise all encrypted partitions with random data */
+.br
+
+
 option ::= /* empty */
 .br
            | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
@@ -234,7 +244,19 @@ option ::= /* empty */
 .br
            may be the device (/dev/xxx), a label given using \-L, or the uuid
 .br
-           */  
+           */
+.br
+           | sameas:(disk[[:digit:]]+|[^[:space:]]+)
+.br
+           /* Indicate that this disk will use the same scheme
+.br
+           as the given device. The referenced device must be
+.br
+           defined before the device using this option. Use only
+.br
+           with identical hardware.
+.br
+           */
 .br
 
 
@@ -258,21 +280,35 @@ type ::= primary
 .br
          /* raid level */
 .br
+         | luks
+.br
+         /* encrypted partition using LUKS */
+.br
+         | tmp
+.br
+         /* encrypted partition for /tmp usage, will be
+.br
+            recreated with a random key at each boot and
+.br
+            reformatted as ext2 */
+.br
+         | swap
+.br
+         /* encrypted partition for swap space usage, will
+.br
+            be recreated with a random key at each boot and
+.br
+            reformatted as swap space */
+.br
          | [^/[:space:]]+-[^/[:space:]]+
 .br
          /* lvm logical volume: vg name and lv name*/
 .br
 
 
-mountpoint ::= (-|swap|/[^\:[:space:]]*)(:encrypt(:randinit)?)?
+mountpoint ::= (-|swap|/[^\:[:space:]]*)
 .br
-               /* do not mount, mount as swap, or mount at fully qualified path;
-.br
-                * if :encrypt is given the partition will be encrypted, the key
-.br
-                * is generated automatically; :randinit adds random
-.br
-                * initialization of the partition  */
+               /* do not mount, mount as swap, or mount at fully qualified path */
 .br
 
 
@@ -353,7 +389,7 @@ Simple configuration of /dev/hda
 .sp
 .nf
 .ta 10n 20n 30n 40n 50n
-disk_config  hda	preserve_always:6,7	disklabel:msdos  bootable:3
+disk_config hda preserve_always:6,7 disklabel:msdos bootable:3
 
 primary	/boot	20-100	ext3	rw
 primary	swap	1000	swap	sw
@@ -387,10 +423,10 @@ Use mkfs.xfs to format the partition 8
 Create a softRAID
 .sp
 .nf
-.ta 6n 9n 40n 45n
+.ta 6n 9n 43n 48n
 disk_config raid
 raid1	/	sda1,sdd1	ext2	rw,errors=remount-ro
-raid0	-	disk2.2,sdc1,sde1:spare:missing	ext2  default
+raid0	-	disk2.2,sdc1,sde1:spare:missing	ext2	default
 .sp
 .fi
 .PP
@@ -406,13 +442,34 @@ Simple LVM example
 .sp
 .nf
 .ta 15n 22n 30n 40n
-disk_config sda  bootable:1
+disk_config sda bootable:1
 primary	/boot	500	ext3	rw
 primary	-	4096-	-	-
+
 disk_config lvm
-vg  my_pv  sda2
+vg	my_pv	sda2
 my_pv-_swap	swap	2048	swap	sw
 my_pv-_root	/	2048	ext3	rw
+.sp
+.fi
+.PP
+
+.TP
+Crypt example
+.sp
+.nf
+.ta 10n 20n 30n 40n 50n
+disk_config /dev/sdb
+primary	/	21750	ext3	defaults,errors=remount-ro
+primary	/boot	250	ext3	defaults
+logical	-	4000	-	-
+logical	-	2000	-	-
+logical	-	10-	-	-
+
+disk_config cryptsetup
+swap	swap	/dev/sdb5	swap	defaults
+tmp	/tmp	/dev/sdb6	ext2	defaults
+luks	/local00	/dev/sdb7	ext3	defaults,errors=remount-ro	createopts="-m	0"
 .sp
 .fi
 .PP
@@ -421,7 +478,7 @@ my_pv-_root	/	2048	ext3	rw
 Partition UUID cannot be obtained: In case a partition was previously used as
 part of a software RAID volume and now is intended as swap space, udev fails
 when asked for a UUID. This happens because mkswap does not overwrite the
-previous RAID superblock. You can remove it using mdadm --zero-superblock
+previous RAID superblock. You can remove it using mdadm \-\-zero-superblock
 <device>.
 .IP \(bu
 Machine does not boot because not partition is marked as bootable: If the
@@ -432,6 +489,11 @@ partition mounting / as bootable, but this is not a sane default for all cases.
 If you want to be sure not boot failures happen because of a missing bootable
 marker, explicitly set the bootable option. Of course, there are lots of other
 reasons why a system may fail to boot.
+.IP \(bu
+Crypto support requires some site-specific changes: If you use cryptsetup
+stanza, a crypttab file and key files for all luks volumes will be created. The
+key files are left in /tmp/fai; you will want to copy these to some removable
+media.
 .SH SEE ALSO
 This program is part of FAI (Fully Automatic Installation).
 The FAI homepage is http://www.informatik.uni-koeln.de/fai.

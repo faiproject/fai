@@ -169,11 +169,6 @@ sub generate_fstab {
         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
 
         my $device_name = &FAI::make_device_name($device, $p_ref->{number});
-        if ($p_ref->{encrypt}) {
-          # encryption requested, rewrite the device name
-          $device_name =~ s#/#_#g;
-          $device_name = "/dev/mapper/crypt$device_name";
-        }
 
         # if the mount point is / or /boot, the variables should be set, unless
         # they are already
@@ -218,14 +213,7 @@ sub generate_fstab {
         ($FAI::no_dry_run == 0 || -b $fstab_key[0]) 
           or die "Failed to resolve /dev/$device/$l\n";
 
-        my $device_name = "/dev/$device/$l";
-        if ($l_ref->{encrypt}) {
-          # encryption requested, rewrite the device name
-          $device_name =~ s#/#_#g;
-          $device_name = "/dev/mapper/crypt$device_name";
-        } else {
-          $device_name = $fstab_key[0];
-        }
+        my $device_name = $fstab_key[0];
 
         # according to http://grub.enbug.org/LVMandRAID, this should work...
         # if the mount point is / or /boot, the variables should be set, unless
@@ -253,11 +241,6 @@ sub generate_fstab {
         next if ($r_ref->{mountpoint} eq "-");
 
         my $device_name = "/dev/md$r";
-        if ($r_ref->{encrypt}) {
-          # encryption requested, rewrite the device name
-          $device_name =~ s#/#_#g;
-          $device_name = "/dev/mapper/crypt$device_name";
-        } 
 
         # according to http://grub.enbug.org/LVMandRAID, this should work...
         # if the mount point is / or /boot, the variables should be set, unless
@@ -272,6 +255,20 @@ sub generate_fstab {
 
         push @fstab, &FAI::create_fstab_line($r_ref,
           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
+      }
+    } elsif ($c eq "CRYPT") {
+      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+        my $c_ref = $config->{$c}->{volumes}->{$v};
+
+        next if ($c_ref->{mountpoint} eq "-");
+
+        my $device_name = &FAI::enc_name($c_ref->{device});
+
+        ($c_ref->{mountpoint} eq "/boot" || ($c_ref->{mountpoint} eq "/" &&
+            !defined ($FAI::disk_var{BOOT_PARTITION}))) and
+          die "Boot partition cannot be encrypted\n";
+
+        push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
       }
     } else {
       &FAI::internal_error("Unexpected key $c");

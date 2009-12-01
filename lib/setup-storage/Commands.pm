@@ -48,6 +48,9 @@ sub build_mkfs_commands {
 
   my ($device, $partition) = @_;
 
+  # check for old-style encryption requests
+  &FAI::handle_oldstyle_encrypt_device($device, $partition);
+
   defined ($partition->{filesystem})
     or &FAI::internal_error("filesystem is undefined");
   my $fs = $partition->{filesystem};
@@ -63,16 +66,11 @@ sub build_mkfs_commands {
   print "$partition->{mountpoint} FS create_options: $create_options\n" if ($FAI::debug && $create_options);
   print "$partition->{mountpoint} FS tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
 
-  # check for encryption requests
-  $device = &FAI::encrypt_device($device, $partition);
-
   # create the file system with options
   my $create_tool = "mkfs.$fs";
   ($fs eq "swap") and $create_tool = "mkswap";
   ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
-  my $pre_encrypt = "exist_$device";
-  $pre_encrypt = "encrypted_$device" if ($partition->{encrypt});
-  &FAI::push_command( "$create_tool $create_options $device", $pre_encrypt,
+  &FAI::push_command( "$create_tool $create_options $device", "exist_$device",
     "has_fs_$device" );
 
   # possibly tune the file system - this depends on whether the file system
@@ -90,50 +88,44 @@ sub build_mkfs_commands {
 
 ################################################################################
 #
-# @brief Encrypt a device and change the device name before formatting it
+# @brief Check for encrypt option and prepare corresponding CRYPT entry
+#
+# If encrypt is set, a corresponding CRYPT entry will be created and filesystem
+# and mountpoint get set to -
 #
 # @param $device Original device name of the target partition
 # @param $partition Reference to partition in the config hash
 #
-# @return Device name, may be the same as $device
-#
 ################################################################################
-sub encrypt_device {
+sub handle_oldstyle_encrypt_device {
 
   my ($device, $partition) = @_;
 
-  return $device unless $partition->{encrypt};
+  return unless ($partition->{encrypt});
 
-  # encryption requested, rewrite the device name
-  my $enc_dev_name = $device;
-  $enc_dev_name =~ s#/#_#g;
-  my $enc_dev_short_name = "crypt$enc_dev_name";
-  $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
-  my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
-
-  # generate a key for encryption
-  &FAI::push_command( 
-    "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
-    "", "keyfile_$device" );
-  # prepare encryption
-  my $prepare_deps = "keyfile_$device";
-  if ($partition->{encrypt} > 1) {
-    &FAI::push_command(
-      "dd if=/dev/urandom of=$device",
-      "exist_$device", "random_init_$device" );
-    $prepare_deps = "random_init_$device,$prepare_deps";
+  if (!defined($FAI::configs{CRYPT}{randinit})) {
+    $FAI::configs{CRYPT}{fstabkey} = "device";
+    $FAI::configs{CRYPT}{randinit} = 0;
+    $FAI::configs{CRYPT}{volumes} = {};
   }
-  &FAI::push_command(
-    "yes YES | cryptsetup luksFormat $device $keyfile -c aes-cbc-essiv:sha256 -s 256",
-    $prepare_deps, "crypt_format_$device" );
-  &FAI::push_command(
-    "cryptsetup luksOpen $device $enc_dev_short_name --key-file $keyfile",
-    "crypt_format_$device", "encrypted_$enc_dev_name" );
 
-  # add entries to crypttab
-  push @FAI::crypttab, "$enc_dev_short_name\t$device\t$keyfile\tluks";
+  $FAI::configs{CRYPT}{randinit} = 1 if ($partition->{encrypt} > 1);
 
-  return $enc_dev_name;
+  my $vol_id = scalar(keys %{ $FAI::configs{CRYPT}{volumes} });
+  $FAI::configs{CRYPT}{volumes}{$vol_id} = {
+    device => $device,
+    mode => "luks",
+    preserve => (defined($partition->{size}) ?
+        $partition->{size}->{preserve} : $partition->{preserve}),
+    mountpoint => $partition->{mountpoint},
+    mount_options => $partition->{mount_options},
+    filesystem => $partition->{filesystem},
+    createopts => $partition->{createopts},
+    tuneopts => $partition->{tuneopts}
+  };
+
+  $partition->{mountpoint} = "-";
+  $partition->{filesystem} = "-";
 }
 
 ################################################################################
@@ -162,6 +154,80 @@ sub set_partition_type_on_phys_dev {
 ################################################################################
 #
 # @brief Using the configurations from %FAI::configs, a list of commands is
+# built to create any encrypted devices
+#
+################################################################################
+sub build_cryptsetup_commands {
+  foreach my $config (keys %FAI::configs) { # loop through all configs
+    # no LVM or physical devices here
+    next if ($config ne "CRYPT");
+
+    # create all encrypted devices
+    foreach my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
+
+      # keep a reference to the current volume
+      my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
+      # the desired encryption mode
+      my $mode = $vol->{mode};
+
+      warn "cryptsetup support is incomplete - preserve is not supported\n"
+        if ($vol->{preserve});
+
+      # rewrite the device name
+      my $real_dev = $vol->{device};
+      my $enc_dev_name = &FAI::enc_name($real_dev);
+      my $enc_dev_short_name = $enc_dev_name;
+      $enc_dev_short_name =~ s#^/dev/mapper/##;
+
+      my $pre_dep = "exist_$real_dev";
+
+      if ($FAI::configs{$config}{randinit}) {
+        # ignore exit 1 caused by reaching the end of $real_dev
+        &FAI::push_command(
+          "dd if=/dev/urandom of=$real_dev || true",
+          $pre_dep, "random_init_$real_dev");
+        $pre_dep = "random_init_$real_dev";
+      }
+
+      if ($mode eq "luks") {
+        my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
+
+        # generate a key for encryption
+        &FAI::push_command(
+          "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
+          "", "keyfile_$real_dev" );
+        # encrypt
+        &FAI::push_command(
+          "yes YES | cryptsetup luksFormat $real_dev $keyfile -c aes-cbc-essiv:sha256 -s 256",
+          "$pre_dep,keyfile_$real_dev", "crypt_format_$real_dev" );
+        &FAI::push_command(
+          "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
+          "crypt_format_$real_dev", "exist_$enc_dev_name" );
+
+        # add entries to crypttab
+        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks";
+
+      } elsif ($mode eq "tmp" || $mode eq "swap") {
+        &FAI::push_command(
+          "cryptsetup --key-file=/dev/urandom create $enc_dev_short_name $real_dev",
+          $pre_dep, "exist_$enc_dev_name");
+
+        # add entries to crypttab
+        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t/dev/urandom\t$mode";
+
+      }
+
+      # create the filesystem on the volume
+      &FAI::build_mkfs_commands($enc_dev_name,
+        \%{ $FAI::configs{$config}{volumes}{$id} });
+    }
+  }
+
+}
+
+################################################################################
+#
+# @brief Using the configurations from %FAI::configs, a list of commands is
 # built to create any RAID devices
 #
 ################################################################################
@@ -169,7 +235,7 @@ sub build_raid_commands {
 
   foreach my $config (keys %FAI::configs) { # loop through all configs
     # no LVM or physical devices here
-    next if ($config =~ /^VG_./ || $config =~ /^PHY_./);
+    next if ($config eq "CRYPT" || $config =~ /^VG_./ || $config =~ /^PHY_./);
     ($config eq "RAID") or &FAI::internal_error("Invalid config $config");
 
     # create all raid devices
@@ -204,11 +270,12 @@ sub build_raid_commands {
           next;
         } else {
           if ($vol->{devices}->{$d}->{spare}) {
-            push @spares, $d;
+            push @spares, &FAI::enc_name($d);
           } else {
-            push @eff_devs, $d;
+            push @eff_devs, &FAI::enc_name($d);
           }
         }
+        $d = &FAI::enc_name($d);
         &FAI::set_partition_type_on_phys_dev($d, "raid");
         if ((&FAI::phys_dev($d))[0]) {
           $pre_req .= ",type_raid_$d";
@@ -302,7 +369,8 @@ sub create_volume_group {
   # create the volume group, if it doesn't exist already
   if (!$vg_exists) {
     # create all the devices
-    my @devices = keys %{ $FAI::configs{$config}{devices} };
+    my @devices = ();
+    push @devices, &FAI::enc_name($_) foreach (keys %{ $FAI::configs{$config}{devices} });
     &FAI::erase_lvm_signature(\@devices);
     &FAI::push_command( "pvcreate $pv_create_options $_",
       "pv_sigs_removed,exist_$_", "pv_done_$_") foreach (@devices);
@@ -324,7 +392,8 @@ sub create_volume_group {
   # create an undefined entry for each new device
   @new_devs{ keys %{ $FAI::configs{$config}{devices} } } = ();
 
-  my @new_devices = keys %new_devs;
+  my @new_devices = ();
+  push @new_devices, &FAI::enc_name($_) foreach (keys %new_devs);
 
   # &FAI::erase_lvm_signature( \@new_devices );
 
@@ -452,8 +521,8 @@ sub build_lvm_commands {
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
 
-    # no physical devices or RAID here
-    next if ($config =~ /^PHY_./ || $config eq "RAID");
+    # no physical devices, RAID or encrypted here
+    next if ($config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT");
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group
@@ -463,6 +532,7 @@ sub build_lvm_commands {
       foreach (keys %{ $FAI::configs{$config}{devices} });
     my $type_pre = "";
     foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
+      $d = &FAI::enc_name($d);
       if ((&FAI::phys_dev($d))[0]) {
         $type_pre .= ",type_lvm_$d"
       } else {
@@ -859,8 +929,8 @@ sub build_disk_commands {
 
   # loop through all configs
   foreach my $config ( keys %FAI::configs ) {
-    # no RAID or LVM devices here
-    next if ($config eq "RAID" || $config =~ /^VG_./);
+    # no RAID, encrypted or LVM devices here
+    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
     my $disk = $1; # the device to be configured
 

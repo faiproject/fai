@@ -201,8 +201,8 @@ sub compute_lv_sizes {
   # loop through all device configurations
   foreach my $config (keys %FAI::configs) {
 
-    # for RAID or physical disks there is nothing to be done here
-    next if ($config eq "RAID" || $config =~ /^PHY_./);
+    # for RAID, encrypted or physical disks there is nothing to be done here
+    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^PHY_./);
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group name
@@ -611,8 +611,8 @@ sub compute_partition_sizes
   # loop through all device configurations
   foreach my $config (keys %FAI::configs) {
 
-    # for RAID or LVM, there is nothing to be done here
-    next if ($config eq "RAID" || $config =~ /^VG_./);
+    # for RAID, encrypted or LVM, there is nothing to be done here
+    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     # nothing to be done, if this is a configuration for a virtual disk
     next if $FAI::configs{$config}{virtual};
