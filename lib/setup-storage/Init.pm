@@ -176,7 +176,7 @@ sub numsort { return sort { $a <=> $b } @_; }
 ################################################################################
 sub phys_dev {
   my ($dev) = @_;
-  if ($dev =~ m{^/dev/(i2o/hd[a-t]|sd[a-t]{1,2}|hd[a-t]|vd[a-t])(\d+)?$})
+  if ($dev =~ m{^/dev/(i2o/hd[a-z]|sd[a-z]{1,2}|hd[a-z]|vd[a-z]|xvd[a-z])(\d+)?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $2);
