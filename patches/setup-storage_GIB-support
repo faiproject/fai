@@ -1,0 +1,20 @@
+2010-01-08  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: Ignore 'i' in GiB, MiB, etc. and treat those units
+		like GB, MB, etc.
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -298,9 +298,9 @@
+ sub convert_unit
+ {
+   my ($val) = @_;
+-  ($val =~ /^(\d+(\.\d+)?)([kMGTP%]?)(B)?\s*$/) or
++  ($val =~ /^(\d+(\.\d+)?)([kMGTP%]?(i)?)(B)?\s*$/) or
+     &FAI::internal_error("convert_unit $val");
+-  $val = $1 * (1 / 1024) * (1 / 1024) if ($3 eq "" && defined ($4) && $4 eq "B");
++  $val = $1 * (1 / 1024) * (1 / 1024) if ($3 eq "" && defined ($5) && $5 eq "B");
+   $val = $1 * (1 / 1024) if ($3 eq "k");
+   $val = $1 if ($3 eq "M");
+   $val = $1 * 1024 if ($3 eq "G");
