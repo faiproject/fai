@@ -1,0 +1,16 @@
+2010-01-13  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Commands.pm: Add -q to createopts when making reiser file
+		systems (thanks Mathieu Alorent and Thomas Neumann).
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -70,6 +70,7 @@
+   my $create_tool = "mkfs.$fs";
+   ($fs eq "swap") and $create_tool = "mkswap";
+   ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
++  ($fs eq "reiserfs") and $create_options = "$create_options -q" unless ($create_options =~ m/-(f|q|y)/);
+   &FAI::push_command( "$create_tool $create_options $device", "exist_$device",
+     "has_fs_$device" );
+ 
