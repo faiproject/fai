@@ -70,6 +70,7 @@ sub build_mkfs_commands {
   my $create_tool = "mkfs.$fs";
   ($fs eq "swap") and $create_tool = "mkswap";
   ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
+  ($fs eq "reiserfs") and $create_options = "$create_options -q" unless ($create_options =~ m/-(f|q|y)/);
   &FAI::push_command( "$create_tool $create_options $device", "exist_$device",
     "has_fs_$device" );
 
