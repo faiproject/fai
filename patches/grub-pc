@@ -36,13 +36,10 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
 --- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
 +++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
-@@ -2,8 +2,25 @@
+@@ -2,8 +2,29 @@
  
  error=0 ; trap "error=$((error|1))" ERR
  
--$ROOTCMD grub-mkdevicemap -n -m /boot/grub/device.map
--$ROOTCMD grub-mkconfig -o /boot/grub/grub.cfg
--$ROOTCMD grub-install --no-floppy "(hd0)"
 +set -a
 +
 +# during softupdate use this file
@@ -54,14 +51,39 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 +# if class NOMBR is defined, write boot loader into root partition, not into mbr
 +ifclass NOMBR && BOOT_DEVICE=$BOOT_PARTITION
 +
+ $ROOTCMD grub-mkdevicemap -n -m /boot/grub/device.map
+-$ROOTCMD grub-mkconfig -o /boot/grub/grub.cfg
+-$ROOTCMD grub-install --no-floppy "(hd0)"
 +$ROOTCMD grub-mkimage --output=/boot/grub/core.img ext2 pc gpt biosdisk lvm
-+grub_dev=$(device2grub $BOOT_DEVICE)
-+if [ -z "$grub_dev" ] ; then
-+  grub_dev=$(echo $BOOT_DEVICE | sed 's#^/dev/##')
-+fi
-+$ROOTCMD /usr/sbin/grub-install --modules="ext2 _chain pc gpt biosdisk lvm raid serial" "($grub_dev)"
-+$ROOTCMD /usr/sbin/grub-setup   "($grub_dev)"
-+$ROOTCMD /usr/sbin/update-grub
++$ROOTCMD update-grub
++
++for device in $BOOT_DEVICE; do
++  grub_dev=$(device2grub $device)
++  if [ -z "$grub_dev" ] ; then
++    grub_dev=$(echo $device | sed 's#^/dev/##')
++  fi
++  $ROOTCMD /usr/sbin/grub-install --no-floppy --modules="ext2 _chain pc gpt biosdisk lvm raid serial" "($grub_dev)"
++  $ROOTCMD /usr/sbin/grub-setup   "($grub_dev)"
++done
  
  exit $error
 +
+Index: trunk/examples/simple/class/50-host-classes
+===================================================================
+--- trunk.orig/examples/simple/class/50-host-classes
++++ trunk/examples/simple/class/50-host-classes	
+@@ -20,5 +20,4 @@
+ 	echo "FAIBASE DHCPC" ;;
+ esac
+ 
+-(ifclass I386 || ifclass AMD64) && echo GRUB 
+ exit 0
+Index: trunk/examples/simple/class/51-grub
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/examples/simple/class/51-grub	
+@@ -0,0 +1,4 @@
++#! /bin/bash
++
++{ ifclass I386 || ifclass AMD64; } && ! ifclass GRUB_PC && echo GRUB
++exit 0
