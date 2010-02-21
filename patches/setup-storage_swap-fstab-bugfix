@@ -1,0 +1,17 @@
+2010-02-21  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Fstab.pm: fsck priority of swap should be 0 instead of 2
+		(closes: #568800).
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -60,7 +60,7 @@
+   # order of filesystem checks: the root filesystem gets a 1, the others
+   # get 2, swap gets 0
+   $fstab_line[-1] = 1 if ($d_ref->{mountpoint} eq "/");
+-  $fstab_line[-1] = 0 if ($d_ref->{mountpoint} eq "swap");
++  $fstab_line[-1] = 0 if ($d_ref->{filesystem} eq "swap");
+ 
+   # set the ROOT_PARTITION variable, if this is the mountpoint for /
+   $FAI::disk_var{ROOT_PARTITION} = $name

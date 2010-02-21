@@ -1,7 +1,7 @@
-2010-01-10  Michael Tautschnig  <mt@debian.org>
+2010-02-21  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage/Parser.pm: Ignore 'i' in GiB, MiB, etc. and treat those units
-		like GB, MB, etc. Added deprecation warning for sole G, M, etc.
+		like GB, MB, etc.
 	* setup-storage/Sizes.pm: Use MiB instead of MB internally.
 	* setup-storage.8: Update syntax.
 Index: trunk/lib/setup-storage/Parser.pm
@@ -17,7 +17,7 @@ Index: trunk/lib/setup-storage/Parser.pm
  #
  # @param $val is the number with its unit
  #
-@@ -298,15 +298,21 @@
+@@ -298,15 +298,22 @@
  sub convert_unit
  {
    my ($val) = @_;
@@ -30,9 +30,10 @@ Index: trunk/lib/setup-storage/Parser.pm
 -  $val = $1 * (1024 * 1024) if ($3 eq "T");
 -  $val = $1 * (1024 * 1024 * 1024) if ($3 eq "P");
 +
-+  ($val =~ /([kKMGTP])\s*$/) and
-+    warn "Using $1 as size modifier is deprecated, please use $1iB or $1B
-+    instead; in future releases these will be treated as different modifiers\n";
++  ## don't warn for now, G/GiB/GB are all treated the same way
++  ## ($val =~ /([kKMGTP])\s*$/) and
++  ##   warn "Using $1 as size modifier is deprecated, please use $1iB or $1B
++  ##   instead; in future releases these will be treated as different modifiers\n";
 +
    # % is returned as is
 +  if ($val =~ /^(\d+(\.\d+)?)%\s*$/) { 1; }
@@ -47,7 +48,7 @@ Index: trunk/lib/setup-storage/Parser.pm
    return $val;
  }
  
-@@ -623,7 +629,7 @@
+@@ -623,7 +630,7 @@
            1;
          }
  
@@ -56,7 +57,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
            # complete the size specification to be a range in all cases
            my $range = $1;
-@@ -641,7 +647,9 @@
+@@ -641,7 +648,9 @@
  
            # convert the units, if necessary
            my ($min, $max) = split (/-/, $range);
@@ -66,7 +67,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            $max   = &FAI::convert_unit($max);
            $range = "$min-$max";
            # enter the range into the hash
-@@ -652,13 +660,15 @@
+@@ -652,13 +661,15 @@
              $FAI::configs{$FAI::device}{preserveparts} = 1;
            }
          }
