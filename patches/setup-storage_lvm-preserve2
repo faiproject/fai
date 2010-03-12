@@ -1,21 +1,123 @@
+2010-03-12  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Commands.pm,Volumes.pm}: Completed support for preserve in
+		LVM/RAID contexts; extended checking for volume groups that remain alive.
 Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -355,6 +355,7 @@
+@@ -244,12 +244,14 @@
+ 
+       # keep a reference to the current volume
+       my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
++
++      # if it is a volume that has to be preserved, there is not much to be
++      # done; its existance has been checked in propagate_and_check_preserve
++      next if ($vol->{preserve});
++
+       # the desired RAID level
+       my $level = $vol->{mode};
+ 
+-      warn "RAID implementation is incomplete - preserve is not supported\n" if
+-        ($vol->{preserve});
+-
+       # prepend "raid", if the mode is numeric-only
+       $level = "raid$level" if ($level =~ /^\d+$/);
+ 
+@@ -347,13 +349,22 @@
+     $vg_exists = 1;
+     foreach my $dev (@{ $FAI::current_lvm_config{$vg}{"physical_volumes"} }) {
+       my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
+-      # if this is not a physical disk, just assume that the volume group will
+-      # not exist anymore
+       if ($i_p_d) {
+         defined ($FAI::configs{"PHY_$disk"}) or next;
+         defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}) and
            ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve}) and
            next;
++      } elsif ($dev =~ m{^/dev/md[\/]?(\d+)$}) {
++        my $vol = $1;
++        defined ($FAI::configs{RAID}{volumes}{$vol}) or next;
++        next if (1 == $FAI::configs{RAID}{volumes}{$vol}{preserve});
++      } elsif ($dev =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
++        my $vg = $1;
++        my $lv = $2;
++        defined($FAI::configs{"VG_$vg"}{volumes}{$lv}) or next;
++        next if (1 == $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve});
++      } else {
++        warn "Don't know how to check preservation of $dev\n";
        }
-+      # TODO: handle RAID and LVM
        $vg_exists = 0;
        last;
-     }
-@@ -396,7 +397,7 @@
+@@ -396,8 +407,6 @@
    my @new_devices = ();
    push @new_devices, &FAI::enc_name($_) foreach (keys %new_devs);
  
 -  # &FAI::erase_lvm_signature( \@new_devices );
-+  # TODO: check for those that really don't exist anymore
- 
+-
    # create all the devices
    &FAI::push_command( "pvcreate $pv_create_options $_", "exist_$_", "pv_done_$_"
+     ) foreach (@new_devices);
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -435,11 +435,17 @@
+   my ($device_name) = @_;
+   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($device_name);
+ 
+-  if (1 == $i_p_d && defined($FAI::configs{"PHY_$disk"}{partitions}{$part_no})) {
+-    $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve} = 1;
+-    $FAI::configs{"PHY_$disk"}{preserveparts} = 1;
+-  } elsif ($device_name =~ m{^/dev/md(\d+)$}) {
++  if (1 == $i_p_d) {
++    defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
++      "Can't preserve $device_name because it does not exist\n";
++    if (defined($FAI::configs{"PHY_$disk"}{partitions}{$part_no})) {
++      $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve} = 1;
++      $FAI::configs{"PHY_$disk"}{preserveparts} = 1;
++    }
++  } elsif ($device_name =~ m{^/dev/md[\/]?(\d+)$}) {
+     my $vol = $1;
++    defined ($FAI::current_raid_config{$vol}) or die
++      "Can't preserve $device_name because it does not exist\n";
+     if (defined($FAI::configs{RAID}{volumes}{$vol}) && 
+         $FAI::configs{RAID}{volumes}{$vol}{preserve} != 1) {
+       $FAI::configs{RAID}{volumes}{$vol}{preserve} = 1;
+@@ -448,6 +454,8 @@
+   } elsif ($device_name =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
+     my $vg = $1;
+     my $lv = $2;
++    defined ($FAI::current_lvm_config{$vg}{volumes}{$lv}) or die
++      "Can't preserve $device_name because it does not exist\n";
+     if (defined($FAI::configs{"VG_$vg"}{volumes}{$lv}) &&
+         $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} != 1) {
+       $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} = 1;
+@@ -477,6 +485,9 @@
+           (defined($FAI::current_config{$1}{partitions}{$part_id}) ? 1 : 0)
+           if (2 == $part->{size}->{preserve});
+         next unless ($part->{size}->{preserve} || $part->{size}->{resize});
++        defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
++          "Can't preserve ". &FAI::make_device_name($1, $part->{number})
++            . " because it does not exist\n";
+         defined ($part->{size}->{range}) or die
+           "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+             . " because it is not defined in the current config\n";
+@@ -491,6 +502,8 @@
+           if (2 == $FAI::configs{$config}{volumes}{$l}{size}{preserve});
+         next unless ($FAI::configs{$config}{volumes}{$l}{size}{preserve} == 1 ||
+           $FAI::configs{$config}{volumes}{$l}{size}{resize} == 1);
++        defined ($FAI::current_lvm_config{$1}{volumes}{$l}) or die
++          "Can't preserve /dev/$1/$l because it does not exist\n";
+         defined ($FAI::configs{$config}{volumes}{$l}{size}{range}) or die
+           "Can't preserve /dev/$1/$l because it is not defined in the current config\n";
+         &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{devices} });
+@@ -504,6 +517,8 @@
+           (defined($FAI::current_raid_config{$r}) ? 1 : 0)
+           if (2 == $FAI::configs{$config}{volumes}{$r}{preserve});
+         next unless ($FAI::configs{$config}{volumes}{$r}{preserve} == 1);
++        defined ($FAI::current_raid_config{$r}) or die
++          "Can't preserve /dev/md$r because it does not exist\n";
+         defined ($FAI::configs{$config}{volumes}{$r}{devices}) or die
+           "Can't preserve /dev/md$r because it is not defined in the current config\n";
+         &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} });
