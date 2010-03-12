@@ -1,0 +1,68 @@
+2010-03-12  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Volumes.pm: Only read sizes and partitioning of disks
+		referenced in the configuration (thanks Henning Sprang).
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -37,18 +37,58 @@
+ 
+ ################################################################################
+ #
++# @brief Collect all physical devices reference in the desired configuration
++#
++################################################################################
++sub find_all_phys_devs {
++
++  my @phys_devs = ();
++
++  # loop through all configs
++  foreach my $config (keys %FAI::configs) {
++
++    if ($config =~ /^PHY_(.+)$/) {
++      push @phys_devs, $1;
++    } elsif ($config =~ /^VG_(.+)$/) {
++      next if ($1 eq "--ANY--");
++      foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
++        my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
++        push @phys_devs, $disk if (1 == $i_p_d);
++      }
++    } elsif ($config eq "RAID") {
++      foreach my $r (keys %{ $FAI::configs{$config}{volumes} }) {
++        foreach my $d (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} }) {
++          my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
++          push @phys_devs, $disk if (1 == $i_p_d);
++        }
++      }
++    } elsif ($config eq "CRYPT") {
++      # devices must be one of the above already
++      next;
++    } else {
++      &FAI::internal_error("Unexpected key $config");
++    }
++  }
++}
++
++################################################################################
++#
+ # @brief Collect the current partition information from all disks listed both
+ # in $FAI::disks and $FAI::configs{PHY_<disk>}
+ #
+ ################################################################################
+ sub get_current_disks {
+ 
++  my %referenced_devs = ();
++  @referenced_devs{ @{ &FAI::find_all_phys_devs() } } = ();
++
+   # obtain the current state of all disks
+   foreach my $disk (@FAI::disks) {
+-
+     # create full paths
+     ($disk =~ m{^/}) or $disk = "/dev/$disk";
+ 
++    defined ($referenced_devs{$disk}) or next;
++
+     # make sure, $disk is a proper block device
+     (-b $disk) or die "$disk is not a block special device!\n";
+ 

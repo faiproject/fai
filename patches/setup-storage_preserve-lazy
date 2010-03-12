@@ -1,0 +1,203 @@
+2010-03-12  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage, setup-storage/{Parser.pm,Volumes.pm}: Added support for new
+		preserve_lazy option that will preserve volumes that exist, but newly create
+		them if not found.
+	* setup-storage.8: Document new preserve_lazy option.
+Index: trunk/bin/setup-storage
+===================================================================
+--- trunk.orig/bin/setup-storage
++++ trunk/bin/setup-storage	
+@@ -126,10 +126,6 @@
+ print "Using config file: $opt_f\n";
+ &FAI::run_parser($config_file);
+ 
+-# mark devices as preserve, where not all already done so and check that only
+-# defined devices are marked preserve
+-&FAI::propagate_and_check_preserve;
+-
+ # read the sizes and partition tables of all disks listed in $FAI::disks
+ &FAI::get_current_disks;
+ 
+@@ -139,6 +135,10 @@
+ # see whether there are any existing RAID devices
+ &FAI::get_current_raid;
+ 
++# mark devices as preserve, where not all already done so and check that only
++# defined devices are marked preserve
++&FAI::propagate_and_check_preserve;
++
+ # debugging only: print the current configuration
+ if ($FAI::debug) {
+   # for debugging purposes to print the hash structures
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -404,6 +404,10 @@
+             $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split(",", $1));
+           }
+         }
++        | /^preserve_lazy:(\d+(,\d+)*)/
++        {
++          $FAI::configs{RAID}{volumes}{$_}{preserve} = 2 foreach (split(",", $1));
++        }
+         | /^fstabkey:(device|label|uuid)/
+         {
+           # the information preferred for fstab device identifieres
+@@ -421,7 +425,7 @@
+           foreach (split (",", $1)) {
+             (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
+               die &FAI::internal_error("VG re-parse failed");
+-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1 
++            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
+           }
+         }
+         | m{^preserve_reinstall:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+@@ -431,17 +435,25 @@
+             foreach (split (",", $1)) {
+               (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
+                 die &FAI::internal_error("VG re-parse failed");
+-              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1 
++              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
+             }
+           }
+         }
++        | m{^preserve_lazy:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
++        {
++          foreach (split (",", $1)) {
++            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
++              die &FAI::internal_error("VG re-parse failed");
++            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 2;
++          }
++        }
+         | m{^resize:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+         {
+           # set the resize flag for all ids
+           foreach (split (",", $1)) {
+             (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
+               die &FAI::internal_error("VG re-parse failed");
+-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1 
++            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1;
+           }
+         }
+         | /^fstabkey:(device|label|uuid)/
+@@ -465,6 +477,11 @@
+             $FAI::configs{$FAI::device}{preserveparts} = 1;
+           }
+         }
++        | /^preserve_lazy:(\d+(,\d+)*)/
++        {
++          $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 2 foreach (split(",", $1));
++          $FAI::configs{$FAI::device}{preserveparts} = 2;
++        }
+         | /^resize:(\d+(,\d+)*)/
+         {
+           # set the resize flag for all ids
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -473,6 +473,9 @@
+     if ($config =~ /^PHY_(.+)$/) {
+       foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
+         my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
++        $part->{size}->{preserve} =
++          (defined($FAI::current_config{$1}{partitions}{$part_id}) ? 1 : 0)
++          if (2 == $part->{size}->{preserve});
+         next unless ($part->{size}->{preserve} || $part->{size}->{resize});
+         defined ($part->{size}->{range}) or die
+           "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+@@ -483,6 +486,9 @@
+       # check for logical volumes that need to be preserved and preserve the
+       # underlying devices recursively
+       foreach my $l (keys %{ $FAI::configs{$config}{volumes} }) {
++        $FAI::configs{$config}{volumes}{$l}{size}{preserve} =
++          (defined($FAI::current_lvm_config{$1}{volumes}{$l}) ? 1 : 0)
++          if (2 == $FAI::configs{$config}{volumes}{$l}{size}{preserve});
+         next unless ($FAI::configs{$config}{volumes}{$l}{size}{preserve} == 1 ||
+           $FAI::configs{$config}{volumes}{$l}{size}{resize} == 1);
+         defined ($FAI::configs{$config}{volumes}{$l}{size}{range}) or die
+@@ -494,6 +500,9 @@
+       # check for volumes that need to be preserved and preserve the underlying
+       # devices recursively
+       foreach my $r (keys %{ $FAI::configs{$config}{volumes} }) {
++        $FAI::configs{$config}{volumes}{$r}{preserve} =
++          (defined($FAI::current_raid_config{$r}) ? 1 : 0)
++          if (2 == $FAI::configs{$config}{volumes}{$r}{preserve});
+         next unless ($FAI::configs{$config}{volumes}{$r}{preserve} == 1);
+         defined ($FAI::configs{$config}{volumes}{$r}{devices}) or die
+           "Can't preserve /dev/md$r because it is not defined in the current config\n";
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -158,14 +158,18 @@
+ .br
+            | preserve_always:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
+ .br
+-           /* preserve partitions -- always */
++           /* preserve volumes -- always */
+ .br
+            | preserve_reinstall:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
+ .br
+-           /* preserve partitions -- unless the system is installed for the 
++           /* preserve volumes -- unless the system is installed for the
+ .br
+            first time */
+ .br
++           | preserve_lazy:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
++.br
++           /* preserve volumes -- unless these don't exist yet */
++.br
+            | resize:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
+ .br
+            /* attempt to resize partitions */
+@@ -184,14 +188,18 @@
+ .br
+            | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
+ .br
+-           /* preserve partitions -- always */
++           /* preserve volumes -- always */
+ .br
+            | preserve_reinstall:[[:digit:]]+(,[[:digit:]]+)*
+ .br
+-           /* preserve partitions -- unless the system is installed for the 
++           /* preserve volumes -- unless the system is installed for the
+ .br
+            first time */
+ .br
++           | preserve_lazy:[[:digit:]]+(,[[:digit:]]+)*
++.br
++           /* preserve volumes -- unless these don't exist yet */
++.br
+            | fstabkey:(device|label|uuid)
+ .br
+            /* when creating the fstab the key used for defining the device
+@@ -222,6 +230,10 @@
+ .br
+            first time */
+ .br
++           | preserve_lazy:[[:digit:]]+(,[[:digit:]]+)*
++.br
++           /* preserve partitions -- unless these don't exist yet */
++.br
+            | resize:[[:digit:]]+(,[[:digit:]]+)*
+ .br
+            /* attempt to resize partitions */
+@@ -380,10 +392,11 @@
+ Any options to mkfs.xxx may be given using createopts="".
+ .IP \(bu
+ The "preserveX" and "boot" options are one of the options now given on the
+-disk_config line, using preserve_reinstall or preserve_always and bootable.
+-preserve_always is equivalent to the previous preserveX option, whereas
+-preserve_reinstall preserves the partition unless "initial" is given as one of
+-the FAI_FLAGS.
++disk_config line, using preserve_reinstall, preserve_always, or preserve_lazy,
++and bootable.  preserve_always is equivalent to the previous preserveX option,
++whereas preserve_reinstall preserves the partition unless "initial" is given as
++one of the FAI_FLAGS. preserve_lazy allows to preserve partitions only if these
++exist already. Otherwise they are created.
+ .IP \(bu
+ Support for LVM and RAID is completely new
+ .IP \(bu
