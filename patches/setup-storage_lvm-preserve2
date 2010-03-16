@@ -62,7 +62,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Volumes.pm
 +++ trunk/lib/setup-storage/Volumes.pm	
-@@ -435,11 +435,17 @@
+@@ -437,11 +437,17 @@
    my ($device_name) = @_;
    my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($device_name);
  
@@ -84,7 +84,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
      if (defined($FAI::configs{RAID}{volumes}{$vol}) && 
          $FAI::configs{RAID}{volumes}{$vol}{preserve} != 1) {
        $FAI::configs{RAID}{volumes}{$vol}{preserve} = 1;
-@@ -448,6 +454,8 @@
+@@ -450,6 +456,8 @@
    } elsif ($device_name =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
      my $vg = $1;
      my $lv = $2;
@@ -93,7 +93,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
      if (defined($FAI::configs{"VG_$vg"}{volumes}{$lv}) &&
          $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} != 1) {
        $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} = 1;
-@@ -477,6 +485,9 @@
+@@ -479,6 +487,9 @@
            (defined($FAI::current_config{$1}{partitions}{$part_id}) ? 1 : 0)
            if (2 == $part->{size}->{preserve});
          next unless ($part->{size}->{preserve} || $part->{size}->{resize});
@@ -103,7 +103,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
          defined ($part->{size}->{range}) or die
            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
              . " because it is not defined in the current config\n";
-@@ -491,6 +502,8 @@
+@@ -493,6 +504,8 @@
            if (2 == $FAI::configs{$config}{volumes}{$l}{size}{preserve});
          next unless ($FAI::configs{$config}{volumes}{$l}{size}{preserve} == 1 ||
            $FAI::configs{$config}{volumes}{$l}{size}{resize} == 1);
@@ -112,7 +112,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
          defined ($FAI::configs{$config}{volumes}{$l}{size}{range}) or die
            "Can't preserve /dev/$1/$l because it is not defined in the current config\n";
          &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{devices} });
-@@ -504,6 +517,8 @@
+@@ -506,6 +519,8 @@
            (defined($FAI::current_raid_config{$r}) ? 1 : 0)
            if (2 == $FAI::configs{$config}{volumes}{$r}{preserve});
          next unless ($FAI::configs{$config}{volumes}{$r}{preserve} == 1);
