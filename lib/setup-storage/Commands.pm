@@ -890,6 +890,7 @@ sub setup_partitions {
     $fs = "linux-swap" if ($fs eq "swap");
     $fs = "fat32" if ($fs eq "vfat");
     $fs = "fat16" if ($fs eq "msdos");
+    $fs = "ext3" if ($fs eq "ext4");
     $fs = $FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem}
       if ($part->{size}->{preserve} || $part->{size}->{resize});
     $fs = "" if ($fs eq "-");

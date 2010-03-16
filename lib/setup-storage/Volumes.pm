@@ -372,7 +372,7 @@ sub get_current_raid {
 
   # parse the output line by line
   foreach my $line (@mdadm_print) {
-    if ($line =~ /^ARRAY \/dev\/md(\d+) level=(\S+) num-devices=\d+(\s+|$)/) {
+    if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+) level=(\S+) num-devices=\d+(\s+|$)/) {
       $id = $1;
       $FAI::current_raid_config{$id}{mode} = $2;
       &FAI::push_command( "true", "", "exist_/dev/md$id" );

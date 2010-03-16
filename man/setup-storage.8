@@ -318,15 +318,19 @@ name ::= [^/[:space:]]+
 .br
 
 
-size ::= [[:digit:]]+[kMGTP%]?(-([[:digit:]]+[kMGTP%]?)?)?(:resize)?
+size ::= [[:digit:]]+[kKMGTP%iB]*(-([[:digit:]]+[kKMGTP%iB]*)?)?(:resize)?
 .br
-         /* size in kilo, mega (default), giga, tera or petabytes or %,
+         /* size in kilo (KiB), mega (default, MiB), giga (GiB), tera (TiB) or
 .br
-          * possibly given as a range; physical
+          * petabytes (PiB) or %, possibly given as a range; physical
 .br
-          * partitions or lvm logical volumes only; */
+          * partitions or lvm logical volumes only; in future releases KB, MB,
 .br
-         | -[[:digit:]]+[kMGTP%]?(:resize)?
+          * GB, ... will be treated as 1000 instead of 1024 (KiB, MiB, GiB, ...)
+.br
+          * multipliers */
+.br
+         | -[[:digit:]]+[kKMGTP%iB]*(:resize)?
 .br
          /* size in kilo, mega (default), giga, tera or petabytes or %,
 .br
@@ -405,10 +409,10 @@ logical	/nobackup	0-	xfs	rw
 Preserve the 6th and the 7th partition. The disklabel is msdos which is the default
 for x86. Furthermore the 3rd partition is made bootable.
 .IP \(bu
-Create a primary partition /dev/hda1 with a size between 20 and 100 MB and mount it
+Create a primary partition /dev/hda1 with a size between 20 and 100 MiB and mount it
 read-write as /boot; it is formatted using ext3 filesystem.
 .IP \(bu
-/dev/hda2 will be a swap space of 1000 MB
+/dev/hda2 will be a swap space of 1000 MiB
 .IP \(bu
 /dev/hda3 should be formatted using ext3 filesystem; when calling mkfs.ext3
 the option "\-b 2048" is appended.

@@ -236,7 +236,7 @@ sub compute_lv_sizes {
       # reference to the size of the current logical volume
       my $lv_size = (\%FAI::configs)->{$config}->{volumes}->{$lv}->{size};
       # get the effective sizes (in Bytes) from the range
-      my ($start, $end) = &FAI::make_range($lv_size->{range}, "${vg_size}MB");
+      my ($start, $end) = &FAI::make_range($lv_size->{range}, "${vg_size}MiB");
       # make them MB
       $start /= 1024.0 * 1024.0;
       $end /= 1024.0 * 1024.0;
@@ -274,7 +274,7 @@ sub compute_lv_sizes {
 
       # get the range again
       my ($start, $end) =
-      &FAI::make_range($FAI::configs{$config}{volumes}{$lv}{size}{range}, "${vg_size}MB");
+      &FAI::make_range($FAI::configs{$config}{volumes}{$lv}{size}{range}, "${vg_size}MiB");
       # make them MB
       $start /= 1024.0 * 1024.0;
       $end /= 1024.0 * 1024.0;
@@ -685,7 +685,7 @@ sub compute_partition_sizes
       $FAI::device = $config;
       &FAI::init_part_config("primary");
       $FAI::configs{$config}{gpt_bios_part} = $FAI::partition_pointer->{number};
-      my $s = &FAI::convert_unit("120k");
+      my $s = &FAI::convert_unit("120KiB");
       # enter the range into the hash
       $FAI::partition_pointer->{size}->{range} = "$s-$s";
       # set proper defaults
@@ -740,9 +740,9 @@ sub compute_partition_sizes
         ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
           $config, $disk, $next_start, $min_req_total_space, \@worklist);
 
-        # msdos does not support partitions larger than 2TB
-        ($part->{size}->{eff_size} > (&FAI::convert_unit("2TB") * 1024.0 *
-            1024.0)) and die "msdos disklabel does not support partitions > 2TB, please use disklabel:gpt or gpt-bios\n"
+        # msdos does not support partitions larger than 2TiB
+        ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
+            1024.0)) and die "msdos disklabel does not support partitions > 2TiB, please use disklabel:gpt or gpt-bios\n"
           if ($FAI::configs{$config}{disklabel} eq "msdos");
         # partition done
         shift @worklist;

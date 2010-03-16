@@ -290,7 +290,7 @@ sub init_part_config {
 
 ################################################################################
 #
-# @brief This function converts different sizes to Mbyte
+# @brief This function converts different sizes to MiB
 #
 # @param $val is the number with its unit
 #
@@ -298,15 +298,22 @@ sub init_part_config {
 sub convert_unit
 {
   my ($val) = @_;
-  ($val =~ /^(\d+(\.\d+)?)([kMGTP%]?)(B)?\s*$/) or
-    &FAI::internal_error("convert_unit $val");
-  $val = $1 * (1 / 1024) * (1 / 1024) if ($3 eq "" && defined ($4) && $4 eq "B");
-  $val = $1 * (1 / 1024) if ($3 eq "k");
-  $val = $1 if ($3 eq "M");
-  $val = $1 * 1024 if ($3 eq "G");
-  $val = $1 * (1024 * 1024) if ($3 eq "T");
-  $val = $1 * (1024 * 1024 * 1024) if ($3 eq "P");
+
+  ## don't warn for now, G/GiB/GB are all treated the same way
+  ## ($val =~ /([kKMGTP])\s*$/) and
+  ##   warn "Using $1 as size modifier is deprecated, please use $1iB or $1B
+  ##   instead; in future releases these will be treated as different modifiers\n";
+
   # % is returned as is
+  if ($val =~ /^(\d+(\.\d+)?)%\s*$/) { 1; }
+  elsif ($val =~ /^(\d+(\.\d+)?)B\s*$/) { $val = $1 * (1 / 1024) * (1 / 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)[kK](i)?(B)?\s*$/) { $val = $1 * (1 / 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)M(i)?(B)?\s*$/) { $val = $1; }
+  elsif ($val =~ /^(\d+(\.\d+)?)G(i)?(B)?\s*$/) { $val = $1 * 1024; }
+  elsif ($val =~ /^(\d+(\.\d+)?)T(i)?(B)?\s*$/) { $val = $1 * (1024 * 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)P(i)?(B)?\s*$/) { $val = $1 * (1024 * 1024 * 1024); }
+  else { &FAI::internal_error("convert_unit $val"); }
+
   return $val;
 }
 
@@ -623,7 +630,7 @@ $FAI::Parser = Parse::RecDescent->new(
           1;
         }
 
-    size: /^(\d+[kMGTP%]?(-(\d+[kMGTP%]?)?)?)(:resize)?\s+/
+    size: /^(\d+[kMGTP%iB]*(-(\d+[kMGTP%iB]*)?)?)(:resize)?\s+/
         {
           # complete the size specification to be a range in all cases
           my $range = $1;
@@ -641,7 +648,9 @@ $FAI::Parser = Parse::RecDescent->new(
 
           # convert the units, if necessary
           my ($min, $max) = split (/-/, $range);
+          $min .= "MiB" if ($min =~ /\d\s*$/);
           $min   = &FAI::convert_unit($min);
+          $max .= "MiB" if ($max =~ /\d\s*$/);
           $max   = &FAI::convert_unit($max);
           $range = "$min-$max";
           # enter the range into the hash
@@ -652,13 +661,15 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
         }
-        | /^(-\d+[kMGTP%]?)(:resize)?\s+/
+        | /^(-\d+[kMGTP%iB]*)(:resize)?\s+/
         {
           # complete the range by assuming 0 as the lower limit 
           my $range = "0$1";
           # convert the units, if necessary
           my ($min, $max) = split (/-/, $range);
+          $min .= "MiB" if ($min =~ /\d\s*$/);
           $min   = &FAI::convert_unit($min);
+          $max .= "MiB" if ($max =~ /\d\s*$/);
           $max   = &FAI::convert_unit($max);
           $range = "$min-$max";
           # enter the range into the hash
