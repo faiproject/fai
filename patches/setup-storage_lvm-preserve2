@@ -1,7 +1,8 @@
-2010-03-12  Michael Tautschnig  <mt@debian.org>
+2010-03-19  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage/{Commands.pm,Volumes.pm}: Completed support for preserve in
-		LVM/RAID contexts; extended checking for volume groups that remain alive.
+		LVM/RAID contexts; extended checking for volume groups that remain alive,
+    fixed bug in LV resize code.
 Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
@@ -58,6 +59,24 @@ Index: trunk/lib/setup-storage/Commands.pm
    # create all the devices
    &FAI::push_command( "pvcreate $pv_create_options $_", "exist_$_", "pv_done_$_"
      ) foreach (@new_devices);
+@@ -447,11 +456,12 @@
+   # remove all volumes that do not exist anymore or need not be preserved
+   foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
+     # skip preserved/resized volumes
+-    if (defined ( $FAI::configs{$config}{volumes}{$lv})
+-      && ($FAI::configs{$config}{volumes}{$lv}{size}{preserve} == 1)) {
+-      $lv_resize_pre .= ",lv_resize_$vg/$lv" if
+-        $FAI::configs{$config}{volumes}{$lv}{size}{resize};
+-      next;
++    if (defined ( $FAI::configs{$config}{volumes}{$lv})) {
++      next if ($FAI::configs{$config}{volumes}{$lv}{size}{preserve} == 1);
++      if (1 == $FAI::configs{$config}{volumes}{$lv}{size}{resize}) {
++        $lv_resize_pre .= ",lv_resize_$vg/$lv";
++        next;
++      }
+     }
+ 
+     &FAI::push_command( "lvremove -f $vg/$lv", "vg_enabled_$vg", "lv_rm_$vg/$lv");
 Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Volumes.pm
