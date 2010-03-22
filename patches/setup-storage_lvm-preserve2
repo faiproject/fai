@@ -50,16 +50,72 @@ Index: trunk/lib/setup-storage/Commands.pm
        }
        $vg_exists = 0;
        last;
-@@ -396,8 +407,6 @@
+@@ -387,38 +398,44 @@
+ 
+   # otherwise add or remove the devices for the volume group, run pvcreate
+   # where needed
+-  # the list of devices to be created
+-  my %new_devs = ();
++  # the devices to be removed later on
++  my %rm_devs = ();
++  @rm_devs{ @{ $FAI::current_lvm_config{$vg}{"physical_volumes"} } } = ();
+ 
+-  # create an undefined entry for each new device
+-  @new_devs{ keys %{ $FAI::configs{$config}{devices} } } = ();
++  # all devices of this VG
++  my @all_devices = ();
+ 
++  # the list of devices to be created
    my @new_devices = ();
-   push @new_devices, &FAI::enc_name($_) foreach (keys %new_devs);
+-  push @new_devices, &FAI::enc_name($_) foreach (keys %new_devs);
  
 -  # &FAI::erase_lvm_signature( \@new_devices );
--
++  # create an undefined entry for each device
++  foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
++    my $denc = &FAI::enc_name($d);
++    push @all_devices, $denc;
++    push @new_devices, $denc unless (exists($rm_devs{$denc}));
++  }
++
++  # remove remaining devices from the list
++  delete $rm_devs{$_} foreach (@all_devices);
+ 
    # create all the devices
    &FAI::push_command( "pvcreate $pv_create_options $_", "exist_$_", "pv_done_$_"
      ) foreach (@new_devices);
-@@ -447,11 +456,12 @@
+ 
+-  # extend the volume group by the new devices (includes the current ones)
+-  my $pre_dev = "";
+-  $pre_dev .= ",pv_done_$_" foreach (@new_devices);
+-  $pre_dev =~ s/^,//;
+-  &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
+-    "vg_extended_$vg" );
+-
+-  # the devices to be removed
+-  my %rm_devs = ();
+-  @rm_devs{ @{ $FAI::current_lvm_config{$vg}{"physical_volumes"} } } = ();
+-
+-  # remove remaining devices from the list
+-  delete $rm_devs{$_} foreach (@new_devices);
++  # extend the volume group by the new devices
++  if (scalar (@new_devices)) {
++    my $pre_dev = "";
++    $pre_dev .= ",pv_done_$_" foreach (@new_devices);
++    $pre_dev =~ s/^,//;
++    &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
++      "vg_extended_$vg" );
++  } else {
++    &FAI::push_command( "true", "", "vg_extended_$vg" );
++  }
+ 
+   # run vgreduce to get them removed
+   if (scalar (keys %rm_devs)) {
+-    $pre_dev = "";
++    my $pre_dev = "";
+     $pre_dev .= ",pv_done_$_" foreach (keys %rm_devs);
+     &FAI::push_command( "vgreduce $vg " . join (" ", keys %rm_devs),
+       "vg_extended_$vg$pre_dev", "vg_created_$vg" );
+@@ -447,11 +464,12 @@
    # remove all volumes that do not exist anymore or need not be preserved
    foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
      # skip preserved/resized volumes
