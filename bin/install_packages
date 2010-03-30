@@ -28,7 +28,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.3, 28-january-2010";
+my $version = "Version 4.3.1, 30-march-2010";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -63,7 +63,7 @@ my $execerrors; # counts execution errors
 my $use_aptpkg=0;
 my $aptopt='-y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
-my $debsourcesdir='/var/tmp/package';
+my $debsourcesdir='/var/lib/fai/packages';
 
 $| = 1;
 
@@ -319,7 +319,7 @@ sub dselectupgrade {
 
   my $type = shift;
   my ($package,$action,$list);
-  my $tempfile = "$FAI_ROOT/tmp/dpkg-selections.tmp"; # TODO: use better uniq filename
+  my $tempfile = "$FAI_ROOT/var/lib/fai/dpkg-selections.tmp"; # TODO: use better uniq filename
   while (@{$list{$type}}) {
     $package = shift @{$list{$type}};
     $action  = shift @{$list{$type}};
@@ -460,8 +460,11 @@ sub mkpackagelist {
 sub writepackages {
 
   # write package list to log file
-  open(LIST,"> $FAI_ROOT/tmp/packages.list") || warn "ERROR $0: Can't write package list file: $!\n";
-  print LIST "# List of all packages that will be installed\n";
+
+  return if $opt_d; # do not write the list if we only download packages
+
+  open(LIST,"> $FAI_ROOT/var/log/install_packages.list") || warn "ERROR $0: Can't write package list file: $!\n";
+  print LIST "# List of all packages that will be installed via install_packages\n";
   for (@known) { print LIST "$_\n"; }
   close(LIST);
 
