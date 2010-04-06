@@ -1,0 +1,177 @@
+2010-04-06  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Parser.pm,Commands.pm}: Added support for new always_format
+		option.
+	* setup-storage.8: Documented new always_format option.
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -247,7 +247,13 @@
+ 
+       # if it is a volume that has to be preserved, there is not much to be
+       # done; its existance has been checked in propagate_and_check_preserve
+-      next if ($vol->{preserve});
++      if ($vol->{preserve}) {
++        # create the filesystem on the volume, if requested
++        &FAI::build_mkfs_commands("/dev/md$id",
++          \%{ $FAI::configs{$config}{volumes}{$id} })
++          if (1 == $vol->{always_format});
++        next;
++      }
+ 
+       # the desired RAID level
+       my $level = $vol->{mode};
+@@ -487,6 +493,10 @@
+       defined ($FAI::current_lvm_config{$vg}{volumes}{$lv})
+         or die "Preserved volume $vg/$lv does not exist\n";
+       warn "$vg/$lv will be preserved\n";
++      # create the filesystem on the volume, if requested
++      &FAI::build_mkfs_commands("/dev/$vg/$lv",
++        \%{ $FAI::configs{$config}{volumes}{$lv} })
++        if (1 == $lv_size->{always_format});
+       next;
+     }
+ 
+@@ -526,6 +536,10 @@
+         }
+       }
+ 
++      # create the filesystem on the volume, if requested
++      &FAI::build_mkfs_commands("/dev/$vg/$lv",
++        \%{ $FAI::configs{$config}{volumes}{$lv} })
++        if (1 == $lv_size->{always_format});
+       next;
+     }
+ 
+@@ -1003,8 +1017,9 @@
+       my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
+ 
+       # skip preserved/resized/extended partitions
+-      next if ($part->{size}->{preserve} == 1
+-        || $part->{size}->{resize} == 1 || $part->{size}->{extended} == 1);
++      next if (($part->{size}->{always_format} == 0 &&
++          ($part->{size}->{preserve} == 1 || $part->{size}->{resize} == 1))
++        || $part->{size}->{extended} == 1);
+ 
+       # create the filesystem on the device
+       &FAI::build_mkfs_commands( &FAI::make_device_name($disk, $part_id), $part );
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -256,6 +256,10 @@
+       defined ($part_size->{preserve})
+         or $part_size->{preserve} = 0;
+ 
++      # add the always_format = 0 flag, if it doesn't exist already
++      defined ($part_size->{always_format})
++        or $part_size->{always_format} = 0;
++
+       # add the resize = 0 flag, if it doesn't exist already
+       defined ($part_size->{resize}) or $part_size->{resize} = 0;
+     }
+@@ -283,6 +287,10 @@
+   defined ($FAI::partition_pointer->{size}->{preserve})
+     or $FAI::partition_pointer->{size}->{preserve} = 0;
+ 
++  # add the always_format = 0 flag, if it doesn't exist already
++  defined ($FAI::partition_pointer->{size}->{always_format})
++    or $FAI::partition_pointer->{size}->{always_format} = 0;
++
+   # add the resize = 0 flag, if it doesn't exist already
+   defined ($FAI::partition_pointer->{size}->{resize})
+     or $FAI::partition_pointer->{size}->{resize} = 0;
+@@ -413,6 +421,10 @@
+           # the information preferred for fstab device identifieres
+           $FAI::configs{$FAI::device}{fstabkey} = $1;
+         }
++        | /^always_format:(\d+(,\d+)*)/
++        {
++          $FAI::configs{RAID}{volumes}{$_}{always_format} = 1 foreach (split (",", $1));
++        }
+ 
+     cryptsetup_option: /^randinit/
+         {
+@@ -461,6 +473,14 @@
+           # the information preferred for fstab device identifieres
+           $FAI::configs{"VG_--ANY--"}{fstabkey} = $1;
+         }
++        | m{^always_format:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
++        {
++          foreach (split (",", $1)) {
++            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
++              die &FAI::internal_error("VG re-parse failed");
++            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{always_format} = 1;
++          }
++        }
+ 
+ 
+     option: /^preserve_always:(\d+(,\d+)*)/
+@@ -531,6 +551,10 @@
+ 
+ 	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
+ 	}
++        | /^always_format:(\d+(,\d+)*)/
++        {
++          $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
++        }
+ 
+     volume: /^vg\s+/ name devices vgcreateopt(s?)
+         | /^raid([0156]|10)\s+/
+@@ -605,6 +629,8 @@
+           # initialise the preserve and resize flags
+           defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{preserve}) or
+             $FAI::configs{$FAI::device}{volumes}{$2}{size}{preserve} = 0;
++          defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{always_format}) or
++            $FAI::configs{$FAI::device}{volumes}{$2}{size}{always_format} = 0;
+           defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{resize}) or
+             $FAI::configs{$FAI::device}{volumes}{$2}{size}{resize} = 0;
+           # set the reference to the current volume
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -170,6 +170,10 @@
+ .br
+            /* preserve volumes -- unless these don't exist yet */
+ .br
++           | always_format:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
++.br
++           /* run mkfs on the volumes, even if marked as preserve */
++.br
+            | resize:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
+ .br
+            /* attempt to resize partitions */
+@@ -200,6 +204,10 @@
+ .br
+            /* preserve volumes -- unless these don't exist yet */
+ .br
++           | always_format:[[:digit:]]+(,[[:digit:]]+)*
++.br
++           /* run mkfs on the volumes, even if marked as preserve */
++.br
+            | fstabkey:(device|label|uuid)
+ .br
+            /* when creating the fstab the key used for defining the device
+@@ -234,6 +242,10 @@
+ .br
+            /* preserve partitions -- unless these don't exist yet */
+ .br
++           | always_format:[[:digit:]]+(,[[:digit:]]+)*
++.br
++           /* run mkfs on the partitions, even if marked as preserve */
++.br
+            | resize:[[:digit:]]+(,[[:digit:]]+)*
+ .br
+            /* attempt to resize partitions */
+@@ -398,6 +410,9 @@
+ one of the FAI_FLAGS. preserve_lazy allows to preserve partitions only if these
+ exist already. Otherwise they are created.
+ .IP \(bu
++The "always_format" option overrides preserving filesystems (via one of the
++"preserveX" options), like the "format" option in setup_harddisks.
++.IP \(bu
+ Support for LVM and RAID is completely new
+ .IP \(bu
+ Resizing partitions and filesystems is supported
