@@ -1,0 +1,152 @@
+2010-04-06  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Volumes.pm,Sizes.pm: eff_size is bytes. Always.
+	* setup-storage/Commands.pm: Prefer resize2fs over parted to resize logical
+		volumes. Future versions of parted will allow even more use of resize2fs.
+		Fix use of eff_size as bytes.
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -496,18 +496,34 @@
+         or die "Resized volume $vg/$lv does not exist\n";
+       warn "$vg/$lv will be resized\n";
+ 
+-      if ($lv_size->{eff_size} <
+-        $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
++      use POSIX qw(floor);
++
++      my $lvsize_mib = &FAI::convert_unit($lv_size->{eff_size} . "B");
++      if ($lvsize_mib < $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
+       {
+-        &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+-          "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
+-        &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
++        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
++            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
++          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
++          &FAI::push_command( "resize2fs /dev/$vg/$lv $block_count",
++            "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
++        } else {
++          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
++            "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
++        }
++        &FAI::push_command( "lvresize -L $lvsize_mib $vg/$lv",
+           "vg_enabled_$vg,$lv_rm_pre,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
+       } else {
+-        &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
++        &FAI::push_command( "lvresize -L $lvsize_mib $vg/$lv",
+           "vg_enabled_$vg,$lv_rm_pre", "lv_grow_$vg/$lv" );
+-        &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+-          "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
++        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
++            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
++          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
++          &FAI::push_command( "resize2fs /dev/$vg/$lv $block_count",
++            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
++        } else {
++          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
++            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
++        }
+       }
+ 
+       next;
+@@ -516,10 +532,10 @@
+     my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
+     # prevent warnings of uninitialized variables
+     $create_options = '' unless $create_options;
+-  print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
++    print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
+     # create a new volume
+     &FAI::push_command( "lvcreate $create_options -n $lv -L " .
+-      $lv_size->{eff_size} . " $vg", "vg_enabled_$vg,$lv_rm_pre",
++      &FAI::convert_unit($lv_size->{eff_size} . "B") . " $vg", "vg_enabled_$vg,$lv_rm_pre",
+       "exist_/dev/$vg/$lv" );
+ 
+     # create the filesystem on the volume
+@@ -847,25 +863,39 @@
+     my $start = $part->{start_byte};
+     my $end = $part->{end_byte};
+ 
++    # ntfs/ext2,3 partition can't be moved
++    ($start == $FAI::current_config{$disk}{partitions}{$mapped_id}{begin_byte})
++      or &FAI::internal_error(
++        $FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem}
++          . " partition start supposed to move, which is not allowed") if
++      ($FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem} =~
++        /^(ntfs|ext[23])$/);
++
+     # build an appropriate command
+     # ntfs requires specific care
+     if ($FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem} eq
+       "ntfs") {
+       # check, whether ntfsresize is available
+       &FAI::in_path("ntfsresize") or die "ntfsresize not found in PATH\n";
+-      # ntfs partition can't be moved
+-      ($start == $FAI::current_config{$disk}{partitions}{$mapped_id}{begin_byte}) 
+-        or &FAI::internal_error("ntfs partition supposed to move");
+-      # ntfsresize requires device names
+-      my $eff_size = $part->{size}->{eff_size};
+ 
+-      &FAI::push_command( "yes | ntfsresize -s $eff_size " .
++      &FAI::push_command( "yes | ntfsresize -s " . $part->{size}->{eff_size} .
+         &FAI::make_device_name($disk, $p), "rebuilt_" .
+         &FAI::make_device_name($disk, $p) . $deps, "ntfs_ready_for_rm_" .
+         &FAI::make_device_name($disk, $p) );
++      # TODO this is just a hack, we would really need support for resize
++      # without data resize in parted, which will be added in some parted
++      # version > 2.1
+       &FAI::push_command( "parted -s $disk rm $p", "ntfs_ready_for_rm_" .
+         &FAI::make_device_name($disk, $p), "resized_" .
+         &FAI::make_device_name($disk, $p) );
++    ## } elsif (($FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem} =~
++    ##     /^ext[23]$/) && &FAI::in_path("resize2fs")) {
++    ##   TODO: BROKEN needs more checks, enlarge partition table before resize, just as
++    ##   NTFS case
++    ##   my $block_count = $part->{size}->{eff_size} / 512;
++    ##   &FAI::push_command( "resize2fs " . &FAI::make_device_name($disk, $p) .
++    ##     " $block_count", "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps,
++    ##     "resized_" .  &FAI::make_device_name($disk, $p) );
+     } else {
+       &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
+         "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps, "resized_" .
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -251,7 +251,7 @@
+       # the size is fixed
+       if ($start == $end) { 
+         # write the size back to the configuration
+-        $lv_size->{eff_size} = $start;
++        $lv_size->{eff_size} = $start * 1024.0 * 1024.0;
+       } else {
+ 
+         # add this volume to the redistribution list
+@@ -281,7 +281,7 @@
+ 
+       # write the final size
+       $FAI::configs{$config}{volumes}{$lv}{size}{eff_size} =
+-        $start + (($end - $start) * $redist_factor);
++        ($start + (($end - $start) * $redist_factor)) * 1024.0 * 1024.0;
+     }
+   }
+ }
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -352,10 +352,10 @@
+     # store the vg size in MB
+     my %vg_info = get_volume_group_information($vg);
+     if (%vg_info) {
+-      $FAI::current_lvm_config{$vg}{size} = $vg_info{alloc_pe_size} .
+-        $vg_info{alloc_pe_size_unit};
++      $FAI::current_lvm_config{$vg}{size} = &FAI::convert_unit(
++        $vg_info{alloc_pe_size} . $vg_info{alloc_pe_size_unit});
+     } else {
+-      $FAI::current_lvm_config{$vg}{size} = "0M";
++      $FAI::current_lvm_config{$vg}{size} = "0";
+     }
+ 
+     # store the logical volumes and their sizes
