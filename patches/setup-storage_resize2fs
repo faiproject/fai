@@ -25,7 +25,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
-+          &FAI::push_command( "resize2fs /dev/$vg/$lv $block_count",
++          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
 +            "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
 +        } else {
 +          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
@@ -42,7 +42,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
-+          &FAI::push_command( "resize2fs /dev/$vg/$lv $block_count",
++          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
 +            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
 +        } else {
 +          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
@@ -105,7 +105,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    ##   NTFS case
 +    ##   my $block_count = $part->{size}->{eff_size} / 512;
 +    ##   &FAI::push_command( "resize2fs " . &FAI::make_device_name($disk, $p) .
-+    ##     " $block_count", "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps,
++    ##     " ${block_count}s", "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps,
 +    ##     "resized_" .  &FAI::make_device_name($disk, $p) );
      } else {
        &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
