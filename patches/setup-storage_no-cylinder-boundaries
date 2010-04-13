@@ -32,22 +32,17 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # set $start and $end to the effective values
    $start = $end_byte - $next_start + 1;
-@@ -646,13 +632,9 @@
-     my $next_start = 0;
+@@ -650,10 +636,6 @@
+       $next_start = $current_disk->{bios_sectors_per_track} *
+         $current_disk->{sector_size};
  
-     if ($FAI::configs{$config}{disklabel} eq "msdos") {
--      # on msdos disk labels, the first partitions starts at head #1
--      $next_start = $current_disk->{bios_sectors_per_track} *
--        $current_disk->{sector_size};
--
-       # the MBR requires space, too
+-      # the MBR requires space, too
 -      $min_req_total_space += $current_disk->{bios_sectors_per_track} *
 -        $current_disk->{sector_size};
-+      $next_start = $current_disk->{sector_size};
-+      $min_req_total_space += $current_disk->{sector_size};
- 
+-
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
        # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
+       $next_start = 34 * $current_disk->{sector_size};
 @@ -665,13 +647,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  

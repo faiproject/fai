@@ -36,10 +36,13 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
 --- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
 +++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
-@@ -2,8 +2,29 @@
+@@ -2,8 +2,28 @@
  
  error=0 ; trap "error=$((error|1))" ERR
  
+-$ROOTCMD grub-mkdevicemap -n -m /boot/grub/device.map
+-$ROOTCMD grub-mkconfig -o /boot/grub/grub.cfg
+-$ROOTCMD grub-install --no-floppy "(hd0)"
 +set -a
 +
 +# during softupdate use this file
@@ -51,10 +54,7 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 +# if class NOMBR is defined, write boot loader into root partition, not into mbr
 +ifclass NOMBR && BOOT_DEVICE=$BOOT_PARTITION
 +
- $ROOTCMD grub-mkdevicemap -n -m /boot/grub/device.map
--$ROOTCMD grub-mkconfig -o /boot/grub/grub.cfg
--$ROOTCMD grub-install --no-floppy "(hd0)"
-+$ROOTCMD grub-mkimage --output=/boot/grub/core.img lvm raid serial
++$ROOTCMD grub-mkimage --output=/boot/grub/core.img lvm raid
 +$ROOTCMD update-grub
 +
 +for device in $BOOT_DEVICE; do
@@ -62,7 +62,7 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 +  if [ -z "$grub_dev" ] ; then
 +    grub_dev=$(echo $device | sed 's#^/dev/##')
 +  fi
-+  $ROOTCMD /usr/sbin/grub-install --no-floppy --modules="lvm raid serial" "($grub_dev)"
++  $ROOTCMD /usr/sbin/grub-install --no-floppy --modules="lvm raid" "($grub_dev)"
 +  $ROOTCMD /usr/sbin/grub-setup   "($grub_dev)"
 +done
  
