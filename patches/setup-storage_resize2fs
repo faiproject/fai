@@ -8,7 +8,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -496,18 +496,34 @@
+@@ -496,18 +496,38 @@
          or die "Resized volume $vg/$lv does not exist\n";
        warn "$vg/$lv will be resized\n";
  
@@ -25,8 +25,10 @@ Index: trunk/lib/setup-storage/Commands.pm
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
++          &FAI::push_command( "e2fsck -f /dev/$vg/$lv",
++            "vg_enabled_$vg,$lv_rm_pre", "e2fsck_f_resize_$vg/$lv" );
 +          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
-+            "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
++            "e2fsck_f_resize_$vg/$lv", "lv_shrink_$vg/$lv" );
 +        } else {
 +          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
 +            "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
@@ -42,8 +44,10 @@ Index: trunk/lib/setup-storage/Commands.pm
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
++          &FAI::push_command( "e2fsck -f /dev/$vg/$lv ${block_count}s",
++            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "e2fsck_f_resize_$vg/$lv" );
 +          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
-+            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
++            "e2fsck_f_resize_$vg/$lv", "exist_/dev/$vg/$lv" );
 +        } else {
 +          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
 +            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
@@ -51,7 +55,7 @@ Index: trunk/lib/setup-storage/Commands.pm
        }
  
        next;
-@@ -516,10 +532,10 @@
+@@ -516,10 +536,10 @@
      my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
      # prevent warnings of uninitialized variables
      $create_options = '' unless $create_options;
@@ -64,7 +68,7 @@ Index: trunk/lib/setup-storage/Commands.pm
        "exist_/dev/$vg/$lv" );
  
      # create the filesystem on the volume
-@@ -847,25 +863,39 @@
+@@ -847,25 +867,42 @@
      my $start = $part->{start_byte};
      my $end = $part->{end_byte};
  
@@ -104,8 +108,11 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    ##   TODO: BROKEN needs more checks, enlarge partition table before resize, just as
 +    ##   NTFS case
 +    ##   my $block_count = $part->{size}->{eff_size} / 512;
-+    ##   &FAI::push_command( "resize2fs " . &FAI::make_device_name($disk, $p) .
++    ##   &FAI::push_command( "e2fsck -f " . &FAI::make_device_name($disk, $p) .
 +    ##     " ${block_count}s", "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps,
++    ##     "e2fsck_f_resize_" .  &FAI::make_device_name($disk, $p) );
++    ##   &FAI::push_command( "resize2fs " . &FAI::make_device_name($disk, $p) .
++    ##     " ${block_count}s", "e2fsck_f_resize_" . &FAI::make_device_name($disk, $p),
 +    ##     "resized_" .  &FAI::make_device_name($disk, $p) );
      } else {
        &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
