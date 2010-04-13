@@ -1,0 +1,93 @@
+2010-04-13  Michael Tautschnig  <mt@debian.org>
+
+	* control: Move setup-storage to its own package (fai-setup-storage). Thanks
+		Michael Prokop <mika@debian.org> for the patch (closes: #575812)
+Index: trunk/debian/control
+===================================================================
+--- trunk.orig/debian/control
++++ trunk/debian/control	
+@@ -12,9 +12,9 @@
+ 
+ Package: fai-client
+ Architecture: all
+-Depends: perl, file, libapt-pkg-perl, libparse-recdescent-perl, liblinux-lvm-perl, iproute
++Depends: perl, file, libapt-pkg-perl, iproute, fai-setup-storage
+ Recommends: debconf-utils, cfengine2
+-Suggests: ntfsprogs, dmsetup, cryptsetup, logtail
++Suggests: logtail
+ Conflicts: fai, fai-kernels
+ Replaces: fai
+ Description: Fully Automatic Installation client package
+@@ -84,3 +84,21 @@
+  .
+  This package contains the software that is only needed in
+  the FAI nfsroot. Do not install this package on a normal machine.
++
++Package: fai-setup-storage
++Architecture: all
++Depends: perl, libparse-recdescent-perl, liblinux-lvm-perl, parted
++Recommends: lvm2, mdadm
++Suggests: dmsetup, cryptsetup, e2fsprogs, dosfstools, jfsutils, ntfsprogs, reiserfsprogs, xfsprogs
++Conflicts: fai-client (<< 3.4~)
++Description: automatically prepare storage devices
++  Using FAI disk_config files, setup-storage computes effective
++  partition and volume sizes and executes the necessary commands
++  to configure storage devices. It manages disk drives as well
++  as RAID and LVM volumes. It handles all file systems supported
++  by parted(8) as well as ntfs but is flexible enough to be
++  extended to further types as well. Once the storage devices
++  are prepared, an appropriate fstab(5) file is generated.
++  .
++  This package provides the setup-storage utility as separate
++  package so it can be used independent from FAI as well.
+Index: trunk/debian/fai-client.install
+===================================================================
+--- trunk.orig/debian/fai-client.install
++++ trunk/debian/fai-client.install	
+@@ -3,14 +3,12 @@
+ usr/lib/fai/fai-savelog
+ usr/lib/fai/fai-savelog-ftp
+ usr/lib/fai/get-boot-info
+-usr/lib/fai/disk-info
+ usr/lib/fai/list_disks
+ usr/lib/fai/subroutines
+ usr/lib/fai/updatebase
+ usr/lib/fai/prcopyleft
+ usr/lib/fai/get-config-dir*
+ usr/lib/fai/fai-divert
+-usr/lib/fai/fai-vol_id
+ usr/lib/fai/mkramdisk
+ usr/bin/device2grub
+ usr/bin/fai-class
+@@ -22,6 +20,4 @@
+ usr/sbin/ftar
+ usr/sbin/install_packages
+ usr/sbin/setup_harddisks
+-usr/sbin/setup-storage
+ usr/sbin/fai-statoverride
+-usr/share/fai/setup-storage
+Index: trunk/debian/fai-client.manpages
+===================================================================
+--- trunk.orig/debian/fai-client.manpages
++++ trunk/debian/fai-client.manpages	
+@@ -6,5 +6,4 @@
+ debian/tmp/man/fai-debconf.1
+ debian/tmp/man/fai-do-scripts.1
+ debian/tmp/man/ainsl.1
+-debian/tmp/man/setup-storage.8
+ debian/tmp/man/fai-statoverride.8
+Index: trunk/debian/fai-setup-storage.install
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/debian/fai-setup-storage.install	
+@@ -0,0 +1,4 @@
++usr/lib/fai/disk-info
++usr/lib/fai/fai-vol_id
++usr/sbin/setup-storage
++usr/share/fai/setup-storage
+Index: trunk/debian/fai-setup-storage.manpages
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/debian/fai-setup-storage.manpages	
+@@ -0,0 +1 @@
++debian/tmp/man/setup-storage.8
