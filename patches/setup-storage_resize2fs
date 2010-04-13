@@ -25,7 +25,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
-+          &FAI::push_command( "e2fsck -f /dev/$vg/$lv",
++          &FAI::push_command( "e2fsck -p -f /dev/$vg/$lv",
 +            "vg_enabled_$vg,$lv_rm_pre", "e2fsck_f_resize_$vg/$lv" );
 +          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
 +            "e2fsck_f_resize_$vg/$lv", "lv_shrink_$vg/$lv" );
@@ -44,7 +44,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
-+          &FAI::push_command( "e2fsck -f /dev/$vg/$lv",
++          &FAI::push_command( "e2fsck -p -f /dev/$vg/$lv",
 +            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "e2fsck_f_resize_$vg/$lv" );
 +          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
 +            "e2fsck_f_resize_$vg/$lv", "exist_/dev/$vg/$lv" );
@@ -108,7 +108,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    ##   TODO: BROKEN needs more checks, enlarge partition table before resize, just as
 +    ##   NTFS case
 +    ##   my $block_count = $part->{size}->{eff_size} / 512;
-+    ##   &FAI::push_command( "e2fsck -f " . &FAI::make_device_name($disk, $p),
++    ##   &FAI::push_command( "e2fsck -p -f " . &FAI::make_device_name($disk, $p),
 +    ##     "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps,
 +    ##     "e2fsck_f_resize_" .  &FAI::make_device_name($disk, $p) );
 +    ##   &FAI::push_command( "resize2fs " . &FAI::make_device_name($disk, $p) .
