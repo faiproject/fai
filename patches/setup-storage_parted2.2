@@ -1,0 +1,53 @@
+2010-04-15  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Volumes.pm: Fixed uninitialized variable warnings in parsing
+		output of parted 2.2.
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -177,6 +177,23 @@
+ #  7      30450018816B  32547432959B  2097414144B   logical   ext3
+ #  8      32547465216B  82343278079B  49795812864B  logical   ext3
+ #
++# parted 2.2:
++# $ parted -s /dev/sda unit TiB print
++# Model: ATA VBOX HARDDISK (scsi)
++# Disk /dev/sda: 0.06TiB
++# Sector size (logical/physical): 512B/512B
++# Partition Table: msdos
++#
++# Number  Start    End      Size     Type      File system     Flags
++#  1      0.00TiB  0.00TiB  0.00TiB  primary   ext3            boot
++#  2      0.00TiB  0.00TiB  0.00TiB  primary   linux-swap(v1)
++#  3      0.00TiB  0.00TiB  0.00TiB  primary   ext3
++#  4      0.00TiB  0.06TiB  0.06TiB  extended                  lba
++#  5      0.00TiB  0.00TiB  0.00TiB  logical   ext3
++#  6      0.00TiB  0.00TiB  0.00TiB  logical   ext3
++#  7      0.00TiB  0.00TiB  0.00TiB  logical   ext3
++#  8      0.00TiB  0.01TiB  0.00TiB  logical   ext3
++#  9      0.01TiB  0.06TiB  0.05TiB  logical                   lvm
+ 
+     # As shown above, some entries may be blank. Thus the exact column starts
+     # and lengths must be parsed from the header line. This is stored in the
+@@ -249,9 +266,17 @@
+         # file system either
+         next if ($id eq "");
+ 
+-        # extract the set of characters
+-        $line =~ /^.{$fs_cols_before}(.{$fs_col_width})/;
+-        my $fs = $1;
++        # extract the file system information
++        my $fs = "";
++        if (length ($line) > $fs_cols_before) {
++          if (length ($line) >= ($fs_cols_before + $fs_col_width)) {
++            $line =~ /^.{$fs_cols_before}(.{$fs_col_width})/;
++            $fs = $1;
++          } else {
++            $line =~ /^.{$fs_cols_before}(.+)$/;
++            $fs = $1;
++          }
++        }
+ 
+         # remove any trailing space
+         $fs =~ s/\s*$//g;
