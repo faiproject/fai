@@ -1,0 +1,46 @@
+2010-04-20  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Volumes.pm: Use absolute path names for devices in volume
+		groups, RAID volumes.
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -367,6 +367,7 @@
+ sub get_current_lvm {
+ 
+   use Linux::LVM;
++  use Cwd qw(abs_path);
+ 
+   # get the existing volume groups
+   foreach my $vg (get_volume_group_list()) {
+@@ -396,8 +397,8 @@
+ 
+     # store the physical volumes
+     my %pv_info = get_physical_volume_information($vg);
+-    @{ $FAI::current_lvm_config{$vg}{physical_volumes} } =
+-      sort keys %pv_info;
++    push @{ $FAI::current_lvm_config{$vg}{physical_volumes} },
++      abs_path($_) foreach (sort keys %pv_info);
+   }
+ 
+ }
+@@ -410,6 +411,8 @@
+ ################################################################################
+ sub get_current_raid {
+ 
++  use Cwd qw(abs_path);
++
+   # the list to hold the output of mdadm commands as parsed below
+   my @mdadm_print = ();
+ 
+@@ -445,7 +448,8 @@
+       &FAI::push_command( "true", "", "exist_/dev/md$id" );
+     } elsif ($line =~ /^\s*devices=(\S+)$/) {
+       defined($id) or &FAI::internal_error("mdadm ARRAY line not yet seen");
+-      @{ $FAI::current_raid_config{$id}{devices} } = split (",", $1);
++      push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($_)
++        foreach (split (",", $1));
+     }
+   }
+ }
