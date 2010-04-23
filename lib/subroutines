@@ -633,22 +633,18 @@ eval_cmdline() {
     echo -n "Kernel currently running: "
     uname -rsmo
     echo -n "Kernel parameters: "; cat /proc/cmdline
-    eval "cmdline=($(</proc/cmdline))"
-    echo "Kernel parameters: ${cmdline[*]}"
-    for word in "${cmdline[@]}"; do
-        case $word in
-            FAI_CLASSES=*)
-		word=${word#*=}
-		eval "classes=(${word//,/ })"
-		printf '%s\n' "${classes[@]}" >>/tmp/l
+    for word in $(cat /proc/cmdline) ; do
+	case $word in
+	    FAI_CLASSES=*)
+                eval "$word"
+		for class in ${FAI_CLASSES//,/ }; do
+		    echo $class >>/tmp/l
+		done
 		unset FAI_CLASSES
 		;;
 
 	    [a-zA-Z]*=*)
-		varname=${word%%=*}
-		word=${word#*=}
-		eval $varname=\$word
-		eval export $varname
+		eval "export $word"
 		;;
 	esac
     done
