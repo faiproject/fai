@@ -41,7 +41,7 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
 --- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
 +++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
-@@ -2,8 +2,26 @@
+@@ -2,8 +2,22 @@
  
  error=0 ; trap "error=$((error|1))" ERR
  
@@ -56,13 +56,9 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 +[ -z "$BOOT_DEVICE" ]    && exit 701
 +
 +for device in $BOOT_DEVICE; do
-+  if echo $device | grep -q "^/dev/mapper/" ; then
-+    grub_dev=$(echo $device | sed 's#^/dev/mapper/##')
-+  else
-+    grub_dev=$(device2grub $device)
-+    if [ -z "$grub_dev" ] ; then
-+      grub_dev=$(echo $device | sed 's#^/dev/##')
-+    fi
++  grub_dev=$(device2grub $device)
++  if [ -z "$grub_dev" ] ; then
++    grub_dev=$(echo $device | sed 's#^/dev/##')
 +  fi
 +  $ROOTCMD /usr/sbin/grub-install --no-floppy --modules="biosdisk part_msdos ext2 lvm raid" "($grub_dev)"
 +done
