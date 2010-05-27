@@ -1,0 +1,155 @@
+2010-05-27  Julien BLACHE <jblache@debian.org>
+	* lib/setup-storage/Commands.pm: support the creation of journal
+	devices (ext3/4) and filesystems with external journal (ext3/4, xfs).
+	* lib/setup-storage/Parser.pm: add support for FS_journal and
+	FS:journal=.
+	* man/setup-storage.8: document external journal support.
+
+Index: trunk-w-exp/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk-w-exp.orig/lib/setup-storage/Commands.pm	2010-05-27 16:02:39.000000000 +0200
++++ trunk-w-exp/lib/setup-storage/Commands.pm	2010-05-27 16:10:11.000000000 +0200
+@@ -54,6 +54,7 @@
+   defined ($partition->{filesystem})
+     or &FAI::internal_error("filesystem is undefined");
+   my $fs = $partition->{filesystem};
++  my $journal = $partition->{journal_dev};
+ 
+   return if ($fs eq "-");
+ 
+@@ -66,13 +67,45 @@
+   print "$partition->{mountpoint} FS create_options: $create_options\n" if ($FAI::debug && $create_options);
+   print "$partition->{mountpoint} FS tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
+ 
+-  # create the file system with options
+-  my $create_tool = "mkfs.$fs";
+-  ($fs eq "swap") and $create_tool = "mkswap";
+-  ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
+-  ($fs eq "reiserfs") and $create_options = "$create_options -q" unless ($create_options =~ m/-(f|q|y)/);
+-  &FAI::push_command( "$create_tool $create_options $device", "exist_$device",
+-    "has_fs_$device" );
++  my $prereqs = "exist_$device";
++  my $provides;
++  my $create_tool;
++
++  # create filesystem journal
++  if ($fs =~ m/.*_journal$/) {
++      $provides = "journal_preped_$device";
++      undef($tune_options);
++
++      if ($fs =~ /ext[34]_journal/) {
++	  $create_tool = "mke2fs";
++	  $create_options = "-O journal_dev";
++      } elsif ($fs eq "xfs_journal") {
++	  $create_tool = "/bin/true";
++	  $create_options = "";
++      } else {
++	  &FAI::internal_error("unsupported journal type $fs");
++      }
++  } else {
++      # create regular filesystem
++      $provides = "has_fs_$device";
++      $create_tool = "mkfs.$fs";
++
++      ($fs eq "swap") and $create_tool = "mkswap";
++      ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
++      ($fs eq "reiserfs") and $create_options = "$create_options -q" unless ($create_options =~ m/-(f|q|y)/);
++
++      # adjust options for filesystem with external journal
++      if (defined($journal)) {
++	  $journal =~ s/^journal=//;
++	  $prereqs = "$prereqs,journal_preped_$journal";
++
++	  ($fs eq "xfs") and $create_options = "$create_options -l logdev=$journal";
++	  ($fs eq "ext3") and $create_options = "$create_options -J device=$journal";
++	  ($fs eq "ext4") and $create_options = "$create_options -J device=$journal";
++      }
++  }
++
++  &FAI::push_command( "$create_tool $create_options $device", $prereqs, $provides);
+ 
+   # possibly tune the file system - this depends on whether the file system
+   # supports tuning at all
+@@ -956,10 +989,12 @@
+ 
+     my $fs = $part->{filesystem};
+     $fs = "" unless defined($fs);
++    ($fs) = split(/:/, $fs);
+     $fs = "linux-swap" if ($fs eq "swap");
+     $fs = "fat32" if ($fs eq "vfat");
+     $fs = "fat16" if ($fs eq "msdos");
+     $fs = "ext3" if ($fs eq "ext4");
++    $fs = "" if ($fs =~ m/.*_journal$/);
+     $fs = $FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem}
+       if ($part->{size}->{preserve} || $part->{size}->{resize});
+     $fs = "" if ($fs eq "-");
+Index: trunk-w-exp/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk-w-exp.orig/lib/setup-storage/Parser.pm	2010-05-27 16:02:39.000000000 +0200
++++ trunk-w-exp/lib/setup-storage/Parser.pm	2010-05-27 16:10:11.000000000 +0200
+@@ -869,16 +869,24 @@
+         }
+         | /^\S+/
+         {
+-          $FAI::partition_pointer->{filesystem} = $item[ 1 ];
++          my ($fs, $journal) = split(/:/, $item[1]);
+           my $to_be_preserved = 0;
++
++          $FAI::partition_pointer->{filesystem} = $fs;
++
++          defined($journal) and $journal =~ s/journal=//;
++          $FAI::partition_pointer->{journal_dev} = $journal;
++
+           if ($FAI::device eq "RAID" or $FAI::device eq "CRYPT") {
+             $to_be_preserved = $FAI::partition_pointer->{preserve};
+           } else {
+             $to_be_preserved = $FAI::partition_pointer->{size}->{preserve};
+           }
+           if (0 == $to_be_preserved) {
+-            &FAI::in_path("mkfs.$item[1]") or
+-              die "unknown/invalid filesystem type $item[1] (mkfs.$item[1] not found in PATH)\n";
++            $fs =~ s/_journal$//;
++
++            &FAI::in_path("mkfs.$fs") or
++              die "unknown/invalid filesystem type $fs (mkfs.$fs not found in PATH)\n";
+           }
+         }
+ 
+Index: trunk-w-exp/man/setup-storage.8
+===================================================================
+--- trunk-w-exp.orig/man/setup-storage.8	2010-05-27 16:45:57.000000000 +0200
++++ trunk-w-exp/man/setup-storage.8	2010-05-27 16:28:07.000000000 +0200
+@@ -537,6 +537,33 @@
+ .IP \(bu
+ Mount a tmpfs on /scratch with a maximum size of 3 GiB.
+ 
++.TP
++External log device example
++.sp
++.nf
++.ta 10n 20n 30n 40n 60n
++disk_config /dev/sda fstabkey:uuid bootable:2
++primary	/	20GiB	ext3		defaults
++primary	/boot	250	ext2		defaults
++primary	swap	4GiB	swap		defaults
++logical	-	256	ext3_journal	-
++logical	-	256	ext4_journal	-
++logical	-	256	xfs_journal	-
++
++disk_config /dev/sdb fstabkey:uuid
++primary	/mnt/ext3	33%	ext3:journal=/dev/sda5		defaults
++primary	/mnt/ext4	33%	ext4:journal=/dev/sda6		defaults
++primary	/mnt/xfs	33%	xfs:journal=/dev/sda7		defaults
++.sp
++.fi
++.PP
++.IP \(bu
++Mount an ext3 filesystem on /dev/sdb1 with an external journal on /dev/sda5
++.IP \(bu
++Mount an ext4 filesystem on /dev/sdb2 with an external journal on /dev/sda6
++.IP \(bu
++Mount an XFS filesystem on /dev/sdb3 using /dev/sda7 as the log device
++
+ .SH CAVEATS
+ .IP \(bu
+ Partition UUID cannot be obtained: In case a partition was previously used as
