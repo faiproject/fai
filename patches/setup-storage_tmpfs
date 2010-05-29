@@ -6,10 +6,10 @@
 	support).
 	* man/setup-storage.8: document the tmpfs stanza.
 
-Index: trunk-w-exp/lib/setup-storage/Commands.pm
+Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
---- trunk-w-exp.orig/lib/setup-storage/Commands.pm	2010-05-27 16:02:39.000000000 +0200
-+++ trunk-w-exp/lib/setup-storage/Commands.pm	2010-05-27 16:02:39.000000000 +0200
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
 @@ -235,8 +235,8 @@
  sub build_raid_commands {
  
@@ -43,10 +43,10 @@ Index: trunk-w-exp/lib/setup-storage/Commands.pm
      ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
      my $disk = $1; # the device to be configured
  
-Index: trunk-w-exp/lib/setup-storage/Fstab.pm
+Index: trunk/lib/setup-storage/Fstab.pm
 ===================================================================
---- trunk-w-exp.orig/lib/setup-storage/Fstab.pm	2010-05-27 16:02:39.000000000 +0200
-+++ trunk-w-exp/lib/setup-storage/Fstab.pm	2010-05-27 16:02:39.000000000 +0200
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
 @@ -58,9 +58,10 @@
    push @fstab_line, ($d_ref->{mountpoint}, $d_ref->{filesystem},
      $d_ref->{mount_options}, 0, 2);
@@ -59,7 +59,7 @@ Index: trunk-w-exp/lib/setup-storage/Fstab.pm
  
    # set the ROOT_PARTITION variable, if this is the mountpoint for /
    $FAI::disk_var{ROOT_PARTITION} = $name
-@@ -159,6 +160,9 @@
+@@ -168,6 +169,9 @@
          return $this_mp if ($this_mp eq "/boot");
          $mnt_point = $this_mp if ($this_mp eq "/");
        }
@@ -69,7 +69,7 @@ Index: trunk-w-exp/lib/setup-storage/Fstab.pm
      } else {
        &FAI::internal_error("Unexpected key $c");
      }
-@@ -303,6 +307,26 @@
+@@ -312,6 +316,26 @@
  
          push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
        }
@@ -96,10 +96,10 @@ Index: trunk-w-exp/lib/setup-storage/Fstab.pm
      } else {
        &FAI::internal_error("Unexpected key $c");
      }
-Index: trunk-w-exp/lib/setup-storage/Parser.pm
+Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
---- trunk-w-exp.orig/lib/setup-storage/Parser.pm	2010-05-27 16:02:39.000000000 +0200
-+++ trunk-w-exp/lib/setup-storage/Parser.pm	2010-05-27 16:02:39.000000000 +0200
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
 @@ -398,6 +398,12 @@
            # exit config mode
            $FAI::device = "";
@@ -168,10 +168,10 @@ Index: trunk-w-exp/lib/setup-storage/Parser.pm
      devices: /^([^\d,:\s\-][^,:\s]*(:(spare|missing))*(,[^,:\s]+(:(spare|missing))*)*)/
          {
            # split the device list by ,
-Index: trunk-w-exp/lib/setup-storage/Sizes.pm
+Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
---- trunk-w-exp.orig/lib/setup-storage/Sizes.pm	2010-05-27 16:02:39.000000000 +0200
-+++ trunk-w-exp/lib/setup-storage/Sizes.pm	2010-05-27 16:02:39.000000000 +0200
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
 @@ -201,8 +201,8 @@
    # loop through all device configurations
    foreach my $config (keys %FAI::configs) {
@@ -194,10 +194,10 @@ Index: trunk-w-exp/lib/setup-storage/Sizes.pm
      ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
      # nothing to be done, if this is a configuration for a virtual disk
      next if $FAI::configs{$config}{virtual};
-Index: trunk-w-exp/lib/setup-storage/Volumes.pm
+Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
---- trunk-w-exp.orig/lib/setup-storage/Volumes.pm	2010-05-27 16:02:39.000000000 +0200
-+++ trunk-w-exp/lib/setup-storage/Volumes.pm	2010-05-27 16:02:39.000000000 +0200
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
 @@ -65,6 +65,9 @@
      } elsif ($config eq "CRYPT") {
        # devices must be one of the above already
@@ -218,10 +218,10 @@ Index: trunk-w-exp/lib/setup-storage/Volumes.pm
      } else {
        &FAI::internal_error("Unexpected key $config");
      }
-Index: trunk-w-exp/man/setup-storage.8
+Index: trunk/man/setup-storage.8
 ===================================================================
---- trunk-w-exp.orig/man/setup-storage.8	2010-05-27 16:02:39.000000000 +0200
-+++ trunk-w-exp/man/setup-storage.8	2010-05-27 16:08:41.000000000 +0200
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
 @@ -137,6 +137,8 @@
  .br
             | disk_config cryptsetup( <cryptsetupoption>)*

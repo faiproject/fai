@@ -8,10 +8,10 @@
 		volumes and RAID volumes are resolved to underlying disks.
 	* setup-storage.8: Documented this new behavior
 	* Makefile: Make sure that all example scripts are executable
-Index: trunk-w-exp/Makefile
+Index: trunk/Makefile
 ===================================================================
---- trunk-w-exp.orig/Makefile	2010-05-28 11:22:37.000000000 +0200
-+++ trunk-w-exp/Makefile	2010-05-28 11:23:00.000000000 +0200
+--- trunk.orig/Makefile
++++ trunk/Makefile	
 @@ -47,6 +47,7 @@
  	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
  	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
@@ -20,10 +20,10 @@ Index: trunk-w-exp/Makefile
  	cp -a utils $(DOCDIR)/examples
  	find $(DOCDIR) -name .svn | xargs rm -rf
  
-Index: trunk-w-exp/examples/simple/package_config/DEFAULT
+Index: trunk/examples/simple/package_config/DEFAULT
 ===================================================================
---- trunk-w-exp.orig/examples/simple/package_config/DEFAULT	2010-05-28 11:22:37.000000000 +0200
-+++ trunk-w-exp/examples/simple/package_config/DEFAULT	2010-05-28 11:23:00.000000000 +0200
+--- trunk.orig/examples/simple/package_config/DEFAULT
++++ trunk/examples/simple/package_config/DEFAULT	
 @@ -17,10 +17,10 @@
  dhcp3-client
  
@@ -37,10 +37,10 @@ Index: trunk-w-exp/examples/simple/package_config/DEFAULT
  PACKAGES aptitude LILO
 -lilo grub-
 +lilo grub- grub-pc-
-Index: trunk-w-exp/examples/simple/scripts/GRUB_PC/10-setup
+Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
---- trunk-w-exp.orig/examples/simple/scripts/GRUB_PC/10-setup	2010-05-28 11:22:37.000000000 +0200
-+++ trunk-w-exp/examples/simple/scripts/GRUB_PC/10-setup	2010-05-28 11:23:00.000000000 +0200
+--- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
++++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
 @@ -2,8 +2,25 @@
  
  error=0 ; trap "error=$((error|1))" ERR
@@ -70,29 +70,29 @@ Index: trunk-w-exp/examples/simple/scripts/GRUB_PC/10-setup
  
  exit $error
 +
-Index: trunk-w-exp/examples/simple/class/50-host-classes
+Index: trunk/examples/simple/class/50-host-classes
 ===================================================================
---- trunk-w-exp.orig/examples/simple/class/50-host-classes	2010-05-28 11:22:37.000000000 +0200
-+++ trunk-w-exp/examples/simple/class/50-host-classes	2010-05-28 11:23:00.000000000 +0200
+--- trunk.orig/examples/simple/class/50-host-classes
++++ trunk/examples/simple/class/50-host-classes	
 @@ -20,5 +20,4 @@
  	echo "FAIBASE DHCPC" ;;
  esac
  
 -(ifclass I386 || ifclass AMD64) && echo GRUB 
  exit 0
-Index: trunk-w-exp/examples/simple/class/51-grub
+Index: trunk/examples/simple/class/51-grub
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ trunk-w-exp/examples/simple/class/51-grub	2010-05-28 11:23:00.000000000 +0200
++++ trunk/examples/simple/class/51-grub	
 @@ -0,0 +1,4 @@
 +#! /bin/bash
 +
 +{ ifclass I386 || ifclass AMD64; } && ! ifclass GRUB_PC && echo GRUB
 +exit 0
-Index: trunk-w-exp/lib/setup-storage/Fstab.pm
+Index: trunk/lib/setup-storage/Fstab.pm
 ===================================================================
---- trunk-w-exp.orig/lib/setup-storage/Fstab.pm	2010-05-28 11:22:37.000000000 +0200
-+++ trunk-w-exp/lib/setup-storage/Fstab.pm	2010-05-28 11:24:14.000000000 +0200
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
 @@ -127,6 +127,54 @@
    }
  }
@@ -246,10 +246,10 @@ Index: trunk-w-exp/lib/setup-storage/Fstab.pm
    $FAI::disk_var{BOOT_DEVICE} =~ s/\s*$/"/;
  
    # sort the lines in @fstab to enable all sub mounts
-Index: trunk-w-exp/man/setup-storage.8
+Index: trunk/man/setup-storage.8
 ===================================================================
---- trunk-w-exp.orig/man/setup-storage.8	2010-05-28 11:22:37.000000000 +0200
-+++ trunk-w-exp/man/setup-storage.8	2010-05-28 11:23:00.000000000 +0200
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
 @@ -106,10 +106,9 @@
  .IR SWAPLIST ,
  .IR ROOT_PARTITION ,
