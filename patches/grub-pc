@@ -10,8 +10,8 @@
 	* Makefile: Make sure that all example scripts are executable
 Index: trunk/Makefile
 ===================================================================
---- trunk.orig/Makefile
-+++ trunk/Makefile	
+--- trunk.orig/Makefile	2010-05-31 16:44:13.000000000 +0200
++++ trunk/Makefile	2010-05-31 16:44:24.000000000 +0200
 @@ -47,6 +47,7 @@
  	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
  	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
@@ -22,8 +22,8 @@ Index: trunk/Makefile
  
 Index: trunk/examples/simple/package_config/DEFAULT
 ===================================================================
---- trunk.orig/examples/simple/package_config/DEFAULT
-+++ trunk/examples/simple/package_config/DEFAULT	
+--- trunk.orig/examples/simple/package_config/DEFAULT	2010-05-31 16:44:13.000000000 +0200
++++ trunk/examples/simple/package_config/DEFAULT	2010-05-31 16:44:24.000000000 +0200
 @@ -17,10 +17,10 @@
  dhcp3-client
  
@@ -39,8 +39,8 @@ Index: trunk/examples/simple/package_config/DEFAULT
 +lilo grub- grub-pc-
 Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
---- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
-+++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
+--- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup	2010-05-31 16:44:13.000000000 +0200
++++ trunk/examples/simple/scripts/GRUB_PC/10-setup	2010-05-31 16:44:24.000000000 +0200
 @@ -2,8 +2,25 @@
  
  error=0 ; trap "error=$((error|1))" ERR
@@ -72,8 +72,8 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 +
 Index: trunk/examples/simple/class/50-host-classes
 ===================================================================
---- trunk.orig/examples/simple/class/50-host-classes
-+++ trunk/examples/simple/class/50-host-classes	
+--- trunk.orig/examples/simple/class/50-host-classes	2010-05-31 16:44:13.000000000 +0200
++++ trunk/examples/simple/class/50-host-classes	2010-05-31 16:44:24.000000000 +0200
 @@ -20,5 +20,4 @@
  	echo "FAIBASE DHCPC" ;;
  esac
@@ -83,7 +83,7 @@ Index: trunk/examples/simple/class/50-host-classes
 Index: trunk/examples/simple/class/51-grub
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ trunk/examples/simple/class/51-grub	
++++ trunk/examples/simple/class/51-grub	2010-05-31 16:44:24.000000000 +0200
 @@ -0,0 +1,4 @@
 +#! /bin/bash
 +
@@ -91,8 +91,8 @@ Index: trunk/examples/simple/class/51-grub
 +exit 0
 Index: trunk/lib/setup-storage/Fstab.pm
 ===================================================================
---- trunk.orig/lib/setup-storage/Fstab.pm
-+++ trunk/lib/setup-storage/Fstab.pm	
+--- trunk.orig/lib/setup-storage/Fstab.pm	2010-05-31 16:44:13.000000000 +0200
++++ trunk/lib/setup-storage/Fstab.pm	2010-05-31 16:45:07.000000000 +0200
 @@ -127,6 +127,54 @@
    }
  }
@@ -217,7 +217,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
 +        # if the mount point the /boot mount point, variables must be set
 +        if ($r_ref->{mountpoint} eq $boot_mnt_point) {
 +          # set BOOT_DEVICE to the underlying disks
-+          foreach my $dev ($r_ref->{devices}) {
++          foreach my $dev (keys %{ $r_ref->{devices} }) {
 +            my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
 +            $FAI::disk_var{BOOT_DEVICE} .= " $disk" if (1 == $i_p_d);
 +          }
@@ -248,8 +248,8 @@ Index: trunk/lib/setup-storage/Fstab.pm
    # sort the lines in @fstab to enable all sub mounts
 Index: trunk/man/setup-storage.8
 ===================================================================
---- trunk.orig/man/setup-storage.8
-+++ trunk/man/setup-storage.8	
+--- trunk.orig/man/setup-storage.8	2010-05-31 16:44:13.000000000 +0200
++++ trunk/man/setup-storage.8	2010-05-31 16:44:24.000000000 +0200
 @@ -106,10 +106,9 @@
  .IR SWAPLIST ,
  .IR ROOT_PARTITION ,
