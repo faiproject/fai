@@ -32,14 +32,9 @@ $ROOTCMD dpkg -C
 [ $? -ne 0 ] && yes '' | $ROOTCMD dpkg --configure -a 
 # using the above value, causes an error: "dpkg need action"
 export aptopt=
-# this may be removed in lenny
-if $ROOTCMD aptitude --help | grep -q safe-upgrade; then
-    $ROOTCMD aptitude -y safe-upgrade
-else
-    $ROOTCMD aptitude -y upgrade
-fi
+$ROOTCMD aptitude -y safe-upgrade
 
-$ROOTCMD aptitude $aptopt -f -y dist-upgrade </dev/null
+$ROOTCMD aptitude $aptopt -f -y full-upgrade </dev/null
 # update dpkg info which packages are available
 tmp=$($ROOTCMD mktemp) || exit 88
 $ROOTCMD apt-cache dumpavail > $FAI_ROOT/$tmp
