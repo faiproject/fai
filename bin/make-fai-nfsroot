@@ -87,9 +87,10 @@ if [ -f /etc/lsb-release ]; then
 fi
 
 # option e currently does nothing
-while getopts hervC:f:kKpU opt ; do
+while getopts hervC:B:f:kKpU opt ; do
     case "$opt" in
         C) cfdir=$OPTARG ;;
+        B) basetgz=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
         r) recover=1 ;;
         f) die "Option -f is not supported any more. Use option -C instead" ;;
@@ -283,12 +284,31 @@ create_base() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+extract_base() {
+
+    if [ ! -r "$basetgz" ] ; then
+      die "Specified $basetgz could not be used."
+    else
+       if cd $NFSROOT ; then
+	 printf "Extracting $basetgz: "
+	 tar -C $NFSROOT -zxpf "$basetgz" || die "Error while extracting ${basetgz} in ${NFSROOT}."
+	 cp "$basetgz" $NFSROOT/var/tmp/base.tgz
+	 touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
+	 echo done
+       fi
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
     mkdir -p $NFSROOT/$FAI
     cd $NFSROOT || die "Can't cd to $NFSROOT"
 
-    call_with_stamp create_base
+    if [ -n "$basetgz" ] ; then
+      call_with_stamp extract_base
+    else
+      call_with_stamp create_base
+    fi
     # save the list of all packages in the base.tgz
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
