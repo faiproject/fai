@@ -12,9 +12,8 @@ Homepage: http://www.informatik.uni-koeln.de/fai
 
 Package: fai-client
 Architecture: all
-Depends: perl, file, libapt-pkg-perl, libparse-recdescent-perl, liblinux-lvm-perl, iproute
+Depends: perl, file, libapt-pkg-perl, iproute, fai-setup-storage
 Recommends: debconf-utils, cfengine2
-Suggests: ntfsprogs, dmsetup, cryptsetup
 Conflicts: fai, fai-kernels
 Replaces: fai
 Description: Fully Automatic Installation client package
@@ -84,3 +83,21 @@ Description: Fully Automatic Installation nfsroot package
  .
  This package contains the software that is only needed in
  the FAI nfsroot. Do not install this package on a normal machine.
+
+Package: fai-setup-storage
+Architecture: all
+Depends: perl, libparse-recdescent-perl, liblinux-lvm-perl, parted
+Recommends: lvm2, mdadm
+Suggests: dmsetup, cryptsetup, dosfstools, jfsutils, ntfsprogs, reiserfsprogs, xfsprogs
+Conflicts: fai-client (<< 3.4~)
+Description: automatically prepare storage devices
+  Using FAI disk_config files, setup-storage computes effective
+  partition and volume sizes and executes the necessary commands
+  to configure storage devices. It manages disk drives as well
+  as RAID and LVM volumes. It handles all file systems supported
+  by parted(8) as well as ntfs but is flexible enough to be
+  extended to further types as well. Once the storage devices
+  are prepared, an appropriate fstab(5) file is generated.
+  .
+  This package provides the setup-storage utility as separate
+  package so it can be used independent from FAI as well.
