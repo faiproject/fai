@@ -1,0 +1,41 @@
+2010-06-18  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: Handle parse errors earlier for more informative
+		error messages.
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -354,7 +354,6 @@
+         {
+           $return = 1;
+         }
+-        | <error>
+ 
+     line: <skip: qr/[ \t]*/> "\\n"
+         | <skip: qr/[ \t]*/> comment "\\n"
+@@ -420,6 +419,7 @@
+           &FAI::init_disk_config($item[ 1 ]);
+         }
+         option(s?)
++        | <error>
+ 
+     raid_option: /^preserve_always:(\d+(,\d+)*)/
+         {
+@@ -643,6 +643,7 @@
+         }
+         mountpoint tmpfs_size mount_options
+         | type mountpoint size filesystem mount_options lv_or_fsopts
++        | <error>
+ 
+     type: 'primary'
+         {
+@@ -714,7 +715,7 @@
+           1;
+         }
+ 
+-    size: /^((RAM:\d+%|\d+[kMGTP%iB]*)(-(RAM:\d+%|\d+[kMGTP%iB]*)?)?)(:resize)?\s+/
++    size: /^((RAM:\d+%|\d+[kMGTP%iB]*)(-(RAM:\d+%|\d+[kMGTP%iB]*)?)?)(:resize)?/
+         {
+           # complete the size specification to be a range in all cases
+           my $range = $1;

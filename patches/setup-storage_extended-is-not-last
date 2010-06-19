@@ -1,0 +1,82 @@
+2010-06-19  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Sizes.pm: Properly handle extended partitions that aren't the
+		last primary partition.
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -361,15 +361,9 @@
+     ($part->{size}->{extended} == $curr_part->{is_extended})
+       or die "Preserved partition $part_dev_name can't change extended/normal setting\n";
+ 
+-    # extended partitions consume no space
+-    if ($part->{size}->{extended}) {
+-
+-      # revert the addition of the size
+-      $min_req_total_space -= $part->{size}->{eff_size};
+-
+-      # set the next start to the start of the extended partition
+-      $next_start = $part->{start_byte};
+-    }
++    # extended partitions are not handled in here (anymore)
++    ($part->{size}->{extended})
++      and die &FAI::internal_error("Preserve must not handle extended partitions\n");
+   }
+ 
+   # on gpt, ensure that the partition ends at a sector boundary
+@@ -686,17 +680,8 @@
+       # reference to the current partition
+       my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
+ 
+-      # the partition $part_id must be preserved
+-      if ($part->{size}->{preserve}) {
+-        ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id, 
+-          $config, $disk, $next_start, $min_req_total_space);
+-
+-        # partition done
+-        shift @worklist;
+-      }
+-
+       # msdos specific: deal with extended partitions
+-      elsif ($part->{size}->{extended}) {
++      if ($part->{size}->{extended}) {
+         # make sure that there is only one extended partition
+         ($extended == -1 || 1 == scalar (@worklist))
+           or &FAI::internal_error("More than 1 extended partition");
+@@ -705,18 +690,32 @@
+         $extended = $part_id;
+ 
+         # the size cannot be determined now, push it to the end of the
+-        # worklist; the check against $extended being == -1 ensures that
+-        # there is no indefinite loop
++        # worklist; also push all remaining primary partitions to the end
+         if (scalar (@worklist) > 1) {
+-          push @worklist, shift @worklist;
++          my $has_logical = 0;
++          foreach (@worklist) {
++            $has_logical = 1 if ($_ > 4);
++          }
++          do {
++            push @worklist, shift @worklist;
++          } while ($has_logical && $worklist[0] < 5);
+           next;
+         }
+ 
++        ($part->{size}->{preserve}) and
++          warn "Extended partition will be rebuilt instead of being preserved\n";
+         # determine the size of the extended partition
+         &FAI::do_partition_extended($part_id, $config, $current_disk);
+ 
+         # partition done
+         shift @worklist;
++      # the partition $part_id must be preserved
++      } elsif ($part->{size}->{preserve}) {
++        ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id,
++          $config, $disk, $next_start, $min_req_total_space);
++
++        # partition done
++        shift @worklist;
+       } else {
+         ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
+           $config, $disk, $next_start, $min_req_total_space, \@worklist);
