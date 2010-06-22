@@ -25,7 +25,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    }
  
    # on gpt, ensure that the partition ends at a sector boundary
-@@ -686,17 +680,8 @@
+@@ -686,37 +680,45 @@
        # reference to the current partition
        my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
  
@@ -41,30 +41,41 @@ Index: trunk/lib/setup-storage/Sizes.pm
        # msdos specific: deal with extended partitions
 -      elsif ($part->{size}->{extended}) {
 +      if ($part->{size}->{extended}) {
++        # handle logical partitions first
++        if (scalar (@worklist) > 1) {
++          my @old_worklist = @worklist;
++          @worklist = ();
++          my @primaries = ();
++          foreach my $p (@old_worklist) {
++            if ($p > 4) {
++              push @worklist, $p;
++            } else {
++              push @primaries, $p;
++            }
++          }
++          if (scalar (@worklist)) {
++            push @worklist, @primaries;
++            next;
++          }
++          @worklist = @primaries;
++        }
++
          # make sure that there is only one extended partition
-         ($extended == -1 || 1 == scalar (@worklist))
-           or &FAI::internal_error("More than 1 extended partition");
-@@ -705,18 +690,32 @@
+-        ($extended == -1 || 1 == scalar (@worklist))
+-          or &FAI::internal_error("More than 1 extended partition");
++        ($extended == -1) or &FAI::internal_error("More than 1 extended partition");
+ 
+         # set the local variable to this id
          $extended = $part_id;
  
-         # the size cannot be determined now, push it to the end of the
+-        # the size cannot be determined now, push it to the end of the
 -        # worklist; the check against $extended being == -1 ensures that
 -        # there is no indefinite loop
-+        # worklist; also push all remaining primary partitions to the end
-         if (scalar (@worklist) > 1) {
+-        if (scalar (@worklist) > 1) {
 -          push @worklist, shift @worklist;
-+          my $has_logical = 0;
-+          foreach (@worklist) {
-+            $has_logical = 1 if ($_ > 4);
-+          }
-+          do {
-+            push @worklist, shift @worklist;
-+          } while ($has_logical && $worklist[0] < 5);
-           next;
-         }
- 
-+        ($part->{size}->{preserve}) and
-+          warn "Extended partition will be rebuilt instead of being preserved\n";
+-          next;
+-        }
+-
          # determine the size of the extended partition
          &FAI::do_partition_extended($part_id, $config, $current_disk);
  
