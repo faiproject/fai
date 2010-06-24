@@ -1,0 +1,190 @@
+#! /usr/bin/perl
+
+# $Id$
+#*********************************************************************
+#
+# dhcp-edit -- managing dhcpd entries made easy
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2010 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#*********************************************************************
+
+# TODO
+# -q quiet: do not print error if host/mac entry not found, exit code 0
+
+$version="Version 1.1, 24-june-2010";
+$dhcpdconf="/etc/dhcp3/dhcpd.conf";
+
+our ($opt_p,$opt_d,$opt_h,$opt_n,$opt_r);
+
+use Pod::Usage;
+use Getopt::Std;
+
+getopts('p:dhnr') || pod2usage(-msg => "edit-dhcp, $version", -verbose => 2);
+$opt_h && pod2usage(-msg => "edit-dhcp, $version",-verbose => 1);
+($hostname,$mac,$ip)= @ARGV;
+$hostname || pod2usage(-msg => "edit-dhcp, $version",-verbose => 1);
+$ip && merror(4,"$ip is not a correct IP address") unless $ip =~ /^[.0-9]{7,15}$/i;
+
+read_dhcpd_conf();
+
+if ($opt_r) {
+
+  $mac=$hostname;
+  # create emty entry, remove entry
+  $found=0;
+
+  # set flag if an entry was found. print warning if entry not found
+  foreach (@dhcpd) {
+    next if /^\s*#/;  # do not change comments
+    do {$_="XXX ENTRY DELETED XXX\n";$found++} if m/host\s+$hostname\b.+hardware\s+ethernet.+;/;
+    do {$_="XXX ENTRY DELETED XXX\n";$found++} if m/host\s+.+hardware\s+ethernet\s+$mac[\s+;]/i;
+  }
+  merror(6,"Entry $hostname can not be removed. Not found.\n") unless $found;
+  print "$found entry/entries removed.\n" if $found;
+
+} else {
+
+  $mac || merror(5,"Please specify hostname and MAC address.");
+  merror(4,"$hostname is not a correct host name") unless $hostname =~ /^[.0-9a-z-]+$/i;
+  merror(4,"$mac is not a correct MAC address") unless $mac =~ /^([0-9a-f]{1,2}(:|$)){6}$/i;
+  # grep all lines if the entry already exists
+  foreach (@dhcpd) {
+    next if /^\s*#/;  # do not change comments
+    merror(7,"$hostname already exists in dhcpd.conf") if m/host\s+$hostname\b/;
+    merror(7,"MAC address $mac already exists in dhcpd.conf") if m/hardware\s+ethernet\s+$mac[\s+;]/i;
+  }
+}
+
+# check if executed as root
+merror(3,"Terminated. $0 can only be run as root.") unless ($< == 0);
+add_entry($hostname,$ip) unless $opt_r;
+write_dhcpd();
+do {
+  if ($opt_d) {
+    print "DRY RUN. Did not restart dhcp daemon.";
+    exit 0;
+  }
+  print qx#/etc/init.d/dhcp3-server restart#
+} unless $opt_n;
+
+exit 0;
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub merror {
+
+  $error = shift;
+  warn "$0 ERROR: @_\n";
+  exit $error;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub read_dhcpd_conf {
+
+  # read the whole dhcpd.conf
+  open(DHCP,"$dhcpdconf") || die "Can't read $dhcpdconf. $!\n";
+  @dhcpd = <DHCP>;
+  close(DHCP);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub add_entry {
+
+  my @new;
+
+  my ($hostname,$ip) = @_;
+  $ip=$hostname unless $ip;
+
+  # add new entry before line matching $opt_n
+  foreach (@dhcpd) {
+    if ($_ =~ /$opt_p/o) {
+      push @new, "host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
+      print "Entry added: host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
+    }
+    push @new,$_;
+  }
+  @dhcpd = @new;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub write_dhcpd {
+
+  if ($opt_d) {
+    print "DRY RUN. Nothing changed.";
+    return;
+  }
+
+  @dhcpd = grep(!/^XXX ENTRY DELETED XXX\n$/, @dhcpd);
+#  print @dhcpd;
+  open(DHCP," >$dhcpdconf") || die "Can't write $dhcpdconf. $!\n";
+  print DHCP @dhcpd;
+  close(DHCP);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+__END__
+
+=head1 NAME
+
+dhcp-edit - add or and remove entries to/from dhcpd.conf
+
+=head1 SYNOPSIS
+
+dhcp-edit [OPTION] HOST MAC [IP]
+
+=head1 DESCRIPTION
+
+Add a new host entry to dhcpd.conf or remove an existing entry.
+Additionally restart DHCP daemon.
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-d>
+
+Dry run. Do not change files.
+
+=item B<-h>
+
+Print help.
+
+=item B<-n>
+
+Do not restart DHCP daemon.
+
+=item B<-p> PATTERN
+
+Add new entry before line matching PATTERN
+
+=item B<-r> HOST|MAC
+
+Remove entry contain HOST or MAC address.
+
+=back
+
+=head1 EXAMPLES
+
+dhcp-edit host mac
+
+   Add entry using host and mac address using a fixed IP address. You
+   have to define the IP address in /etc/hosts or similar service.
+
+
+dhcp-edit host mac ip
+
+   Add entry using host and mac address using the numerical IP address.
+
+
+dhcp-edit -r hostname|mac
+
+   Remove line containing this hostname or mac address.
+
+=head1 COPYRIGHT
+
+This program is Copyright (C) 2010 by Thomas Lange <lange@informatik.uni-koeln.de>
+
+=cut
