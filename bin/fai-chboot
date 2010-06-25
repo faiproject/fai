@@ -28,14 +28,14 @@
 #*********************************************************************
 
 # variable needed: $nfsroot
-$version="version 3.5.1 25-march-2010";
+$version="version 3.6 25-june-2010";
 
 use Socket;
 use Net::hostent;
 use Getopt::Std;
 use File::Copy;
 
-our ($opt_D, $opt_p,$opt_h,$opt_t,$opt_s,,$opt_C);
+our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P);
 $Getopt::Std::STANDARD_HELP_VERSION=1;
 
 $0=~ s#.+/##; # remove path from program name
@@ -268,6 +268,7 @@ EOM
 
   $append="append $initrd $bootprot $rootfs $opt_k $flags $action\n";
   print FILE $append;
+  print FILE "IPAPPEND 3\n" if $opt_P;
   close FILE;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -361,7 +362,7 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:C:D:edhnvlLiIpf:Fk:Ss:tu:o') || usage;
+getopts('gBc:C:D:edhnvlLiIpf:Fk:Ss:tu:oP') || usage;
 $opt_h and usage;
 defined @ARGV or usage;
 
