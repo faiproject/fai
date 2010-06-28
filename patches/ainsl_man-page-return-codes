@@ -1,5 +1,7 @@
 2010-06-28  Michael Tautschnig  <mt@debian.org>
 
+	* ainsl: Improved error handling in case target device is full (thanks Rob
+		<rclemley@booksys.com>)
 	* ainsl.1: Document ainsl exit codes (thanks Rob <rclemley@booksys.com>)
 Index: trunk/man/ainsl.1
 ===================================================================
@@ -24,17 +26,29 @@ Index: trunk/man/ainsl.1
 +.B 0
 +Success: Either FILE contains the LINE/PATTERN or LINE was appended to FILE.
 +.TP
-+.B non-zero
-+Either FILE does not exist or FILE does not contain PATTERN/LINE and cannot be
-+written.  A diagnostic message will be printed on stderr which explains the
-+details. The following two errors are among the most likely:
-+.TP
-+.B 2
-+FILE does not exist and the autocreate option (-a) is not present.
-+.TP
 +.B 13
-+FILE cannot be opened for writing and LINE/PATTERN was not found in file.
++Permissions do not allow writing to FILE and LINE/PATTERN was not found in file.
++.TP
++.B 28
++FILE cannot written because the filesystem has no space and LINE/PATTERN was not
++found in file.
++.TP
++.B 30
++FILE cannot written because the filesystem is read-only and LINE/PATTERN was not
++found in file.
 +
  .SH NOTES
  This is a similar function to AppendIfNoSuchLine from cfengine(8).
  .SH SEE ALSO
+Index: trunk/bin/ainsl
+===================================================================
+--- trunk.orig/bin/ainsl
++++ trunk/bin/ainsl	
+@@ -139,5 +139,5 @@
+ print "ainsl: appending to $filename: $line\n" if $verbose;
+ exit 0 if $opt_n;
+ open (INFILE, ">>$filename") or die "ainsl: can't open $filename for writing. $!";
+-print INFILE $line,"\n";
+-close(INFILE);
++print INFILE $line,"\n" || die "ainsl: cannot print to file $filename: $!";
++close(INFILE) or die "ainsl: error saving file $filename: $!";
