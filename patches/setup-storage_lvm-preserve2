@@ -1,8 +1,8 @@
-2010-03-19  Michael Tautschnig  <mt@debian.org>
+2010-06-28  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage/{Commands.pm,Volumes.pm}: Completed support for preserve in
 		LVM/RAID contexts; extended checking for volume groups that remain alive,
-    fixed bug in LV resize code.
+    fixed bug in LV resize code, disable existing volume groups.
 Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
@@ -115,24 +115,72 @@ Index: trunk/lib/setup-storage/Commands.pm
      $pre_dev .= ",pv_done_$_" foreach (keys %rm_devs);
      &FAI::push_command( "vgreduce $vg " . join (" ", keys %rm_devs),
        "vg_extended_$vg$pre_dev", "vg_created_$vg" );
-@@ -447,11 +464,12 @@
+@@ -445,20 +462,23 @@
+   my $lv_resize_pre = "";
+   # remove, resize, create the logical volumes
    # remove all volumes that do not exist anymore or need not be preserved
-   foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
-     # skip preserved/resized volumes
+-  foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
+-    # skip preserved/resized volumes
 -    if (defined ( $FAI::configs{$config}{volumes}{$lv})
 -      && ($FAI::configs{$config}{volumes}{$lv}{size}{preserve} == 1)) {
 -      $lv_resize_pre .= ",lv_resize_$vg/$lv" if
 -        $FAI::configs{$config}{volumes}{$lv}{size}{resize};
 -      next;
-+    if (defined ( $FAI::configs{$config}{volumes}{$lv})) {
-+      next if ($FAI::configs{$config}{volumes}{$lv}{size}{preserve} == 1);
-+      if (1 == $FAI::configs{$config}{volumes}{$lv}{size}{resize}) {
-+        $lv_resize_pre .= ",lv_resize_$vg/$lv";
-+        next;
+-    }
++  if (defined($FAI::current_lvm_config{$vg})) {
++    foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
++      # skip preserved/resized volumes
++      if (defined ( $FAI::configs{$config}{volumes}{$lv})) {
++        next if ($FAI::configs{$config}{volumes}{$lv}{size}{preserve} == 1);
++        if (1 == $FAI::configs{$config}{volumes}{$lv}{size}{resize}) {
++          $lv_resize_pre .= ",lv_resize_$vg/$lv";
++          next;
++        }
 +      }
-     }
  
-     &FAI::push_command( "lvremove -f $vg/$lv", "vg_enabled_$vg", "lv_rm_$vg/$lv");
+-    &FAI::push_command( "lvremove -f $vg/$lv", "vg_enabled_$vg", "lv_rm_$vg/$lv");
+-    $lv_rm_pre .= ",lv_rm_$vg/$lv";
++      &FAI::push_command( "lvremove -f $vg/$lv", "vg_enabled_$vg", "lv_rm_$vg/$lv");
++      $lv_rm_pre .= ",lv_rm_$vg/$lv";
++    }
++    $lv_rm_pre =~ s/^,//;
++    $lv_resize_pre =~ s/^,//;
+   }
+-  $lv_rm_pre =~ s/^,//;
+-  $lv_resize_pre =~ s/^,//;
+ 
+   # now create or resize the configured logical volumes
+   foreach my $lv (keys %{ $FAI::configs{$config}{volumes} }) {
+@@ -519,6 +539,10 @@
+ ################################################################################
+ sub build_lvm_commands {
+ 
++  # disable volumes if there are pre-existing ones
++  &FAI::push_command("vgchange -a n", "", "vgchange_a_n")
++    if (scalar(keys %FAI::current_lvm_config));
++
+   # loop through all configs
+   foreach my $config (keys %FAI::configs) {
+ 
+@@ -540,6 +564,7 @@
+         $type_pre .= ",exist_$d"
+       }
+     }
++    $type_pre .= ",vgchange_a_n" if (scalar(keys %FAI::current_lvm_config));
+ 
+     # create the volume group or add/remove devices
+     &FAI::create_volume_group($config);
+@@ -754,7 +779,9 @@
+     or die "Can't change disklabel, partitions are to be preserved\n";
+ 
+   # write the disklabel to drop the previous partition table
+-  &FAI::push_command( "parted -s $disk mklabel $label", "exist_$disk",
++  my $pre = "exist_$disk";
++  $pre .= ",vgchange_a_n" if (scalar(keys %FAI::current_lvm_config));
++  &FAI::push_command( "parted -s $disk mklabel $label", $pre,
+     "cleared1_$disk" );
+ 
+   &FAI::rebuild_preserved_partitions($config, \@to_preserve);
 Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Volumes.pm

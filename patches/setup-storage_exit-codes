@@ -1,7 +1,7 @@
-2010-06-20  Michael Tautschnig  <mt@debian.org>
+2010-06-28  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage/Exec.pm: Improved handling of non-zero exit codes; later this
-		will be changed to die on almost all non-zero exits of subcommands.
+	* setup-storage/Exec.pm: All unexpected non-zero exit codes of subcommands
+		lead to immediate failure of setup-storage.
 Index: trunk/lib/setup-storage/Exec.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Exec.pm
@@ -118,11 +118,38 @@ Index: trunk/lib/setup-storage/Exec.pm
    },
    {
      error        => "ntfsresize_1",
-@@ -161,6 +174,16 @@
+@@ -161,6 +174,43 @@
      stdout_regex => "",
      program      => "ntfsresize",
      response     => "die",
 +    exit_codes   => [0..255],
++  },
++  {
++    error        => "pvremove_pv_in_vg",
++    message      => "Removing physical volume that is still part of volume group\n",
++    stderr_regex => "WARNING: Wiping physical volume label from \\S+ of volume group \".*\"",
++    stdout_regex => "",
++    program      => "pvremove -ff -y \\S+",
++    response     => "warn",
++    exit_codes   => [5],
++  },
++  {
++    error        => "pvcreate_pv_in_vg",
++    message      => "Recreating physical volume that is already part of volume group\n",
++    stderr_regex => "Can't initialize physical volume \"\\S+\" of volume group \".*\" without -ff",
++    stdout_regex => "",
++    program      => "pvcreate \\S+",
++    response     => "warn",
++    exit_codes   => [5],
++  },
++  {
++    error        => "vgcreate_vg_exists",
++    message      => "Volume group already/still exists\n",
++    stderr_regex => "/dev/.*: already exists in filesystem",
++    stdout_regex => "",
++    program      => "vgcreate .* \\S+",
++    response     => "warn",
++    exit_codes   => [5],
 +  },
 +  {
 +    error        => "catch_all_nonzero_exit_code",
@@ -130,12 +157,12 @@ Index: trunk/lib/setup-storage/Exec.pm
 +    stderr_regex => "",
 +    stdout_regex => "",
 +    program      => ".*",
-+    response     => "warn",
++    response     => "die",
 +    exit_codes   => [1..255],
    },
  ];
  
-@@ -300,6 +323,7 @@
+@@ -300,6 +350,7 @@
    my @stdout      = ();
    my $stderr_line = "";
    my $stdout_line = "";
@@ -143,7 +170,7 @@ Index: trunk/lib/setup-storage/Exec.pm
  
    #make tempfile, get perl filehandle and filename of the file
    my ($stderr_fh, $stderr_filename) = File::Temp::tempfile(UNLINK => 1);
-@@ -314,9 +338,10 @@
+@@ -314,9 +365,10 @@
      # execute the bash command, write stderr and stdout into the testfiles
      print "Executing: $command\n";
      `$command 1> $stdout_filename 2> $stderr_filename`;
@@ -156,7 +183,7 @@ Index: trunk/lib/setup-storage/Exec.pm
    }
  
    # read the tempfile into lists, each element of the list one line
-@@ -344,11 +369,11 @@
+@@ -344,11 +396,11 @@
  
    #get the error, if there was any
    foreach my $err (@$FAI::error_codes) {
