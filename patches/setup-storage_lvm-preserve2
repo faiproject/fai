@@ -361,17 +361,17 @@ Index: trunk/lib/setup-storage/Commands.pm
  
      # perform all necessary operations on the underlying logical volumes
      &FAI::setup_logical_volumes($config);
-@@ -754,7 +803,9 @@
+@@ -754,8 +803,8 @@
      or die "Can't change disklabel, partitions are to be preserved\n";
  
    # write the disklabel to drop the previous partition table
 -  &FAI::push_command( "parted -s $disk mklabel $label", "exist_$disk",
-+  my $pre = "exist_$disk";
-+  $pre .= ",vgchange_a_n" if (scalar(keys %FAI::current_lvm_config));
-+  &FAI::push_command( "parted -s $disk mklabel $label", $pre,
-     "cleared1_$disk" );
+-    "cleared1_$disk" );
++  &FAI::push_command( "parted -s $disk mklabel $label",
++    "exist_$disk,all_pv_sigs_removed", "cleared1_$disk" );
  
    &FAI::rebuild_preserved_partitions($config, \@to_preserve);
+ 
 Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Volumes.pm
