@@ -298,7 +298,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +
 +  my $vg_destroy_pre = "vgchange_a_n";
 +  foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
-+    &FAI::push_command( "lvremove $vg/$lv", "vgchange_a_n", "lv_rm_$vg/$lv");
++    &FAI::push_command( "lvremove -f $vg/$lv", "vgchange_a_n", "lv_rm_$vg/$lv");
 +    $vg_destroy_pre .= ",lv_rm_$vg/$lv";
 +  }
 +  &FAI::push_command( "vgremove $vg", "$vg_destroy_pre", "vg_removed_$vg");
@@ -308,7 +308,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +  $devices .= " " . &FAI::enc_name($_) foreach
 +    (@{ $FAI::current_lvm_config{$vg}{physical_volumes} });
 +  $FAI::debug and print "Erased devices:$devices\n";
-+  &FAI::push_command( "pvremove -y$devices", "", "pv_sigs_removed_$vg" );
++  &FAI::push_command( "pvremove $devices", "", "pv_sigs_removed_$vg" );
 +  return 1;
 +}
 +
