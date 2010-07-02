@@ -8,7 +8,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -469,18 +469,38 @@
+@@ -447,18 +447,38 @@
          or die "Resized volume $vg/$lv does not exist\n";
        warn "$vg/$lv will be resized\n";
  
@@ -20,55 +20,51 @@ Index: trunk/lib/setup-storage/Commands.pm
 +      if ($lvsize_mib < $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
        {
 -        &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
--          "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
+-          "vg_enabled_$vg,exist_/dev/$vg/$lv", "lv_shrink_$vg/$lv" );
 -        &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
 +          &FAI::push_command( "e2fsck -p -f /dev/$vg/$lv",
-+            "vg_enabled_$vg,$lv_rm_pre", "e2fsck_f_resize_$vg/$lv" );
++            "vg_enabled_$vg,exist_/dev/$vg/$lv", "e2fsck_f_resize_$vg/$lv" );
 +          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
 +            "e2fsck_f_resize_$vg/$lv", "lv_shrink_$vg/$lv" );
 +        } else {
 +          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
-+            "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
++            "vg_enabled_$vg", "lv_shrink_$vg/$lv" );
 +        }
 +        &FAI::push_command( "lvresize -L $lvsize_mib $vg/$lv",
-           "vg_enabled_$vg,$lv_rm_pre,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
+           "vg_enabled_$vg,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
        } else {
 -        &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
 +        &FAI::push_command( "lvresize -L $lvsize_mib $vg/$lv",
-           "vg_enabled_$vg,$lv_rm_pre", "lv_grow_$vg/$lv" );
+           "vg_enabled_$vg,exist_/dev/$vg/$lv", "lv_grow_$vg/$lv" );
 -        &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
--          "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
+-          "vg_enabled_$vg,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
 +        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
 +            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
 +          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
 +          &FAI::push_command( "e2fsck -p -f /dev/$vg/$lv",
-+            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "e2fsck_f_resize_$vg/$lv" );
++            "vg_enabled_$vg,lv_grow_$vg/$lv", "e2fsck_f_resize_$vg/$lv" );
 +          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
 +            "e2fsck_f_resize_$vg/$lv", "exist_/dev/$vg/$lv" );
 +        } else {
 +          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
-+            "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
++            "vg_enabled_$vg,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
 +        }
        }
  
        next;
-@@ -489,10 +509,10 @@
-     my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
-     # prevent warnings of uninitialized variables
-     $create_options = '' unless $create_options;
--  print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
-+    print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
+@@ -470,7 +490,7 @@
+     print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
      # create a new volume
      &FAI::push_command( "lvcreate $create_options -n $lv -L " .
--      $lv_size->{eff_size} . " $vg", "vg_enabled_$vg,$lv_rm_pre",
-+      &FAI::convert_unit($lv_size->{eff_size} . "B") . " $vg", "vg_enabled_$vg,$lv_rm_pre",
+-      $lv_size->{eff_size} . " $vg", "vg_enabled_$vg",
++      &FAI::convert_unit($lv_size->{eff_size} . "B") . " $vg", "vg_enabled_$vg",
        "exist_/dev/$vg/$lv" );
  
      # create the filesystem on the volume
-@@ -878,25 +898,42 @@
+@@ -875,25 +895,42 @@
      my $start = $part->{start_byte};
      my $end = $part->{end_byte};
  

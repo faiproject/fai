@@ -168,22 +168,22 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    push @all_devices, $denc;
 +    push @new_devices, $denc unless (exists($rm_devs{$denc}));
 +  }
- 
--  # create all the devices
--  &FAI::push_command( "pvcreate $pv_create_options $_", "exist_$_", "pv_done_$_"
--    ) foreach (@new_devices);
++
 +  # remove remaining devices from the list
 +  delete $rm_devs{$_} foreach (@all_devices);
  
--  # extend the volume group by the new devices (includes the current ones)
-+  # create all the devices
-   my $pre_dev = "";
--  $pre_dev .= ",pv_done_$_" foreach (@new_devices);
+   # create all the devices
+-  &FAI::push_command( "pvcreate $pv_create_options $_", "exist_$_", "pv_done_$_"
+-    ) foreach (@new_devices);
++  my $pre_dev = "vg_exists_$vg";
 +  foreach my $dev (@new_devices) {
 +    # set proper partition types for LVM
 +    my $type_pre = "";
 +    $type_pre .= ",type_lvm_$dev" if (&FAI::set_partition_type_on_phys_dev($dev, "lvm"));
-+
+ 
+-  # extend the volume group by the new devices (includes the current ones)
+-  my $pre_dev = "";
+-  $pre_dev .= ",pv_done_$_" foreach (@new_devices);
 +    &FAI::push_command( "pvcreate $pv_create_options $dev",
 +      "all_pv_sigs_removed,exist_$dev$type_pre", "pv_done_$dev");
 +    $pre_dev .= ",pv_done_$dev";
@@ -203,21 +203,25 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
 +      "vg_extended_$vg" );
 +  } else {
-+    &FAI::push_command( "true", "", "vg_extended_$vg" );
++    &FAI::push_command( "true", "all_pv_sigs_removed,$pre_dev", "vg_extended_$vg" );
 +  }
  
    # run vgreduce to get them removed
    if (scalar (keys %rm_devs)) {
      $pre_dev = "";
 -    $pre_dev .= ",pv_done_$_" foreach (keys %rm_devs);
-+    $pre_dev .= ",exists_$_" foreach (keys %rm_devs);
++    $pre_dev .= ",exist_$_" foreach (keys %rm_devs);
      &FAI::push_command( "vgreduce $vg " . join (" ", keys %rm_devs),
        "vg_extended_$vg$pre_dev", "vg_created_$vg" );
    } else {
-@@ -445,20 +433,23 @@
-   my $lv_resize_pre = "";
-   # remove, resize, create the logical volumes
-   # remove all volumes that do not exist anymore or need not be preserved
+@@ -441,25 +429,6 @@
+   ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
+   my $vg = $1; # the actual volume group
+ 
+-  my $lv_rm_pre = "";
+-  my $lv_resize_pre = "";
+-  # remove, resize, create the logical volumes
+-  # remove all volumes that do not exist anymore or need not be preserved
 -  foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
 -    # skip preserved/resized volumes
 -    if (defined ( $FAI::configs{$config}{volumes}{$lv})
@@ -226,36 +230,54 @@ Index: trunk/lib/setup-storage/Commands.pm
 -        $FAI::configs{$config}{volumes}{$lv}{size}{resize};
 -      next;
 -    }
-+  if (defined($FAI::current_lvm_config{$vg})) {
-+    foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
-+      # skip preserved/resized volumes
-+      if (defined ( $FAI::configs{$config}{volumes}{$lv})) {
-+        next if ($FAI::configs{$config}{volumes}{$lv}{size}{preserve} == 1);
-+        if (1 == $FAI::configs{$config}{volumes}{$lv}{size}{resize}) {
-+          $lv_resize_pre .= ",lv_resize_$vg/$lv";
-+          next;
-+        }
-+      }
- 
+-
 -    &FAI::push_command( "lvremove -f $vg/$lv", "vg_enabled_$vg", "lv_rm_$vg/$lv");
 -    $lv_rm_pre .= ",lv_rm_$vg/$lv";
-+      &FAI::push_command( "lvremove -f $vg/$lv", "vg_enabled_$vg", "lv_rm_$vg/$lv");
-+      $lv_rm_pre .= ",lv_rm_$vg/$lv";
-+    }
-+    $lv_rm_pre =~ s/^,//;
-+    $lv_resize_pre =~ s/^,//;
-   }
+-  }
 -  $lv_rm_pre =~ s/^,//;
 -  $lv_resize_pre =~ s/^,//;
- 
+-
    # now create or resize the configured logical volumes
    foreach my $lv (keys %{ $FAI::configs{$config}{volumes} }) {
-@@ -512,6 +503,66 @@
+     # reference to the size of the current logical volume
+@@ -482,14 +451,14 @@
+         $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
+       {
+         &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+-          "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
++          "vg_enabled_$vg,exist_/dev/$vg/$lv", "lv_shrink_$vg/$lv" );
+         &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
+-          "vg_enabled_$vg,$lv_rm_pre,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
++          "vg_enabled_$vg,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
+       } else {
+         &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
+-          "vg_enabled_$vg,$lv_rm_pre", "lv_grow_$vg/$lv" );
++          "vg_enabled_$vg,exist_/dev/$vg/$lv", "lv_grow_$vg/$lv" );
+         &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+-          "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
++          "vg_enabled_$vg,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
+       }
+ 
+       next;
+@@ -498,10 +467,10 @@
+     my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
+     # prevent warnings of uninitialized variables
+     $create_options = '' unless $create_options;
+-  print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
++    print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
+     # create a new volume
+     &FAI::push_command( "lvcreate $create_options -n $lv -L " .
+-      $lv_size->{eff_size} . " $vg", "vg_enabled_$vg,$lv_rm_pre",
++      $lv_size->{eff_size} . " $vg", "vg_enabled_$vg",
+       "exist_/dev/$vg/$lv" );
+ 
+     # create the filesystem on the volume
+@@ -512,6 +481,85 @@
  
  ################################################################################
  #
 +# @brief Remove existing volume group if underlying devices will be modified,
-+# otherwise add proper exists_ preconditions
++# otherwise add proper exist_ preconditions
 +#
 +################################################################################
 +sub cleanup_vg {
@@ -288,10 +310,29 @@ Index: trunk/lib/setup-storage/Commands.pm
 +  }
 +
 +  if (0 == $clear_vg) {
-+    defined($FAI::configs{"VG_$vg"}{volumes}) and $FAI::configs{"VG_$vg"}{exists} = 1;
-+    &FAI::push_command("true", "vgchange_a_n", "vg_created_$vg");
-+    &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$_") foreach
-+      (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
++    my $vg_setup_pre = "vgchange_a_n";
++    if (defined($FAI::configs{"VG_$vg"}{volumes})) {
++      $FAI::configs{"VG_$vg"}{exists} = 1;
++
++      # remove all volumes that do not exist anymore or need not be preserved
++      foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
++        # skip preserved/resized volumes
++        if (defined ( $FAI::configs{"VG_$vg"}{volumes}{$lv})) {
++          if ($FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} == 1 ||
++            $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{resize} == 1) {
++            &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$lv");
++            next;
++          }
++        }
++
++        &FAI::push_command( "lvremove -f $vg/$lv", "vgchange_a_n", "lv_rm_$vg/$lv");
++        $vg_setup_pre .= ",lv_rm_$vg/$lv";
++      }
++    } else {
++      &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$_") foreach
++        (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
++    }
++    &FAI::push_command("true", $vg_setup_pre, "vg_exists_$vg");
 +
 +    return 0;
 +  }
@@ -317,7 +358,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  # @brief Using the configurations from %FAI::configs, a list of commands is
  # built to setup the LVM
  # creates the volume groups, the logical volumes and the filesystems
-@@ -519,6 +570,17 @@
+@@ -519,6 +567,17 @@
  ################################################################################
  sub build_lvm_commands {
  
@@ -335,7 +376,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    # loop through all configs
    foreach my $config (keys %FAI::configs) {
  
-@@ -528,24 +590,11 @@
+@@ -528,24 +587,11 @@
      next if ($1 eq "--ANY--");
      my $vg = $1; # the volume group
  
@@ -361,7 +402,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  
      # perform all necessary operations on the underlying logical volumes
      &FAI::setup_logical_volumes($config);
-@@ -754,8 +803,8 @@
+@@ -754,8 +800,8 @@
      or die "Can't change disklabel, partitions are to be preserved\n";
  
    # write the disklabel to drop the previous partition table
