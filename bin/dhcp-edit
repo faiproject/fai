@@ -19,9 +19,10 @@
 # TODO
 # -q quiet: do not print error if host/mac entry not found, exit code 0
 
-$version="Version 1.1, 24-june-2010";
+$version="Version 1.2, 6-july-2010";
 $dhcpdconf="/etc/dhcp3/dhcpd.conf";
 
+$modified=0; # 1 if dhcpd.conf was modified
 our ($opt_p,$opt_d,$opt_h,$opt_n,$opt_r);
 
 use Pod::Usage;
@@ -38,17 +39,16 @@ read_dhcpd_conf();
 if ($opt_r) {
 
   $mac=$hostname;
-  # create emty entry, remove entry
-  $found=0;
+  # create empty entry, remove entry
 
   # set flag if an entry was found. print warning if entry not found
   foreach (@dhcpd) {
     next if /^\s*#/;  # do not change comments
-    do {$_="XXX ENTRY DELETED XXX\n";$found++} if m/host\s+$hostname\b.+hardware\s+ethernet.+;/;
-    do {$_="XXX ENTRY DELETED XXX\n";$found++} if m/host\s+.+hardware\s+ethernet\s+$mac[\s+;]/i;
+    do {$_="XXX ENTRY DELETED XXX\n";$modified++} if m/host\s+$hostname\b.+hardware\s+ethernet.+;/;
+    do {$_="XXX ENTRY DELETED XXX\n";$modified++} if m/host\s+.+hardware\s+ethernet\s+$mac[\s+;]/i;
   }
-  merror(6,"Entry $hostname can not be removed. Not found.\n") unless $found;
-  print "$found entry/entries removed.\n" if $found;
+  merror(6,"Entry $hostname can not be removed. Not found.\n") unless $modified;
+  print "$modified entry/entries removed.\n" if $modified;
 
 } else {
 
@@ -67,13 +67,7 @@ if ($opt_r) {
 merror(3,"Terminated. $0 can only be run as root.") unless ($< == 0);
 add_entry($hostname,$ip) unless $opt_r;
 write_dhcpd();
-do {
-  if ($opt_d) {
-    print "DRY RUN. Did not restart dhcp daemon.";
-    exit 0;
-  }
-  print qx#/etc/init.d/dhcp3-server restart#
-} unless $opt_n;
+restart_dhcpd();
 
 exit 0;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -99,11 +93,21 @@ sub add_entry {
   my ($hostname,$ip) = @_;
   $ip=$hostname unless $ip;
 
-  # add new entry before line matching $opt_n
+  # if -p was not given
+  unless (defined $opt_p) {
+    $modified=1;
+    push @dhcpd, "host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
+    print "Entry added: host $hostname {hardware ethernet $mac;fixed-address $ip;}\n" if $modified;
+    return;
+  }
+
+  # add new entry before line matching $opt_p
+  # if $opt_p matches multiple times, also the new entry is added multiple times
   foreach (@dhcpd) {
     if ($_ =~ /$opt_p/o) {
       push @new, "host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
       print "Entry added: host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
+      $modified=1;
     }
     push @new,$_;
   }
@@ -117,11 +121,36 @@ sub write_dhcpd {
     return;
   }
 
+  unless ($modified) {
+    print "Nothing changed.";
+    return;
+  }
+
   @dhcpd = grep(!/^XXX ENTRY DELETED XXX\n$/, @dhcpd);
 #  print @dhcpd;
   open(DHCP," >$dhcpdconf") || die "Can't write $dhcpdconf. $!\n";
   print DHCP @dhcpd;
   close(DHCP);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub restart_dhcpd {
+
+  if ($opt_d) {
+    print "DRY RUN. Did not restart dhcp daemon.\n";
+  }
+  if ($opt_n) {
+    print "Did not restart dhcp daemon.\n";
+  }
+  unless ($modified) {
+    print "No modifications.\n";
+  }
+
+  if ($opt_d || $opt_n || $modified==0) {
+    print "Did not restart dhcp daemon.\n";
+    return;
+  }
+
+  print qx#/etc/init.d/dhcp3-server restart#
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
