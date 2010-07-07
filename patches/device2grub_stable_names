@@ -1,0 +1,48 @@
+2010-07-07  Julien BLACHE <jblache@debian.org>
+	* bin/device2grub: try to find and use a stable name (by-id) for the
+	device if the shortname has no match in device.map. Needed now that
+	grub2 in unstable has switched to using stable names in device.map.
+Index: trunk/bin/device2grub
+===================================================================
+--- trunk.orig/bin/device2grub	2010-07-07 17:58:55.160374252 +0200
++++ trunk/bin/device2grub	2010-07-07 17:58:46.200397745 +0200
+@@ -5,11 +5,15 @@
+ # TODO: read from stdin if no parameter given
+ 
+ use strict;
++
++use Cwd 'abs_path';
++
+ my $grubdevice;
+ my %map;
+ 
+ my $device=shift;
+ my $devicemap="$ENV{target}/boot/grub/device.map";
++my $devbyid = "/dev/disk/by-id";
+ 
+ open (DEVICEMAP,"<$devicemap") || die "Can't open $devicemap\n";
+ while (<DEVICEMAP>) {
+@@ -23,7 +27,22 @@
+ if ($map{$disk}) {
+   $grubdevice=$map{$disk};
+ } else {
+-  die "No match in $devicemap for $disk\n";
++    opendir (my $dh, $devbyid) || die "Can't open /dev/disk/by-id\n";
++    while (my $diskid = readdir $dh) {
++	next if ($diskid =~ /[.].*/);
++
++	$diskid = $devbyid . "/" . $diskid;
++
++	my $shortdev = abs_path($diskid);
++
++	if (($shortdev eq $disk) && $map{$diskid}) {
++	    $grubdevice = $map{$diskid};
++	    last;
++	}
++    }
++    closedir $dh;
++
++    die "No match in $devicemap for $disk\n" unless $grubdevice;
+ }
+ 
+ if ($partition) {
