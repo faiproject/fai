@@ -14,6 +14,10 @@ fcopy /etc/hostname || echo $HOSTNAME     > $target/etc/hostname
 echo $TIMEZONE    > $target/etc/timezone
 ln -fs /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
 
+if [ -n "$IPADDR" ]; then
+    ifclass DHCPC || ainsl -s $FAI_ROOT/etc/hosts "$IPADDR $HOSTNAME.$DOMAIN $HOSTNAME"
+fi
+
 fcopy -iM /etc/hosts /etc/motd
 
 # set root password
