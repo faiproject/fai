@@ -361,7 +361,9 @@ EOF
     ln -sf /usr/share/zoneinfo/$timezone etc/localtime
     ln -sf /proc/mounts etc/mtab
     [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
-    find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
+    if [ -d etc/init ]; then   # if upstart is available
+	find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
+    fi
 
     # definition for loopback device
     echo "iface lo inet loopback" > etc/network/interfaces
