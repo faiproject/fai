@@ -1,26 +1,12 @@
-#! /usr/sbin/cfagent -f
+#! /bin/bash
 
-control:
-   any::
-   actionsequence = ( directories editfiles )
-   EditFileSize = ( 30000 )
+error=0 ; trap "error=$((error|1))" ERR
 
-directories:
-   any::
-	${target}/tmp mode=1777 owner=0 group=0
+chmod -c 1777 ${target}/tmp
+chown -c 0:0  ${target}/tmp
 
-editfiles:
-   any::
-	{ ${target}/etc/mailname
-	  AutoCreate
-          AppendIfNoSuchLine "${HOSTNAME}"
-	}
+ainsl -av ${target}/etc/mailname ${HOSTNAME}
+sed -i -e "s/^UTC.*/UTC=${UTC}/" $target/etc/default/rcS
+sed -i -e 's#/sbin/getty 38400#/sbin/getty -f /etc/issue.linuxlogo 38400#' ${target}/etc/inittab
 
-	{ ${target}/etc/default/rcS
-	  ReplaceAll "^UTC=.*" With "UTC=${UTC}"
-	}
-
-	{ ${target}/etc/inittab
-	  ReplaceAll "/sbin/getty 38400"
-		With "/sbin/getty -f /etc/issue.linuxlogo 38400"
-	}
+exit $error
