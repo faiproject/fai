@@ -25,7 +25,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-version="Version 1.11, 22-october-2009"
+version="Version 2.0, 9-july-2010"
 
 # variables: NFSROOT, FAI_CONFIGDIR, FAI_ETC_DIR
 
@@ -93,7 +93,6 @@ initialize() {
     # not a copy later during apt-move
     aptcache=$mirrordir/aptcache   # holds the package cache data
     archivedir=$aptcache/var/cache/apt/archives
-    aptmovefile=$aptcache/etc/apt-move.conf # stores apt-move.conf
     statefile=$aptcache/statefile
 
     # also used in install_packages.conf
@@ -194,8 +193,6 @@ set-classes() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-[ -x "$(which apt-move)" ] || die 5 "apt-move not found. Please install package."
-
 preserve=0
 verbose=0
 add=1
@@ -280,35 +277,23 @@ trap "" EXIT ERR
 [ $add -eq 0 ] && delete_base_packages
 
 # create mirror directory structure
-echo "Calling apt-move"
-cat > $aptmovefile <<EOF   # generate apt-move.conf
-APTSITES=*
-LOCALDIR=$mirrordir
-DIST=$debdist
-FILECACHE=$archivedir
-LISTSTATE=$aptcache/var/lib/apt/lists
-DELETE=no
-CONTENTS=no
-PKGCOMP='none gzip'
+echo "Calling reprepro"
+mkdir $mirrordir/conf
+cat > $mirrordir/conf/distributions <<EOF   # generate config file for reprepro
+Codename: cskoeln
+Architectures: i386 amd64
+Components: main non-free contrib
+DebIndices: Packages Release . .bz2
+Description: FAI packages from author's repository
+Label: www.informatik.uni-koeln.de
+Origin: Original FAI archive
+Suite: lenny
 EOF
-# due to bug #441231 in apt-move, we have to specify the arhcitecture
-[ -n "$arch" ] && echo "ARCH=$arch" >> $aptmovefile # append architecture
-apt-move $qflag -c $aptmovefile update
-# since Packages.gz from apt-move does not include packages from my
-# repository, let's use apt-ftparchive for generiating correct index
-# files
-pfilegz=$(find $mirrordir/dists -name Packages.gz)
-pfile=$(find $mirrordir/dists -name Packages)
-pdist=$(cd $mirrordir/dists ; ls)
-cd $mirrordir
-# md5sums of apt-move are not valid, when we recreate Packages.gz using
-# apt-ftparchive, but we can use the header of the Release file
-grep -B99 MD5Sum:  $mirrordir/dists/$pdist/Release | grep -v MD5Sum: > $mirrordir/tmpfile
-rm $mirrordir/dists/$pdist/Release
-apt-ftparchive packages pool > $pfile
-gzip -c $pfile > $pfilegz
-apt-ftparchive release dists/$pdist >> tmpfile
-mv tmpfile dists/$pdist/Release
+# '
+
+# maybe using reprepro pulls it's possible to move instead of copy the packages
+reprepro -b $mirrordir includedeb cskoeln $mirrordir/aptcache/var/cache/apt/archives/*.deb
+rm -rf $mirrordir/db $mirrordir/conf $mirrordir/aptcache/var/cache/apt/archives
 
 echo "$0 finished."
 echo -n "Mirror size and location: ";du -sh $mirrordir
