@@ -9,7 +9,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -143,7 +143,7 @@
+@@ -143,14 +143,15 @@
  
    my ($d, $t) = @_;
    my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
@@ -18,10 +18,11 @@ Index: trunk/lib/setup-storage/Commands.pm
    # make sure this device really exists (we can't check for the partition
    # as that may be created later on
    (-b $disk) or die "Specified disk $disk does not exist in this system!\n";
-@@ -151,6 +151,7 @@
+   # set the raid/lvm unless this is an entire disk flag
    my $cmd = "parted -s $disk set $part_no $t on";
    $cmd = "true" if ($part_no == -1);
-   &FAI::push_command( $cmd, "exist_$d", "type_${t}_$d" );
+-  &FAI::push_command( $cmd, "exist_$d", "type_${t}_$d" );
++  &FAI::push_command( $cmd, "cleared2_$disk,exist_$d", "type_${t}_$d" );
 +  return 1;
  }
  
