@@ -1,0 +1,175 @@
+2010-07-23  Michael Tautschnig  <mt@debian.org>
+
+	* Patch is incomplete! Simple example has not been updated, should be done in
+		trunk directly.
+	* Makefile, fai-nfsroot.dirs, fai-nfsroot.install, get-boot-info: Install
+		dhclient-fai.conf and dhclient-fai-script into /usr/share/fai instead of
+		/etc/dhcp3 (closes: #585063).
+	* dhcp-edit, control: Updated to work with isc-dhcp-server or dhcp3-server,
+		whichever is available.
+	* fai-guide.txt: Updated to isch-dhcp-server.
+
+Index: trunk/Makefile
+===================================================================
+--- trunk.orig/Makefile
++++ trunk/Makefile	
+@@ -23,7 +23,7 @@
+ 	$(MAKE) -f debian/rules clean
+ 
+ install: 
+-	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,dhcp3,apt/apt.conf.d}
++	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,apt/apt.conf.d}
+ 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
+ 	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps,setup-storage}
+ 	install man/* $(DESTDIR)/man
+@@ -34,8 +34,8 @@
+ 	cd bin ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
+ 	cd bin ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
+ 	install bin/fai-start-stop-daemon $(DESTDIR)/sbin
+-	install bin/dhclient-fai-script  $(DESTDIR)/etc/dhcp3
+-	install -m644 conf/dhclient-fai.conf $(DESTDIR)/etc/dhcp3
++	install bin/dhclient-fai-script  $(DESTDIR)/usr/share/fai
++	install -m644 conf/dhclient-fai.conf $(DESTDIR)/usr/share/fai
+ 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
+ 	install -m644 conf/fai.conf conf/menu.lst conf/live.conf $(DESTDIR)/etc/fai/
+ 	install -m644 conf/make-fai-nfsroot.conf $(DESTDIR)/etc/fai/
+Index: trunk/bin/dhcp-edit
+===================================================================
+--- trunk.orig/bin/dhcp-edit
++++ trunk/bin/dhcp-edit	
+@@ -20,7 +20,7 @@
+ # -q quiet: do not print error if host/mac entry not found, exit code 0
+ 
+ $version="Version 1.2, 6-july-2010";
+-$dhcpdconf="/etc/dhcp3/dhcpd.conf";
++$dhcpdconf=(-d "/etc/dhcp" ? "/etc/dhcp/dhcpd.conf" : "/etc/dhcp3/dhcpd.conf");
+ 
+ $modified=0; # 1 if dhcpd.conf was modified
+ our ($opt_p,$opt_d,$opt_h,$opt_n,$opt_r);
+@@ -150,7 +150,8 @@
+     return;
+   }
+ 
+-  print qx#/etc/init.d/dhcp3-server restart#
++  print (-x "/etc/init.d/isc-dhcp-server" ? qx#/etc/init.d/isc-dhcp-server# :
++    qx#/etc/init.d/dhcp3-server restart#)
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 
+Index: trunk/debian/control
+===================================================================
+--- trunk.orig/debian/control
++++ trunk/debian/control	
+@@ -42,7 +42,7 @@
+ Package: fai-server
+ Architecture: all
+ Depends: fai-client, debootstrap
+-Recommends: nfs-kernel-server, dhcp3-server, tftpd-hpa | tftpd, openssh-server, openssh-client, syslinux-common, openbsd-inetd | inet-superserver, fai-setup-storage
++Recommends: nfs-kernel-server, isc-dhcp-server | dhcp3-server, tftpd-hpa | tftpd, openssh-server, openssh-client, syslinux-common, openbsd-inetd | inet-superserver, fai-setup-storage
+ Suggests: debmirror, reprepro, genisoimage, grub, aptitude, perl-tk, libproc-daemon-perl
+ Conflicts: fai
+ Replaces: fai
+@@ -63,7 +63,7 @@
+ 
+ Package: fai-quickstart
+ Architecture: all
+-Depends: fai-server, fai-doc, dhcp3-server, nfs-kernel-server, syslinux-common, tftpd-hpa, reprepro, genisoimage, openbsd-inetd | inet-superserver
++Depends: fai-server, fai-doc, isc-dhcp-server | dhcp3-server, nfs-kernel-server, syslinux-common, tftpd-hpa, reprepro, genisoimage, openbsd-inetd | inet-superserver
+ Description: Fully Automatic Installation quickstart package
+  FAI is a non-interactive system to install, customize and manage
+  Linux systems and software configurations on computers as well as
+Index: trunk/debian/fai-nfsroot.dirs
+===================================================================
+--- trunk.orig/debian/fai-nfsroot.dirs
++++ trunk/debian/fai-nfsroot.dirs	
+@@ -1,6 +1,6 @@
+ etc/fai
+ etc/init
+-etc/dhcp3
+ etc/init.d
+ etc/apt/apt.conf.d
+ usr/lib/fai
++usr/share/fai
+Index: trunk/debian/fai-nfsroot.install
+===================================================================
+--- trunk.orig/debian/fai-nfsroot.install
++++ trunk/debian/fai-nfsroot.install	
+@@ -6,8 +6,8 @@
+ usr/lib/fai/fai-mount-disk
+ usr/lib/fai/mount2dir
+ usr/lib/fai/task_sysinfo
+-etc/dhcp3/dhclient-fai-script
+-etc/dhcp3/dhclient-fai.conf
++usr/share/fai/dhclient-fai-script
++usr/share/fai/dhclient-fai.conf
+ etc/apt/apt.conf.d/90fai
+ etc/init.d/fai-abort
+ etc/init/fai.conf
+Index: trunk/doc/fai-guide.txt
+===================================================================
+--- trunk.orig/doc/fai-guide.txt
++++ trunk/doc/fai-guide.txt	
+@@ -403,7 +403,7 @@
+ Reading task descriptions... Done  
+ 
+ The following NEW packages will be installed:
+-  apt-move{a} dhcp3-server{a} fai-doc{a} fai-quickstart fai-server{a}
++  apt-move{a} isc-dhcp-server{a} fai-doc{a} fai-quickstart fai-server{a}
+   genisoimage{a} inetutils-inetd{a} nfs-kernel-server{a} 
+   openssh-server{a} syslinux-common{a} tftpd-hpa{a} 
+ 0 packages upgraded, 11 newly installed, 0 to remove and 0 not upgraded.
+@@ -610,12 +610,12 @@
+ First, install following additional needed packages:
+ 
+ ----
+-faiserver# apt-get install dhcp3-server syslinux-common tftpd-hpa
++faiserver# apt-get install isc-dhcp-server syslinux-common tftpd-hpa
+ ----
+ 
+ Then set up the DHCP daemon. A sample configuration file can be found
+ in '/usr/share/doc/fai-doc/examples/etc/dhcpd.conf'. Copy this file to
+-'/etc/dhcp3/dhcpd.conf'.
++'/etc/dhcp/dhcpd.conf'.
+ 
+ The install client then loads the pxelinux boot loader which receives
+ its configuration via TFTP from a file in the directory
+@@ -712,7 +712,7 @@
+ If you make any changes to the DHCP daemon configuration, you must
+ restart the daemon.
+ 
+-  # /etc/init.d/dhcp3-server restart
++  # /etc/init.d/isc-dhcp-server restart
+ 
+ By default, the DHCP daemon writes its log files to
+ '/var/log/daemon.log'. The command `fai-chboot(8)` is used for
+@@ -2162,7 +2162,7 @@
+ Add the following packages to the install server:
+ 
+ ----
+-nucleus:/# apt-get install ntp tftpd-hpa dhcp3-server \
++nucleus:/# apt-get install ntp tftpd-hpa isc-dhcp-server \
+   nfs-kernel-server etherwake fai
+ nucleus:/# tasksel -q -n install dns-server
+ nucleus:/# apt-get dselect-upgrade
+@@ -2173,7 +2173,7 @@
+ 
+ It's very important to use the internal network name +atom00+ for the
+ master server (not the external name +nucleus+) in
+-'/etc/dhcp3/dhcpd.conf' and 'make-fai-nfsroot.conf'. Replace the
++'/etc/dhcp/dhcpd.conf' and 'make-fai-nfsroot.conf'. Replace the
+ strings FAISERVER with _atom00_ and uncomment the following line in
+ 'make-fai-nfsroot.conf' so the Beowulf nodes can use the name for
+ connecting to their master server.
+Index: trunk/lib/get-boot-info
+===================================================================
+--- trunk.orig/lib/get-boot-info
++++ trunk/lib/get-boot-info	
+@@ -62,7 +62,7 @@
+ get_dhcp_info() {
+ 
+     boot=1
+-    dhclient -lf /dev/null -cf /etc/dhcp3/dhclient-fai.conf -sf /etc/dhcp3/dhclient-fai-script $netdevices >>$bootlog 2> $LOGDIR/dhclient.log
++    dhclient -lf /dev/null -cf /usr/share/fai/dhclient-fai.conf -sf /usr/share/fai/dhclient-fai-script $netdevices >>$bootlog 2> $LOGDIR/dhclient.log
+     killall dhclient
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

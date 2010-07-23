@@ -8,7 +8,7 @@ Index: trunk/bin/setup-storage
 ===================================================================
 --- trunk.orig/bin/setup-storage
 +++ trunk/bin/setup-storage	
-@@ -126,10 +126,6 @@
+@@ -127,10 +127,6 @@
  print "Using config file: $opt_f\n";
  &FAI::run_parser($config_file);
  
@@ -19,7 +19,7 @@ Index: trunk/bin/setup-storage
  # read the sizes and partition tables of all disks listed in $FAI::disks
  &FAI::get_current_disks;
  
-@@ -139,6 +135,10 @@
+@@ -140,6 +136,10 @@
  # see whether there are any existing RAID devices
  &FAI::get_current_raid;
  
@@ -34,7 +34,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
 +++ trunk/lib/setup-storage/Parser.pm	
-@@ -404,6 +404,10 @@
+@@ -405,6 +405,10 @@
              $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split(",", $1));
            }
          }
@@ -45,7 +45,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          | /^fstabkey:(device|label|uuid)/
          {
            # the information preferred for fstab device identifieres
-@@ -421,7 +425,7 @@
+@@ -422,7 +426,7 @@
            foreach (split (",", $1)) {
              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
                die &FAI::internal_error("VG re-parse failed");
@@ -54,7 +54,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            }
          }
          | m{^preserve_reinstall:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
-@@ -431,17 +435,25 @@
+@@ -432,17 +436,25 @@
              foreach (split (",", $1)) {
                (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
                  die &FAI::internal_error("VG re-parse failed");
@@ -82,7 +82,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            }
          }
          | /^fstabkey:(device|label|uuid)/
-@@ -465,6 +477,11 @@
+@@ -466,6 +478,11 @@
              $FAI::configs{$FAI::device}{preserveparts} = 1;
            }
          }
@@ -98,7 +98,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Volumes.pm
 +++ trunk/lib/setup-storage/Volumes.pm	
-@@ -475,6 +475,10 @@
+@@ -476,6 +476,10 @@
      if ($config =~ /^PHY_(.+)$/) {
        foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
          my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
@@ -109,7 +109,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
          next unless ($part->{size}->{preserve} || $part->{size}->{resize});
          defined ($part->{size}->{range}) or die
            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
-@@ -485,6 +489,10 @@
+@@ -486,6 +490,10 @@
        # check for logical volumes that need to be preserved and preserve the
        # underlying devices recursively
        foreach my $l (keys %{ $FAI::configs{$config}{volumes} }) {
@@ -120,7 +120,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
          next unless ($FAI::configs{$config}{volumes}{$l}{size}{preserve} == 1 ||
            $FAI::configs{$config}{volumes}{$l}{size}{resize} == 1);
          defined ($FAI::configs{$config}{volumes}{$l}{size}{range}) or die
-@@ -496,6 +504,9 @@
+@@ -497,6 +505,9 @@
        # check for volumes that need to be preserved and preserve the underlying
        # devices recursively
        foreach my $r (keys %{ $FAI::configs{$config}{volumes} }) {

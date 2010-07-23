@@ -9,7 +9,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -142,7 +142,7 @@
+@@ -143,7 +143,7 @@
  
    my ($d, $t) = @_;
    my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
@@ -18,7 +18,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    # make sure this device really exists (we can't check for the partition
    # as that may be created later on
    (-b $disk) or die "Specified disk $disk does not exist in this system!\n";
-@@ -150,6 +150,7 @@
+@@ -151,6 +151,7 @@
    my $cmd = "parted -s $disk set $part_no $t on";
    $cmd = "true" if ($part_no == -1);
    &FAI::push_command( $cmd, "exist_$d", "type_${t}_$d" );
@@ -26,7 +26,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  }
  
  ################################################################################
-@@ -244,12 +245,17 @@
+@@ -245,12 +246,17 @@
  
        # keep a reference to the current volume
        my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
@@ -47,7 +47,7 @@ Index: trunk/lib/setup-storage/Commands.pm
        # prepend "raid", if the mode is numeric-only
        $level = "raid$level" if ($level =~ /^\d+$/);
  
-@@ -307,29 +313,6 @@
+@@ -308,29 +314,6 @@
  
  ################################################################################
  #
@@ -77,7 +77,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  # @brief Create the volume group $config, unless it exists already; if the
  # latter is the case, only add/remove the physical devices
  #
-@@ -342,24 +325,6 @@
+@@ -343,24 +326,6 @@
    ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
    my $vg = $1; # the actual volume group
  
@@ -102,7 +102,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    my ($pv_create_options) = $FAI::configs{$config}{pvcreateopts};
    my ($vg_create_options) = $FAI::configs{$config}{vgcreateopts};
    # prevent warnings of uninitialized variables
-@@ -367,59 +332,82 @@
+@@ -368,59 +333,82 @@
    $vg_create_options = '' unless $vg_create_options;
    print "/dev/$vg PV create_options: $pv_create_options\n" if ($FAI::debug && $pv_create_options);
    print "/dev/$vg VG create_options: $vg_create_options\n" if ($FAI::debug && $vg_create_options);
@@ -215,7 +215,7 @@ Index: trunk/lib/setup-storage/Commands.pm
      &FAI::push_command( "vgreduce $vg " . join (" ", keys %rm_devs),
        "vg_extended_$vg$pre_dev", "vg_created_$vg" );
    } else {
-@@ -441,25 +429,6 @@
+@@ -442,25 +430,6 @@
    ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
    my $vg = $1; # the actual volume group
  
@@ -241,7 +241,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    # now create or resize the configured logical volumes
    foreach my $lv (keys %{ $FAI::configs{$config}{volumes} }) {
      # reference to the size of the current logical volume
-@@ -482,14 +451,14 @@
+@@ -483,14 +452,14 @@
          $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
        {
          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
@@ -260,7 +260,7 @@ Index: trunk/lib/setup-storage/Commands.pm
        }
  
        next;
-@@ -498,10 +467,10 @@
+@@ -499,10 +468,10 @@
      my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
      # prevent warnings of uninitialized variables
      $create_options = '' unless $create_options;
@@ -273,7 +273,7 @@ Index: trunk/lib/setup-storage/Commands.pm
        "exist_/dev/$vg/$lv" );
  
      # create the filesystem on the volume
-@@ -512,6 +481,85 @@
+@@ -513,6 +482,85 @@
  
  ################################################################################
  #
@@ -359,7 +359,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  # @brief Using the configurations from %FAI::configs, a list of commands is
  # built to setup the LVM
  # creates the volume groups, the logical volumes and the filesystems
-@@ -519,6 +567,17 @@
+@@ -520,6 +568,17 @@
  ################################################################################
  sub build_lvm_commands {
  
@@ -377,7 +377,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    # loop through all configs
    foreach my $config (keys %FAI::configs) {
  
-@@ -528,24 +587,11 @@
+@@ -529,24 +588,11 @@
      next if ($1 eq "--ANY--");
      my $vg = $1; # the volume group
  
@@ -403,7 +403,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  
      # perform all necessary operations on the underlying logical volumes
      &FAI::setup_logical_volumes($config);
-@@ -754,8 +800,8 @@
+@@ -755,8 +801,8 @@
      or die "Can't change disklabel, partitions are to be preserved\n";
  
    # write the disklabel to drop the previous partition table
@@ -418,7 +418,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Volumes.pm
 +++ trunk/lib/setup-storage/Volumes.pm	
-@@ -347,7 +347,6 @@
+@@ -348,7 +348,6 @@
    foreach my $vg (get_volume_group_list()) {
      # initialise the hash entry
      $FAI::current_lvm_config{$vg}{physical_volumes} = ();
@@ -426,7 +426,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
  
      # store the vg size in MB
      my %vg_info = get_volume_group_information($vg);
-@@ -366,7 +365,6 @@
+@@ -367,7 +366,6 @@
        $FAI::current_lvm_config{$vg}{volumes}{$short_name}{size} =
          &FAI::convert_unit($lv_info{$lv_name}->{lv_size} .
            $lv_info{$lv_name}->{lv_size_unit});
@@ -434,7 +434,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
      }
  
      # store the physical volumes
-@@ -417,7 +415,6 @@
+@@ -418,7 +416,6 @@
      if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+) level=(\S+) num-devices=\d+(\s+|$)/) {
        $id = $1;
        $FAI::current_raid_config{$id}{mode} = $2;
@@ -442,7 +442,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
      } elsif ($line =~ /^\s*devices=(\S+)$/) {
        defined($id) or &FAI::internal_error("mdadm ARRAY line not yet seen");
        @{ $FAI::current_raid_config{$id}{devices} } = split (",", $1);
-@@ -437,11 +434,17 @@
+@@ -438,11 +435,17 @@
    my ($device_name) = @_;
    my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($device_name);
  
@@ -464,7 +464,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
      if (defined($FAI::configs{RAID}{volumes}{$vol}) && 
          $FAI::configs{RAID}{volumes}{$vol}{preserve} != 1) {
        $FAI::configs{RAID}{volumes}{$vol}{preserve} = 1;
-@@ -450,6 +453,8 @@
+@@ -451,6 +454,8 @@
    } elsif ($device_name =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
      my $vg = $1;
      my $lv = $2;
@@ -473,7 +473,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
      if (defined($FAI::configs{"VG_$vg"}{volumes}{$lv}) &&
          $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} != 1) {
        $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} = 1;
-@@ -480,6 +485,9 @@
+@@ -481,6 +486,9 @@
                defined($FAI::current_config{$1}{partitions}{$part_id})) ? 1 : 0)
            if (2 == $part->{size}->{preserve});
          next unless ($part->{size}->{preserve} || $part->{size}->{resize});
@@ -483,7 +483,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
          defined ($part->{size}->{range}) or die
            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
              . " because it is not defined in the current config\n";
-@@ -495,10 +503,11 @@
+@@ -496,10 +504,11 @@
            if (2 == $FAI::configs{$config}{volumes}{$l}{size}{preserve});
          next unless ($FAI::configs{$config}{volumes}{$l}{size}{preserve} == 1 ||
            $FAI::configs{$config}{volumes}{$l}{size}{resize} == 1);
@@ -496,7 +496,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
        }
      } elsif ($config eq "RAID") {
        # check for volumes that need to be preserved and preserve the underlying
-@@ -508,6 +517,8 @@
+@@ -509,6 +518,8 @@
            (defined($FAI::current_raid_config{$r}) ? 1 : 0)
            if (2 == $FAI::configs{$config}{volumes}{$r}{preserve});
          next unless ($FAI::configs{$config}{volumes}{$r}{preserve} == 1);
