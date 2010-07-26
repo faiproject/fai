@@ -27,7 +27,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-version="version 1.3.2, 18-january-2010"
+version="version 1.3.3, 18-january-2010"
 
 # variables needed: $classes, $ROOTCMD, $LOGDIR, $target
     
@@ -91,7 +91,6 @@ usage() {
     local ex=$1
     cat <<-EOF
     fai-debconf $version. Copyright (C) 2005-2010 Thomas Lange
-    Report bugs to <fai@informatik.uni-koeln.de>.
 
     Usage: fai-debconf [OPTION] DIRECTORY
 EOF
@@ -112,7 +111,7 @@ while getopts "hvsf" opt ; do
 done
 shift $(($OPTIND - 1))
 [ -z "$1" ] || [ -n "$2" ] && usage 1
-debconfdir=$1 # will be /fai/debconf
+debconfdir=$1 # will be $FAI/debconf
 
 if [ "x$classes" = "x" ]; then
     echo "No classes are defined."
@@ -122,3 +121,4 @@ fi
 [ $forcereconf -eq 0 -a -x $target/usr/bin/debconf-get-selections ] && $ROOTCMD debconf-get-selections > $LOGDIR/debconf.old
 call_conf # add data to debconf database
 [ $reconf -eq 1 ] && reconfigure_packages
+exit 0
