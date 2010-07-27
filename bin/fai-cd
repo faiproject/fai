@@ -6,8 +6,10 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2009 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2010 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
+# Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
+# with major support from Michael Prokop, prokop@grml-solutions.com
 #
 # based on a script called make-fai-bootcd by Niall Young <niall@holbytla.org>
 #
@@ -31,7 +33,11 @@
 
 set -e 
 
-forceremoval=0;
+# last die exit code 20
+
+grub_version=2
+boot_image="boot/grub/eltorito.img"
+forceremoval=0
 burn=0
 bootonly=0
 keep=0
@@ -64,12 +70,26 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_grub_image() {
+create_grub1_image() {
 
-    mkdir -p $tmp/boot/grub $nfsrootdir
-
-    [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
-    [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
+    mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
+    if [ -f $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito ]; then
+	echo "preparing grub1 eltorito boot loader using NFSROOT"
+	[ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
+	[ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
+    else
+	# if grub1 is not available in NFSROOT, we download the package based on the current
+	# sources.list, unpack and use these files for further processing
+	apt-get -d install --reinstall grub >/dev/null
+	grubPackage=`ls -rt /var/cache/apt/archives/grub_*|tail -1`
+	GRUBDIR=$tmp/grubPackage
+	echo "no grub1 installation found in NFSROOT, using downloaded $grubPackage"
+	mkdir -p $GRUBDIR
+	dpkg -x $grubPackage $GRUBDIR
+	cp -p $GRUBDIR/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
+	cp -p $GRUBDIR/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
+	rm -rf $GRUBDIR
+    fi
     cp $grub_config $tmp/boot/grub/menu.lst
     # insert date into grub menu
     if [ $bootonly -eq 1 ]; then
@@ -82,6 +102,81 @@ create_grub_image() {
     cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
     cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
+    boot_image="boot/grub/stage2_eltorito"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_grub2_image() {
+
+    mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir $NFSROOT/boot/grub
+    if [ -f $NFSROOT/boot/grub/core.img ]; then
+	echo "preparing grub2 eltorito.img using existing core.img from NFSROOT"
+	cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
+	MODULEBASE=$NFSROOT/usr/lib/grub/
+    elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
+	echo "preparing grub2 eltorito.img creating core.img in NFSROOT"
+        if chroot $NFSROOT /usr/bin/grub-mkimage --help | grep -q -- --format ; then
+	    chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
+        else
+	    chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660
+        fi
+	cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
+	MODULEBASE=$NFSROOT/usr/lib/grub/
+    else
+	apt-get -d install --reinstall grub-pc >/dev/null
+	grubPackage=`ls -rt /var/cache/apt/archives/grub-pc*|tail -1`
+	echo "no grub2 installation fount in NFSROOT, using downloaded $grubPackage"
+	GRUBDIR=$tmp/grubPackage
+	mkdir -p $GRUBDIR
+	dpkg -x $grubPackage $GRUBDIR
+	cd $GRUBDIR
+	if ./usr/bin/grub-mkimage --help | grep -q -- --format ; then
+	    ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
+	else
+	    ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660
+	fi
+	MODULEBASE=$GRUBDIR/usr/lib/grub/
+    fi
+    for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
+        [[ -e $a ]] && cp $a $tmp/boot/grub
+    done
+    rm -rf $GRUBDIR
+    cp $grub_config $tmp/boot/grub/grub.cfg
+    # insert date into grub menu
+    perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/grub.cfg
+    cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
+    cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
+    cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
+    cat $tmp/boot/grub/cdboot.img $tmp/boot/grub/core.img > $tmp/boot/grub/eltorito.img
+    boot_image="boot/grub/eltorito.img"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+provide_memtest_boot_option() {
+
+    if [ -f $NFSROOT/boot/memtest86+.bin ]; then
+	cp $NFSROOT/boot/memtest86+.bin $tmp/boot
+    elif [ -f /boot/memtest86+.bin ]; then
+	cp /boot/memtest86+.bin $tmp/boot
+    else
+	echo "no memtest86+.bin found, omit memtest boot option"
+	return
+    fi
+    
+    if [ "$grub_version" -eq 1 ]; then
+        cat >> $tmp/boot/grub/menu.lst <<EOF
+
+title           memtest86+
+root		(cd)
+kernel          /boot/memtest86+.bin
+quiet
+EOF
+    elif [ "$grub_version" -eq 2 ]; then
+        cat >> $tmp/boot/grub/grub.cfg <<EOF
+
+menuentry "Memory test (memtest86+)" {
+    linux16 /boot/memtest86+
+}
+EOF
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 customize_nfsroot() {
@@ -133,7 +228,7 @@ mkiso() {
     [ $makeiso -eq 0 ] && return
 
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    mkisofs --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
+    mkisofs --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -l -r -J -b "$boot_image" -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
     echo -n "ISO image size and filename: "; du -h $isoname
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -231,7 +326,7 @@ rsync=0
 [ -x $(which rsync) ] && rsync=1
 
 # Parse commandline options
-while getopts "nkfhHg:bBm:C:u:" opt ; do
+while getopts "nkfhHg:bBG:m:C:u:" opt ; do
     case "$opt" in
         C)  cdir=$OPTARG ;;
 	f)  forceremoval=1 ;;
@@ -243,6 +338,7 @@ while getopts "nkfhHg:bBm:C:u:" opt ; do
 	n)  makeiso=0 ;;
 	b)  burn=1 ;;
 	B)  bootonly=1 ;;
+	G)  grub_version="$OPTARG" ;;
 	u)  usbdir="$OPTARG"
 	    makeusb=1
 	    makeiso=0
@@ -266,6 +362,7 @@ fi
 if [ $bootonly -eq 0 -o $makeusb -eq 1 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
+[ "$grub_version" -eq 1 ] || [ "$grub_version" -eq 2 ] || die 20 "grub version -G must be either 1 or 2."
 
 if [ $makeiso -eq 1 ]; then
     [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
@@ -319,7 +416,15 @@ isoversion="FAI $faiversion -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
-create_grub_image
+if [ "$grub_version" -eq 1 ]; then
+    create_grub1_image
+elif [ "$grub_version" -eq 2 ]; then
+    create_grub2_image
+else
+    echo "grub_version $grub_version not supported, creating grub2 boot image"
+    create_grub2_image
+fi
+provide_memtest_boot_option
 
 if [ $bootonly -eq 1 ]; then
     rm -rf $tmp/live
