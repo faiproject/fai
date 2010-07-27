@@ -65,20 +65,35 @@ umount_ramdisk() {
 
 size= # no default size
 umount=0
+useall=0
 
-while getopts ns:u opt ; do
+# mkramdisk
+
+
+
+while getopts ans:u opt ; do
     case "$opt" in
-        u) umount=1 ;;
-        s) size="-o size=$OPTARG" ;;
-        n) mtab="-n" ;;
+    # -a: mount all dirs listed in FAI_RAMDISKS instead of dirs given as arguments
+        a) useall=1 ;;
+        u) umount=1 ;;       # umount instead of mount
+        s) size="-o size=$OPTARG" ;; # give size of ramdisk
+        n) mtab="-n" ;;      # do not wirte to /etc/mtab
         esac
 done
 shift $(($OPTIND - 1))
 
-# do not use the ramdisk if FAI_NORAMDISK is set to 1
-[ X$FAI_NORAMDISK = X1 ] && exit 0
+if [ -n "$FAI_NORAMDISK" ]; then
+    echo "The use of \$FAI_NORAMDISK is now deprecated. Please use \$FAI_RAMDISKS instead."
+    exit 99
+fi
 
-for d in "$@"; do
+# set default dirs if FAI_RAMDISKS not already set
+: ${FAI_RAMDISKS:="$target/var/lib/dpkg"}
+
+# use arguments $@ unless -a was specified
+[ $useall -eq 0 ] && FAI_RAMDISKS=$@
+
+for d in $FAI_RAMDISKS; do
     if [ $umount -eq 1 ]; then
 	umount_ramdisk $d
     else

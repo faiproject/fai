@@ -544,7 +544,7 @@ task_dirinstall() {
 	# list if dhelp.postinst is starting an index process in the
 	# bg which did not finished until the installation was finished. 
 	[ -f /etc/init.d/udev ] && umount $FAI_ROOT/dev
-	mkramdisk -u $target/var/lib/dpkg 2>/dev/null
+	mkramdisk -au 2>/dev/null
     }
     trap 'clean_exit' INT QUIT EXIT
 
@@ -804,7 +804,7 @@ task_extrbase() {
     # copy crypttab, if setup-storage created one
     [ -f $LOGDIR/crypttab ] && cp -p $LOGDIR/crypttab $FAI_ROOT/etc/crypttab
     # make /var/lib/dpkg a ramdisk
-    mkramdisk $target/var/lib/dpkg
+    mkramdisk -a
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -921,7 +921,7 @@ task_finish() {
 	swapoff -a
     fi
 
-    mkramdisk -u $target/var/lib/dpkg # umount ramdisk
+    mkramdisk -au # umount ramdisk
     # undo fake of all programs made by fai
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
