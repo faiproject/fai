@@ -42,7 +42,7 @@ Index: trunk/bin/dhcp-edit
  # -q quiet: do not print error if host/mac entry not found, exit code 0
  
 -$dhcpdconf="/etc/dhcp3/dhcpd.conf";
-+$dhcpdconf=(-d "/etc/dhcp" ? "/etc/dhcp/dhcpd.conf" : "/etc/dhcp3/dhcpd.conf");
++$dhcpdconf=(-d "/etc/dhcp") ? "/etc/dhcp/dhcpd.conf" : "/etc/dhcp3/dhcpd.conf";
  
  $modified=0; # 1 if dhcpd.conf was modified
  our ($opt_p,$opt_d,$opt_h,$opt_n,$opt_r);
@@ -51,8 +51,8 @@ Index: trunk/bin/dhcp-edit
    }
  
 -  print qx#/etc/init.d/dhcp3-server restart#
-+  print (-x "/etc/init.d/isc-dhcp-server" ? qx#/etc/init.d/isc-dhcp-server# :
-+    qx#/etc/init.d/dhcp3-server restart#)
++  (-x "/etc/init.d/isc-dhcp-server") and print qx#/etc/init.d/isc-dhcp-server# or
++    print qx#/etc/init.d/dhcp3-server restart#;
  }
  # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  
@@ -142,24 +142,6 @@ Index: trunk/doc/fai-guide.txt
  
  By default, the DHCP daemon writes its log files to
  '/var/log/daemon.log'. The command `fai-chboot(8)` is used for
-@@ -2162,7 +2162,7 @@
- Add the following packages to the install server:
- 
- ----
--nucleus:/# apt-get install ntp tftpd-hpa dhcp3-server \
-+nucleus:/# apt-get install ntp tftpd-hpa isc-dhcp-server \
-   nfs-kernel-server etherwake fai
- nucleus:/# tasksel -q -n install dns-server
- nucleus:/# apt-get dselect-upgrade
-@@ -2173,7 +2173,7 @@
- 
- It's very important to use the internal network name +atom00+ for the
- master server (not the external name +nucleus+) in
--'/etc/dhcp3/dhcpd.conf' and 'make-fai-nfsroot.conf'. Replace the
-+'/etc/dhcp/dhcpd.conf' and 'make-fai-nfsroot.conf'. Replace the
- strings FAISERVER with _atom00_ and uncomment the following line in
- 'make-fai-nfsroot.conf' so the Beowulf nodes can use the name for
- connecting to their master server.
 Index: trunk/lib/get-boot-info
 ===================================================================
 --- trunk.orig/lib/get-boot-info
