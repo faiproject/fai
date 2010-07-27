@@ -141,6 +141,7 @@ fi
 [ -z "$TFTPROOT" ] && badupdateto32 "\$TFTPROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
 [ -n "$KERNELPACKAGE" ] && badupdateto32 "The use of \$KERNELPACKAGE is deprecated. Please use $cfdir/NFSROOT now."
 [ ! -d "$cfdir/apt" ] && die "$cfdir/apt/ does not exists. Can't continue."
+[ -n "$FAI_BOOT" ] && die "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment." 
 
 oldnfsroot=$NFSROOT
 NFSROOT="$NFSROOT/live/filesystem.dir"
@@ -457,24 +458,8 @@ fdivert() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 kernel_install() {
 
-# Install the kernel package
-
-    # create tftp boot images
     call_with_stamp install_kernel_nfsroot
-
-    # setup for DHCP, BOOTP or both
-    [ "x$FAI_BOOT" = "x" ] && FAI_BOOT="dhcp"
-    
-    for bootopt in $FAI_BOOT; do
-    	case $bootopt in
-    		dhcp|DHCP)      
-			call_with_stamp setup_dhcp ;;
-    		bootp|BOOTP)      
-			echo "You have to setup BOOTP support manually." ;;
-		*)
-			echo "Unknown boot option" ;;
-    	esac
-    done
+    call_with_stamp setup_dhcp ;;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 run_hooks() {
