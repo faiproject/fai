@@ -2,28 +2,32 @@
 
 # Copyright (c) 2009 by Michael Tautschnig <mt@debian.org>
 
-udev_vol_id="/lib/udev/vol_id"
-udev_blkid="/sbin/blkid"
+vol_id="/lib/udev/vol_id"
+blkid="/sbin/blkid"
 
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_uuid() {
-  if [ -z $udev_vol_id ] ; then
-    $udev_blkid -s UUID -o value $1
+
+  if [ -z $vol_id ] ; then
+    $blkid -s UUID -o value $1
     exit $?
   fi
 
-  /lib/udev/vol_id -u $1
+  $vol_id -u $1
   exit $?
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_label() {
-  if [ -z $udev_vol_id ] ; then
-    $udev_blkid -s LABEL -o value $1
+
+  if [ -z $vol_id ] ; then
+    $blkid -s LABEL -o value $1
     exit $?
   fi
 
-  /lib/udev/vol_id -L $1
+  $vol_id -L $1
   exitcode=$?
-  if [ $exitcode -eq 0 -o $exitcode -eq 3 ] ; then
+  if [ $exitcode -eq 3 ] ; then
     exitcode=0
   fi
   exit $exitcode
@@ -32,10 +36,10 @@ get_label() {
 
 # main program
 
-if [ -e $udev_blkid ] ; then
-  udev_vol_id=""
+if [ -e $blkid ] ; then
+  vol_id=""
 else
-  if [ ! -e $udev_vol_id ] ; then
+  if [ ! -e $vol_id ] ; then
     "Neither udev vol_id nor blkid found!"
     exit 1
   fi
