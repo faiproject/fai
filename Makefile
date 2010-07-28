@@ -25,7 +25,7 @@ veryclean: clean
 install: 
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,dhcp3,apt/apt.conf.d}
 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
-	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps,setup-storage}
+	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps/small,setup-storage}
 	install man/* $(DESTDIR)/man
 	pod2man -c '' -r '' -s8 bin/dhcp-edit > $(DESTDIR)/man/dhcp-edit.8
 	$(MAKE) -C doc install
@@ -45,7 +45,8 @@ install:
 	install -m644 conf/menu.lst.boot-only $(DESTDIR)/usr/share/fai/menu.lst
 	install -m644 conf/upstart-fai.conf $(DESTDIR)/etc/init/fai.conf
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
-	install -p -m644 pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
+	cp -a pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
+	cp -a pixmaps/small/*.gif $(DESTDIR)/usr/share/fai/pixmaps/small
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
 	cp -a utils $(DOCDIR)/examples

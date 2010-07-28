@@ -6,7 +6,7 @@
 # faimond-gui: graphical FAI monitor daemon
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2007,2009 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2007-2010 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -29,6 +29,7 @@
 
 # TODO: Add support for TASKERROR
 
+use Getopt::Std;
 use Tk;
 use Tk::HList;
 use Tk::ItemStyle;
@@ -36,9 +37,9 @@ use Tk::ItemStyle;
 
 my $tcounter;
 my $n;
+our ($opt_s);
 
 $debug = 0;
-$icondir='/usr/share/fai/pixmaps';
 
 #@tasklist = qw/hostname confdir defclass action partition mountdisks extrbase mirror debconf prepareapt instsoft configure chboot savelog faiend reboot/;
 @tasklist = qw/hostname confdir defclass partition extrbase debconf instsoft configure tests savelog faiend reboot/;
@@ -71,13 +72,13 @@ sub mkgraphics {
   $defstyle = $hlist->ItemStyle("imagetext",
 				-foreground => $forecolor,
 				-background => $backcolor,
-				-font => $font,
+				-font => $font2,
 			       );
 
   $headerstyle = $hlist->ItemStyle("imagetext",
 				   -bg=>$backcolor,
 				   -fg=>$headercolor,
-				   -font=>$font
+				   -font=>$font1
 				  );
 
   # not yet used
@@ -140,19 +141,46 @@ sub hostentry {
 
 }
 # -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+sub usage {
+
+  print << "EOF";
+faimond-gui, graphical FAI monitor daemon
+
+   Copyright (C) 2007-2010 by Thomas Lange
+
+Usage: faimond | faimond-gui -
+
+   -s                   Use smaller icons.
+
+EOF
+  exit 0;
+}
+# -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
 # main program
 
-open(INP, "<$ARGV[0]") or die "Can't open input file. $@";
+getopts('s') || usage;
+
+if ($opt_s) {
+  $font1="Sans 13";
+  $font2="Sans 7";
+  $icondir='/usr/share/fai/pixmaps/small';
+} else {
+  $font1="Sans 15";
+  $font2="Sans 10";
+  $icondir='/usr/share/fai/pixmaps';
+}
 
 $backcolor="#76716f";
 $forecolor="#ffffff";
 $headercolor="#ffffff";
-$font="Sans 15";
+
+open(INP, "<$ARGV[0]") or die "Can't open input file. $@";
 
 $top = new MainWindow;
 #$top->configure(-background=> $backcolor);
 $hlist = $top->Scrolled("HList",
             -header => 1,
+            -font => $font2,
             -columns => $#tasklist+1,
             -scrollbars => 'oe',
             -width => 102,
