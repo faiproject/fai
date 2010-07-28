@@ -33,7 +33,7 @@
 
 set -e 
 
-# last die exit code 20
+# last die exit code 22
 
 grub_version=2
 boot_image="boot/grub/eltorito.img"
@@ -80,8 +80,13 @@ create_grub1_image() {
     else
 	# if grub1 is not available in NFSROOT, we download the package based on the current
 	# sources.list, unpack and use these files for further processing
+	# this does not work if file: URI's are used in sources.lst
 	apt-get -d install --reinstall grub >/dev/null
 	grubPackage=`ls -rt /var/cache/apt/archives/grub_*|tail -1`
+	if [ -z "$grubPackage" ]; then
+	    die 21 "Downloading grub failed."
+	fi
+
 	GRUBDIR=$tmp/grubPackage
 	echo "no grub1 installation found in NFSROOT, using downloaded $grubPackage"
 	mkdir -p $GRUBDIR
@@ -122,9 +127,12 @@ create_grub2_image() {
 	cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
 	MODULEBASE=$NFSROOT/usr/lib/grub/
     else
-	apt-get -d install --reinstall grub-pc >/dev/null
+	echo "no grub2 installation found in NFSROOT, using downloaded $grubPackage"
+	apt-get -y -d install --reinstall grub-pc >/dev/null
 	grubPackage=`ls -rt /var/cache/apt/archives/grub-pc*|tail -1`
-	echo "no grub2 installation fount in NFSROOT, using downloaded $grubPackage"
+	if [ -z "$grubPackage" ]; then
+	    die 22 "Downloading grub2 failed."
+	fi
 	GRUBDIR=$tmp/grubPackage
 	mkdir -p $GRUBDIR
 	dpkg -x $grubPackage $GRUBDIR
