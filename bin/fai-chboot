@@ -56,6 +56,21 @@ sub host2hex {
   }
   return ('no IP','default') if ($host =~ /^default/);
 
+  # MAC address with separator "-" or ":"
+  if ($host =~ /^([0-9a-fA-F]{2}([:-]|$)){6}$/i) { # pattern matching
+    $host = lc $host; # lowercase for pxe-file
+    my @nums = split /[:-]/, $host;
+    $mac = join ('-', "01",@nums); # build pxe-filename
+    return ('no IP',$mac);
+  }
+
+  if ($host =~ /^[0-9a-fA-F]{12}$/i) { # pattern matching MAC address w/o separator
+    $host = lc $host;
+    my @nums = split /(.{2})/, $host;
+    $mac = join ('-', "01",@nums[1,3,5,7,9,11]); # build pxe-filename
+    return ('no IP',$mac);
+  }
+
   my $h = gethost($host);
   die "$0: unknown host: $host\n" unless $h;
 
@@ -133,7 +148,12 @@ sub lsdir {
       $type = '[Template]';
     }
 
-    if ($hex =~ /^[0-9A-F]+/) {
+    if ($hex =~ /^01-[0-9A-F-]{17}$/i) {
+      $host = "$hex";
+      $type = '[MAC address]';
+    }
+
+    if (($hex =~ /^[0-9A-F]+/) && ($hex !~ /^01-/) ) {
       my $hexstrip = (split /\./,$hex)[0]; # remove .disable if necessary
       $n = $hexstrip;
       # hex to ip/subnet address
@@ -210,7 +230,7 @@ sub printpxe {
     $append =~ /FAI_ACTION=(\S+)/;
     $append = $1;
 #   printf "%-16.16s $append $kernelname %-8s\n",$host,$hex;
-    printf "%-26.26s  %-20.20s $append $kernelname\n",$type?$type:$host,$hex;
+    printf "%-26.26s  %-22.22s $append $kernelname\n",$type?$type:$host,$hex;
   } else {
     printf "%s %s $kernelname $append\n",$type?$type:$host,$hex;
   }
