@@ -5,7 +5,7 @@
 # fai -- main installation script executed after booting
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 1999-2009 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 1999-2010 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -112,7 +112,7 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
     cat <<-EOF
-	fai $FAI_VERSION. Copyright (C) 1999-2009 Thomas Lange
+	fai $FAI_VERSION. Copyright (C) 1999-2010 Thomas Lange
 	Usage: $0 [options] [action]
 
 	Options:
@@ -162,51 +162,36 @@ unset TEMP
 while true ; do
     case "$1" in
         -h|--help)
-	    shift
-	    usage
-            ;;
+	    usage ;;
 	-v|--verbose)
-	    shift
 	    export verbose=1
-	    ;;
+	    shift ;;
 	-N|--new)
-	    shift
 	    renewclass=1
-	    ;;
+	    shift ;;
 	-C|--cfdir)
-	    shift
-	    cfdir=$1
-	    shift
-	    ;;
+	    cfdir=$2
+	    shift 2 ;;
 	-c|--class)
-
 	    if [ $renewclass -eq 1 ]; then
 		echo "You can't use -c|--classes and -N|--new at the same time."
 		exit 9
 	    fi
-	    shift
-	    export cmdlineclasses=$1
-	    shift
+	    export cmdlineclasses=$2
 	    cmdlineclasses=${cmdlineclasses//,/ }
-	    ;;
+	    shift 2 ;;
 	-s|--cspace)
-	    shift
-	    cspace=$1
-	    shift
-	    ;;
+	    cspace=$2
+	    shift 2 ;;
 	-u|--hostname)
-	    shift
-	    export newhostname=$1
-	    shift
-	    ;;
+	    export newhostname=$2
+	    shift 2 ;;
         --) 
             shift
-            break
-            ;;
+            break ;;
          *)
             echo "$0: command line parsing error ! $@"
-            exit 1
-            ;;
+            exit 1 ;;
     esac
 done
 
@@ -294,8 +279,7 @@ else
     ln -snf $action-$fai_rundate $LOGDIR/../last-$action
     ln -snf $action-$fai_rundate $LOGDIR/../last
 fi
-chown root $LOGDIR
-chgrp adm  $LOGDIR
+chown root:adm $LOGDIR
 chmod 0750 $LOGDIR
 
 fai_init
