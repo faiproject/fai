@@ -55,6 +55,7 @@ sub build_mkfs_commands {
   defined ($partition->{filesystem})
     or &FAI::internal_error("filesystem is undefined");
   my $fs = $partition->{filesystem};
+  my $journal = $partition->{journal_dev};
 
   return if ($fs eq "-");
 
@@ -67,13 +68,45 @@ sub build_mkfs_commands {
   print "$partition->{mountpoint} FS create_options: $create_options\n" if ($FAI::debug && $create_options);
   print "$partition->{mountpoint} FS tune_options: $tune_options\n" if ($FAI::debug && $tune_options);
 
-  # create the file system with options
-  my $create_tool = "mkfs.$fs";
-  ($fs eq "swap") and $create_tool = "mkswap";
-  ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
-  ($fs eq "reiserfs") and $create_options = "$create_options -q" unless ($create_options =~ m/-(f|q|y)/);
-  &FAI::push_command( "$create_tool $create_options $device", "exist_$device",
-    "has_fs_$device" );
+  my $prereqs = "exist_$device";
+  my $provides;
+  my $create_tool;
+
+  # create filesystem journal
+  if ($fs =~ m/.*_journal$/) {
+      $provides = "journal_preped_$device";
+      undef($tune_options);
+
+      if ($fs =~ /ext[34]_journal/) {
+	  $create_tool = "mke2fs";
+	  $create_options = "-O journal_dev";
+      } elsif ($fs eq "xfs_journal") {
+	  $create_tool = "/bin/true";
+	  $create_options = "";
+      } else {
+	  &FAI::internal_error("unsupported journal type $fs");
+      }
+  } else {
+      # create regular filesystem
+      $provides = "has_fs_$device";
+      $create_tool = "mkfs.$fs";
+
+      ($fs eq "swap") and $create_tool = "mkswap";
+      ($fs eq "xfs") and $create_options = "$create_options -f" unless ($create_options =~ m/-f/);
+      ($fs eq "reiserfs") and $create_options = "$create_options -q" unless ($create_options =~ m/-(f|q|y)/);
+
+      # adjust options for filesystem with external journal
+      if (defined($journal)) {
+	  $journal =~ s/^journal=//;
+	  $prereqs = "$prereqs,journal_preped_$journal";
+
+	  ($fs eq "xfs") and $create_options = "$create_options -l logdev=$journal";
+	  ($fs eq "ext3") and $create_options = "$create_options -J device=$journal";
+	  ($fs eq "ext4") and $create_options = "$create_options -J device=$journal";
+      }
+  }
+
+  &FAI::push_command( "$create_tool $create_options $device", $prereqs, $provides);
 
   # possibly tune the file system - this depends on whether the file system
   # supports tuning at all
@@ -143,14 +176,15 @@ sub set_partition_type_on_phys_dev {
 
   my ($d, $t) = @_;
   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
-  return unless $i_p_d;
+  return 0 unless $i_p_d;
   # make sure this device really exists (we can't check for the partition
   # as that may be created later on
   (-b $disk) or die "Specified disk $disk does not exist in this system!\n";
   # set the raid/lvm unless this is an entire disk flag
   my $cmd = "parted -s $disk set $part_no $t on";
   $cmd = "true" if ($part_no == -1);
-  &FAI::push_command( $cmd, "exist_$d", "type_${t}_$d" );
+  &FAI::push_command( $cmd, "cleared2_$disk,exist_$d", "type_${t}_$d" );
+  return 1;
 }
 
 ################################################################################
@@ -236,8 +270,8 @@ sub build_cryptsetup_commands {
 sub build_raid_commands {
 
   foreach my $config (keys %FAI::configs) { # loop through all configs
-    # no LVM or physical devices here
-    next if ($config eq "CRYPT" || $config =~ /^VG_./ || $config =~ /^PHY_./);
+    # no encrypted, tmpfs, LVM or physical devices here
+    next if ($config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
     ($config eq "RAID") or &FAI::internal_error("Invalid config $config");
 
     # create all raid devices
@@ -245,11 +279,20 @@ sub build_raid_commands {
 
       # keep a reference to the current volume
       my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
+
+      # if it is a volume that has to be preserved, there is not much to be
+      # done; its existance has been checked in propagate_and_check_preserve
+      if ($vol->{preserve}) {
+        &FAI::push_command("true", "", "exist_/dev/md$id");
+        # create the filesystem on the volume, if requested
+        &FAI::build_mkfs_commands("/dev/md$id",
+          \%{ $FAI::configs{$config}{volumes}{$id} })
+          if (1 == $vol->{always_format});
+        next;
+      }
+
       # the desired RAID level
       my $level = $vol->{mode};
-
-      warn "RAID implementation is incomplete - preserve is not supported\n" if
-        ($vol->{preserve});
 
       # prepend "raid", if the mode is numeric-only
       $level = "raid$level" if ($level =~ /^\d+$/);
@@ -308,29 +351,6 @@ sub build_raid_commands {
 
 ################################################################################
 #
-# @brief Erase the LVM signature from a list of devices that should be prestine
-# in order to avoid confusion of the lvm tools
-#
-################################################################################
-sub erase_lvm_signature {
-
-  my ($devices_aref) = @_;
-  # first remove the dm_mod module to prevent ghost lvm volumes 
-  # from existing
-  # push @FAI::commands, "modprobe -r dm_mod";
-  # zero out (broken?) lvm signatures
-  # push @FAI::commands, "dd if=/dev/zero of=$_ bs=1 count=1"
-  #   foreach ( @{$devices_aref} );
-  my $device_list = join (" ", @{$devices_aref});
-  $FAI::debug and print "Erased devices: $device_list\n"; 
-  &FAI::push_command( "pvremove -ff -y $device_list", "", "pv_sigs_removed" );
-
-  # reload module
-  # push @FAI::commands, "modprobe dm_mod";
-}
-
-################################################################################
-#
 # @brief Create the volume group $config, unless it exists already; if the
 # latter is the case, only add/remove the physical devices
 #
@@ -343,24 +363,6 @@ sub create_volume_group {
   ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
   my $vg = $1; # the actual volume group
 
-  my $vg_exists = 0;
-  if (defined ($FAI::current_lvm_config{$vg})) {
-    $vg_exists = 1;
-    foreach my $dev (@{ $FAI::current_lvm_config{$vg}{"physical_volumes"} }) {
-      my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
-      # if this is not a physical disk, just assume that the volume group will
-      # not exist anymore
-      if ($i_p_d) {
-        defined ($FAI::configs{"PHY_$disk"}) or next;
-        defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}) and
-          ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve}) and
-          next;
-      }
-      $vg_exists = 0;
-      last;
-    }
-  }
-
   my ($pv_create_options) = $FAI::configs{$config}{pvcreateopts};
   my ($vg_create_options) = $FAI::configs{$config}{vgcreateopts};
   # prevent warnings of uninitialized variables
@@ -368,59 +370,82 @@ sub create_volume_group {
   $vg_create_options = '' unless $vg_create_options;
   print "/dev/$vg PV create_options: $pv_create_options\n" if ($FAI::debug && $pv_create_options);
   print "/dev/$vg VG create_options: $vg_create_options\n" if ($FAI::debug && $vg_create_options);
+
   # create the volume group, if it doesn't exist already
-  if (!$vg_exists) {
-    # create all the devices
-    my @devices = ();
-    push @devices, &FAI::enc_name($_) foreach (keys %{ $FAI::configs{$config}{devices} });
-    &FAI::erase_lvm_signature(\@devices);
-    &FAI::push_command( "pvcreate $pv_create_options $_",
-      "pv_sigs_removed,exist_$_", "pv_done_$_") foreach (@devices);
-    # create the volume group
+  if (!defined($FAI::configs{"VG_$vg"}{exists})) {
     my $pre_dev = "";
-    $pre_dev .= ",exist_$_,pv_done_$_" foreach (@devices);
+    my $devs = "";
+    # create all the devices
+    foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
+      my $dev = &FAI::enc_name($d);
+
+      # set proper partition types for LVM
+      my $type_pre = "";
+      $type_pre .= ",type_lvm_$dev" if (&FAI::set_partition_type_on_phys_dev($dev, "lvm"));
+
+      &FAI::push_command( "pvcreate $pv_create_options $dev",
+        "all_pv_sigs_removed,exist_$dev$type_pre", "pv_done_$dev");
+      $devs .= " $dev";
+      $pre_dev .= ",pv_done_$dev";
+    }
     $pre_dev =~ s/^,//;
-    &FAI::push_command( "vgcreate $vg_create_options $vg " . join (" ",
-        @devices), "$pre_dev", "vg_created_$vg" );
+
+    # create the volume group
+    &FAI::push_command( "vgcreate $vg_create_options $vg $devs",
+      "$pre_dev", "vg_created_$vg" );
+
     # we are done
     return;
   }
 
   # otherwise add or remove the devices for the volume group, run pvcreate
   # where needed
-  # the list of devices to be created
-  my %new_devs = ();
-
-  # create an undefined entry for each new device
-  @new_devs{ keys %{ $FAI::configs{$config}{devices} } } = ();
-
-  my @new_devices = ();
-  push @new_devices, &FAI::enc_name($_) foreach (keys %new_devs);
-
-  # &FAI::erase_lvm_signature( \@new_devices );
-
-  # create all the devices
-  &FAI::push_command( "pvcreate $pv_create_options $_", "exist_$_", "pv_done_$_"
-    ) foreach (@new_devices);
-
-  # extend the volume group by the new devices (includes the current ones)
-  my $pre_dev = "";
-  $pre_dev .= ",pv_done_$_" foreach (@new_devices);
-  $pre_dev =~ s/^,//;
-  &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
-    "vg_extended_$vg" );
-
-  # the devices to be removed
+  # the devices to be removed later on
   my %rm_devs = ();
   @rm_devs{ @{ $FAI::current_lvm_config{$vg}{"physical_volumes"} } } = ();
 
+  # all devices of this VG
+  my @all_devices = ();
+
+  # the list of devices to be created
+  my @new_devices = ();
+
+  # create an undefined entry for each device
+  foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
+    my $denc = &FAI::enc_name($d);
+    push @all_devices, $denc;
+    push @new_devices, $denc unless (exists($rm_devs{$denc}));
+  }
+
   # remove remaining devices from the list
-  delete $rm_devs{$_} foreach (@new_devices);
+  delete $rm_devs{$_} foreach (@all_devices);
+
+  # create all the devices
+  my $pre_dev = "vg_exists_$vg";
+  foreach my $dev (@new_devices) {
+    # set proper partition types for LVM
+    my $type_pre = "";
+    $type_pre .= ",type_lvm_$dev" if (&FAI::set_partition_type_on_phys_dev($dev, "lvm"));
+
+    &FAI::push_command( "pvcreate $pv_create_options $dev",
+      "all_pv_sigs_removed,exist_$dev$type_pre", "pv_done_$dev");
+    $pre_dev .= ",pv_done_$dev";
+  }
+  $pre_dev =~ s/^,//;
+
+
+  # extend the volume group by the new devices
+  if (scalar (@new_devices)) {
+    &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
+      "vg_extended_$vg" );
+  } else {
+    &FAI::push_command( "true", "all_pv_sigs_removed,$pre_dev", "vg_extended_$vg" );
+  }
 
   # run vgreduce to get them removed
   if (scalar (keys %rm_devs)) {
     $pre_dev = "";
-    $pre_dev .= ",pv_done_$_" foreach (keys %rm_devs);
+    $pre_dev .= ",exist_$_" foreach (keys %rm_devs);
     &FAI::push_command( "vgreduce $vg " . join (" ", keys %rm_devs),
       "vg_extended_$vg$pre_dev", "vg_created_$vg" );
   } else {
@@ -442,25 +467,6 @@ sub setup_logical_volumes {
   ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
   my $vg = $1; # the actual volume group
 
-  my $lv_rm_pre = "";
-  my $lv_resize_pre = "";
-  # remove, resize, create the logical volumes
-  # remove all volumes that do not exist anymore or need not be preserved
-  foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
-    # skip preserved/resized volumes
-    if (defined ( $FAI::configs{$config}{volumes}{$lv})
-      && ($FAI::configs{$config}{volumes}{$lv}{size}{preserve} == 1)) {
-      $lv_resize_pre .= ",lv_resize_$vg/$lv" if
-        $FAI::configs{$config}{volumes}{$lv}{size}{resize};
-      next;
-    }
-
-    &FAI::push_command( "lvremove -f $vg/$lv", "vg_enabled_$vg", "lv_rm_$vg/$lv");
-    $lv_rm_pre .= ",lv_rm_$vg/$lv";
-  }
-  $lv_rm_pre =~ s/^,//;
-  $lv_resize_pre =~ s/^,//;
-
   # now create or resize the configured logical volumes
   foreach my $lv (keys %{ $FAI::configs{$config}{volumes} }) {
     # reference to the size of the current logical volume
@@ -470,6 +476,10 @@ sub setup_logical_volumes {
       defined ($FAI::current_lvm_config{$vg}{volumes}{$lv})
         or die "Preserved volume $vg/$lv does not exist\n";
       warn "$vg/$lv will be preserved\n";
+      # create the filesystem on the volume, if requested
+      &FAI::build_mkfs_commands("/dev/$vg/$lv",
+        \%{ $FAI::configs{$config}{volumes}{$lv} })
+        if (1 == $lv_size->{always_format});
       next;
     }
 
@@ -479,36 +489,139 @@ sub setup_logical_volumes {
         or die "Resized volume $vg/$lv does not exist\n";
       warn "$vg/$lv will be resized\n";
 
-      if ($lv_size->{eff_size} <
-        $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
+      use POSIX qw(floor);
+
+      my $lvsize_mib = &FAI::convert_unit($lv_size->{eff_size} . "B");
+      if ($lvsize_mib < $FAI::current_lvm_config{$vg}{volumes}{$lv}{size})
       {
-        &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
-          "vg_enabled_$vg,$lv_rm_pre", "lv_shrink_$vg/$lv" );
-        &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
-          "vg_enabled_$vg,$lv_rm_pre,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
+        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
+            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
+          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
+          &FAI::push_command( "e2fsck -p -f /dev/$vg/$lv",
+            "vg_enabled_$vg,exist_/dev/$vg/$lv", "e2fsck_f_resize_$vg/$lv" );
+          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
+            "e2fsck_f_resize_$vg/$lv", "lv_shrink_$vg/$lv" );
+        } else {
+          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+            "vg_enabled_$vg", "lv_shrink_$vg/$lv" );
+        }
+        &FAI::push_command( "lvresize -L $lvsize_mib $vg/$lv",
+          "vg_enabled_$vg,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
       } else {
-        &FAI::push_command( "lvresize -L " . $lv_size->{eff_size} . " $vg/$lv",
-          "vg_enabled_$vg,$lv_rm_pre", "lv_grow_$vg/$lv" );
-        &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
-          "vg_enabled_$vg,$lv_rm_pre,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
+        &FAI::push_command( "lvresize -L $lvsize_mib $vg/$lv",
+          "vg_enabled_$vg,exist_/dev/$vg/$lv", "lv_grow_$vg/$lv" );
+        if (($FAI::configs{$config}{volumes}{$lv}{filesystem} =~
+            /^ext[23]$/) && &FAI::in_path("resize2fs")) {
+          my $block_count = POSIX::floor($lv_size->{eff_size} / 512);
+          &FAI::push_command( "e2fsck -p -f /dev/$vg/$lv",
+            "vg_enabled_$vg,lv_grow_$vg/$lv", "e2fsck_f_resize_$vg/$lv" );
+          &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
+            "e2fsck_f_resize_$vg/$lv", "exist_/dev/$vg/$lv" );
+        } else {
+          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+            "vg_enabled_$vg,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
+        }
       }
 
+      # create the filesystem on the volume, if requested
+      &FAI::build_mkfs_commands("/dev/$vg/$lv",
+        \%{ $FAI::configs{$config}{volumes}{$lv} })
+        if (1 == $lv_size->{always_format});
       next;
     }
 
     my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
     # prevent warnings of uninitialized variables
     $create_options = '' unless $create_options;
-  print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
+    print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
     # create a new volume
     &FAI::push_command( "lvcreate $create_options -n $lv -L " .
-      $lv_size->{eff_size} . " $vg", "vg_enabled_$vg,$lv_rm_pre",
+      &FAI::convert_unit($lv_size->{eff_size} . "B") . " $vg", "vg_enabled_$vg",
       "exist_/dev/$vg/$lv" );
 
     # create the filesystem on the volume
     &FAI::build_mkfs_commands("/dev/$vg/$lv",
       \%{ $FAI::configs{$config}{volumes}{$lv} });
   }
+}
+
+################################################################################
+#
+# @brief Remove existing volume group if underlying devices will be modified,
+# otherwise add proper exist_ preconditions
+#
+################################################################################
+sub cleanup_vg {
+
+  my ($vg) = @_;
+  my $clear_vg = 0;
+
+  foreach my $dev (@{ $FAI::current_lvm_config{$vg}{"physical_volumes"} }) {
+    my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
+    if ($i_p_d) {
+      defined ($FAI::configs{"PHY_$disk"}) or next;
+      defined ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}) and
+        ($FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve}) and
+        next;
+    } elsif ($dev =~ m{^/dev/md[\/]?(\d+)$}) {
+      my $vol = $1;
+      defined ($FAI::configs{RAID}{volumes}{$vol}) or next;
+      next if (1 == $FAI::configs{RAID}{volumes}{$vol}{preserve});
+    } elsif ($dev =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
+      my $ivg = $1;
+      my $lv = $2;
+      defined($FAI::configs{"VG_$ivg"}{volumes}{$lv}) or next;
+      next if (1 == $FAI::configs{"VG_$ivg"}{volumes}{$lv}{size}{preserve});
+    } else {
+      warn "Don't know how to check preservation of $dev\n";
+      next;
+    }
+    $clear_vg = 1;
+    last;
+  }
+
+  if (0 == $clear_vg) {
+    my $vg_setup_pre = "vgchange_a_n";
+    if (defined($FAI::configs{"VG_$vg"}{volumes})) {
+      $FAI::configs{"VG_$vg"}{exists} = 1;
+
+      # remove all volumes that do not exist anymore or need not be preserved
+      foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
+        # skip preserved/resized volumes
+        if (defined ( $FAI::configs{"VG_$vg"}{volumes}{$lv})) {
+          if ($FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} == 1 ||
+            $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{resize} == 1) {
+            &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$lv");
+            next;
+          }
+        }
+
+        &FAI::push_command( "lvremove -f $vg/$lv", "vgchange_a_n", "lv_rm_$vg/$lv");
+        $vg_setup_pre .= ",lv_rm_$vg/$lv";
+      }
+    } else {
+      &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$_") foreach
+        (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
+    }
+    &FAI::push_command("true", $vg_setup_pre, "vg_exists_$vg");
+
+    return 0;
+  }
+
+  my $vg_destroy_pre = "vgchange_a_n";
+  foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
+    &FAI::push_command( "lvremove -f $vg/$lv", "vgchange_a_n", "lv_rm_$vg/$lv");
+    $vg_destroy_pre .= ",lv_rm_$vg/$lv";
+  }
+  &FAI::push_command( "vgremove $vg", "$vg_destroy_pre", "vg_removed_$vg");
+
+  # clear all the devices
+  my $devices = "";
+  $devices .= " " . &FAI::enc_name($_) foreach
+    (@{ $FAI::current_lvm_config{$vg}{physical_volumes} });
+  $FAI::debug and print "Erased devices:$devices\n";
+  &FAI::push_command( "pvremove $devices", "", "pv_sigs_removed_$vg" );
+  return 1;
 }
 
 ################################################################################
@@ -520,33 +633,31 @@ sub setup_logical_volumes {
 ################################################################################
 sub build_lvm_commands {
 
+  # disable volumes if there are pre-existing ones
+  my $all_vg_pre = "";
+  if (scalar(keys %FAI::current_lvm_config)) {
+    &FAI::push_command("vgchange -a n", "", "vgchange_a_n");
+    foreach my $vg (keys %FAI::current_lvm_config) {
+      $all_vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
+    }
+    $all_vg_pre =~ s/^,//;
+  }
+  &FAI::push_command("true", "$all_vg_pre", "all_pv_sigs_removed");
+
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
 
-    # no physical devices, RAID or encrypted here
-    next if ($config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT");
+    # no physical devices, RAID, encrypted or tmpfs here
+    next if ($config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS");
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group
-
-    # set proper partition types for LVM
-    &FAI::set_partition_type_on_phys_dev($_, "lvm")
-      foreach (keys %{ $FAI::configs{$config}{devices} });
-    my $type_pre = "";
-    foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
-      $d = &FAI::enc_name($d);
-      if ((&FAI::phys_dev($d))[0]) {
-        $type_pre .= ",type_lvm_$d"
-      } else {
-        $type_pre .= ",exist_$d"
-      }
-    }
 
     # create the volume group or add/remove devices
     &FAI::create_volume_group($config);
     # enable the volume group
     &FAI::push_command( "vgchange -a y $vg",
-      "vg_created_$vg$type_pre", "vg_enabled_$vg" );
+      "vg_created_$vg", "vg_enabled_$vg" );
 
     # perform all necessary operations on the underlying logical volumes
     &FAI::setup_logical_volumes($config);
@@ -755,8 +866,8 @@ sub setup_partitions {
     or die "Can't change disklabel, partitions are to be preserved\n";
 
   # write the disklabel to drop the previous partition table
-  &FAI::push_command( "parted -s $disk mklabel $label", "exist_$disk",
-    "cleared1_$disk" );
+  &FAI::push_command( "parted -s $disk mklabel $label",
+    "exist_$disk,all_pv_sigs_removed", "cleared1_$disk" );
 
   &FAI::rebuild_preserved_partitions($config, \@to_preserve);
 
@@ -830,25 +941,42 @@ sub setup_partitions {
     my $start = $part->{start_byte};
     my $end = $part->{end_byte};
 
+    # ntfs/ext2,3 partition can't be moved
+    ($start == $FAI::current_config{$disk}{partitions}{$mapped_id}{begin_byte})
+      or &FAI::internal_error(
+        $FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem}
+          . " partition start supposed to move, which is not allowed") if
+      ($FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem} =~
+        /^(ntfs|ext[23])$/);
+
     # build an appropriate command
     # ntfs requires specific care
     if ($FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem} eq
       "ntfs") {
       # check, whether ntfsresize is available
       &FAI::in_path("ntfsresize") or die "ntfsresize not found in PATH\n";
-      # ntfs partition can't be moved
-      ($start == $FAI::current_config{$disk}{partitions}{$mapped_id}{begin_byte}) 
-        or &FAI::internal_error("ntfs partition supposed to move");
-      # ntfsresize requires device names
-      my $eff_size = $part->{size}->{eff_size};
 
-      &FAI::push_command( "yes | ntfsresize -s $eff_size " .
+      &FAI::push_command( "yes | ntfsresize -s " . $part->{size}->{eff_size} .
         &FAI::make_device_name($disk, $p), "rebuilt_" .
         &FAI::make_device_name($disk, $p) . $deps, "ntfs_ready_for_rm_" .
         &FAI::make_device_name($disk, $p) );
+      # TODO this is just a hack, we would really need support for resize
+      # without data resize in parted, which will be added in some parted
+      # version > 2.1
       &FAI::push_command( "parted -s $disk rm $p", "ntfs_ready_for_rm_" .
         &FAI::make_device_name($disk, $p), "resized_" .
         &FAI::make_device_name($disk, $p) );
+    ## } elsif (($FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem} =~
+    ##     /^ext[23]$/) && &FAI::in_path("resize2fs")) {
+    ##   TODO: BROKEN needs more checks, enlarge partition table before resize, just as
+    ##   NTFS case
+    ##   my $block_count = $part->{size}->{eff_size} / 512;
+    ##   &FAI::push_command( "e2fsck -p -f " . &FAI::make_device_name($disk, $p),
+    ##     "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps,
+    ##     "e2fsck_f_resize_" .  &FAI::make_device_name($disk, $p) );
+    ##   &FAI::push_command( "resize2fs " . &FAI::make_device_name($disk, $p) .
+    ##     " ${block_count}s", "e2fsck_f_resize_" . &FAI::make_device_name($disk, $p),
+    ##     "resized_" .  &FAI::make_device_name($disk, $p) );
     } else {
       &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
         "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps, "resized_" .
@@ -886,12 +1014,14 @@ sub setup_partitions {
       }
     }
 
-    my $fs = $part->{filesystem};
-    $fs = "" unless defined($fs);
+    my $fs = (defined($part->{filesystem}) && $part->{filesystem} =~ /\S+/) ?
+      $part->{filesystem} : "-";
+    ($fs) = split(/:/, $fs);
     $fs = "linux-swap" if ($fs eq "swap");
     $fs = "fat32" if ($fs eq "vfat");
     $fs = "fat16" if ($fs eq "msdos");
     $fs = "ext3" if ($fs eq "ext4");
+    $fs = "" if ($fs =~ m/.*_journal$/);
     $fs = $FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem}
       if ($part->{size}->{preserve} || $part->{size}->{resize});
     $fs = "" if ($fs eq "-");
@@ -932,8 +1062,8 @@ sub build_disk_commands {
 
   # loop through all configs
   foreach my $config ( keys %FAI::configs ) {
-    # no RAID, encrypted or LVM devices here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^VG_./);
+    # no RAID, encrypted, tmpfs or LVM devices here
+    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
     my $disk = $1; # the device to be configured
 
@@ -956,8 +1086,9 @@ sub build_disk_commands {
       my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
 
       # skip preserved/resized/extended partitions
-      next if ($part->{size}->{preserve} == 1
-        || $part->{size}->{resize} == 1 || $part->{size}->{extended} == 1);
+      next if (($part->{size}->{always_format} == 0 &&
+          ($part->{size}->{preserve} == 1 || $part->{size}->{resize} == 1))
+        || $part->{size}->{extended} == 1);
 
       # create the filesystem on the device
       &FAI::build_mkfs_commands( &FAI::make_device_name($disk, $part_id), $part );

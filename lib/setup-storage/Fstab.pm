@@ -59,9 +59,10 @@ sub create_fstab_line {
   push @fstab_line, ($d_ref->{mountpoint}, $d_ref->{filesystem},
     $d_ref->{mount_options}, 0, 2);
   # order of filesystem checks: the root filesystem gets a 1, the others
-  # get 2, swap gets 0
+  # get 2, swap and tmpfs get 0
   $fstab_line[-1] = 1 if ($d_ref->{mountpoint} eq "/");
   $fstab_line[-1] = 0 if ($d_ref->{filesystem} eq "swap");
+  $fstab_line[-1] = 0 if ($d_ref->{filesystem} eq "tmpfs");
 
   # set the ROOT_PARTITION variable, if this is the mountpoint for /
   $FAI::disk_var{ROOT_PARTITION} = $name
@@ -270,6 +271,29 @@ sub generate_fstab {
           die "Boot partition cannot be encrypted\n";
 
         push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
+      }
+    } elsif ($c eq "TMPFS") {
+      # not usable for /boot
+      next;
+    } elsif ($c eq "TMPFS") {
+      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+        my $c_ref = $config->{$c}->{volumes}->{$v};
+
+        next if ($c_ref->{mountpoint} eq "-");
+
+        ($c_ref->{mountpoint} eq "/boot" || ($c_ref->{mountpoint} eq "/" &&
+            !defined ($FAI::disk_var{BOOT_PARTITION}))) and
+          die "Boot partition cannot be a tmpfs\n";
+
+	if (($c_ref->{mount_options} =~ m/size=/) || ($c_ref->{mount_options} =~ m/nr_blocks=/)) {
+          warn "Specified tmpfs size for $c_ref->{mountpoint} ignored as mount options contain size= or nr_blocks=\n";
+        } else {
+	  $c_ref->{mount_options} .= "," if ($c_ref->{mount_options} ne "");
+          # Size will be in % or MiB
+	  $c_ref->{mount_options} .= "size=" . $c_ref->{size};
+	}
+
+        push @fstab, &FAI::create_fstab_line($c_ref, "tmpfs", "tmpfs");
       }
     } else {
       &FAI::internal_error("Unexpected key $c");

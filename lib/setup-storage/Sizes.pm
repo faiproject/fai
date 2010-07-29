@@ -202,8 +202,8 @@ sub compute_lv_sizes {
   # loop through all device configurations
   foreach my $config (keys %FAI::configs) {
 
-    # for RAID, encrypted or physical disks there is nothing to be done here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^PHY_./);
+    # for RAID, encrypted, tmpfs or physical disks there is nothing to be done here
+    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^PHY_./);
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group name
@@ -252,7 +252,7 @@ sub compute_lv_sizes {
       # the size is fixed
       if ($start == $end) { 
         # write the size back to the configuration
-        $lv_size->{eff_size} = $start;
+        $lv_size->{eff_size} = $start * 1024.0 * 1024.0;
       } else {
 
         # add this volume to the redistribution list
@@ -282,7 +282,7 @@ sub compute_lv_sizes {
 
       # write the final size
       $FAI::configs{$config}{volumes}{$lv}{size}{eff_size} =
-        $start + (($end - $start) * $redist_factor);
+        ($start + (($end - $start) * $redist_factor)) * 1024.0 * 1024.0;
     }
   }
 }
@@ -612,8 +612,8 @@ sub compute_partition_sizes
   # loop through all device configurations
   foreach my $config (keys %FAI::configs) {
 
-    # for RAID, encrypted or LVM, there is nothing to be done here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config =~ /^VG_./);
+    # for RAID, encrypted, tmpfs or LVM, there is nothing to be done here
+    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     # nothing to be done, if this is a configuration for a virtual disk
     next if $FAI::configs{$config}{virtual};

@@ -58,6 +58,7 @@ $FAI::error_codes = [
     stdout_regex => "",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error   => "parted_1_new",
@@ -66,22 +67,25 @@ $FAI::error_codes = [
     stdout_regex => "Error: Could not stat device .* - No such file or directory",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error        => "parted_2",
-    message      => "Parted could not read a disk label\n",
+    message      => "Parted could not read a disk label (new disk?)\n",
     stderr_regex => "Error: Unable to open .* - unrecognised disk label",
     stdout_regex => "",
-    program      => "parted",
+    program      => "parted -s \\S+ unit TiB print",
     response     => "warn",
+    exit_codes   => [1],
   },
   {
     error        => "parted_2_new",
-    message      => "Parted could not read a disk label\n",
+    message      => "Parted could not read a disk label (new disk?)\n",
     stderr_regex => "",
     stdout_regex => "Error: .* unrecognised disk label",
-    program      => "parted",
+    program      => "parted -s \\S+ unit TiB print",
     response     => "warn",
+    exit_codes   => [1],
   },
   ## {
   ##   error        => "parted_3",
@@ -90,6 +94,7 @@ $FAI::error_codes = [
   ##   stdout_regex => "",
   ##   program      => "parted",
   ##   response     => \&FAI::restore_partition_table,
+  ##   exit_codes   => [0..255],
   ## },
   {
     error        => "parted_4",
@@ -98,6 +103,7 @@ $FAI::error_codes = [
     stdout_regex => "",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error        => "parted_4_new",
@@ -106,6 +112,7 @@ $FAI::error_codes = [
     stdout_regex => "No Implementation: Partition \\d+ isn't aligned to cylinder boundaries",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error        => "parted_5",
@@ -114,6 +121,7 @@ $FAI::error_codes = [
     stdout_regex => "",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error        => "parted_5_new",
@@ -122,6 +130,7 @@ $FAI::error_codes = [
     stdout_regex => "Error: Can't have overlapping partitions",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error        => "parted_6",
@@ -130,6 +139,7 @@ $FAI::error_codes = [
     stdout_regex => "",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error        => "parted_6_new",
@@ -138,6 +148,7 @@ $FAI::error_codes = [
     stdout_regex => "Error: Unable to satisfy all constraints on the partition",
     program      => "parted",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error   => "cmd_parted_1",
@@ -145,7 +156,8 @@ $FAI::error_codes = [
     stderr_regex => "(parted: command not found|/sbin/parted: No such file or directory)",
     stdout_regex => "",
     program      => "parted",
-    response     => "die"
+    response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error => "mkfs.xfs_1",
@@ -154,6 +166,7 @@ $FAI::error_codes = [
     stdout_regex => "",
     program      => "mkfs.xfs",
     response     => "die",
+    exit_codes   => [0..255],
   },
   {
     error        => "ntfsresize_1",
@@ -162,6 +175,16 @@ $FAI::error_codes = [
     stdout_regex => "",
     program      => "ntfsresize",
     response     => "die",
+    exit_codes   => [0..255],
+  },
+  {
+    error        => "catch_all_nonzero_exit_code",
+    message      => "Command had non-zero exit code\n",
+    stderr_regex => "",
+    stdout_regex => "",
+    program      => ".*",
+    response     => "die",
+    exit_codes   => [1..255],
   },
 ];
 
@@ -301,6 +324,7 @@ sub execute_command_internal {
   my @stdout      = ();
   my $stderr_line = "";
   my $stdout_line = "";
+  my $exit_code   = 0;
 
   #make tempfile, get perl filehandle and filename of the file
   my ($stderr_fh, $stderr_filename) = File::Temp::tempfile(UNLINK => 1);
@@ -315,9 +339,10 @@ sub execute_command_internal {
     # execute the bash command, write stderr and stdout into the testfiles
     print "Executing: $command\n";
     `$command 1> $stdout_filename 2> $stderr_filename`;
-    ( ($?>>8) ne 0 ) and warn "Command $command had exit code " . ($?>>8) . "\n";
+    $exit_code = ($?>>8);
   } else {
-    print "would run command $command; to have them executed, use -X \n";
+    print "would run command $command; to have it executed, use -X \n";
+    return "";
   }
 
   # read the tempfile into lists, each element of the list one line
@@ -345,11 +370,11 @@ sub execute_command_internal {
 
   #get the error, if there was any
   foreach my $err (@$FAI::error_codes) {
-    if (($err->{stdout_regex} eq "" || $stdout_line =~ /$err->{stdout_regex}/)
-      && ($err->{stderr_regex} eq "" || $stderr_line =~ /$err->{stderr_regex}/)
-      && ($err->{program} eq "" || $command =~ /$err->{program}/)) {
-      return $err->{error};
-    }
+    return $err->{error} if
+      (($err->{stdout_regex} eq "" || $stdout_line =~ /$err->{stdout_regex}/)
+        && ($err->{stderr_regex} eq "" || $stderr_line =~ /$err->{stderr_regex}/)
+        && ($err->{program} eq "" || $command =~ /$err->{program}/)
+        && (grep {$_ == $exit_code} @{ $err->{exit_codes} }));
   }
 
 }

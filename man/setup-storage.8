@@ -137,6 +137,8 @@ config ::= disk_config lvm( <lvmoption>)*
 .br
            | disk_config cryptsetup( <cryptsetupoption>)*
 .br
+           | disk_config tmpfs
+.br
            | disk_config end 
 .br
            | disk_config disk[[:digit:]]+( <option>)*
@@ -157,13 +159,21 @@ lvmoption ::= /* empty */
 .br
            | preserve_always:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
 .br
-           /* preserve partitions -- always */
+           /* preserve volumes -- always */
 .br
            | preserve_reinstall:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
 .br
-           /* preserve partitions -- unless the system is installed for the 
+           /* preserve volumes -- unless the system is installed for the
 .br
            first time */
+.br
+           | preserve_lazy:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
+.br
+           /* preserve volumes -- unless these don't exist yet */
+.br
+           | always_format:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
+.br
+           /* run mkfs on the volumes, even if marked as preserve */
 .br
            | resize:[^/,\\s\\-]+-[^/,\\s\\-]+(,[^/,\\s\\-]+-[^/,\\s\\-]+)*
 .br
@@ -183,13 +193,21 @@ raidoption ::= /* empty */
 .br
            | preserve_always:[[:digit:]]+(,[[:digit:]]+)*
 .br
-           /* preserve partitions -- always */
+           /* preserve volumes -- always */
 .br
            | preserve_reinstall:[[:digit:]]+(,[[:digit:]]+)*
 .br
-           /* preserve partitions -- unless the system is installed for the 
+           /* preserve volumes -- unless the system is installed for the
 .br
            first time */
+.br
+           | preserve_lazy:[[:digit:]]+(,[[:digit:]]+)*
+.br
+           /* preserve volumes -- unless these don't exist yet */
+.br
+           | always_format:[[:digit:]]+(,[[:digit:]]+)*
+.br
+           /* run mkfs on the volumes, even if marked as preserve */
 .br
            | fstabkey:(device|label|uuid)
 .br
@@ -220,6 +238,14 @@ option ::= /* empty */
            /* preserve partitions -- unless the system is installed for the 
 .br
            first time */
+.br
+           | preserve_lazy:[[:digit:]]+(,[[:digit:]]+)*
+.br
+           /* preserve partitions -- unless these don't exist yet */
+.br
+           | always_format:[[:digit:]]+(,[[:digit:]]+)*
+.br
+           /* run mkfs on the partitions, even if marked as preserve */
 .br
            | resize:[[:digit:]]+(,[[:digit:]]+)*
 .br
@@ -264,6 +290,10 @@ volume ::= <type> <mountpoint> <size> <filesystem> <mount_options> <fs_options>
            | vg <name> <size> <fs_options>
 .br
            /* lvm vg */
+.br
+           | tmpfs <mountpoint> <tmpfs_size> <mount_options>
+.br
+           /* tmpfs volume */
 .br
 
 
@@ -317,19 +347,19 @@ name ::= [^/[:space:]]+
 .br
 
 
-size ::= [[:digit:]]+[kKMGTP%iB]*(-([[:digit:]]+[kKMGTP%iB]*)?)?(:resize)?
+size ::= (RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*)(-(RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*)?)?(:resize)?
 .br
-         /* size in kilo (KiB), mega (default, MiB), giga (GiB), tera (TiB) or
+         /* size in kilo (KiB), mega (default, MiB), giga (GiB), tera (TiB),
 .br
-          * petabytes (PiB) or %, possibly given as a range; physical
+          * petabytes (PiB) or percentage of disk size or RAM size, possibly
 .br
-          * partitions or lvm logical volumes only; in future releases KB, MB,
+          * given as a range; physical partitions or lvm logical volumes only;
 .br
-          * GB, ... will be treated as 1000 instead of 1024 (KiB, MiB, GiB, ...)
+          * in future releases KB, MB, GB, ... will be treated as 1000 instead
 .br
-          * multipliers */
+          * of 1024 (KiB, MiB, GiB, ...) multipliers */
 .br
-         | -[[:digit:]]+[kKMGTP%iB]*(:resize)?
+         | -(RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*)(:resize)?
 .br
          /* size in kilo, mega (default), giga, tera or petabytes or %,
 .br
@@ -340,6 +370,14 @@ size ::= [[:digit:]]+[kKMGTP%iB]*(-([[:digit:]]+[kKMGTP%iB]*)?)?(:resize)?
          | [^,:[:space:]]+(:(spare|missing))*(,[^,:[:space:]]+(:(spare|missing))*)*
 .br
          /* devices and options for a raid or lvm vg */
+.br
+
+
+tmpfs_size ::= (RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTPiB]*)
+.br
+         /* tmpfs size in percentage of the total RAM or fixed size in
+.br
+          kilo (KiB), mega (default, MiB), giga (GiB), tera (TiB) or petabytes (PiB).
 .br
 
 
@@ -379,10 +417,14 @@ format of disk_config.
 Any options to mkfs.xxx may be given using createopts="".
 .IP \(bu
 The "preserveX" and "boot" options are one of the options now given on the
-disk_config line, using preserve_reinstall or preserve_always and bootable.
-preserve_always is equivalent to the previous preserveX option, whereas
-preserve_reinstall preserves the partition unless "initial" is given as one of
-the FAI_FLAGS.
+disk_config line, using preserve_reinstall, preserve_always, or preserve_lazy,
+and bootable.  preserve_always is equivalent to the previous preserveX option,
+whereas preserve_reinstall preserves the partition unless "initial" is given as
+one of the FAI_FLAGS. preserve_lazy allows to preserve partitions only if these
+exist already. Otherwise they are created.
+.IP \(bu
+The "always_format" option overrides preserving filesystems (via one of the
+"preserveX" options), like the "format" option in setup_harddisks.
 .IP \(bu
 Support for LVM and RAID is completely new
 .IP \(bu
@@ -476,6 +518,52 @@ luks	/local00	/dev/sdb7	ext3	defaults,errors=remount-ro	createopts="-m	0"
 .sp
 .fi
 .PP
+
+.TP
+tmpfs example
+.sp
+.nf
+.ta 10n 20n 30n 40n 50n
+disk_config tmpfs
+tmpfs	/tmp	RAM:20%	defaults
+tmpfs	/scratch	3GiB	defaults
+.sp
+.fi
+.PP
+.IP \(bu
+Mount a tmpfs on /tmp with a maximum size equal to 20% of the total amount of
+RAM in the machine. This is equivalent to using size=20% in the tmpfs mount
+options.
+.IP \(bu
+Mount a tmpfs on /scratch with a maximum size of 3 GiB.
+
+.TP
+External log device example
+.sp
+.nf
+.ta 10n 20n 30n 40n 60n
+disk_config /dev/sda fstabkey:uuid bootable:2
+primary	/	20GiB	ext3		defaults
+primary	/boot	250	ext2		defaults
+primary	swap	4GiB	swap		defaults
+logical	-	256	ext3_journal	-
+logical	-	256	ext4_journal	-
+logical	-	256	xfs_journal	-
+
+disk_config /dev/sdb fstabkey:uuid
+primary	/mnt/ext3	33%	ext3:journal=/dev/sda5		defaults
+primary	/mnt/ext4	33%	ext4:journal=/dev/sda6		defaults
+primary	/mnt/xfs	33%	xfs:journal=/dev/sda7		defaults
+.sp
+.fi
+.PP
+.IP \(bu
+Mount an ext3 filesystem on /dev/sdb1 with an external journal on /dev/sda5
+.IP \(bu
+Mount an ext4 filesystem on /dev/sdb2 with an external journal on /dev/sda6
+.IP \(bu
+Mount an XFS filesystem on /dev/sdb3 using /dev/sda7 as the log device
+
 .SH CAVEATS
 .IP \(bu
 Partition UUID cannot be obtained: In case a partition was previously used as

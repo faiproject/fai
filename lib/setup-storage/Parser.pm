@@ -239,13 +239,17 @@ sub init_part_config {
 
       # msdos disk labels don't allow for more than 4 primary partitions
       ($extended < 5)
-        or die "Too many primary partitions while creating extended\n";
+        or die "Too many primary partitions; cannot add extended partition\n";
 
       # initialize the entry, unless it already exists
       defined ($FAI::configs{$FAI::device}{partitions}{$extended})
         or (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended} = {
           size => {}
         };
+
+      # as we can't compute the index from the reference, we need to store the
+      # $part_number explicitly
+      (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{number} = $extended;
 
       my $part_size =
         (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{size};
@@ -256,6 +260,10 @@ sub init_part_config {
       # add the preserve = 0 flag, if it doesn't exist already
       defined ($part_size->{preserve})
         or $part_size->{preserve} = 0;
+
+      # add the always_format = 0 flag, if it doesn't exist already
+      defined ($part_size->{always_format})
+        or $part_size->{always_format} = 0;
 
       # add the resize = 0 flag, if it doesn't exist already
       defined ($part_size->{resize}) or $part_size->{resize} = 0;
@@ -284,6 +292,10 @@ sub init_part_config {
   defined ($FAI::partition_pointer->{size}->{preserve})
     or $FAI::partition_pointer->{size}->{preserve} = 0;
 
+  # add the always_format = 0 flag, if it doesn't exist already
+  defined ($FAI::partition_pointer->{size}->{always_format})
+    or $FAI::partition_pointer->{size}->{always_format} = 0;
+
   # add the resize = 0 flag, if it doesn't exist already
   defined ($FAI::partition_pointer->{size}->{resize})
     or $FAI::partition_pointer->{size}->{resize} = 0;
@@ -299,6 +311,21 @@ sub init_part_config {
 sub convert_unit
 {
   my ($val) = @_;
+
+  if ($val =~ /^RAM:(\d+)%/) {
+      $val = $1 / 100.0;
+
+      ## get total RAM
+      open(F, "/proc/meminfo");
+      my @meminfo = <F>;
+      close F;
+
+      my ($totalmem) = grep /^MemTotal:/, @meminfo;
+      $totalmem =~ s/[^0-9]//g;
+      $totalmem = $totalmem / 1024.0;
+
+      return $val * $totalmem;
+  }
 
   ## don't warn for now, G/GiB/GB are all treated the same way
   ## ($val =~ /([kKMGTP])\s*$/) and
@@ -332,7 +359,6 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           $return = 1;
         }
-        | <error>
 
     line: <skip: qr/[ \t]*/> "\\n"
         | <skip: qr/[ \t]*/> comment "\\n"
@@ -376,6 +402,12 @@ $FAI::Parser = Parse::RecDescent->new(
           # exit config mode
           $FAI::device = "";
         }
+        | /^tmpfs/
+        {
+          $FAI::device = "TMPFS";
+          $FAI::configs{$FAI::device}{fstabkey} = "device";
+          $FAI::configs{$FAI::device}{volumes} = {};
+        }
         | /^disk(\d+)/
         {
           # check, whether parted is available
@@ -392,6 +424,7 @@ $FAI::Parser = Parse::RecDescent->new(
           &FAI::init_disk_config($item[ 1 ]);
         }
         option(s?)
+        | <error>
 
     raid_option: /^preserve_always:(\d+(,\d+)*)/
         {
@@ -405,10 +438,18 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split(",", $1));
           }
         }
+        | /^preserve_lazy:(\d+(,\d+)*)/
+        {
+          $FAI::configs{RAID}{volumes}{$_}{preserve} = 2 foreach (split(",", $1));
+        }
         | /^fstabkey:(device|label|uuid)/
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
+        }
+        | /^always_format:(\d+(,\d+)*)/
+        {
+          $FAI::configs{RAID}{volumes}{$_}{always_format} = 1 foreach (split (",", $1));
         }
 
     cryptsetup_option: /^randinit/
@@ -422,7 +463,7 @@ $FAI::Parser = Parse::RecDescent->new(
           foreach (split (",", $1)) {
             (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
               die &FAI::internal_error("VG re-parse failed");
-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1 
+            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
           }
         }
         | m{^preserve_reinstall:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
@@ -432,8 +473,16 @@ $FAI::Parser = Parse::RecDescent->new(
             foreach (split (",", $1)) {
               (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
                 die &FAI::internal_error("VG re-parse failed");
-              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1 
+              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
             }
+          }
+        }
+        | m{^preserve_lazy:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+        {
+          foreach (split (",", $1)) {
+            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
+              die &FAI::internal_error("VG re-parse failed");
+            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 2;
           }
         }
         | m{^resize:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
@@ -442,13 +491,21 @@ $FAI::Parser = Parse::RecDescent->new(
           foreach (split (",", $1)) {
             (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
               die &FAI::internal_error("VG re-parse failed");
-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1 
+            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1;
           }
         }
         | /^fstabkey:(device|label|uuid)/
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{"VG_--ANY--"}{fstabkey} = $1;
+        }
+        | m{^always_format:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+        {
+          foreach (split (",", $1)) {
+            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
+              die &FAI::internal_error("VG re-parse failed");
+            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{always_format} = 1;
+          }
         }
 
 
@@ -465,6 +522,11 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split(",", $1));
             $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
+        }
+        | /^preserve_lazy:(\d+(,\d+)*)/
+        {
+          $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 2 foreach (split(",", $1));
+          $FAI::configs{$FAI::device}{preserveparts} = 2;
         }
         | /^resize:(\d+(,\d+)*)/
         {
@@ -515,6 +577,10 @@ $FAI::Parser = Parse::RecDescent->new(
 
 	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
 	}
+        | /^always_format:(\d+(,\d+)*)/
+        {
+          $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
+        }
 
     volume: /^vg\s+/ name devices vgcreateopt(s?)
         | /^raid([0156]|10)\s+/
@@ -561,7 +627,28 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{CRYPT}->{volumes}->{$vol_id};
         }
         mountpoint devices filesystem mount_options lv_or_fsopts
+        | /^tmpfs\s+/
+        {
+          ($FAI::device eq "TMPFS") or die "tmpfs entry invalid in this context\n";
+          defined ($FAI::configs{TMPFS}) or &FAI::internal_error("TMPFS entry missing");
+
+          my $vol_id = 0;
+          foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{TMPFS}{volumes} })) {
+            defined ($FAI::configs{TMPFS}{volumes}{$ex_vol_id}{device}) or last;
+            $vol_id++;
+          }
+
+          $FAI::configs{TMPFS}{volumes}{$vol_id}{device} = "tmpfs";
+          $FAI::configs{TMPFS}{volumes}{$vol_id}{filesystem} = "tmpfs";
+
+          # We don't do preserve for tmpfs
+          $FAI::configs{TMPFS}{volumes}{$vol_id}{preserve} = 0;
+
+          $FAI::partition_pointer = (\%FAI::configs)->{TMPFS}->{volumes}->{$vol_id};
+        }
+        mountpoint tmpfs_size mount_options
         | type mountpoint size filesystem mount_options lv_or_fsopts
+        | <error>
 
     type: 'primary'
         {
@@ -589,6 +676,8 @@ $FAI::Parser = Parse::RecDescent->new(
           # initialise the preserve and resize flags
           defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{preserve}) or
             $FAI::configs{$FAI::device}{volumes}{$2}{size}{preserve} = 0;
+          defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{always_format}) or
+            $FAI::configs{$FAI::device}{volumes}{$2}{size}{always_format} = 0;
           defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{resize}) or
             $FAI::configs{$FAI::device}{volumes}{$2}{size}{resize} = 0;
           # set the reference to the current volume
@@ -631,17 +720,17 @@ $FAI::Parser = Parse::RecDescent->new(
           1;
         }
 
-    size: /^(\d+[kMGTP%iB]*(-(\d+[kMGTP%iB]*)?)?)(:resize)?\s+/
+    size: /^((RAM:\d+%|\d+[kMGTP%iB]*)(-(RAM:\d+%|\d+[kMGTP%iB]*)?)?)(:resize)?/
         {
           # complete the size specification to be a range in all cases
           my $range = $1;
           # the size is fixed
-          if (!defined ($2))
+          if (!defined ($3))
           {
             # make it a range of the form x-x
-            $range = "$range-$1";
+            $range = "$range-$2";
           }
-          elsif (!defined ($3))
+          elsif (!defined ($4))
           {
             # range has no upper limit, assume the whole disk
             $range = "${range}100%";
@@ -657,12 +746,12 @@ $FAI::Parser = Parse::RecDescent->new(
           # enter the range into the hash
           $FAI::partition_pointer->{size}->{range} = $range;
           # set the resize flag, if required
-          if (defined ($4)) {
+          if (defined ($5)) {
             $FAI::partition_pointer->{size}->{resize} = 1;
             $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
         }
-        | /^(-\d+[kMGTP%iB]*)(:resize)?\s+/
+        | /^(-(RAM:\d+%|\d+[kMGTP%iB]*))(:resize)?\s+/
         {
           # complete the range by assuming 0 as the lower limit 
           my $range = "0$1";
@@ -676,12 +765,33 @@ $FAI::Parser = Parse::RecDescent->new(
           # enter the range into the hash
           $FAI::partition_pointer->{size}->{range} = $range;
           # set the resize flag, if required
-          if (defined ($2)) {
+          if (defined ($3)) {
             $FAI::partition_pointer->{size}->{resize} = 1;
             $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
         }
         | <error: invalid partition size near "$text">
+
+    tmpfs_size: /^(RAM:(\d+%)|\d+[kMGTPiB]*)\s+/
+        {
+          my $size;
+
+          # convert the units, if necessary
+          # A percentage is kept as is as tmpfs handles it
+          if (defined($2)) {
+            $size = $2;
+          } else {
+            $size = $1;
+            $size .= "MiB" if ($size =~ /\d\s*$/);
+            $size  = &FAI::convert_unit($size);
+            # Size in MiB for tmpfs
+            $size .= "m";
+          }
+
+          # enter the size into the hash
+          $FAI::partition_pointer->{size} = $size;
+        }
+        | <error: invalid tmpfs size near "$text">
 
     devices: /^([^\d,:\s\-][^,:\s]*(:(spare|missing))*(,[^,:\s]+(:(spare|missing))*)*)/
         {
@@ -765,16 +875,24 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | /^\S+/
         {
-          $FAI::partition_pointer->{filesystem} = $item[ 1 ];
+          my ($fs, $journal) = split(/:/, $item[1]);
           my $to_be_preserved = 0;
+
+          $FAI::partition_pointer->{filesystem} = $fs;
+
+          defined($journal) and $journal =~ s/journal=//;
+          $FAI::partition_pointer->{journal_dev} = $journal;
+
           if ($FAI::device eq "RAID" or $FAI::device eq "CRYPT") {
             $to_be_preserved = $FAI::partition_pointer->{preserve};
           } else {
             $to_be_preserved = $FAI::partition_pointer->{size}->{preserve};
           }
           if (0 == $to_be_preserved) {
-            &FAI::in_path("mkfs.$item[1]") or
-              die "unknown/invalid filesystem type $item[1] (mkfs.$item[1] not found in PATH)\n";
+            $fs =~ s/_journal$//;
+
+            &FAI::in_path("mkfs.$fs") or
+              die "unknown/invalid filesystem type $fs (mkfs.$fs not found in PATH)\n";
           }
         }
 

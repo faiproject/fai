@@ -91,8 +91,40 @@ fai (3.4~beta10) unstable; urgency=low
     (closes: #557544)
     
   [ Michael Tautschnig ]
+  * setup-storage: Bumped version number to 1.3
   * control: Move setup-storage to its own package (fai-setup-storage). Thanks
     Michael Prokop <mika@debian.org> for the patch (closes: #575812)
+  * setup-storage/Volumes.pm: Only read sizes and partitioning of disks
+    referenced in the configuration (thanks Henning Sprang).
+  * setup-storage, setup-storage/{Parser.pm,Volumes.pm}: Added support for new
+    preserve_lazy option that will preserve volumes that exist, but newly
+    create them if not found.
+  * setup-storage.8: Document new preserve_lazy option.
+  * setup-storage/{Commands.pm,Volumes.pm}: Completed support for preserve in
+    LVM/RAID contexts; extended checking for volume groups that remain alive,
+    fixed bug in LV resize code, disable existing volume groups, remove
+    non-preserved volume groups (thanks Mathieu Alorent <malorent@echo.fr> for
+    extensive testing).
+  * setup-storage/{Volumes.pm,Sizes.pm}: eff_size is bytes. Always.
+  * setup-storage/Commands.pm: Prefer resize2fs over parted to resize logical
+    volumes. Future versions of parted will allow even more use of resize2fs.
+    Fix use of eff_size as bytes.
+  * setup-storage/{Parser.pm,Commands.pm}: Added support for new always_format
+    option.
+  * setup-storage.8: Documented new always_format option.
+  * setup-storage/Volumes.pm: Fixed uninitialized variable warnings in parsing
+    output of parted 2.2.
+  * setup-storage/Volumes.pm: Use VG size for volume group size, not space in
+    use. Thanks Mathieu Alorent for reporting this.
+  * setup-storage/Init.pm: Properly handle /dev/cciss disk devices, even
+    without partitions (thanks Steffen Grunewald
+    <steffen.grunewald@aei.mpg.de> and Mathieu Alorent <malorent@echo.fr>).
+  * setup-storage/Parser.pm: Handle parse errors earlier for more informative
+    error messages.
+  * setup-storage/Volumes.pm: Proper error message in case an extended
+    partition is marked as preserve
+  * setup-storage/Exec.pm: All unexpected non-zero exit codes of subcommands
+    lead to immediate failure of setup-storage.
 
   [ Michael Prokop ]
   * subroutines, fai: make sure fai exits with the according return
@@ -106,6 +138,23 @@ fai (3.4~beta10) unstable; urgency=low
     inside $FAI_ROOT but are still registered in /etc/mtab outside of
     $FAI_ROOT, so let's get rid of them outside the chroot as well iff
     they are present
+
+  [ Julien BLACHE ]
+  * setup-storage/Parser.pm: add support for RAM:XX% (closes: #493237)
+  * setup-storage.8: document RAM:XX%.
+  * setup-storage/Commands.pm: support the TMPFS key where necessary.
+  * setup-storage/Fstab.pm: add support for tmpfs mounts.
+  * setup-storage/Parser.pm: add a new tmpfs stanza, a new tmpfs volume type
+    and tmpfs_size (slightly differing from the regular size, no range
+    support).
+  * setup-storage.8: document the tmpfs stanza.
+  * setup-storage/Commands.pm: support the creation of journal devices
+    (ext3/4) and filesystems with external journal (ext3/4, xfs).
+  * setup-storage/Parser.pm: add support for FS_journal and FS:journal=.
+  * setup-storage.8: document external journal support.
+  * bin/device2grub: try to find and use a stable name (by-id) for the device
+    if the shortname has no match in device.map. Needed now that grub2 in
+    unstable has switched to using stable names in device.map.
   
  -- Thomas Lange <lange@debian.org>  Wed, 28 Jul 2010 16:28:51 -0400
 
