@@ -320,9 +320,8 @@ create_nfsroot() {
     fi
 
     # hoaks some packages
-    # liloconfig, dump and raidtool2 needs these files
+    # liloconfig, dump needs these files
     echo "# UNCONFIGURED FSTAB FOR BASE SYSTEM" > etc/fstab
-    > etc/raidtab
     echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
     cp -La $cfdir/apt $NFSROOT/etc
@@ -344,12 +343,7 @@ EOF
     if [ -f $cfdir/live.conf ]; then
 	cp -Lp $cfdir/live.conf etc/live.conf
     else
-	cat > etc/live.conf <<EOF
-# UNIONTYPE=aufs # if unionfs is broken
-NOUSER="Yes"
-NOHOSTS="Yes"
-export UNIONTYPE NOHOSTS NOUSER
-EOF
+	die "$cfdir/live.conf not found."
     fi
 
     LC_ALL=C call_with_stamp add_packages_nfsroot
