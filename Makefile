@@ -33,7 +33,6 @@ install:
 	install lib/setup-storage/* $(SHAREDIR)/setup-storage
 	cd bin ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd bin ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
-	install bin/fai-start-stop-daemon $(DESTDIR)/sbin
 	install bin/dhclient-fai-script  $(DESTDIR)/etc/dhcp3
 	install -m644 conf/dhclient-fai.conf $(DESTDIR)/etc/dhcp3
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
