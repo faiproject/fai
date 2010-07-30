@@ -391,7 +391,6 @@ upgrade_nfsroot() {
 	fdivert /usr/sbin/update-initramfs
 	ln -sf /bin/true $NFSROOT/usr/sbin/update-initramfs
     fi
-    fdivert /sbin/discover-modprobe
     $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -414,8 +413,6 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {
 
-    [ -f $NFSROOT/usr/sbin/dpkg-divert ] && 
-       LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /sbin/discover-modprobe
     cd /
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
     [ -d $NFSROOT/sys/class ] && umount $NFSROOT/sys
