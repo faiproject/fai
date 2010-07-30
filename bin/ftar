@@ -29,8 +29,12 @@
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
-    echo "ftar died with error: $1"
-    exit 99
+
+    local e=$1   # first parameter is the exit code
+    shift
+
+    echo "ftar died with error: $@" # print error message
+    exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract() {
@@ -102,28 +106,24 @@ done
 
 [ "$debug" ] && vflag="-v"
 [ "$debug" ] && echo "ftar: classes : $revclasses"
-[ -z "$source" ] && die "Source directory undefined."
-[ -z "$target" ] && die "Target directory undefined."
+[ -z "$source" ] && die 1 "Source directory undefined."
+[ -z "$target" ] && die 1 "Target directory undefined."
 
 # currently only one directory is used
 dir=$1
 fpath=$source/$dir
-[ -d $fpath ] || die "No directory $fpath"
+[ -d $fpath ] || die 1 "No directory $fpath"
 
 [ $deletefiles -eq 1 ] && cd $target/$dir && rm -f  .* * 2>/dev/null
 
 if [ $removedir -eq 1 ]; then
     cd $target/$dir
-    if [ $PWD = "/" ]; then
-	echo "ftar WARNING: Will not do recursive removal of directory /"
-    else
-	rm -rf .* * 2>/dev/null
-    fi
+    [ $PWD = "/" ] && die 3 "ftar WARNING: Will not do recursive removal of directory /"
+    rm -rf .* * 2>/dev/null
 fi
 
 for c in $revclasses ; do
     # what if a directory exists which is equal to the hostname or a classname?
-    # [ -f $fpath/$c ]          && extract $fpath/$c cat
     [ -f $fpath/$c.tgz ]      && extract $fpath/$c.tgz zcat
     [ -f $fpath/$c.tar ]      && extract $fpath/$c.tar cat
     [ -f $fpath/$c.tar.gz ]   && extract $fpath/$c.tar.gz zcat
@@ -132,10 +132,7 @@ for c in $revclasses ; do
     [ -f $fpath/$c.txz ]      && extract $fpath/$c.txz xzcat
 done
 
-if [ $tardone -eq 0 ]; then
-    echo "ftar: No matching class found in $fpath"
-    exit 1
-else
-    exit 0
-fi
+[ $tardone -eq 0 ] && die 1 "ftar: No matching class found in $fpath"
+
+exit 0
 
