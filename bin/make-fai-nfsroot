@@ -44,19 +44,21 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
 
+    local e=$1   # first parameter is the exit code
+    shift
+
     echo "ERROR: $@"
     echo "Log file written to /var/log/fai/make-fai-nfsroot.log"
-    exit 99
+    exit $e
 }
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 check_nfsroot() {
 
     set +e
     # simple test, to see if important thing are available inside the nfsroot
-    [ -d $NFSROOT/usr/share/live-initramfs ] || die "live-initramfs was not installed inside the nfsroot."
+    [ -d $NFSROOT/usr/share/live-initramfs ] || die 1 "live-initramfs was not installed inside the nfsroot."
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
-    [ -z "$files" ] && die "No initrd installed."
+    [ -z "$files" ] && die 1 "No initrd installed."
     egrep -q "^ERROR: " /var/log/fai/make-fai-nfsroot.log && bad_exit
     return 0
 }
@@ -68,7 +70,7 @@ badupdateto32() {
         Please check the NEWS file for changes in variable names and if you have a linux-image package
         defined in /etc/fai/NFSROOT.
 EOF
-    die $@
+    die 1 $@
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -92,7 +94,7 @@ while getopts hervC:B:f:kKpU opt ; do
         B) basetgz=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
         r) recover=1 ;;
-        f) die "Option -f is not supported any more. Use option -C instead" ;;
+        f) die 1 "Option -f is not supported any more. Use option -C instead" ;;
         k) kinstall=1 ;;
         K) kremove=1;;
         h) usage ;;
@@ -103,10 +105,7 @@ while getopts hervC:B:f:kKpU opt ; do
     esac
 done
 
-if [ $(id -u) != "0" ]; then
-    echo "Run this program as root."
-    exit 9
-fi
+[ $(id -u) != "0" ] && die 9 "Run this program as root."
 
 set -e
 
@@ -116,32 +115,26 @@ if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
 fi
 [ -z "$cfdir" ] && cfdir=${FAI_ETC_DIR:=/etc/fai}
 cfdir=$(readlink -f $cfdir) # canonicalize path
-if [ ! -d "$cfdir" ]; then
-    echo "$cfdir is not a directory"
-    exit 6
-fi
+[ ! -d "$cfdir" ] && die 6 "$cfdir is not a directory"
+
 [ "$verbose" ] && echo "Using configuration files from $cfdir"
 . $cfdir/fai.conf
 
 # read config file for this tool
-if [ -f "$cfdir/make-fai-nfsroot.conf" ]; then
-    . $cfdir/make-fai-nfsroot.conf
-else
-    echo "Can't read $cfdir/make-fai-nfsroot.conf"
-    exit 8
-fi
+[ -f "$cfdir/make-fai-nfsroot.conf" ] || die 8 "Can't read $cfdir/make-fai-nfsroot.conf"
+. $cfdir/make-fai-nfsroot.conf
 
 # IMO this may be removed, since all information should be included into sources.list
 [ -n "$FAI_LOCAL_REPOSITORY" ] && die "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list." 
 [ -n "$packages" ] && badupdateto32 "The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
-[ -n "$NFSROOT_PACKAGES" ] && die "The use of \$NFSROOT_PACKAGES in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
-[ -n "$FAI_SOURCES_LIST" ] && die "The use of \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
+[ -n "$NFSROOT_PACKAGES" ] && die 1 "The use of \$NFSROOT_PACKAGES in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$FAI_SOURCES_LIST" ] && die 1 "The use of \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
 
-[ -z "$NFSROOT" ] && die "\$NFSROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
+[ -z "$NFSROOT" ] && die 1 "\$NFSROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
 [ -z "$TFTPROOT" ] && badupdateto32 "\$TFTPROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
 [ -n "$KERNELPACKAGE" ] && badupdateto32 "The use of \$KERNELPACKAGE is deprecated. Please use $cfdir/NFSROOT now."
-[ ! -d "$cfdir/apt" ] && die "$cfdir/apt/ does not exists. Can't continue."
-[ -n "$FAI_BOOT" ] && die "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment." 
+[ ! -d "$cfdir/apt" ] && die 1 "$cfdir/apt/ does not exists. Can't continue."
+[ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment." 
 
 oldnfsroot=$NFSROOT
 NFSROOT="$NFSROOT/live/filesystem.dir"
@@ -240,7 +233,7 @@ call_debootstrap() {
     # check if NFSROOT directory is mounted with bad options
     fs=$(df $NFSROOT | tail -1 | awk '{print $6}')
     if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
-        die "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
+        die 1 "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
     fi
     local dversion=$(dpkg -l debootstrap | awk '/debootstrap/ {print $3}')
     echo "Creating base system using debootstrap version $dversion"
@@ -272,16 +265,14 @@ add_all_host_entries() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    if [ "$FAI_DEBOOTSTRAP" ]; then
-        call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
-        $ROOTCMD apt-get clean
-	rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
-        echo "Creating base.tgz"
-        tar --one-file-system -C $NFSROOT -cf - --exclude var/tmp/base.tgz --exclude 'var/lib/apt/lists/*_*' . | gzip > $NFSROOT/var/tmp/base.tgz
-	touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
-    else
-	die "\$FAI_DEBOOTSTRAP not defined."
-    fi
+    [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
+
+    call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
+    $ROOTCMD apt-get clean
+    rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
+    echo "Creating base.tgz"
+    tar --one-file-system -C $NFSROOT -cf - --exclude var/tmp/base.tgz --exclude 'var/lib/apt/lists/*_*' . | gzip > $NFSROOT/var/tmp/base.tgz
+    touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract_base() {
@@ -292,7 +283,7 @@ extract_base() {
 
     if cd $NFSROOT ; then
       printf "Extracting $basetgz: "
-      tar -C $NFSROOT -zxpf "$basetgz" || die "Error while extracting ${basetgz} in ${NFSROOT}."
+      tar -C $NFSROOT -zxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
       cp "$basetgz" $NFSROOT/var/tmp/base.tgz
       touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
       echo done
@@ -302,7 +293,7 @@ extract_base() {
 create_nfsroot() {
 
     mkdir -p $NFSROOT/$FAI
-    cd $NFSROOT || die "Can't cd to $NFSROOT"
+    cd $NFSROOT || die 1 "Can't cd to $NFSROOT"
 
     if [ -n "$basetgz" ] ; then
       call_with_stamp extract_base
@@ -316,7 +307,7 @@ create_nfsroot() {
 	[ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
         mount -o ro,noatime,rsize=8192 $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || \
-                die "Can't mount $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
+                die 1 "Can't mount $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
     fi
 
     # hoaks some packages
@@ -340,11 +331,8 @@ EOF
     LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
 
     # overwrite default live.conf
-    if [ -f $cfdir/live.conf ]; then
-	cp -Lp $cfdir/live.conf etc/live.conf
-    else
-	die "$cfdir/live.conf not found."
-    fi
+    [ -f $cfdir/live.conf ] || die 1 "$cfdir/live.conf not found."
+    cp -Lp $cfdir/live.conf etc/live.conf
 
     LC_ALL=C call_with_stamp add_packages_nfsroot
     call_with_stamp copy_fai_files
@@ -354,6 +342,7 @@ EOF
     echo $timezone > etc/timezone 
     ln -sf /usr/share/zoneinfo/$timezone etc/localtime
     ln -sf /proc/mounts etc/mtab
+
     [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
     if [ -d etc/init ]; then   # if upstart is available
 	find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
@@ -416,7 +405,7 @@ umount_dirs() {
     cd /
     [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
     [ -d $NFSROOT/sys/class ] && umount $NFSROOT/sys
-    [ -d $NFSROOT/proc/self ] && die "/proc still mounted inside the nfsroot."
+    [ -d $NFSROOT/proc/self ] && die 1 "/proc still mounted inside the nfsroot."
     umount $NFSROOT/dev/pts 2> /dev/null || true
 
     if [ "$FAI_DEBMIRROR" ]; then
@@ -504,7 +493,7 @@ echo "This may take a long time."
 if [ $sshpreserve = 1 ]; then
     [ "$verbose" ] && echo "Preserving root/.ssh directory from inside the nfsroot."
     # save old .ssh directory
-    tmptar=$(mktemp) || exit 12
+    tmptar=$(mktemp) || die 12 "Cannot create tmp file"
     # should we set the umask before? Does it influence the other parts?
     tar -C $NFSROOT -cf $tmptar root/.ssh
 fi
@@ -515,7 +504,7 @@ then
     echo $NFSROOT already exists. Removing $NFSROOT
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
     [ -L $NFSROOT/proc/self ] && umount $NFSROOT/proc || true
-    [ -L $NFSROOT/proc/self ] && die "/proc is still mounted inside the nfsroot."
+    [ -L $NFSROOT/proc/self ] && die 1 "/proc is still mounted inside the nfsroot."
     umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount 
     rm -rf $oldnfsroot/.??* $oldnfsroot/*
     # also remove files $NFSROOT/.? but not . and ..
@@ -524,7 +513,7 @@ fi
 
 # Create a new nfsroot
 if [ ! -x "$(which debootstrap)" ]; then
-    die "Can't find debootstrap command. Aborting."
+    die 1 "Can't find debootstrap command. Aborting."
 fi
 call_with_stamp create_nfsroot
 
