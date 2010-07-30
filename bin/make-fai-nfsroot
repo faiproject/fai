@@ -205,7 +205,7 @@ setup_ssh() {
     fi
 
     # enable root login
-    perl -pi -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
+    sed -i -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
     if [ -f "$SSH_IDENTITY" ]; then
         cp $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
 	chmod 0644 $NFSROOT/root/.ssh/authorized_keys
@@ -303,7 +303,7 @@ create_nfsroot() {
     # save the list of all packages in the base.tgz
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
-    if [ "$FAI_DEBMIRROR" ]; then
+    if [ -n "$FAI_DEBMIRROR" ]; then
 	[ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
         mount -o ro,noatime,rsize=8192 $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || \
@@ -368,12 +368,11 @@ upgrade_nfsroot() {
 	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
 	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
     fi
-    mount -t proc /proc $NFSROOT/proc
-    mount -t sysfs /sys $NFSROOT/sys
+    mount -t proc   /proc  $NFSROOT/proc
+    mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
-    $ROOTCMD apt-get check
     rm -rf $NFSROOT/etc/apm
 
     if [ $divert = 1 ]; then
@@ -388,6 +387,7 @@ add_packages_nfsroot() {
     local iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
     export FAI_ROOT=$NFSROOT
     export classes="NFSROOT $iarch"
+
 cat > $NFSROOT/etc/kernel-img.conf << EOF
 do_bootloader = No
 do_initrd = No
@@ -408,7 +408,7 @@ umount_dirs() {
     [ -d $NFSROOT/proc/self ] && die 1 "/proc still mounted inside the nfsroot."
     umount $NFSROOT/dev/pts 2> /dev/null || true
 
-    if [ "$FAI_DEBMIRROR" ]; then
+    if [ -n "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
     fi
     # show directories still mounted on nfsroot
@@ -443,15 +443,13 @@ kernel_install() {
 run_hooks() {
 
     local file
-    if [ -z "$NFSROOT_HOOKS" ]; then
-	return
-    fi
-    if [ -d "$NFSROOT_HOOKS"  ]; then
-        echo "Running hooks..."
-        for file in $(cd $NFSROOT_HOOKS ;ls 2>/dev/null | egrep '^[[:alnum:]_.-]+$'); do
-            . $NFSROOT_HOOKS/$file
-        done
-    fi
+    [ -z "$NFSROOT_HOOKS" ] && return
+    [ -d "$NFSROOT_HOOKS" ] || return
+
+    echo "Running hooks..."
+    for file in $(cd $NFSROOT_HOOKS ;ls 2>/dev/null | egrep '^[[:alnum:]_.-]+$'); do
+	. $NFSROOT_HOOKS/$file
+    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main routine
@@ -515,9 +513,8 @@ then
 fi
 
 # Create a new nfsroot
-if [ ! -x "$(which debootstrap)" ]; then
-    die 1 "Can't find debootstrap command. Aborting."
-fi
+[ ! -x "$(which debootstrap)" ] && die 1 "Can't find debootstrap command. Aborting."
+
 call_with_stamp create_nfsroot
 
 kernel_install
