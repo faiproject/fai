@@ -207,10 +207,13 @@ setup_ssh() {
     # enable root login
     sed -i -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
     if [ -f "$SSH_IDENTITY" ]; then
-        cp $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
-	chmod 0644 $NFSROOT/root/.ssh/authorized_keys
+        install -m0644 $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
         echo You can log into install clients without password using $SSH_IDENTITY
     fi
+
+# seting StrictHostKeyChecking to no inside the nfsroot would enable
+# easy login to the install server even if the host key is not known
+
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 copy_fai_files() {
