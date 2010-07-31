@@ -94,9 +94,9 @@ initialize() {
 
     # also used in install_packages.conf
     export aptoptions=" \
-       -o Aptitude::Log=/dev/null \
-       -o Aptitude::CmdLine::Ignore-Trust-Violations=yes\
-       -o APT::Get::AllowUnauthenticated=true \
+      -o Aptitude::Log=/dev/null \
+      -o Aptitude::CmdLine::Ignore-Trust-Violations=yes\
+      -o APT::Get::AllowUnauthenticated=true \
       -o DPkg::force-conflicts::=yes \
       -o Dir::State::status=$statefile \
       -o APT::Get::Force-Yes=true \
@@ -136,10 +136,6 @@ delete_base_packages() {
 	if [ -f $archivedir/${p}_*.deb ]; then
 	    [ $verbose -eq 1 ] && echo "deleting package $p"
 	    rm $archivedir/${p}_*.deb
-        # else commands only for debugging
-        #    else
-        #	echo "package $p not found"
-        #	ls $archivedir/${p}_*.deb
 	fi
     done
 }
@@ -211,18 +207,11 @@ done
 shift $(($OPTIND - 1))
 
 # use FAI_ETC_DIR from environment variable
-if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
-    echo "Using environment variable \$FAI_ETC_DIR."
-fi
+[ -n "$FAI_ETC_DIR" -a -z "$cfdir" ] && echo "Using environment variable \$FAI_ETC_DIR."
 # use -C option if present otherwise use $FAI_ETC_DIR or default to /etc/fai
-if [ -z "$cfdir" ]; then
-    cfdir=${FAI_ETC_DIR:=/etc/fai}
-fi
+[ -z "$cfdir" ] && cfdir=${FAI_ETC_DIR:=/etc/fai}
 cfdir=$(readlink -f $cfdir) # canonicalize path
-if [ ! -d "$cfdir" ]; then
-    echo "$cfdir is not a directory"
-    exit 6
-fi
+[ ! -d "$cfdir" ] && die 6 "$cfdir is not a directory"
 [ "$verbose" -eq 1 ] && echo "Using configuration files from $cfdir"
 . $cfdir/fai.conf
 . $cfdir/make-fai-nfsroot.conf
@@ -234,16 +223,10 @@ export NFSROOT="$NFSROOT/live/filesystem.dir"
 [ -n "$exclasses" -a -n "$cclasses" ] && die 3 "Options -x and -c not allowed at the same time."
 
 # use first argument if given, use variable mirrordir if not argument was given
-if [ -n "$1" ]; then
-    mirrordir=$1
-fi
-if [ -z "$mirrordir" ]; then
-    die 2 "Please give the absolute path to the mirror."
-fi
+[ -n "$1" ] && mirrordir=$1
+[ -z "$mirrordir" ] && die 2 "Please give the absolute path to the mirror."
 { echo $mirrordir | egrep -q '^/'; } || die 4 "Mirrordir must start with a slash /."
-if [ -d $mirrordir/pool -o -d $mirrordir/dists ]; then
-    die 3 "Please first remove $mirrordir/pool and $mirrordir/dists"
-fi
+[ -d $mirrordir/pool -o -d $mirrordir/dists ] && die 3 "Please first remove $mirrordir/pool and $mirrordir/dists"
 
 [ -d $FAI_CONFIGDIR/package_config ] || die 6 "Can't find package config files in $FAI_CONFIGDIR."
 
@@ -264,7 +247,7 @@ if [ "$FAI_DEBMIRROR" ]; then
 fi
 
 # TODO: use -p to preserve sources.list
-perl -p -e 's/file:/copy:/' $cfdir/apt/sources.list > $aptcache/etc/apt/sources.list
+sed -e 's/file:/copy:/' $cfdir/apt/sources.list > $aptcache/etc/apt/sources.list
 
 echo "Getting package information"
 apt-get $qflag $aptoptions update >/dev/null
