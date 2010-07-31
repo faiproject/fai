@@ -255,9 +255,15 @@ call_debootstrap() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-add_all_host_entries() {
+add_etc_hosts_entries() {
 
-    local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
+    # some default entries
+    ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
+    ainsl     $NFSROOT/etc/hosts "# Following entries are specific to your environment"
+    ainsl     $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
+
+    # add entries for all network devices
+local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
     for eth in $ips; do
 	getent hosts $eth >> etc/hosts || true
     done
@@ -310,16 +316,12 @@ create_nfsroot() {
                 die 1 "Can't mount $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
     fi
 
-    # hoaks some packages
     # liloconfig, dump needs these files
     echo "# UNCONFIGURED FSTAB FOR BASE SYSTEM" > etc/fstab
-    echo 'NTPSERVERS=""' > etc/default/ntp-servers
 
     cp -La $cfdir/apt $NFSROOT/etc
 
-    ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
-    ainsl     $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
-    add_all_host_entries
+    add_etc_hosts_entries
 
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
@@ -455,10 +457,12 @@ run_hooks() {
 
 trap 'echo "Aborting";umount_dirs' EXIT
 trap "bad_exit" ERR
-{
 
 # repeat message, so it will appear in the log file
-[ "$verbose" ] && echo "Using configuration files from $cfdir"
+[ "$verbose" ] && echo "Using configuration files from $cfdir" > /var/log/fai/make-fai-nfsroot.log
+
+{
+
 
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
@@ -522,7 +526,7 @@ check_nfsroot
 umount_dirs
 echo "make-fai-nfsroot finished $merror."
 exit 0
-} 2>&1 | tee /var/log/fai/make-fai-nfsroot.log
+} 2>&1 | tee -a /var/log/fai/make-fai-nfsroot.log
 umount_dirs
 trap "true" EXIT
 echo "Log file written to /var/log/fai/make-fai-nfsroot.log"
