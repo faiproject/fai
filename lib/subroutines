@@ -843,29 +843,24 @@ task_debconf () {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    none
-# Requires-Var:    $FAI_ROOT $FAI_ETC_DIR
-# Suggests-Var:    $IPADDR $DOMAIN
+# Requires-Var:    $FAI_ROOT $FAI_ETC_DIR $FAI_ALLOW_UNSIGNED
+# Suggests-Var:
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
 
 task_prepareapt () {
 
-    # ftp and http needs resolv.conf in chroot environment, /etc/hosts is useful
-    # think about using fcopy for these two files
-    [ -f /etc/resolv.conf ] && cp /etc/resolv.conf $FAI_ROOT/etc
-    [ -f /etc/hosts ] && cp /etc/hosts $FAI_ROOT/etc
-    # set hostname in $FAI_ROOT
-    if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
-      echo $HOSTNAME >$FAI_ROOT/etc/hostname
-    fi
-
-
-    # during normal installation, we need sources.list from /etc/apt
-    # currently /target/etc/apt gets overwritten by the contents of /etc/apt from inside the nfsroot
     [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
-    [ -d $FAI_ETC_DIR/apt ] && cp -r $FAI_ETC_DIR/apt/* $FAI_ROOT/etc/apt/
 
-    rm -f $FAI_ROOT/etc/apt/apt.conf.d/10fai # disable AllowUnauthenticated, which was used in the nfsroot
+    # resolv.conf is needed, /etc/hosts is useful in /target
+    # use a file from the config space or from /etc inside the nfsroot
+    fcopy -Bv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
+    fcopy -Bv /etc/apt/preferences || [ -f $FAI_ETC_DIR/apt/preferences ] && \ 
+          cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
+    fcopy -Bv /etc/resolv.conf || cp -v /etc/resolv.conf $FAI_ROOT/etc
+    fcopy -Bv /etc/hosts || cp -v /etc/hosts $FAI_ROOT/etc
+    fcopy -ir /etc/apt # copy all other apt config files from the config space
+
     if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
 	cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
 APT::Get::AllowUnauthenticated "true";
