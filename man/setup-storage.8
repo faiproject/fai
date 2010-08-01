@@ -347,25 +347,28 @@ name ::= [^/[:space:]]+
 .br
 
 
-size ::= (RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*)(-(RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*)?)?(:resize)?
+sizespec ::= RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*
 .br
          /* size in kilo (KiB), mega (default, MiB), giga (GiB), tera (TiB),
 .br
-          * petabytes (PiB) or percentage of disk size or RAM size, possibly
-.br
-          * given as a range; physical partitions or lvm logical volumes only;
-.br
+          * petabytes (PiB) or percentage of disk size or RAM size;
+.br          
           * in future releases KB, MB, GB, ... will be treated as 1000 instead
 .br
           * of 1024 (KiB, MiB, GiB, ...) multipliers */
+
+
+size ::= <sizespec>(-(<sizespec>)?)?(:resize)?
 .br
-         | -(RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*)(:resize)?
+         /* size, possibly given as a range; physical partitions or lvm logical
 .br
-         /* size in kilo, mega (default), giga, tera or petabytes or %,
+          * volumes only */
 .br
-          * given as upper limit; physical partitions
+         | -<sizespec>(:resize)?
 .br
-          * or lvm logical volumes only */
+         /* size given as upper limit; physical partitions or lvm logical
+.br
+          * volumes only */
 .br
          | [^,:[:space:]]+(:(spare|missing))*(,[^,:[:space:]]+(:(spare|missing))*)*
 .br
@@ -373,11 +376,9 @@ size ::= (RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*)(-(RAM:[[:digit:]]+%|[[:dig
 .br
 
 
-tmpfs_size ::= (RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTPiB]*)
+tmpfs_size ::= <sizespec>
 .br
-         /* tmpfs size in percentage of the total RAM or fixed size in
-.br
-          kilo (KiB), mega (default, MiB), giga (GiB), tera (TiB) or petabytes (PiB).
+         /* tmpfs size */
 .br
 
 
