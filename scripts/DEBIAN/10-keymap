@@ -1,0 +1,14 @@
+#! /bin/bash
+
+# (c) Thomas Lange, 2001-2008, lange@debian.org
+# (c) Michael Goetze, 2010, mgoetze@mgoetze.net
+
+error=0 ; trap "error=$((error|1))" ERR
+
+# create keyboard layout table
+$ROOTCMD bash -c "echo 'console-data console-data/keymap/full select $KEYMAP' | debconf-set-selections"
+$ROOTCMD install-keymap $KEYMAP || true
+# dumpkeys | gzip -9f >$target/etc/console/boottime.kmap.gz
+
+exit $error
+
