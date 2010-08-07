@@ -68,7 +68,7 @@ $| = 1;
 
 
 # @commands is the order of the commands that are executed
-our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr smarti smartr hold taskrm taskinst clean-internal aptitude aptitude-r install unpack remove dselect-upgrade/;
+our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r aptitude aptitude-r install unpack remove dselect-upgrade/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
     "inst-internal" => "apt-get $aptopt --fix-missing -s install",
@@ -80,6 +80,8 @@ our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi 
    "clean-internal" => "apt-get clean",
          "aptitude" => "aptitude -R $aptopt install",
        "aptitude-r" => "aptitude -r $aptopt install",
+             "cupt" => "cupt -R $aptopt install",
+           "cupt-r" => "cupt $aptopt install",
            "unpack" => "cd $downloaddir; aptitude download",
   "unpack-internal" => "dpkg --unpack --recursive $downloaddir; rm $downloaddir/*.deb",
  "pending-internal" => "dpkg --configure --pending",
@@ -138,7 +140,7 @@ foreach (@classes) {
 }
 
 # check if any Debian related commands/types are used in package_config
-my @debiantypes= qw/taskinst aptitude aptitude-r install remove dselect-upgrade smarti/;
+my @debiantypes= qw/taskinst cupt cupt-r aptitude aptitude-r install remove dselect-upgrade smarti/;
 foreach my $dt (@debiantypes) {
   $types{$dt} and $hasdebian=1;
 }
@@ -187,7 +189,7 @@ foreach $atype (@commands) {
     next;
   }
 
-  if ($atype eq "install" || $atype eq "smarti" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
+  if ($atype eq "install" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
 
     mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
     getsources(); # retrieve sources
@@ -510,12 +512,14 @@ undef @commands;
 undef %command;
 
 $maxpl=9999;
-@commands = qw/taskinst aptitude aptitude-r install unpack/;
+@commands = qw/taskinst cupt cupt-r aptitude aptitude-r install unpack/;
 %command = (
 	  "install" => "apt-get $qopt -d $ENV{aptoptions} -y --fix-missing install",
          "taskinst" => "aptitude -d $ENV{aptoptions} -y install $devnull",
          "aptitude" => "aptitude -R -d $ENV{aptoptions} -y install $devnull",
        "aptitude-r" => "aptitude -r -d $ENV{aptoptions} -y install $devnull",
+             "cupt" => "cupt -R --download-only $ENV{aptoptions} -y install $devnull",
+           "cupt-r" => "cupt --download-only $ENV{aptoptions} -y install $devnull",
            "unpack" => "cd $downloaddir; aptitude download",
    "clean-internal" => 'true',
  "pending-internal" => 'true',
