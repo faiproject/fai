@@ -1,0 +1,102 @@
+#! /bin/bash
+
+# $Id$
+#
+# Script for setting up a FAI test environment
+
+# this script automatically sets up two empty virtual machines for VirtualBox
+# one named faiserver, the other named demohost
+# it's used for testing new FAI packages in a clean environment
+
+
+# both virtual machines are have a bridged network interface connected
+# to tap0 or eth0 to the real hardware
+
+# this is how I set up my network
+# aptitude install uml-utilities 
+# /etc/init.d/uml-utilities stop
+# tunctl -t tap0
+# ip addr add 192.168.33.100 dev tap0
+# ip link set tap0 up
+# ip route add 192.168.33.0/24 dev tap0
+# or just use eth0, if no other DHCP daemon is running in the network
+# where eth0 is connected to
+
+# one host is the install server (called faiserver, IP 192.168.33.250)
+# demohost is the install client (called demohost, MAC 08:00:27:12:34:56)
+
+# faiserver needs very few memory, disk should be > 2 GB (check again)
+# demohost should have at least 200 MB RAM, disk > 1GB   (check again)
+
+#hostname notebook
+
+
+set -e 
+
+# where to put the hard disk images
+diskdir=/srv/fai/testsdisks
+diskdir=/files/scratch/tests
+
+hostdev=tap0  # device used on real your hardware
+
+vm1=faiserver # this will be the server
+vm2=demohost  # the install client
+serverram=250 # can be very low (maybe <100), more is better
+clientram=400 # > 200; less than 200M is insufficient
+
+vmmod() { VBoxManage -q modifyvm $@; }
+
+[ -d $diskdir ] || mkdir -p $diskdir
+
+# - - - - - - - - - - - - - - - - - - - - - - - -
+# set up faiserver
+# - - - - - - - - - - - - - - - - - - - - - - - -
+VBoxManage -q createvm --register --name $vm1
+VBoxManage -q setproperty hdfolder $diskdir
+VBoxManage -q createhd --filename $diskdir/$vm1-sda.vdi --size 4000
+
+vmmod $vm1 --bioslogofadein off
+vmmod $vm1 --bioslogofadeout off
+vmmod $vm1 --bioslogodisplaytime 0
+vmmod $vm1 --boot1 net --boot2 disk --boot3 dvd --boot4 none
+vmmod $vm1 --hwvirtex on --nestedpaging on
+vmmod $vm1 --usb off
+vmmod $vm1 --sata on --sataportcount 6 --memory $serverram
+vmmod $vm1 --sataport0 $diskdir/$vm1-sda.vdi
+
+vmmod $vm1 --bridgeadapter1 $hostdev
+vmmod $vm1 --nic1 bridged --nictype1 82540EM --macaddress1 081111111111
+
+# - - - - - - - - - - - - - - - - - - - - - - - -
+# set up install client
+# - - - - - - - - - - - - - - - - - - - - - - - -
+VBoxManage -q createvm --register --name $vm2
+VBoxManage -q setproperty hdfolder $diskdir
+VBoxManage -q createhd --filename $diskdir/$vm2-sda.vdi --size 20000
+
+vmmod $vm2 --bioslogofadein off
+vmmod $vm2 --bioslogofadeout off
+vmmod $vm2 --bioslogodisplaytime 0
+vmmod $vm2 --boot1 net --boot2 disk --boot3 dvd --boot4 none
+vmmod $vm2 --hwvirtex on --nestedpaging on
+vmmod $vm2 --usb off
+vmmod $vm2 --sata on --sataportcount 6 --memory $clientram
+vmmod $vm2 --sataport0 $diskdir/$vm2-sda.vdi
+
+vmmod $vm2 --bridgeadapter1 $hostdev
+vmmod $vm2 --nic1 bridged --nictype1 82540EM --macaddress1 080027123456
+
+
+VBoxManage -q setextradata global "GUI/LicenseAgreed" ",8"
+VBoxManage -q setextradata global "GUI/SuppressMessages" value=",confirmVMReset,remindAboutMouseIntegrationOff"
+
+exit 0
+
+
+# now install the faiserver (maybe using FAI and class FAISERVER), or
+# install the package fai-quickstart
+
+# Every client (unknown mac address) will boot the FAI installation
+# fai-chboot -IFPv default
+
+
