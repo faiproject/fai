@@ -1,0 +1,35 @@
+#! /bin/bash
+
+# copyright Thomas Lange 2001-2007, lange@debian.org
+
+error=0 ; trap "error=$((error|1))" ERR
+
+# remove backup files from cfengine
+dirs="root etc var"
+for path in $dirs; do
+    find $target/$path -maxdepth 20 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
+done
+
+[ "$FAI_DEBMIRROR" ] && 
+  ainsl $target/etc/fstab "#$FAI_DEBMIRROR $MNTPOINT nfs ro 0 0"
+
+# set bios clock
+if [ $do_init_tasks -eq 1 ] ; then
+    case "$UTC" in
+       no|"") hwopt="--localtime" ;;
+       yes)   hwopt="--utc"       ;;
+    esac
+    $ROOTCMD hwclock $hwopt --systohc || true
+fi
+
+# Make sure everything is configured properly
+echo "Running \"apt-get -f install\" for the last time."
+$ROOTCMD apt-get -f install
+
+lskernels=$(echo $target/boot/vmlinu*)
+[ -f ${lskernels%% *} ] || echo "ERROR: No kernel was installed. Have a look at shell.log"
+# copy sources.list
+fcopy -i /etc/apt/sources.list
+
+exit $error
+

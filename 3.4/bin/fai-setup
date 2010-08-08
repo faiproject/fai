@@ -1,0 +1,204 @@
+#! /bin/bash
+
+# $Id$
+#*********************************************************************
+#
+# fai-setup -- set up FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2000-2009 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
+
+set -e
+
+cfdir=/etc/fai
+
+options=$@ # all options are also passed to make-fai-nfsroot
+
+while getopts ervC:f:kKV: opt ; do
+    case "$opt" in
+	C) cfdir=$OPTARG ;;
+	v) verbose=1 ; v=-v ;;
+	e) expert=1 ;;
+    esac
+done
+
+
+. $cfdir/fai.conf
+. $cfdir/make-fai-nfsroot.conf
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_export_line() {
+
+    # add a line to /etc/exports
+
+    pattern=$1
+    shift
+    options="$@"
+
+    [ -f /etc/exports ] && grep -q "^$pattern[[:space:]]" /etc/exports && return
+    echo "Adding line to /etc/exports: $pattern $options"
+    echo "$pattern $options" >> /etc/exports
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_fai_account() {
+
+    if id $LOGUSER 2>/dev/null 1>&2 ; then
+	echo Account \$LOGUSER=$LOGUSER  already exists.
+	echo Make sure that all install clients can
+	echo log into this account without a password.
+	return
+    fi
+
+    adduser --system --disabled-password --home /var/log/fai --gecos "FAI account for log files" $LOGUSER
+    # there's a bug when the encrypted password is !, so change it to *
+    perl -pi.bak -e "s#^$LOGUSER:.:(.+):/bin/false#$LOGUSER:*:\1:/bin/bash#" /etc/passwd
+    # get the home dir of a user in a variable; do not exit when set -e is used
+    # loguserhome is unset if $LOGUSER does not exists
+    # this is not a evil hack, it's a very clever piece of code
+    loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
+    touch $loguserhome/.account_created_by_fai_package
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+setup_fai_account() {
+
+    # most things should be executed as user $LOGUSER, since root may not have write
+    # permissions to $loguserhome (e.g if mount via NFS without no_root_squash)
+
+    set +e
+    loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
+    sshdir=$loguserhome/.ssh
+    if [ -z "$loguserhome" ]; then
+	echo "Can't determine home directory for user $LOGUSER."
+	echo "LOGUSER= $LOGUSER    loguserhome= $loguserhome"
+	exit 8
+    fi
+
+    if [ "$FAI_LOGPROTO" = "ssh" ]; then
+	# set up ssh on the server
+	mkdir -p -m 700 $loguserhome/.ssh
+	
+	#Generating keys for LOGUSER
+	[ -f $sshdir/id_rsa ] || {
+	    ssh-keygen -t rsa -N '' -f $sshdir/id_rsa -C "$LOGUSER@$HOSTNAME"
+	    cat $sshdir/id_rsa.pub >> $sshdir/authorized_keys
+	}
+
+	[ -f $sshdir/id_dsa ] || {
+	    ssh-keygen -t dsa -N '' -f $sshdir/id_dsa -C "$LOGUSER@$HOSTNAME"
+	    cat $sshdir/id_dsa.pub >> $sshdir/authorized_keys
+	}
+	
+	#Adding servers keys to known_hosts list of LOGUSER. 
+	#So that installed clients can ssh $LOGUSER@$HOSTNAME without password
+	if [ ! -f $sshdir/known_hosts ]; then
+	    [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_dsa_key.pub)
+	    [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_rsa_key.pub )
+	    # determine all IP addresses, and their host names
+	    ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | grep -v 127.0.0.1)
+	    for ip in $ips; do
+		hname=$(getent hosts $ip| tr -s ' ' ',')
+		: ${hname:=$ip}
+		echo "Adding $hname to known_hosts."
+		[ -z "$DSASERVER" ] || echo "$hname $DSASERVER" >> $sshdir/known_hosts
+		[ -z "$RSASERVER" ] || echo "$hname $RSASERVER" >> $sshdir/known_hosts
+	    done
+	    echo "$sshdir/known_hosts created."
+	else
+	    echo "$sshdir/known_hosts remained unchanged."
+	fi
+
+	chmod 0600 $sshdir/authorized_keys
+	echo "$sshdir/authorized_keys created."
+    fi
+    if [ "$FAI_LOGPROTO" = "rsh" -a ! -f $loguserhome/.rhosts ]; then
+	# use .rhosts authentication
+	echo "+@faiclients root" > $loguserhome/.rhosts
+	chmod go-rwx $loguserhome/.rhosts
+	echo "$loguserhome/.rhosts created."
+    fi
+
+    logusergid=$(id -ng $LOGUSER)
+    echo "User account $LOGUSER set up."
+    set -e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+{ # start huge block for capturing output
+
+if [ -n "$LOGUSER" ]; then
+    add_fai_account
+    setup_fai_account
+fi
+
+make-fai-nfsroot $options
+
+if [ -n "$LOGUSER" ]; then
+    # chown only if cd was successful
+    cd $loguserhome
+    if [ $? -eq 0 ]; then
+	[ -e .rhosts ] && chown $LOGUSER:$logusergid . .rhosts || true
+	[ -d .ssh ] && chown -R $LOGUSER:$logusergid .ssh || true
+    fi
+    mkdir -p $TFTPROOT
+    chown -R $LOGUSER:$logusergid $TFTPROOT || true
+fi
+
+if [ -z "$FAI_CONFIGDIR" ]; then
+    echo "FAI_CONFIGDIR not set in /etc/fai/fai.conf."
+    echo "Using /srv/fai/config as default."
+    FAI_CONFIGDIR=/srv/fai/config
+fi
+mkdir -p $FAI_CONFIGDIR
+
+# in expert mode, do not export nfs directories
+if [ -z "$expert" ]; then
+    test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
+    test -f /etc/init.d/nfs-user-server && nfsserver=nfs-user-server
+
+    : ${SERVERINTERFACE:=eth0}  # set to eth0 if not already set
+    addr=$(ip addr show dev $SERVERINTERFACE | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | head -1)
+
+    if expr match "$FAI_CONFIG_SRC" 'nfs:\/\/' > /dev/null; then
+        add_export_line $FAI_CONFIGDIR  "$addr(async,ro,no_subtree_check)"
+    fi
+    add_export_line $NFSROOT  "$addr(async,ro,no_subtree_check,no_root_squash)"
+    if [ -z "$nfsserver" ]; then
+	echo "Could not find the type of your nfs server. Maybe"
+	echo "no nfs server is installed. I can't restart it."
+    else
+	/etc/init.d/$nfsserver reload
+    fi
+fi
+
+if [ ! -d $FAI_CONFIGDIR/class ]; then
+    echo ""
+    echo "   You have no FAI configuration space yet. Copy the simple examples with:"
+    echo "   cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR"
+    echo "   Then change the configuration files to meet your local needs."
+    echo "Please don't forget to fill out the FAI questionnaire after you've finished your project with FAI."
+    echo ""
+fi
+echo "FAI setup finished."
+} 2>&1 | tee /var/log/fai/fai-setup.log
+echo "Log file written to /var/log/fai/fai-setup.log"

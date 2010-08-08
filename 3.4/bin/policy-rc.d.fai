@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# which init.d do we like to start?
+
+# do not start any daemons when make-fai-nfsroot is called
+echo $classes | grep -q NFSROOT
+if [ $? -eq 0 ]; then
+    exit 101
+fi
+
+# maybe: start all other daemons, when used via /etc/init.d scripts
+# exit 0
+
+case "$1" in
+    udev)
+	# udev should not be started when make-fai-nfsroot is running
+	# it should be started when install clients are running
+	exit 0
+	;;
+esac
+
+# all other will not be started
+exit 101

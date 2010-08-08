@@ -1,0 +1,15 @@
+#!/bin/bash
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_CONFIG_SRC $FAI
+# Suggests-Var:    $romountopt
+# Short-Description: get $FAI by mounting it via nfs
+### END SUBROUTINE INFO
+
+server=$(expr match "$FAI_CONFIG_SRC" '.*://\([^/]*\)/.*')
+nfspath=$(expr match "$FAI_CONFIG_SRC" '.*://[^/]*\(/.*\)')
+
+mount $romountopt $server:$nfspath $FAI &&
+  echo "Configuration space $server:$nfspath mounted to $FAI"
+task_error 701 $?

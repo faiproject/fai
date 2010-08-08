@@ -1,0 +1,41 @@
+#! /bin/sh
+
+# $Id$
+# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001-2009
+
+# create partial debian mirror using command debmirror(1)
+# you should use debmirror > 2.0 because of the very nice cache feature
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+update_from() {
+
+    # update local mirror from a host
+    host=$1
+    defopt="--pdiff=none $allopt --host=$host --dist=$dist $sect $*"
+
+    echo "------------------ create mirror for debian ------------------"
+    debmirror $destdir/debian $defopt
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# main program
+#
+# here you have to adjust the hostnames of the mirror and the names of the distributions
+
+
+debug="$@"
+arch=i386
+dist=lenny
+
+destdir=/files/scratch/debmirror
+sect="--section main,contrib,non-free"
+allopt="$debug --state-cache-days=100 --ignore-missing-release --ignore-release-gpg --passive --nosource --arch=$arch"
+
+# first sync from a mirror near to you
+#update_from ftp.uni-koeln.de
+
+# since this mirror is not always up to date, sync the rest from an official mirror
+update_from ftp.de.debian.org --getcontents
+
+# even one should not mirror the security site, but I will do it.
+echo "------------------ create mirror for debian-security ------------------"
+debmirror $destdir/debian-security $allopt --host=security.debian.org -r debian-security $sect -d lenny/updates

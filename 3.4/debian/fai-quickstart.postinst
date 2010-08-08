@@ -1,0 +1,49 @@
+#! /bin/sh
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+#
+
+case "$1" in
+    configure)
+
+	# for upgrades from 3.2.20 to newer versions.
+	if egrep -q ^FAI_CONFIGDIR= /etc/fai/fai.conf; then
+	    echo "WARNING: The variable \$FAI_CONFIGDIR is still defined in /etc/fai/fai.conf."
+	    echo "Please move it to /etc/fai/make-fai-nfsroot.conf."
+	    echo "NOT doing any further configuration - please copy your configspace yourself"
+	    exit 0
+	fi
+
+	. /etc/fai/make-fai-nfsroot.conf
+	if [ ! -d $FAI_CONFIGDIR/class ]; then
+	    mkdir -p $FAI_CONFIGDIR
+	    cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR
+	    echo "Simple examples copied to config space $FAI_CONFIGDIR."
+	fi
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+
+#DEBHELPER#
+
+exit 0

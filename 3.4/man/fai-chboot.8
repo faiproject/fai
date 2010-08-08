@@ -1,0 +1,196 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH fai-chboot 8 "21 October 2009" "FAI 3.3"
+.\"
+.\" File Name macro.  This used to be `.PN', for Path Name,
+.\" but Sun doesn't seem to like that very much.
+.\"
+.de FN
+\fI\|\\$1\|\fP
+..
+
+.SH NAME
+fai-chboot \- manage the network boot configuration files
+.SH SYNOPSIS
+.B fai-chboot
+[OPTION]... KERNELNAME HOST...
+.br
+.B fai-chboot
+\-l[e|d|t|o|g] [PATTERN]
+.br
+.B fai-chboot
+\-e HOST...
+.br
+.B fai-chboot
+\-d HOST...
+.br
+.B fai-chboot
+\-c HOST|TEMPLATE HOST|TEMPLATE...
+.br
+.B fai-chboot
+\-i [OPTION]... HOST...
+.br
+.B fai-chboot
+\-I [OPTION]... HOST...
+.SH DESCRIPTION
+This command creates the configuration files for network booting using
+pxelinux and DHCP.
+
+KERNELNAME is the file name of the kernel that will be booted. This
+kernel will mount the root filesystem via NFS. You can add
+additional kernel parameters and define some FAI specific flags. For
+each host one configuration file is created. The file name of the
+configuration file is its IP address in upper case hexadecimal. HOST
+can be a host name, an IP address or the keyword "default".
+
+.SH OPTIONS
+.TP
+.BI \-B
+Set default values for FAI_FLAGS. This is the same as \-f
+verbose,sshd,reboot
+.TP
+.B \-c
+Copy an existing config file to one or more hosts or templates and enable
+them for network booting.
+.TP
+.BI "\-C " CFDIR
+Use CFDIR as the configuration directory. Default is /etc/fai. You can
+also set the environment variable FAI_ETC_DIR.
+.TP
+.BI "\-D " DIR
+Set the directory for the network boot configuration to
+DIR. The default value is /srv/tftp/fai/pxelinux.cfg/.
+.TP
+.B \-d
+Disable network booting for HOST. This renames the config file adding
+the suffix .disable to it.
+.TP
+.B \-e
+Reenable network booting for HOST. This renames the config file removing
+the suffix .disable from it, so the next time it uses the PXE configuration.
+.TP
+.BI "\-f " fai_flags
+Set FAI_FLAGS. The flags must be comma separated.
+.TP
+.BI \-F
+Set default values for FAI_FLAGS. This is the same as \-f
+verbose,sshd,createvt
+.TP
+.B \-h
+Show simple help and version.
+.TP
+.B \-i
+Set parameters for booting the FAI install kernel (proper initrd, boot from nfs). This does not set FAI_ACTION
+.TP
+.B \-I
+Same as \-i but also sets FAI_ACTION=install. So a fully automatic
+installation will be performed. ATTENTION! This will erase most of the
+data on the local disks of the install clients.
+.TP
+.BI "\-k " parameters
+Set kernel append parameters.
+.TP
+.B \-l
+List the configuration for all hosts in short format. If PATTERN is
+given, list only hosts matching PATTERN. Lists hostname, FAI_ACTION,
+kernel name and IP address in hex. Use \fB\-le\fR, to list only enabled hosts,
+\fB-ld\fR to list only disabled hosts, \fB-lt\fR to list only templates,
+\fB-lo\fR to list only hosts that do not match any of the
+previous categories, and \fB-lg\fR to list the configuration for all hosts,
+sorted and ordered by groups (enabled, disabled, templates, others).
+Note that a combination of multiple \fB-l\fR options is not supported and that
+in listing mode no other action will be performed.
+.TP
+.B \-L
+List the configuration for all hosts. Also list the kernel append parameters.
+If PATTERN is given, list only hosts matching PATTERN.
+.TP
+.B \-n
+Do not create configuration but show what would be done. This also
+enables the verbose flag.
+.TP
+.BI \-o
+Do localboot via PXE. Do not boot via network card, but use next boot
+device which is specified in the BIOS. Normally this is the local disk.
+.TP
+.B \-p
+Preserve existing config files. The default is to overwrite an
+existing config file.
+.TP
+.BI "\-s " SUFFIX
+Use SUFFIX to determine which kernel and initrd to use.
+.TP
+.BI \-S
+Same as \-i but also sets FAI_ACTION=sysinfo.
+.TP
+.BI "\-u " URL
+Set FAI_CONFIG_SRC to URL. If not set the value from fai.conf inside
+the nfsroot will be used.
+.TP
+.B \-v
+Create verbose output.
+.SH EXAMPLES
+.TP
+fai-chboot \-l
+List the configuration for all hosts.
+.TP
+fai-chboot \-iFv atom02 atom03 dom kueppers
+The hosts atom02, atom03, dom and kueppers will boot the FAI install
+kernel. FAI_ACTION will not be set unless specified with option
+\-k or \-I. You can also use the script class/LAST.var on the install server
+to set FAI_ACTION.
+.TP
+fai-chboot \-FSv atom02
+The host atom02 will boot the FAI install kernel but with FAI_ACTION sysinfo.
+.TP
+fai-chboot \-IBv atom02
+The host atom02 will be installed. ATTENTION! All data on the local
+hard disks are lost in most cases, because we want to install a new
+system. After the installation the host automatically reboots.
+.TP
+fai-chboot \-v atom-localboot atom03 
+Next time atom03 will boot the kernel atom-localboot.
+.TP
+fai-chboot \-vS \-s2.6.18-4-amd64 faiserver
+Booting kernel vmlinuz-2.6.18-4-amd64
+ append initrd=initrd.img-2.6.18-4-amd64 ip=dhcp   
+
+faiserver has 1.2.3.4 in hex 01020304
+.br
+Writing file /srv/tftp/fai/pxelinux.cfg/01020304 for faiserver
+.TP
+fai-chboot \-IFv \-u nfs://faiserver/srv/fai/clusterconf node03
+.br
+node03 will be installed using the configuration space
+/srv/fai/clusterconf, which is mounted from faiserver via NFS.
+.TP
+fai-chboot memtest86+ atom02
+The host atom02 will boot the memory test. Install the package
+memtest86+ and copy the executable memtest86+.bin to /srv/tftp/fai
+without the .bin suffix.
+.TP
+fai-chboot \-o default
+All hosts, that do not have a PXE configuration for their IP-address
+will do a localboot, i.e. booting from local disk.
+.TP
+fai-chboot \-vc lenny64 james007
+This command will tell the host james007 to use the template called lenny64.
+Beforehand, you have to manually create the template 
+and save it to /srv/tftp/fai/pxelinux.cfg/lenny64.tmpl.
+
+
+.SH NOTES
+Currently only PXE boot is supported. BOOTP configuration can be
+managed using the tlink utility.
+
+.SH SEE ALSO
+.br
+\fBfai-mirror\fP(1)
+.TP
+.FN /usr/share/doc/syslinux/pxelinux.doc.gz
+The pxelinux documentation.
+.TP
+
+This program is part of FAI (Fully Automatic Installation). See the FAI manual for more information on how to use fai-chboot. The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+
+.SH AUTHOR
+Thomas Lange <lange@informatik.uni-koeln.de>

@@ -1,0 +1,24 @@
+#! /bin/sh
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    none
+# Requires-Var:    none
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+diskandsize() {
+
+    while read major minor blocks device suffix; do
+	isdisk=1
+	# skip ide cdrom
+	[ -f /proc/ide/$device/media ] && grep -q cdrom /proc/ide/$device/media && isdisk=0
+# old way of detecting disks: [ `cat /sys/block/$device/removable` -eq 1 ] && isdisk=0
+	[ `stat -c %G /dev/$device` = "disk" ] || isdisk=0
+	[ $isdisk -eq 1 ] && echo "$device"
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# echo a space separated list of devices and their block size
+egrep ' etherd/e[[:digit:]]+\.[[:digit:]]+\b| i2o/hd.\b| cciss/c.d.\b| ida/c.d.\b| rd/c.d.\b| hd.\b| sd[a-z]{1,2}\b|/disc\b| vd.\b| xvd.\b' /proc/partitions | diskandsize
+
+

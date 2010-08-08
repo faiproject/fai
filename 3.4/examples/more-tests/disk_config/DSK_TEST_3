@@ -1,0 +1,16 @@
+# DSK_TEST_3
+disk_config disk1
+
+primary	/boot 20-100     ext3       rw
+primary swap  100        swap       sw
+primary /     300-400    ext3       rw,acl,user_xattr
+primary  -    0-	 -	    -
+
+# config the LVM
+disk_config lvm
+vg  volg1   disk1.4
+volg1-usr   /usr	    1048    ext3  rw   createopts="-O dir_index,resize_inode"
+volg1-var   /var	    600     ext3  rw   createopts="-O dir_index,resize_inode"
+volg1-hl    /home/local	    2G-3G   ext3  rw,acl,user_xattr,noexec,nosuid,nodev
+volg1-es    /export/sites   100     ext3  rw   createopts="-O none"
+volg1-v	    /vservers	    100     ext3  rw   createopts="-O ^dir_index,^resize_inode"

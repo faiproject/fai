@@ -1,0 +1,18 @@
+#! /bin/sh
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:    $DNSSRVS $DOMAIN
+# Requires-Var:    none
+# Short-Description: <task desc.>
+### END SUBROUTINE INFO
+
+# create a resolv.conf using the DHCP or BOOTP information
+if [ "$DNSSRVS" ]; then
+	[ "$DOMAIN" ] && echo "domain $DOMAIN" >/etc/resolv.conf
+	for dnshost in $DNSSRVS ; do
+	    echo "nameserver $dnshost" >>/etc/resolv.conf
+	done
+else
+    # use the resolv.conf from the installserver
+    cp -p /etc/resolv.conf-installserver /etc/resolv.conf
+fi

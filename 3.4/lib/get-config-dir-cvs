@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# (c) 2002-2006 Henning Glawe <glaweh@debian.org>
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_CONFIG_SRC $FAI $LOGDIR
+# Suggests-Var:
+# Short-Description: get $FAI from a cvs repository.
+### END SUBROUTINE INFO
+
+# matched string: "cvs[+ssh]://user@host/path/to/cvsroot module[=tag]"
+# dir contains user@host/path/to/cvsroot
+protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
+dir=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^[:space:]]\+\)[[:space:]]\+')
+module=$(expr match "$FAI_CONFIG_SRC" '[^:]*://.*[[:space:]]\+\([^=]*\)')
+tag=$(expr match "$FAI_CONFIG_SRC" '[^=]*=\([^=]*\)')
+
+case $protocol in
+	cvs+ssh)
+		export CVS_RSH=ssh
+		export CVSROOT=":ext:$dir"
+		;;
+	cvs)
+		export CVSROOT=":pserver:$dir"
+		;;
+	*)
+		echo "get-config-dir-cvs: protocol $protocol not implemented"
+		exit 1
+		;;
+esac
+		
+[ -n "$tag" ] && tag="-r $tag"
+
+if [ -d "$FAI/CVS" ] ; then
+   echo "Updating CVS in $FAI"
+   cd $FAI
+   cvs -q up -P $tag -d -C > $LOGDIR/getconf.log
+   task_error 701 $?
+else 
+   echo "Checking out CVS"
+   cd ${FAI%/*}     # cd to dirname $FAI
+   cvs -q co -P -d ${FAI##*/} $tag $module > $LOGDIR/getconf.log   # -d uses basename of $FAI
+   task_error 702 $?
+fi

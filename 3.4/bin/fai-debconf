@@ -1,0 +1,123 @@
+#! /bin/bash
+
+#*********************************************************************
+#
+# fai-debconf - set debconf values using classes
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2005-2010 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+version="version 1.3.2, 18-january-2010"
+
+# variables needed: $classes, $ROOTCMD, $LOGDIR, $target
+    
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+call_conf() {
+
+    # loop over all files in debconf
+    local class f
+    cd $debconfdir
+    for class in $classes ; do
+	[ -f $class ] && add_data $class
+	if [ -d $class ]; then
+	   for f in $(ls $class/* | egrep '^[[:alnum:]_.-]+$') ; do
+	       [ -f $f ] && add_data $f
+	   done
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_data() {
+
+    # add debconf data
+    local file=$1
+
+    [ "$verbose" ] && echo "Adding debconf data from $debconfdir/$file"
+    $ROOTCMD debconf-set-selections -v < $debconfdir/$file 2>> $LOGDIR/debconf.log
+#    grep -v ^# $debconfdir/$file >> $LOGDIR/debconf.data
+    cat $debconfdir/$file >> $LOGDIR/debconf.data
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+reconfigure_packages() {
+
+     local packages p tmpdb
+
+     [ -s $LOGDIR/debconf.data ] || return # nothing to do if is size 0 or missing
+     if [ -r $LOGDIR/debconf.old ] ; then
+       $ROOTCMD debconf-get-selections > $LOGDIR/debconf.new
+       diff --changed-group-format="%>" --unchanged-line-format="" \
+         $LOGDIR/debconf.old $LOGDIR/debconf.new > $LOGDIR/debconf.data
+     fi
+     packages=$(awk '{print $1}' $LOGDIR/debconf.data | sort | uniq)
+     # backup database
+     tmpdb=$($ROOTCMD mktemp -t fai-debconf.XXXXXXXXXX) || exit 10
+     $ROOTCMD debconf-copydb configdb faidb --config=Name:faidb --config=Driver:File --config=Filename:$tmpdb
+     for p in $packages; do
+	 # test if package is installed
+	 if [ -f $target/var/lib/dpkg/info/$p.list ]; then
+	     echo "Reconfiguring package $p"
+       DEBCONF_DB_OVERRIDE="File{$tmpdb readonly:true}" DEBIAN_FRONTEND=noninteractive $ROOTCMD /usr/sbin/dpkg-reconfigure $p
+	 else
+	     :
+	     # for debugging only
+	     # echo "Package $p is not yet installed. Skipping reconfiguration."
+	 fi
+     done
+     rm -f $target/$tmpdb $target/$tmpdb-old
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    local ex=$1
+    cat <<-EOF
+    fai-debconf $version. Copyright (C) 2005-2010 Thomas Lange
+    Report bugs to <fai@informatik.uni-koeln.de>.
+
+    Usage: fai-debconf [OPTION] DIRECTORY
+EOF
+    exit $ex
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# main program
+
+reconf=1 # call dpkg-reconfigure by default
+forcereconf=0 # don't call dpkg-reconfigure for unchanged packages
+while getopts "hvsf" opt ; do
+    case "$opt" in
+	h) usage 0 ;;
+	s) reconf=0 ;;
+	v) verbose=1 ;;
+	f) forcereconf=1 ;;
+    esac
+done
+shift $(($OPTIND - 1))
+[ -z "$1" ] || [ -n "$2" ] && usage 1
+debconfdir=$1 # will be /fai/debconf
+
+if [ "x$classes" = "x" ]; then
+    echo "No classes are defined."
+    exit 9
+fi
+
+[ $forcereconf -eq 0 -a -x $target/usr/bin/debconf-get-selections ] && $ROOTCMD debconf-get-selections > $LOGDIR/debconf.old
+call_conf # add data to debconf database
+[ $reconf -eq 1 ] && reconfigure_packages

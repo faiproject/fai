@@ -1,0 +1,143 @@
+#! /usr/bin/perl
+
+# $Id$
+#*********************************************************************
+#
+# ainsl -- AppendIfNoSuchLine written in Perl
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2006-2009 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# '/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+my $version = "Version 1.3, 17-july-2009";
+
+use strict;
+
+use Getopt::Std;
+our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q);
+
+my $filename;
+my $verbose;
+my $debug;
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub usage {
+
+  my $exitcode = shift;
+
+  print << "EOF";
+ainsl, AppendIfNoSuchLine written in Perl. $version
+
+   Copyright (C) 2006-2009 by Thomas Lange
+
+Usage: ainsl [OPTION] FILE LINE [PATTERN]
+
+   -a         Autocreate file if not existing.
+   -D         Create debug output.
+   -h         Show summary of options.
+   -n         Print the actions, but do not execute them.
+   -Q         Quote all metacharacters in pattern. Uses perl\'s \\Q function.
+   -q         Quote * and + metacharacters in pattern.
+   -s         Convert blanks in line to '\\s+' regexp.
+   -v         Create verbose output.
+
+Report bugs to <lange\@informatik.uni-koeln.de>.
+EOF
+  exit $exitcode;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub autocreate {
+
+  -f $filename && return;
+
+  # create missing parts of a path. Could be replaced by File::Path
+  my $path;
+  while ($filename =~ m#([^/]+)/#g) {
+    $path.="/$1";
+    -d $path && next;
+    print "ainsl: create $path\n" if $debug;
+    $opt_n && next;
+    mkdir $path || die "ainsl: can't create $path $!";
+  }
+
+  print "ainsl: create $filename\n" if $verbose;
+  $opt_n && return;
+  open (FILE,">$filename") || die "ainsl: can't create $filename $!";
+  close (FILE);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+getopts('aDhsvnQq') || usage(3);
+
+$opt_h && usage(0);
+$verbose = $opt_v || $ENV{verbose} || 0;
+$debug   = $opt_D || $ENV{debug}   || 0;
+
+$filename = shift;
+my $line     = shift;
+my $optpattern  = shift;
+my $found = 0;
+usage(3) unless defined $line;
+
+print "FILE: $filename\nLINE: $line\nPATTERN: $optpattern\n" if $debug;
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+$opt_a && autocreate;
+
+my $pattern = (defined $optpattern) ? $optpattern: $line;
+# process pattern and line
+# remove ^ and $ in line (only at start and end), but still use it for pattern
+# in no explicit pattern was given
+
+unless (defined $optpattern) {
+# remove special chars ^ and $ from line
+  $line =~ s/^\^//;
+  $line =~ s/\$$//;
+# escape '(' and ')' if no pattern was given and line is used
+  $pattern =~s/\(/\\(/g;
+  $pattern =~s/\)/\\)/g;
+  $pattern =~s/\+/\\+/g;
+}
+$opt_s && $pattern=~ s/\s+/\\s+/g;
+$opt_q && $pattern=~ s/\*/\\*/g;
+$opt_q && $pattern=~ s/\+/\+/g;
+$pattern="\Q$pattern\E" if $opt_Q;
+
+print "ainsl: newpattern: $pattern\n" if $debug;
+print "ainsl: newline: $line\n" if $debug;
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# check if pattern already included in file
+-f $filename || die "ainsl: target file $filename does not exist.\n";
+open (INFILE, "<$filename") or die "ainsl: Can't open $filename $!\n";
+while (<INFILE>) {
+  if (/$pattern/o) {
+    print "aisnl: Pattern found. Nothing to append.\n" if $debug;
+    $found=1;
+    last;
+  }
+}
+close(INFILE);
+exit 1 if $found; # nothing to append
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Append line to file
+print "ainsl: appending to $filename: $line\n" if $verbose;
+exit 0 if $opt_n;
+open (INFILE, ">>$filename") or die "ainsl: can't open $filename for writing. $!";
+print INFILE $line,"\n";
+close(INFILE);

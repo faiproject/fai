@@ -1,0 +1,148 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH fai 8 "20 October 2009" "FAI 3.3"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+fai \- fully automatic installation
+.SH SYNOPSIS
+.B fai
+.RI [ options ] " ACTION"
+.br
+.B fai
+.RI [ options ] " dirinstall DIRECTORY"
+.SH DESCRIPTION
+fai starts an fai-action, e.g. an installation or a softupdate.
+If the variable FAI_ACTION is defined, this action will be
+performed. The command line argument will override the value of
+FAI_ACTION. You can also define your own actions which will be
+executed when specified.
+.SH OPTIONS
+.TP
+ACTION is required.
+.TP
+.B \-C CFDIR
+Use CFDIR as the configuration directory. Default is /etc/fai.
+.TP
+.BI "\-c|\-\-class " class[,class]
+Define classes.  Multiple classes must be comma separated.  If not
+specified, use the shell environment variable $classes (space
+separated).  The first class has lowest priority.
+.TP
+.B \-h|\-\-help
+Show help, version and summary of options.
+.TP
+.B \-N|\-\-new
+Renew the list of defined classes. By default, FAI uses the list of
+classes which was created during the first installation and skips
+calling fai-class(1). You need this option for the first 
+softupdate if the system was not installed with FAI, you can also use
+it in subsequent runs.
+.TP
+.B \-s|\--cspace <URL>
+URL of the config space. See fai.conf for more information on the
+format and which types of protocol are supported.
+This overrides the setting of FAI_CONFIG_SRC in /etc/fai.
+.TP
+.B \-u|\--hostname <HOSTNAME>
+Use this hostname instead the output of the hostname command. This is
+useful in conjunction with the dirinstall action, where you
+want to manually define a hostname that should be used for
+defining classes and for the network setup and other stuff. There, you
+don't want the name of the host where you run fai
+dirinstall to be used - because programs in a chroot, or in a
+virtualized OS instance should run with their own name, and install
+their own set of classes.
+.TP
+.B \-v|\-\-verbose
+Create verbose output.
+.SH ACTIONS
+.TP
+.B install
+starts a fully automatic installation:
+.RS
+.IP 1. 3
+setup the fai environment (create ramdisk, get configuration data,...) 
+.IP 2. 3
+define classes and variables
+.IP 3. 3
+partition the local hard disk and create file systems
+.IP 4. 3
+install new software packages
+.IP 5. 3
+call configuration scripts
+.IP 6. 3
+check and save the logfiles
+.RE
+
+.TP
+.B sysinfo
+starts a system rescue:
+.RS
+.IP 1. 3
+setup the fai environment (create ramdisk, get configuration data,...) 
+.IP 2. 3
+define classes and variables
+.IP 3. 3
+do different types of hardware detection and print hardware info
+.IP 4. 3
+save the logfiles
+.RE
+
+.TP
+.B softupdate
+starts a softupdate:
+.RS
+.IP 1. 3
+fetch FAI configuration according to /etc/fai/fai.conf 
+.IP 2. 3
+define classes and variables
+.IP 3. 3
+update the installed packages
+.IP 4. 3
+install new software
+.IP 5. 3
+call configuration scripts
+.IP 6. 3
+check and save the logfiles
+.RE
+
+.TP
+.B dirinstall [DIR]
+Installation into a directory. This is nearly the same action as
+install except for skipping the task that partitions the hard disks and
+creates the file systems. Classes can be defined with option \-c, or by
+giving the hostname with \-u or \-\-hostname and enabling automatic definition
+by class scripts from hostname with \-N. (Without \-N class scripts aren't
+executed)
+
+.SH NOTES
+Running with action "install" on a running system will almost
+certainly destroy it.
+.SH EXAMPLES
+
+   fai \-v \-s file:///srv/fai/config \-cDEFAULT,FAIBASE dirinstall /srv/etchroot 
+
+This command will do an installation into the directory
+/src/etchroot. For defining variables, selecting the software packages
+and calling the customization script the classes DEFAULT, FAIBASE and
+LAST are used.
+
+.SH SEE ALSO
+.br
+This program is the central part of FAI (Fully Automatic Installation).  See 
+the FAI manual for more information on how to use FAI. 
+The FAI homepage is http://www.informatik.uni-koeln.de/fai.
+
+.SH AUTHOR
+This manual page was written by Henning Glawe
+<glaweh@physik.fu-berlin.de> and Thomas Lange <lange@informatik.uni-koeln.de>.

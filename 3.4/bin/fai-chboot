@@ -1,0 +1,459 @@
+#! /usr/bin/perl
+
+# $Id$
+#*********************************************************************
+#
+# fai-chboot -- manage configuration for network boot
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2003-2010 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# A copy of the GNU General Public License is available as
+# '/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+# variable needed: $nfsroot
+$version="version 3.5.1 25-march-2010";
+
+use Socket;
+use Net::hostent;
+use Getopt::Std;
+use File::Copy;
+
+our ($opt_D, $opt_p,$opt_h,$opt_t,$opt_s,,$opt_C);
+$Getopt::Std::STANDARD_HELP_VERSION=1;
+
+$0=~ s#.+/##; # remove path from program name
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub ip2hex {
+
+  my $ipadr = shift;
+  my $hex = sprintf("%02X%02X%02X%02X", split(/\./,$ipadr));
+  return ($ipadr,$hex);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub host2hex {
+
+  my $host = shift;
+
+  if ($host =~ /^\d+\.\d+\.\d+\.\d+$/) {
+    # hostname is already an IP address
+    return ip2hex($host);
+  }
+  return ('no IP','default') if ($host =~ /^default/);
+
+  my $h = gethost($host);
+  die "$0: unknown host: $host\n" unless $h;
+
+  if ( @{$h->addr_list} > 1 ) {
+    my $i;
+    for my $addr ( @{$h->addr_list} ) {
+      $ipadr = inet_ntoa($addr);
+      printf "$host \taddr #%d is [%s]\n", $i++, $ipadr if $debug;
+    }
+  } else {
+    $ipadr = inet_ntoa($h->addr);
+    printf "$host \taddress is [%s]\n", $ipadr if $debug;
+  }
+  ip2hex($ipadr);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub readpxedir {
+
+  # read all files in pxedir and add them to different arrays
+
+  opendir(DIR, $pxedir) || die "Can't opendir $pxedir: $!";
+  foreach (readdir(DIR)) {
+    next if /^\./;
+    next if /~$/;
+    next if /\.bak$/;
+    if (/^(default|[0-9A-F]+)$/) { push @enabled,   $_ ; next}
+    if (/\.tmpl$/)               { push @templates, $_ ; next}
+    if (/\.disable$/) {
+      my $filename=(split (/\./,$_))[0];
+      if (-f "$pxedir/$filename") {
+	warn "Skipping $_ as disabled host because also enabled.\n" if $verbose;
+      } else {
+	push @disabled, $_;
+      }
+      next;
+    }
+    push @other, $_;
+  }
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub lsdir {
+
+# -ld list only disabled hosts
+# -le list only enabled hosts
+# -lt list only templates
+# -lo list only "other", i.e that does not match templates or hosts
+# -lg list by goups (enabled, disabled, templates, others)
+# -l[detog] <pattern> list matching pattern
+
+  my ($n,$host,$iaddr,$hex,$type);
+
+  @patterns = @_; # a global variable
+
+  readpxedir();
+
+  # create list which entries we want to list
+  @allfiles = (@enabled,@disabled,@templates,@other);
+  $opt_d and @allfiles = @disabled;
+  $opt_e and @allfiles = @enabled;
+  $opt_t and @allfiles = @templates;
+  $opt_o and @allfiles = @other;
+  $opt_g and @allfiles = (@enabled,@disabled,@templates,@other);
+
+  # map all entries (in HEX) to hostname or IP
+  foreach $hex (@allfiles) {
+    undef $host;
+    undef $type;
+
+    if ($hex =~ /^default(.disable)?$/) {
+      $host = $hex;
+      $type = '[DEFAULT]';
+    }
+    if ($hex =~ /\.tmpl$/) {
+      $host = "$hex";
+      $type = '[Template]';
+    }
+
+    if ($hex =~ /^[0-9A-F]+/) {
+      my $hexstrip = (split /\./,$hex)[0]; # remove .disable if necessary
+      $n = $hexstrip;
+      # hex to ip/subnet address
+      while ( length $n ) {
+	$host = sprintf( "%s%d" ,$host?"$host.":$host,
+                 (hex substr $n,0,1,"" ) * 16 + (hex substr $n,0,1,""));
+      }
+      if ( $host and ( length($hexstrip) < 8) ) {
+	$host = "Subnet: $host/". length($hexstrip)*4
+      } else {
+        # ip to hostname
+        $iaddr = inet_aton($host);
+        if ($h = gethostbyaddr($iaddr, AF_INET)) {
+	  $host = $h->name;
+          $host =~ s/^([^.]+).*/$1/; # strip domain from FQDN so we have short hostnames
+        }
+      }
+    }
+
+    if ( !$host ) {
+      $host = $hex;
+      $type = '[Other]';
+    }
+
+    $hexname{$host} = $hex;
+    $hname{$hex}= $host;
+    $type{$hex} = $type if $type;
+  }
+
+  if ($opt_g) { # print in group, sorted inside each group
+    prtsorted(@enabled);
+    prtsorted(@disabled);
+    prtsorted(@templates);
+    prtsorted(@other);
+    exit 0;
+  }
+
+  prtsorted(keys %hname);
+  exit 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub prtsorted {
+
+  my @list = @_;
+
+  @list = sort map {$hname{$_}} @list;
+  foreach (@list) {
+    printpxe ($_,$hexname{$_}, $type{$_});
+  }
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub printpxe {
+
+  my ($host,$hex, $type) = @_;
+  my ($kernelname,$append);
+
+  $match = (@patterns) ? 0: 1; # set match to 1 if no pattern is given
+  foreach (@patterns) {
+    $match = 1 if $host =~ /$_/;
+  }
+  return unless $match; # do not print entries if no pattern matches
+
+  # read pxe config file for a host
+  undef $kernelname;
+  open (CFG,"$pxedir/$hex") || die "$! $@\n";
+  while (<CFG>) {
+    /\bkernel\s+(\S+)/ and $kernelname = $1;
+    /\b(localboot.+)/ and $kernelname = $1;
+    /\bappend\s+(.+)/ and $append = $1;
+  }
+  close (CFG);
+
+  if ($opt_l && ! $opt_L) {
+    $append =~ /FAI_ACTION=(\S+)/;
+    $append = $1;
+#   printf "%-16.16s $append $kernelname %-8s\n",$host,$hex;
+    printf "%-26.26s  %-20.20s $append $kernelname\n",$type?$type:$host,$hex;
+  } else {
+    printf "%s %s $kernelname $append\n",$type?$type:$host,$hex;
+  }
+
+  undef $append;
+  undef $kernelname;
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub usage {
+
+  &VERSION_MESSAGE;
+  &HELP_MESSAGE;
+  exit 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub VERSION_MESSAGE {
+
+  print "$0 $version\n";
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub HELP_MESSAGE {
+
+  print << "EOM";
+ Please read the manual pages fai-chboot(8).
+EOM
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub mkpxecfg {
+
+  my ($host,$kernel,$rootfs,$initrd) = @_;
+  my ($ipadr,$hex) = host2hex($host);
+
+  warn "$host has $ipadr in hex $hex\n" if $verbose;
+  if (-f "$pxedir/$hex.disable") {
+    unlink "$pxedir/$hex.disable";
+    print "removed old $pxedir/$hex.disable\n";
+  }
+  warn "Writing file $pxedir/$hex for $host\n" if $verbose;
+  return if $opt_n;
+
+  if ($opt_p && -e "$pxedir/$hex") {
+    warn "WARNING: $pxedir/$hex already exists.\nSkipping file creation. ";
+    return;
+  }
+  open (FILE,"> $pxedir/$hex") or warn "$0 $@ $!";
+  print FILE << "EOM";
+# generated by fai-chboot for host $host with IP $ipadr
+default fai-generated
+
+label fai-generated
+$kernel
+EOM
+
+  $append="append $initrd $bootprot $rootfs $opt_k $flags $action\n";
+  print FILE $append;
+  close FILE;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub disable {
+
+  # rename network config file
+  my ($host) = shift;
+  my ($ipadr,$hex) = host2hex($host);
+  if (! -e "$pxedir/$hex") {
+    print "$host ($hex) is not enabled\n";
+    return;
+  }
+  print "disable pxe config for $host in hex $hex\n" if $verbose;
+  return if $opt_n;
+  rename "$pxedir/$hex","$pxedir/$hex.disable" or $error .= "\nRename for $hex failed. $! $@";
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub enable {
+
+  # rename network config file
+  my ($host) = shift;
+  my ($ipadr,$hex) = host2hex($host);
+
+  -e "$pxedir/$hex" and print "$host ($hex) is already enabled\n" and return;
+  if (! -e "$pxedir/$hex.disable") {
+    print "$host ($hex) is not disabled\n";
+    return;
+  }
+
+  print "reenable pxe config for $host in hex $hex\n" if $verbose;
+  return if $opt_n;
+  rename "$pxedir/$hex.disable","$pxedir/$hex" or $error .= "\nRename for $hex failed. $! $@";
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub docopy {
+
+  my ($srcfile, $pxedir, $desthex, $desthost, $ipadr) = @_;
+  open (SOURCE, "$srcfile");
+  open (DEST, ">$pxedir/$desthex") || die "Can't opendir $pxedir: $!";
+  print DEST "# template generated by fai-chboot for host $desthost with IP $ipadr from source $srcfile\n";
+  while (<SOURCE>) {
+    print DEST $_;
+  }
+  close SOURCE;
+  close DEST;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub tcopy {
+
+  my ($srchost,$desthost) = @_;
+  my ($ipadr,$srcfile,$srchex,$desthex);
+
+  if (gethost($srchost)) {
+    ($ipadr,$srchex) = host2hex($srchost);
+
+    if (-e "$pxedir/$srchex") {
+      $srcfile = "$pxedir/$srchex";
+    } elsif (-e "$pxedir/$srchex.disable") {
+      $srcfile = "$pxedir/$srchex.disable";
+    } elsif (-e "$pxedir/$srchost" ) {
+      $srcfile = "$pxedir/$srchost";
+    } elsif (-e "$pxedir/$srchost.tmpl" ) {
+      $srcfile = "$pxedir/$srchost.tmpl";
+    } else {
+      warn "Source file for $srchost ($srchex) not available\n";
+      return;
+    }
+  } elsif ( -e "$pxedir/$srchost") {
+      $srcfile = "$pxedir/$srchost";
+  } elsif ( -e "$pxedir/$srchost.tmpl") {
+      $srcfile = "$pxedir/$srchost.tmpl";
+  } else {
+      warn "Source file for $srchost not available\n";
+      return;
+  }
+  if ($desthost =~ /\.tmpl$/) {
+    if (-e "$pxedir/$desthost") {
+      warn "Template $desthost already exist. Copying aborted.\n";
+      return;
+    }
+    print "copy pxe config from $srchost to template $desthost\n" if $verbose;
+    docopy($srcfile,$pxedir,$desthost,$desthost,$ipadr);
+  } else {
+    ($ipadr,$desthex) = host2hex($desthost);
+    if (-f "$pxedir/$desthex.disable") {
+      unlink "$pxedir/$desthex.disable";
+      print "removed old $pxedir/$desthex.disable\n";
+    }
+    print "copy pxe config from $srchost to $desthost ($desthex)\n" if $verbose;
+    docopy($srcfile,$pxedir,$desthex,$desthost,$ipadr);
+  }
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+getopts('gBc:C:D:edhnvlLiIpf:Fk:Ss:tu:o') || usage;
+$opt_h and usage;
+defined @ARGV or usage;
+
+$opt_n and $opt_v = 1;
+$opt_v and $verbose = 1;
+$cfdir = $opt_C || $ENV{'FAI_ETC_DIR'} || '/etc/fai';
+$opt_L and $opt_l = 1;
+($opt_B and $opt_F) && die "ERROR: use only one option out of -B and -F\n";
+($opt_S and $opt_I) && die "ERROR: use only one option out of -I and -S\n";
+#TODO: also -e, -r and -c can't be used together
+
+# read the nfsroot variable; a little bit ugly, but it works
+$nfsroot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
+chomp $nfsroot;
+$nfsroot = '/srv/fai/nfsroot' unless $nfsroot;
+
+$tftproot = `. $cfdir/make-fai-nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
+chomp $tftproot;
+$tftproot = '/srv/tftp/fai' unless $tftproot;
+
+$pxedir = $opt_D || "$tftproot/pxelinux.cfg";
+
+(-d $pxedir) || die "PXE directory $pxedir does not exist.";
+
+$opt_l and lsdir(@ARGV);
+
+if ($opt_d) {
+  die "Missing host name(s). Can't disable network booting.\n" unless @ARGV;
+  foreach (@ARGV) {
+    disable($_);
+  }
+  $error and die "$0: $error\n";
+  exit 0;
+}
+
+if ($opt_c) {
+  die "Missing destination host name(s). Can't copy.\n" unless @ARGV;
+  # copy a template config to multiple hosts
+  foreach (@ARGV) {
+    tcopy($opt_c,$_);
+  }
+  $error and die "$0: $error\n";
+  exit 0;
+}
+
+if ($opt_e) {
+  die "Missing host name(s). Can't reenable network booting.\n" unless @ARGV;
+  foreach (@ARGV) {
+    enable($_);
+  }
+  $error and die "$0: $error\n";
+  exit 0;
+}
+
+if ($opt_S) {
+  $opt_i = 1;
+  $action="FAI_ACTION=sysinfo";
+}
+if ($opt_I) {
+  $opt_i = 1;
+  $action="FAI_ACTION=install";
+}
+
+$kernelsuffix = (glob "$tftproot/vmlinuz*$opt_s")[-1];
+$kernelsuffix=~ s/.+vmlinuz-//;
+die "No kernel found matching $tftproot/vmlinuz*$opt_s\n" unless $kernelsuffix;
+
+if ($opt_i) {
+  # create config so host will boot the install kernel
+  $kernelname = "kernel vmlinuz-$kernelsuffix";
+  $initrd     = "initrd=initrd.img-$kernelsuffix";
+  $rootfs     = "root=/dev/nfs nfsroot=$nfsroot boot=live";
+  $bootprot   = "ip=dhcp ";
+
+} elsif ($opt_o) {
+  $kernelname = 'localboot 0';
+  $rootfs   = '';
+  $bootprot = '';
+  $flags    = '';
+} else {
+  $kernelname = shift;
+  $kernelname = "kernel $kernelname";
+#  $rootfs = shift or die "No rootfs specified.\n";
+}
+
+$opt_F and $opt_f="verbose,sshd,createvt";
+$opt_B and $opt_f="verbose,sshd,reboot";
+$opt_f and $flags="FAI_FLAGS=$opt_f";
+$opt_u and $flags.=" FAI_CONFIG_SRC=$opt_u"; # set -u as FAI_CONFIG_SRC
+warn "Booting $kernelname\n" if $verbose;
+warn " append $initrd $bootprot $opt_k\n    $flags\n\n" if $verbose;
+$opt_k && print "Kernel parameters: $opt_k\n";
+
+die "No host specified.\n" unless @ARGV;
+foreach (@ARGV) { mkpxecfg($_,$kernelname,$rootfs,$initrd); }

@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# (c) 2002-2006 Henning Glawe <glaweh@debian.org>
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:    $FAI_CONFIG_SRC $FAI $LOGDIR
+# Suggests-Var:
+# Short-Description: get $FAI from an svn repository.
+### END SUBROUTINE INFO
+
+# matched string: "svn://user@host/svnpath"
+protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
+# username may or may not be followed by a password
+username=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^@:]*\)[^@]*@')
+if [ -n "$username" ] ; then
+  svnpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://[^@]\+@\([^[:space:]]\+\)')
+  # password definitely is preceded by a username
+  password=$(expr match "$FAI_CONFIG_SRC" '[^:]*://[^@:]*:\([^@]*\)@')
+  [ -n "$password" ] && pass="--password $password"
+else
+  svnpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^[:space:]]\+\)')
+fi
+
+case $protocol in
+	svn)
+		svnurl="svn://$svnpath"
+		;;
+	svn+file)
+		svnurl="file://$svnpath"
+		;;
+	svn+http)
+		svnurl="http://$svnpath"
+		;;
+	svn+https)
+		svnurl="https://$svnpath"
+		;;
+	svn+ssh)
+    if [ -n "$username" ] ; then
+		  svnurl="svn+ssh://$username@$svnpath"
+    else
+      svnurl=$FAI_CONFIG_SRC
+    fi
+		;;
+	*)
+		echo "get-config-dir-svn: protocol $protocol not implemented"
+		exit 1
+		;;
+esac
+		
+[ -n "$username" ] && user="--username $username"
+
+if [ -d "$FAI/.svn" ] ; then
+   echo "Updating SVN in $FAI"
+   cd $FAI
+   svn up $user $pass | grep -v 'Updated to revision' > $LOGDIR/getconf.log
+   task_error 701 $?
+else 
+   echo "Checking out SVN"
+   svn co $user $pass $svnurl $FAI | grep -v 'Checked out revision' > $LOGDIR/getconf.log
+   task_error 702 $?
+fi

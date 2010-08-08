@@ -1,0 +1,191 @@
+#! /bin/bash
+
+#*********************************************************************
+#
+# fai-do-scripts - call configuration scripts for every defined class
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2003-2009 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+version="version 1.7.1, 1-nov-2009"
+
+# variables needed: $classes, $cfclasses, $LOGDIR
+# 
+# And many other variables like:
+
+# execute all scripts that match the name of a class.
+# If class is a directory, execute all $class/[0-9][0-9]* scripts in
+# it, but do not execute files ending in ~
+    
+maxstatus=0
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+savemaxstatus() {
+
+    exitcode=$1 # set global variable
+    # save the highest exit status
+    [ $1 -gt $maxstatus ] && maxstatus=$1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fc_check_status() {
+
+    local cmd st res
+    cmd=$1
+    st=$2
+
+    if [ $st -eq 0 ]; then
+	res="OK."
+    else
+	res="FAILED with exit code $st."
+    fi
+    # put result in the log file and write to stdout
+    printf "%-20s $res\n" $cmd | tee -a $LOGDIR/status.log
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+call_conf() {
+
+    local class f
+    cd $1
+    for class in $classes ; do
+	[ -x $class -a -f $class ] && do_script $class
+	if [ -d $class ]; then
+	   for f in $(echo $class/[0-9][0-9]* ) ; do
+	       [ -x $f -a -f $f ] && do_script $f
+	   done
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+do_script() {
+
+    # execute scripts and save their output in log files
+    # cfengine, shell, perl and expect scripts are known types
+    local shelldebug file filetype name
+
+    file=$1
+
+    # may be remove some day
+    case $file in
+	*~) [ X$debug = X1 ] && echo "Skipping backup file $file";   return ;;
+	*.dpkg-old)  [ X$debug = X1 ] && echo "Skipping file $file"; return ;;
+	*.dpkg-new)  [ X$debug = X1 ] && echo "Skipping file $file"; return ;;
+	*.dpkg-inst) [ X$debug = X1 ] && echo "Skipping file $file"; return ;;
+    esac
+
+    name=${file##*/}  # basename function
+    filetype=$(file -bL $file)
+
+    if [ "$fake" ]; then
+	echo "Executing $filetype"
+	return
+    fi
+
+    shelldebug=
+    case $filetype in
+	*"POSIX shell script"*|*"Bourne shell script"*)
+	    [ X$debug = X1 ] && shelldebug="sh -x" ;;
+	*"Bourne-Again shell script"*)
+	    [ X$debug = X1 ] && shelldebug="bash -x" ;;
+    esac
+
+    case $filetype in
+
+	*"POSIX shell script"*|*"executable shell script"*|*"/bash script"*|*"Bourne shell script"*|*"Bourne-Again shell script"*)
+	    echo "Executing   $shelldebug shell: $file"
+	    echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
+	    $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/shell.log
+	;;
+
+	*"cfagent"*)
+	    echo "Executing cfagent: $file"
+	    echo "=====   cfagent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
+	    ./$file $cfagentdebug -qKI -D${cfclasses} >> $LOGDIR/cfagent.log 2>&1
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/cfagent.log
+	;;
+
+	*"cfengine script"*)
+	    echo "Executing cfengine: $file"
+	    echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
+	    ./$file -K -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/cfengine.log
+	;;
+
+	*"perl"*"script"*)
+	    echo "Executing    perl: $file"
+	    echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
+	    ./$file >> $LOGDIR/perl.log 2>&1
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/perl.log
+	;;
+
+	*"expect script"*)
+	    echo "Executing  expect: $file"
+	    echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
+	    ./$file >> $LOGDIR/expect.log 2>&1
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/expect.log
+	;;
+
+	*) echo "File $file has unsupported type $filetype." ;;
+    esac
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    local ex
+    ex=$1
+    cat <<-EOF
+        fai-do-scripts $version. Copyright (C) 2003-2009 Thomas Lange
+        Read the manual page fai-do-scripts(1) for more information.
+
+        Usage: fai-do-scripts [OPTION] DIRECTORY
+
+EOF
+    exit $ex
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ # main program
+
+while getopts "nhL:" opt ; do
+    case "$opt" in
+	h) usage 0 ;;
+        L) LOGDIR=$OPTARG; export LOGDIR ;;
+	n) fake=1 ;;
+    esac
+done
+shift $(($OPTIND - 1))
+[ -z "$1" ] || [ -n "$2" ] && usage 1
+
+if [ "x$classes" = "x" ]; then
+    echo "No classes are defined."
+    exit 9
+fi
+
+[ X$debug = X1 ] && cfagentdebug=-v
+
+call_conf $1
+# move error number from child scripts to 100+x if any error happened
+[ $maxstatus -gt 0 ] && maxstatus=$((100+$maxstatus))
+exit $maxstatus

@@ -1,0 +1,67 @@
+#!/usr/bin/make -f
+
+DESTDIR=`pwd`/debian/tmp
+DOCDIR=`pwd`/debian/fai-doc/usr/share/doc/fai-doc
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+include VERSION
+
+build: build-stamp
+build-stamp:
+	dh_testdir
+
+# Add here commands to compile the package.
+	$(MAKE) all
+
+	touch build-stamp
+
+clean:
+	dh_testdir
+#	dh_testroot
+# Add here commands to clean up after the build process.
+	$(MAKE) clean
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+# Add here commands to install the package into debian/fai.
+	$(MAKE) install
+
+# Build architecture-independent files here.
+binary-indep: build install
+	dh_testdir
+	dh_testroot
+#	dh_installdebconf	
+	dh_installdocs -Nfai-server -Nfai-quickstart
+#	dh_installexamples
+#	dh_installmenu
+	dh_installman
+	dh_install --sourcedir=debian/tmp
+#	dh_installinfo
+	dh_link
+	dh_installchangelogs 
+	dh_compress -Xexamples -X.pdf
+	dh_fixperms -X make-fai-nfsroot.conf
+	chmod a+rx ${DOCDIR}/examples/*/class/[0-9][0-9]*
+	chmod -R a+rx ${DOCDIR}/examples/*/scripts/*
+	chmod a+rx ${DOCDIR}/examples/*/hooks/*
+	find ${DOCDIR}/examples/*/files -name postinst | xargs chmod a+x
+	chmod a+rx ${DOCDIR}/examples/utils/*
+	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(shell pwd)/debian/fai-client/usr/share/doc/fai-client/README
+	dh_lintian
+# You may want to make some executables suid here.
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+# Build architecture-dependent files here.
+binary-arch: build install
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install

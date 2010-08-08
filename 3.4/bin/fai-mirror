@@ -1,0 +1,315 @@
+#! /bin/bash
+
+# $Id$
+#*********************************************************************
+#
+# fai-mirror -- create and manage a partial mirror for FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2004-2009, Thomas Lange, lange@informatik.uni-koeln.de
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING. If not, write to the
+# Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+# MA 02111-1307, USA.
+#*********************************************************************
+
+version="Version 1.11, 22-october-2009"
+
+# variables: NFSROOT, FAI_CONFIGDIR, FAI_ETC_DIR
+
+export FAI_ROOT=/ # do not execute in chroot, needed for install_packages call
+export PATH=$PATH:/usr/sbin
+
+trap "umount_dirs" EXIT ERR
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+    echo "fai-mirror -- create and manage a partial mirror for FAI."
+    echo "$version"
+    echo "Please read the manual page fai-mirror(1)."
+    exit
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+
+    local e=$1   # first parameter is the exit code
+    shift
+
+    echo "$@"    # print error message
+    exit $e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+excludeclass() {
+
+    # removes/excludes all classes in $* from $classes
+    local insert eclasses newclass c e
+
+    eclasses="$*"
+    eclasses=${eclasses//,/ }
+
+    for c in $classes; do
+        insert=1
+        for e in $eclasses; do
+          [ $c = $e ] && insert=0
+        done
+        [ $insert = 1 ] && newclass="$newclass $c"
+    done
+    classes="$newclass"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+umount_dirs() {
+
+    [ "$FAI_DEBMIRROR" ] && umount $MNTPOINT 2>/dev/null 1>&2 || true
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+cleandirs() {
+
+    return # currently nothing to do
+#    rm $statefile
+#    rm -rf $mirrordir/.apt-move  $statefile
+#    [ $debug -eq 1 ] || rm -rf $aptcache $archivedir
+#    rm -rf $aptcache $archivedir
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+initialize() {
+
+    # TODO: root is only needed when FAI_DEBMIRROR is defined. Then we
+    # must mount a directory
+
+    debdist=$(echo "$FAI_DEBOOTSTRAP" | awk '{print $1}')
+    # store all packages temporary in the mirror partition so we need only a move,
+    # not a copy later during apt-move
+    aptcache=$mirrordir/aptcache   # holds the package cache data
+    archivedir=$aptcache/var/cache/apt/archives
+    aptmovefile=$aptcache/etc/apt-move.conf # stores apt-move.conf
+    statefile=$aptcache/statefile
+
+    # also used in install_packages.conf
+    export aptoptions=" \
+       -o Aptitude::Log=/dev/null \
+       -o Aptitude::CmdLine::Ignore-Trust-Violations=yes\
+       -o APT::Get::AllowUnauthenticated=true \
+      -o DPkg::force-conflicts::=yes \
+      -o Dir::State::status=$statefile \
+      -o APT::Get::Force-Yes=true \
+      -o Dir::Cache=$aptcache/var/cache/apt \
+      -o Dir::State=$aptcache/var/cache/apt \
+      -o Dir::Cache::Archives=$archivedir \
+      -o Dir::Etc=$aptcache/etc/apt/ \
+      -o Dir::State::Lists=$aptcache/var/lib/apt/lists/"
+
+    if [ -n "$arch" ]; then
+	aptoptions="$aptoptions -o APT::Architecture=$arch" # add architecture
+    fi
+
+    # not needed
+    # -o APT::Get::ReInstall
+    # ."-o APT::Get::Download-Only=true -o Aptitude::Cmd-Line::Download-Only=true "
+
+    # we only need some empty dirs
+    set -e
+    mkdir -p $archivedir/partial $aptcache/etc/apt $aptcache/var/lib/apt/lists/partial 
+    > $statefile
+    set +e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+delete_base_packages() {
+
+    # now delete all packages that are already included in base.tgz
+    local p
+
+    if [ ! -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
+	echo "$NFSROOT/var/tmp/base-pkgs.lis not available."
+	echo "Can't remove wasteful packages that are already in base.tgz."
+	return
+    fi
+    echo "Removing packages that are already included in base.tgz"
+    for p in $(cat $NFSROOT/var/tmp/base-pkgs.lis); do
+	if [ -f $archivedir/${p}_*.deb ]; then
+	    [ $verbose -eq 1 ] && echo "deleting package $p"
+	    rm $archivedir/${p}_*.deb
+        # else commands only for debugging
+        #    else
+        #	echo "package $p not found"
+        #	ls $archivedir/${p}_*.deb
+	fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_base_packages() {
+
+    local plist
+    # add packages from base.tgz and additional packages in nfsroot
+
+    # arch dependent packages defined in make-fai-nfsroot
+    echo "Adding packages of $cfdir/NFSROOT."
+    if [ -f $NFSROOT/var/tmp/packages.nfsroot ]; then
+	plist=$(< $NFSROOT/var/tmp/packages.nfsroot)
+	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+    else
+	echo "WARNING: $NFSROOT/var/tmp/packages.nfsroot does not exists."
+	echo "Can't add those packages. Maybe the nfsroot is not yet created."
+    fi
+
+    # now use sources.list for debootstrap packages
+    echo "$FAI_DEBOOTSTRAP" | awk '{printf "deb %s %s main\n",$2,$1}' | perl -p -e 's/file:/copy:/' > $aptcache/etc/apt/sources.list
+    echo "Adding packages from $NFSROOT/var/tmp/base-pkgs.lis"
+    if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
+	plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
+	apt-get $qflag $aptoptions update >/dev/null
+	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+    else
+	echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists."
+	echo "Can't add those packages. Maybe the nfsroot is not yet created."
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+set-classes() {
+
+    # if -c is given, ignore -x
+    if [ -n "$cclasses" ]; then
+	export classes=${cclasses//,/ }
+	return
+    fi
+
+    set +e
+    # all available file names are classes
+    classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep -i "^[a-zA-Z0-9_-]+$")
+    addclasses=$(grep -h PACKAGES $FAI_CONFIGDIR/package_config/* | sed -e 's/#.*//' | awk '{printf $3"\n"$4"\n"$5"\n"$6"\n"}')
+    export classes=$(echo -e "$classes\n$addclasses\n" | sort | uniq)
+    [ -n "$exclasses" ] && excludeclass $exclasses
+    set -e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+[ -x "$(which apt-move)" ] || die 5 "apt-move not found. Please install package."
+
+preserve=0
+verbose=0
+add=1
+qflag=-qq
+while getopts "a:Bvhx:pc:C:" opt ; do
+    case "$opt" in
+	a) arch=$OPTARG ;;
+	B) add=0 ;;
+	C) cfdir=$OPTARG ;;
+	h) usage ;;
+	x) exclasses="$OPTARG";;
+	c) cclasses="$OPTARG";;
+	p) preserve=1;;
+	v) verbose=1; vflag=-v; qflag='';;
+	?) die 1 "Unknown option";;
+    esac
+done
+shift $(($OPTIND - 1))
+
+# use FAI_ETC_DIR from environment variable
+if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+    echo "Using environment variable \$FAI_ETC_DIR."
+fi
+# use -C option if present otherwise use $FAI_ETC_DIR or default to /etc/fai
+if [ -z "$cfdir" ]; then
+    cfdir=${FAI_ETC_DIR:=/etc/fai}
+fi
+cfdir=$(readlink -f $cfdir) # canonicalize path
+if [ ! -d "$cfdir" ]; then
+    echo "$cfdir is not a directory"
+    exit 6
+fi
+[ "$verbose" -eq 1 ] && echo "Using configuration files from $cfdir"
+. $cfdir/fai.conf
+. $cfdir/make-fai-nfsroot.conf
+export NFSROOT="$NFSROOT/live/filesystem.dir"
+
+[ -n "$packages" ] && die "WARNING: The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$NFSROOT_PACKAGES" ] && die "WARNING: The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+
+[ -n "$exclasses" -a -n "$cclasses" ] && die 3 "Options -x and -c not allowed at the same time."
+
+mirrordir=$1
+if [ -z "$mirrordir" ]; then
+    die 2 "Please give the absolute path to the mirror."
+fi
+{ echo $mirrordir | egrep -q '^/'; } || die 4 "Mirrordir must start with a slash /."
+if [ -d $mirrordir/pool -o -d $mirrordir/dists ]; then
+    die 3 "Please first remove $mirrordir/pool and $mirrordir/dists"
+fi
+
+[ -d $FAI_CONFIGDIR/package_config ] || die 6 "Can't find package config files in $FAI_CONFIGDIR."
+
+# set default if undefined
+: ${MAXPACKAGES:=1}
+export MAXPACKAGES
+
+initialize
+
+# if we are using nfs mounts for Debian mirror, this may fail here, since inside a chroot environment different dir are used
+
+# if sources.list includes file AND FAI_DEBMIRROR is defined we have to mount
+# otherwise mounting is not needed. call task_mirror
+
+if [ "$FAI_DEBMIRROR" ]; then
+    mkdir -p $MNTPOINT
+    mount -r $FAI_DEBMIRROR $MNTPOINT || exit 9
+fi
+
+# TODO: use -p to preserve sources.list
+perl -p -e 's/file:/copy:/' $cfdir/apt/sources.list > $aptcache/etc/apt/sources.list
+
+echo "Getting package information"
+apt-get $qflag $aptoptions update >/dev/null
+
+set-classes
+echo "Downloading packages for classes:" $classes
+FAI=$FAI_CONFIGDIR install_packages -d $vflag
+[ $add -eq 1 ] && add_base_packages
+umount_dirs
+trap "" EXIT ERR
+[ $add -eq 0 ] && delete_base_packages
+
+# create mirror directory structure
+echo "Calling apt-move"
+cat > $aptmovefile <<EOF   # generate apt-move.conf
+APTSITES=*
+LOCALDIR=$mirrordir
+DIST=$debdist
+FILECACHE=$archivedir
+LISTSTATE=$aptcache/var/lib/apt/lists
+DELETE=no
+CONTENTS=no
+PKGCOMP='none gzip'
+EOF
+# due to bug #441231 in apt-move, we have to specify the arhcitecture
+[ -n "$arch" ] && echo "ARCH=$arch" >> $aptmovefile # append architecture
+apt-move $qflag -c $aptmovefile update
+# since Packages.gz from apt-move does not include packages from my
+# repository, let's use apt-ftparchive for generiating correct index
+# files
+pfilegz=$(find $mirrordir/dists -name Packages.gz)
+pfile=$(find $mirrordir/dists -name Packages)
+pdist=$(cd $mirrordir/dists ; ls)
+cd $mirrordir
+# md5sums of apt-move are not valid, when we recreate Packages.gz using
+# apt-ftparchive, but we can use the header of the Release file
+grep -B99 MD5Sum:  $mirrordir/dists/$pdist/Release | grep -v MD5Sum: > $mirrordir/tmpfile
+rm $mirrordir/dists/$pdist/Release
+apt-ftparchive packages pool > $pfile
+gzip -c $pfile > $pfilegz
+apt-ftparchive release dists/$pdist >> tmpfile
+mv tmpfile dists/$pdist/Release
+
+echo "$0 finished."
+echo -n "Mirror size and location: ";du -sh $mirrordir
+cleandirs

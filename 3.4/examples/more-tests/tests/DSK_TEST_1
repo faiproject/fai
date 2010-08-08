@@ -1,0 +1,51 @@
+#! /usr/bin/perl
+
+use strict;
+use warnings;
+use Faitest;
+package FAITEST;
+
+setup_test();
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+# now comes the test itself
+
+my $dev = &getDevByMount("/target/home");
+&checkE2fsAttribute($dev,"Filesystem volume name","home");
+&checkE2fsAttribute($dev,"Maximum mount count","-1");
+&checkE2fsAttribute($dev,"Reserved block count","0");
+&checkE2fsAttribute($dev,"Default mount options","user_xattr acl");
+
+system("dd if=/dev/urandom of=/target/home/test.data bs=4096 count=512 2>/dev/null");
+$FAITEST::errors++ if $?;
+system("md5sum /target/home/test.data > /target/home/test.md5");
+
+exit printresult("DSK_TEST_2");
+#  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+__END__
+
+=head1 NAME
+
+DSK_TEST_1 - regression test for setup-storage disk layout DSK_TEST_1
+
+=head1 SYNOPSIS
+
+DSK_TEST_1 checks some important aspects of setup-storage. The DSK_TEST_1 disk_config makes heavy use of
+setup-storage ability to tune filesystem parameters upon creation. We check the last of 9 created partitions
+since we expect prior errors to make creation of the last partition fail.
+
+DSK_TEST_1 also creates a file in /target/home that should be preserved in DSK_TEST_2, so DSK_TEST_2 depends on
+successful run of DSK_TEST_1.
+
+ Options:
+ -help          simple help
+ -verbose=n     increase verbosity of test script
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-help>
+simple help
+
+=item B<-verbose>
+increase verbosity of test script

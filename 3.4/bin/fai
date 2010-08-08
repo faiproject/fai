@@ -1,0 +1,313 @@
+#!/bin/bash
+# $Id$
+#*********************************************************************
+#
+# fai -- main installation script executed after booting
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 1999-2009 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+# (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
+# Freie Universitaet Berlin
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+# 
+# A copy of the GNU General Public License is available as
+# `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
+# or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html. You
+# can also obtain it by writing to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+#*********************************************************************
+
+#set -xv # for full debugging
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/usr/sbin:/usr/bin:/sbin:/bin
+# some variables
+export FAI_VERSION=FAIVERSIONSTRING
+stamp=/var/run/fai/FAI_INSTALLATION_IN_PROGRESS
+export romountopt="-o async,noatime,nolock,ro,actimeo=1800"
+
+export STOP_ON_ERROR=700
+export faimond=0
+export renewclass=0
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fai_init() {
+
+    set -a # now export all variables
+    set -o pipefail
+
+    umask 022
+    mkdir -p /var/run/fai
+    if [ ! -d "$FAI_ETC_DIR" ]; then
+	echo "$FAI_ETC_DIR is not a directory"
+	exit 6
+    fi
+    [ -f $FAI_ETC_DIR/fai.conf ] && . $FAI_ETC_DIR/fai.conf
+    [ -n "$cspace" ] && FAI_CONFIG_SRC=$cspace
+    unset cspace
+
+    if [ -f /etc/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
+	umount /initrd
+	romountopt=
+	FAI_DEBMIRROR="--bind /media/mirror"
+	MNTPOINT=/media/mirror
+	FAI_CONFIG_SRC="file://$FAI"   # on a fai-cd the config space is already available
+    fi
+
+    # read subroutine definitions
+    . /usr/lib/fai/subroutines
+
+    [ -f "$stamp" ] && {
+       echo -n "$0 already running or was aborted before. PID: "
+       cat $stamp
+       echo "You may remove $stamp and try again."
+       exit 1
+    }
+
+    DEBIAN_FRONTEND=noninteractive
+    # local disks are mounted to $FAI_ROOT
+    if [ -z "$FAI_ROOT" ] ; then
+      [ $do_init_tasks -eq 1 ] && FAI_ROOT=/target || FAI_ROOT=/
+    fi
+    # executed command in the environment of the new system
+    ROOTCMD="chroot $FAI_ROOT"
+    # no chroot needed
+    [ "$FAI_ROOT" = '/' ] && ROOTCMD=
+    target=$FAI_ROOT
+
+    if [ $do_init_tasks -eq 1 ]; then
+        trap 'echo "Now rebooting";faireboot' INT QUIT
+    else
+        trap "echo 'Aborted';rm -f $stamp" INT QUIT
+    fi
+
+    if [ $do_init_tasks -eq 1 ]; then
+	eval_cmdline
+	[ -d /sys/kernel ] || mount -t sysfs sysfs /sys
+	# we really need to start udev
+	[ -x /etc/init.d/udev ] && [ X$UPSTART_JOB != Xfai ] && /etc/init.d/udev start
+	mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
+	ifup lo
+	[ -x /sbin/portmap ] && /sbin/portmap
+	mount -t devpts devpts /dev/pts
+	cat /proc/kmsg >/dev/tty4 &
+    fi
+
+    # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
+    [ -z "$classes" ] && classes="DEFAULT $(uname -s | tr a-z A-Z) $HOSTNAME LAST"
+
+    prcopyleft
+
+    [ $do_init_tasks -eq 1 ] && save_dmesg
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+    cat <<-EOF
+	fai $FAI_VERSION. Copyright (C) 1999-2009 Thomas Lange
+	Usage: $0 [options] [action]
+
+	Options:
+	   -v|--verbose         display more information during the update
+	   -h|--help            display this help message
+	   -N|--new             renew list of classes
+	   -c|--class           comma separated list of classes
+	   -C|--cfdir CFDIR     Use CFDIR for  reading the config files
+	   -s|--cspace CSDIR    URI of the configuration space
+	   -u|--hostname HNAME  set hostname to be used
+
+EOF
+    exit 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fstart() {
+
+    # these tasks can define variables, that are needed later
+    [ -n "$etc_message" ] && echo ""
+    echo "$etc_message"
+    [ $do_init_tasks -eq 1 ] || echo "Using configuration files from $FAI_ETC_DIR"
+    unset etc_message
+    task confdir
+    # if the config space is a local directory, reset $FAI
+    local method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
+    if [ $method = "file" ]; then
+	local localpath=$(expr match "$FAI_CONFIG_SRC" '.*://\(/.*\)')
+	export FAI=$localpath
+    fi
+    task setup
+    task defclass
+    unset cmdlineclasses renewclass
+    [ $do_init_tasks -eq 1 ] && set_disk_info
+    task defvar
+    [ $do_init_tasks -eq 1 ] && load_keymap_consolechars
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Main routine
+
+# Parse commandline options
+TEMP=$(getopt -o s:u:Nhvc:C: --long cspace:,hostname:,new,help,verbose,class:,cfdir: -n "$0" -- "$@")
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+# Note the quotes around `$TEMP': they are essential!
+eval set -- "$TEMP"
+unset TEMP
+
+while true ; do
+    case "$1" in
+        -h|--help)
+	    shift
+	    usage
+            ;;
+	-v|--verbose)
+	    shift
+	    export verbose=1
+	    ;;
+	-N|--new)
+	    shift
+	    renewclass=1
+	    ;;
+	-C|--cfdir)
+	    shift
+	    cfdir=$1
+	    shift
+	    ;;
+	-c|--class)
+
+	    if [ $renewclass -eq 1 ]; then
+		echo "You can't use -c|--classes and -N|--new at the same time."
+		exit 9
+	    fi
+	    shift
+	    export cmdlineclasses=$1
+	    shift
+	    cmdlineclasses=${cmdlineclasses//,/ }
+	    ;;
+	-s|--cspace)
+	    shift
+	    cspace=$1
+	    shift
+	    ;;
+	-u|--hostname)
+	    shift
+	    export newhostname=$1
+	    shift
+	    ;;
+        --) 
+            shift
+            break
+            ;;
+         *)
+            echo "$0: command line parsing error ! $@"
+            exit 1
+            ;;
+    esac
+done
+
+# use FAI_ETC_DIR from environment variable
+if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+    # print this message later so it gets into the log files
+    etc_message="Using environment variable \$FAI_ETC_DIR."
+fi
+[ -n "$cfdir" ] && FAI_ETC_DIR=$cfdir
+unset cfdir
+: ${FAI_ETC_DIR:=/etc/fai}
+FAI_ETC_DIR=$(readlink -f $FAI_ETC_DIR) # canonicalize path
+export FAI_ETC_DIR
+
+# override FAI_ACTION later if a command line argument is given
+[ "$1" ] && export action=$1
+[ "$2" ] && export FAI_ROOT=$2 # only used for dirinstall
+
+if [ X$action = Xdirinstall ]; then
+    if [ -z "$FAI_ROOT" ]; then
+	echo "Please specify a target directory. Aborted"
+	exit 3
+    fi
+    if [ $renewclass -eq 0 -a -z "$cmdlineclasses" ]; then
+	echo "Please use -c or -N. Aborted"
+	exit 4
+    fi
+
+    # two lines taken from task_dirinstall
+    mkdir -p $FAI_ROOT
+    FAI_ROOT=$(cd $FAI_ROOT;pwd)
+
+    # check if target directory is mounted with bad options
+    fs=$(df $FAI_ROOT | tail -1 | awk '{print $6}')
+    if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
+	echo "Target directory is mounted using nosuid or nodev. Aborting"
+	exit 5
+    fi
+    unset fs
+
+    if [ ! -e $FAI_ETC_DIR/make-fai-nfsroot.conf ]; then
+	echo "$FAI_ETC_DIR/make-fai-nfsroot.conf not found."
+	echo "You may want to install the package fai-server"
+	exit 7
+    fi
+    export NFSROOT=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $NFSROOT)
+    export FAI_DEBOOTSTRAP=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $FAI_DEBOOTSTRAP)
+    export FAI_DEBOOTSTRAP_OPTS=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $FAI_DEBOOTSTRAP_OPTS)
+
+fi
+
+if [ $(id -u) != "0" ]; then
+    echo "Run this program as root."
+    exit 1
+fi
+
+# exit if we do not run from nfsroot and no parameter is given
+if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
+    echo "Please give more parameters if not run from the nfsroot."
+    exit 2
+fi
+
+# are we called as an init substitute ?
+export do_init_tasks=0
+[ "$0" = "/etc/init.d/rcS" ] || [ X$UPSTART_JOB = Xfai ] && do_init_tasks=1
+if [ $do_init_tasks -eq 1 ]; then
+    hostname $HOSTNAME
+    renewclass=1 # always renew class list when installing
+    mkdir -p /var/lib/discover /var/discover /etc/sysconfig
+fi
+
+[ -f /proc/version ] || mount -n -t proc proc /proc # ubuntu initrd does not mount /proc
+export start_seconds=$(cut -d . -f 1 /proc/uptime)
+
+[ -n "$newhostname" ] && export HOSTNAME=$newhostname
+
+if [ $do_init_tasks -eq 1 ]; then
+    # we are running an initial installation
+    export LOGDIR=/tmp/fai
+    mkdir -p $LOGDIR
+else
+    export fai_rundate=$(date +'%Y%m%d_%H%M%S')
+    export LOGDIR=/var/log/fai/$HOSTNAME/$action-$fai_rundate
+    mkdir -p $LOGDIR
+    ln -snf $action-$fai_rundate $LOGDIR/../last-$action
+    ln -snf $action-$fai_rundate $LOGDIR/../last
+fi
+chown root $LOGDIR
+chgrp adm  $LOGDIR
+chmod 0750 $LOGDIR
+
+fai_init
+[ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
+unset newhostname
+
+fstart > >( tee -a $LOGDIR/fai.log )  2>&1
+
+[ "$action" ] && export FAI_ACTION=$action
+unset action
+task action 2>&1 | tee -a $LOGDIR/fai.log
+
+[ -L "/var/run/fai/current_config" ] && rm -f "/var/run/fai/current_config"
+
+echo "End of $0"
