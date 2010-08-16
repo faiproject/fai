@@ -1,0 +1,95 @@
+2010-08-16  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Init.pm,Commands.pm}: Enforce execution of mdadm --create
+		commands to happen after all partition table manipulations.
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -184,6 +184,11 @@
+   my $cmd = "parted -s $disk set $part_no $t on";
+   $cmd = "true" if ($part_no == -1);
+   &FAI::push_command( $cmd, "cleared2_$disk,exist_$d", "type_${t}_$d" );
++  if (defined($FAI::partition_table_deps{$disk})) {
++    $FAI::partition_table_deps{$disk} .= ",type_${t}_$d";
++  } else {
++    $FAI::partition_table_deps{$disk} = "type_${t}_$d";
++  }
+   return 1;
+ }
+ 
+@@ -321,9 +326,8 @@
+           }
+         }
+         $d = &FAI::enc_name($d);
+-        &FAI::set_partition_type_on_phys_dev($d, "raid");
+-        if ((&FAI::phys_dev($d))[0]) {
+-          $pre_req .= ",type_raid_$d";
++        if (&FAI::set_partition_type_on_phys_dev($d, "raid")) {
++          $pre_req .= ",pt_complete_" . (&FAI::phys_dev($d))[1];
+         } else {
+           $pre_req .= ",exist_$d";
+         }
+@@ -1040,12 +1044,16 @@
+     $prev_id = $part_id;
+   }
+ 
++  $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
++    . &FAI::make_device_name($disk, $prev_id);
++
+   # set the bootable flag, if requested at all
+   if ($FAI::configs{$config}{bootable} > -1) {
+     &FAI::push_command( "parted -s $disk set " .
+       $FAI::configs{$config}{bootable} . " boot on", "exist_" .
+       &FAI::make_device_name($disk, $FAI::configs{$config}{bootable}),
+       "boot_set_$disk" );
++    $FAI::partition_table_deps{$disk} .= ",boot_set_$disk";
+   }
+ 
+   # set the bios_grub flag on BIOS compatible GPT tables
+@@ -1054,6 +1062,7 @@
+       $FAI::configs{$config}{gpt_bios_part} . " bios_grub on", "exist_" .
+       &FAI::make_device_name($disk, $FAI::configs{$config}{gpt_bios_part}),
+       "bios_grub_set_$disk" );
++    $FAI::partition_table_deps{$disk} .= ",bios_grub_set_$disk";
+   }
+ }
+ 
+@@ -1080,6 +1089,8 @@
+         # virtual disks always exist
+         &FAI::push_command( "true", "",
+           "exist_" . &FAI::make_device_name($disk, $part_id) );
++        # no partition table operations
++        $FAI::partition_table_deps{$disk} = "";
+       }
+     } else {
+       # create partitions on non-virtual configs
+@@ -1155,6 +1166,10 @@
+ #
+ ################################################################################
+ sub order_commands {
++  # first add partition-table-is-complete
++  &FAI::push_command("true", $FAI::partition_table_deps{$_}, "pt_complete_$_")
++    foreach (keys %FAI::partition_table_deps);
++
+   my @pre_deps = ();
+   my $i = 1;
+   my $pushed = -1;
+Index: trunk/lib/setup-storage/Init.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Init.pm
++++ trunk/lib/setup-storage/Init.pm	
+@@ -138,6 +138,13 @@
+ 
+ ################################################################################
+ #
++# @brief Dependencies to be fulfilled before a disk is ready for use
++#
++################################################################################
++%FAI::partition_table_deps = ();
++
++################################################################################
++#
+ # @brief Add command to hash
+ #
+ # @param cmd Command
