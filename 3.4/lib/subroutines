@@ -520,6 +520,11 @@ task_dirinstall() {
 	[ -z "$FAI_ROOT" ] && return
 	[ -d $FAI_ROOT/proc/self ] && umount $FAI_ROOT/proc $FAI_ROOT/sys
 	umount $FAI_ROOT/dev/pts 2>/dev/null || true
+	# sometimes umount $FAI_ROOT/dev fails, because a process is
+	# still running in the background and accesses /dev 
+	# this occured sometimes when using dirinst and a long package
+	# list if dhelp.postinst is starting an index process in the
+	# bg which did not finished until the installation was finished. 
 	[ -f /etc/init.d/udev ] && umount $FAI_ROOT/dev
 	mkramdisk -u $target/var/lib/dpkg 2>/dev/null
     }
