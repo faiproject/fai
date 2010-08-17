@@ -19,7 +19,7 @@
 # TODO
 # -q quiet: do not print error if host/mac entry not found, exit code 0
 
-$dhcpdconf="/etc/dhcp3/dhcpd.conf";
+$dhcpdconf=(-d "/etc/dhcp") ? "/etc/dhcp/dhcpd.conf" : "/etc/dhcp3/dhcpd.conf";
 
 $modified=0; # 1 if dhcpd.conf was modified
 our ($opt_p,$opt_d,$opt_h,$opt_n,$opt_r);
@@ -149,7 +149,8 @@ sub restart_dhcpd {
     return;
   }
 
-  print qx#/etc/init.d/dhcp3-server restart#
+  (-x "/etc/init.d/isc-dhcp-server") and print qx#/etc/init.d/isc-dhcp-server# or
+    print qx#/etc/init.d/dhcp3-server restart#;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
