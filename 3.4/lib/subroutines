@@ -526,7 +526,17 @@ task_dirinstall() {
     clean_exit() {
 	rm -f $stamp
 	[ -z "$FAI_ROOT" ] && return
-	[ -d $FAI_ROOT/proc/self ] && umount $FAI_ROOT/proc $FAI_ROOT/sys
+	[ -d $FAI_ROOT/proc/self ] && umount $FAI_ROOT/proc
+	[ -d $FAI_ROOT/sys/class ] && umount $FAI_ROOT/sys
+	# /proc + /sys might be empty because they were unmounted inside
+	# $FAI_ROOT but are still registered in /etc/mtab outside $FAI_ROOT,
+	# so let's get rid of them outside the chroot as well
+	if grep -q "${FAI_ROOT}/sys " /etc/mtab ; then
+	   umount $FAI_ROOT/sys 2>/dev/null || true
+	fi
+	if grep -q "${FAI_ROOT}/proc " /etc/mtab ; then
+	   umount $FAI_ROOT/proc 2>/dev/null || true
+	fi
 	umount $FAI_ROOT/dev/pts 2>/dev/null || true
 	# sometimes umount $FAI_ROOT/dev fails, because a process is
 	# still running in the background and accesses /dev 
