@@ -28,7 +28,7 @@
 # MA 02111-1307, USA.
 #*********************************************************************
 
-my $version = "Version 4.3.1, 30-march-2010";
+my $version = "Version 4.4.0, 04-july-2010";
 $0=~ s#.+/##; # remove path from program name
 
 # import variables: $verbose, $MAXPACKAGES, $classes, $FAI, $FAI_ROOT
@@ -37,7 +37,7 @@ use strict;
 use Getopt::Std;
 
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
@@ -101,7 +101,7 @@ our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi 
   "smartc-internal" => "smart clean",
 );
 
-getopts('dhHvlLm:p:nN');
+getopts('dhHvlLm:p:nNs');
 
 $opt_N || check_aptpkg(); # do not use AptPkg when -N is given
 
@@ -191,6 +191,7 @@ foreach $atype (@commands) {
   if ($atype eq "install" || $atype eq "smarti" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
 
     mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
+    getsources(); # retrieve sources
     if ($opt_l) {
       # only print the package list
       print join ' ',@known,"\n";
@@ -467,12 +468,25 @@ sub writepackages {
   print LIST "# List of all packages that will be installed via install_packages\n";
   for (@known) { print LIST "$_\n"; }
   close(LIST);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# download debian source packages
+sub getsources {
 
-  return unless ($ENV{'FAI_DEBSOURCESDIR'});
+  return unless $opt_s;
 
-  # download debian source packages if $ENV{'FAI_DEBSOURCESDIR'} is defined
-  execute("$rootcmd sh -c \"mkdir $debsourcesdir;cd $debsourcesdir ; apt-get --download-only source @known\"");
-  execute("mkdir -p $ENV{'FAI_DEBSOURCESDIR'}; mv $FAI_ROOT/$debsourcesdir/* $ENV{'FAI_DEBSOURCESDIR'}");
+  print "Trying to retrieve sources as specified via -s option for install_packages\n" if $verbose;
+
+  if (!$ENV{'FAI_DEBSOURCESDIR'}) {
+    die "Error: FAI_DEBSOURCESDIR is not set, can not retrieve sources.";
+  }
+
+  execute("$rootcmd sh -c \"mkdir -p $debsourcesdir;\"");
+  execute("mkdir -p $ENV{'FAI_DEBSOURCESDIR'};");
+  for (@known) {
+    execute("$rootcmd sh -c \"cd $debsourcesdir ; apt-get --download-only source $_\"");
+    execute("mv $FAI_ROOT/$debsourcesdir/* $ENV{'FAI_DEBSOURCESDIR'}");
+  }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
