@@ -5,7 +5,7 @@ DESTDIR=$(shell pwd)/debian/tmp
 export DOCDIR = $(shell pwd)/debian/fai-doc/usr/share/doc/fai-doc
 LIBDIR = $(DESTDIR)/usr/lib/fai
 SHAREDIR = $(DESTDIR)/usr/share/fai
-USRSBIN_SCRIPTS = make-fai-nfsroot fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai setup_harddisks faireboot fai-statoverride setup-storage
+USRSBIN_SCRIPTS = make-fai-nfsroot fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai setup_harddisks faireboot fai-statoverride setup-storage dhcp-edit
 
 USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl faimond-gui
 
@@ -27,6 +27,7 @@ install:
 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
 	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps,setup-storage}
 	install man/* $(DESTDIR)/man
+	pod2man -c '' -r '' -s8 bin/dhcp-edit > $(DESTDIR)/man/dhcp-edit.8
 	$(MAKE) -C doc install
 	-install $(libfiles) $(LIBDIR)
 	install lib/setup-storage/* $(SHAREDIR)/setup-storage
