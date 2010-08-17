@@ -182,10 +182,10 @@ sub phys_dev {
     return (1, "/dev/$1", $2);
   }
   elsif ($dev =~
-    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)p(\d+)?$})
+    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)(p(\d+))?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
-    return (1, "/dev/$1", $2);
+    return (1, "/dev/$1", $3);
   }
   return (0, "", -2);
 }

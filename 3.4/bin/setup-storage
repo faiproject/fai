@@ -52,7 +52,7 @@ use warnings FATAL => qw(uninitialized);
 
 package FAI;
 
-my $version = "1.2.1";
+my $version = "1.3";
 
 # command line parameter handling
 use Getopt::Std;
@@ -126,10 +126,6 @@ warn "Starting setup-storage $version\n";
 print "Using config file: $opt_f\n";
 &FAI::run_parser($config_file);
 
-# mark devices as preserve, where not all already done so and check that only
-# defined devices are marked preserve
-&FAI::propagate_and_check_preserve;
-
 # read the sizes and partition tables of all disks listed in $FAI::disks
 &FAI::get_current_disks;
 
@@ -138,6 +134,10 @@ print "Using config file: $opt_f\n";
 
 # see whether there are any existing RAID devices
 &FAI::get_current_raid;
+
+# mark devices as preserve, where not all already done so and check that only
+# defined devices are marked preserve
+&FAI::propagate_and_check_preserve;
 
 # debugging only: print the current configuration
 if ($FAI::debug) {
