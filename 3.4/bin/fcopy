@@ -142,8 +142,12 @@ sub copy_one {
       warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
       ewarn("copying $sourcefile for preinst processing failed !") unless
         _copy($sourcefile,$tmpfh);
-      runscript("preinst",$ps,$tmpfile,$class);
-    };
+      if (runscript("preinst",$ps,$tmpfile,$class)) {
+	ewarn("preinst for $sourcefile failed; not proceeding");
+	_unlink($tmpfile);
+	return 0;
+      }
+    }
 
     if ( compare($tmpfile,$destfile)) {
       $logcomment="\t# new (literal)";
@@ -217,14 +221,20 @@ sub _copy {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub runscript {
 
+  # returns 0 on success, 1 if the script failed
+
   my ($scriptname,$sourcefile,$destfile,$class) = @_;
-  return unless -x "$sourcefile/$scriptname";
+  return 1 unless -x "$sourcefile/$scriptname";
   warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
-  return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
+  return 0 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   system "$sourcefile/$scriptname $class $destfile";
   my $rc = $?>>8;
-  warn "ERROR: $scriptname returned code $rc\n" if $rc;
-  $error=1 if $rc;
+  if ($rc) {
+    warn "ERROR: $scriptname returned code $rc\n";
+    $error=1;
+    return 1;
+  }
+  return 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub name2num {
