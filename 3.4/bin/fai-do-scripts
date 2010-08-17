@@ -5,7 +5,7 @@
 # fai-do-scripts - call configuration scripts for every defined class
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2009 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2010 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -26,7 +26,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-version="version 1.7.1, 1-nov-2009"
+version="version 1.8, 10-july-2010"
 
 # variables needed: $classes, $cfclasses, $LOGDIR
 # 
@@ -116,6 +116,14 @@ do_script() {
 	    fc_check_status $file $exitcode | tee -a $LOGDIR/shell.log
 	;;
 
+	*"cf-agent"*)
+	    echo "Executing cf-agent: $file"
+	    echo "=====   cf-agent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
+	    ./$file $cfagentdebug -KI -D${cfclasses} >> $LOGDIR/cfagent.log 2>&1
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/cfagent.log
+	;;
+
 	*"cfagent"*)
 	    echo "Executing cfagent: $file"
 	    echo "=====   cfagent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
@@ -157,7 +165,7 @@ usage() {
     local ex
     ex=$1
     cat <<-EOF
-        fai-do-scripts $version. Copyright (C) 2003-2009 Thomas Lange
+        fai-do-scripts $version. Copyright (C) 2003-2010 Thomas Lange
         Read the manual page fai-do-scripts(1) for more information.
 
         Usage: fai-do-scripts [OPTION] DIRECTORY
