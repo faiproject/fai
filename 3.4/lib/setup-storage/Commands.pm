@@ -183,6 +183,11 @@ sub set_partition_type_on_phys_dev {
   my $cmd = "parted -s $disk set $part_no $t on";
   $cmd = "true" if ($part_no == -1);
   &FAI::push_command( $cmd, "cleared2_$disk,exist_$d", "type_${t}_$d" );
+  if (defined($FAI::partition_table_deps{$disk})) {
+    $FAI::partition_table_deps{$disk} .= ",type_${t}_$d";
+  } else {
+    $FAI::partition_table_deps{$disk} = "type_${t}_$d";
+  }
   return 1;
 }
 
@@ -320,9 +325,8 @@ sub build_raid_commands {
           }
         }
         $d = &FAI::enc_name($d);
-        &FAI::set_partition_type_on_phys_dev($d, "raid");
-        if ((&FAI::phys_dev($d))[0]) {
-          $pre_req .= ",type_raid_$d";
+        if (&FAI::set_partition_type_on_phys_dev($d, "raid")) {
+          $pre_req .= ",pt_complete_" . (&FAI::phys_dev($d))[1];
         } else {
           $pre_req .= ",exist_$d";
         }
@@ -1033,12 +1037,16 @@ sub setup_partitions {
     $prev_id = $part_id;
   }
 
+  $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
+    . &FAI::make_device_name($disk, $prev_id);
+
   # set the bootable flag, if requested at all
   if ($FAI::configs{$config}{bootable} > -1) {
     &FAI::push_command( "parted -s $disk set " .
       $FAI::configs{$config}{bootable} . " boot on", "exist_" .
       &FAI::make_device_name($disk, $FAI::configs{$config}{bootable}),
       "boot_set_$disk" );
+    $FAI::partition_table_deps{$disk} .= ",boot_set_$disk";
   }
 
   # set the bios_grub flag on BIOS compatible GPT tables
@@ -1047,6 +1055,7 @@ sub setup_partitions {
       $FAI::configs{$config}{gpt_bios_part} . " bios_grub on", "exist_" .
       &FAI::make_device_name($disk, $FAI::configs{$config}{gpt_bios_part}),
       "bios_grub_set_$disk" );
+    $FAI::partition_table_deps{$disk} .= ",bios_grub_set_$disk";
   }
 }
 
@@ -1073,6 +1082,8 @@ sub build_disk_commands {
         # virtual disks always exist
         &FAI::push_command( "true", "",
           "exist_" . &FAI::make_device_name($disk, $part_id) );
+        # no partition table operations
+        $FAI::partition_table_deps{$disk} = "";
       }
     } else {
       # create partitions on non-virtual configs
@@ -1148,6 +1159,10 @@ sub restore_partition_table {
 #
 ################################################################################
 sub order_commands {
+  # first add partition-table-is-complete
+  &FAI::push_command("true", $FAI::partition_table_deps{$_}, "pt_complete_$_")
+    foreach (keys %FAI::partition_table_deps);
+
   my @pre_deps = ();
   my $i = 1;
   my $pushed = -1;
