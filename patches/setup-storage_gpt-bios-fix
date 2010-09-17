@@ -1,0 +1,53 @@
+2010-09-17  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Parser.pm,Sizes.pm}: Make extra partition for gpt-bios the
+		first one.
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -605,6 +605,20 @@
+           # supported by parted could be allowed, but others are not implemented
+           # yet
+           $FAI::configs{$FAI::device}{disklabel} = $1;
++
++          # on gpt-bios we'll need an partition at the very beginning to store what
++          # doesn't fit in the MBR
++          if ($1 eq "gpt-bios") {
++            &FAI::init_part_config("primary");
++            $FAI::configs{$FAI::device}{gpt_bios_part} = $FAI::partition_pointer->{number};
++            my $s = &FAI::convert_unit("1MiB");
++            # enter the range into the hash
++            $FAI::partition_pointer->{size}->{range} = "$s-$s";
++            # set proper defaults
++            $FAI::partition_pointer->{encrypt} = 0;
++            $FAI::partition_pointer->{filesystem} = "-";
++            $FAI::partition_pointer->{mountpoint} = "-";
++          }
+         }
+         | /^bootable:(\d+)/
+         {
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -655,19 +655,6 @@
+ 
+       # the space required by the GPTs
+       $min_req_total_space += 33 * $current_disk->{sector_size};
+-
+-      # on gpt-bios we'll need an additional partition to store what doesn't fit
+-      # in the MBR
+-      $FAI::device = $config;
+-      &FAI::init_part_config("primary");
+-      $FAI::configs{$config}{gpt_bios_part} = $FAI::partition_pointer->{number};
+-      my $s = &FAI::convert_unit("120KiB");
+-      # enter the range into the hash
+-      $FAI::partition_pointer->{size}->{range} = "$s-$s";
+-      # set proper defaults
+-      $FAI::partition_pointer->{encrypt} = 0;
+-      $FAI::partition_pointer->{filesystem} = "-";
+-      $FAI::partition_pointer->{mountpoint} = "-";
+     }
+ 
+     # the list of partitions that we need to find start and end bytes for
