@@ -1,17 +1,55 @@
-2009-10-14  Michael Tautschnig  <mt@debian.org>
+2010-09-18  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage/Sizes.pm: Align partition sizes to sectors on all disk labels,
-		dropping DOS cylinder-alignment.
+	* setup-storage/{Parser.pm,Sizes.pm}: Align partition sizes to sectors or
+		user-requested alignment on all disk labels, dropping DOS
+		cylinder-alignment. Thanks Patrick Cervicek for suggesting the
+		user-specified alignment.
+	* setup-storage.8: Document new align-at option.
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
 +++ trunk/lib/setup-storage/Sizes.pm	
-@@ -560,23 +560,9 @@
+@@ -436,8 +436,9 @@
+ #
+ # @param $part_id Partition id within $config
+ # @param $config Disk config
+-# @param $current_disk Current config of this disk
++# @param $disk This disk
+ # @param $next_start Start of the next partition
++# @param $block_size Requested alignment
+ # @param $min_req_total_space Minimum space required on disk
+ # @param $worklist Reference to the remaining partitions
+ #
+@@ -446,7 +447,7 @@
+ ################################################################################
+ sub do_partition_real {
+ 
+-  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $worklist) = @_;
++  my ($part_id, $config, $disk, $next_start, $block_size, $min_req_total_space, $worklist) = @_;
+   # reference to the current disk config
+   my $current_disk = $FAI::current_config{$disk};
+ 
+@@ -549,34 +550,22 @@
+       $current_disk->{sector_size};
+   }
+ 
+-  # partition starts at where we currently are, or remains fixed in case of
+-  # resized ntfs
++  # partition starts at where we currently are + requested alignment, or remains
++  # fixed in case of resized ntfs
+   if ($FAI::configs{$config}{partitions}{$part_id}{size}{resize} &&
+     ($current_disk->{partitions}->{$part_id}->{filesystem} eq "ntfs")) {
+     ($next_start <= $current_disk->{partitions}->{$part_id}->{begin_byte}) 
+       or die "Cannot preserve start byte of ntfs volume on partition $part_id, space before it is too small\n";
+     $next_start = $current_disk->{partitions}->{$part_id}->{begin_byte};
++  } elsif (0 != $next_start % $block_size) {
++    $next_start += $block_size - ($next_start % $block_size);
+   }
    $FAI::configs{$config}{partitions}{$part_id}{start_byte} =
      $next_start;
  
 -  # the end may need some alignment, depending on the disk label
-+  # partitions must end at sector boundary
++  # partitions must end at the requested alignment
    my $end_byte = $next_start + $start - 1;
 -
 -  # on msdos, ensure that the partition ends at a cylinder boundary
@@ -28,11 +66,25 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -    $end_byte -=
 -      ($end_byte + 1) % $current_disk->{sector_size};
 -  }
-+  $end_byte -= ($end_byte + 1) % $current_disk->{sector_size};
++  $end_byte -= ($end_byte + 1) % $block_size;
  
    # set $start and $end to the effective values
    $start = $end_byte - $next_start + 1;
-@@ -651,10 +637,6 @@
+@@ -623,6 +612,13 @@
+     # reference to the current disk config
+     my $current_disk = $FAI::current_config{$disk};
+ 
++    # user-defined alignment or alignment to sector boundaries
++    my $block_size = $current_disk->{sector_size};
++    defined ($FAI::configs{$config}{align_at}) and
++      $block_size = $FAI::configs{$config}{align_at};
++    (0 == $block_size % $current_disk->{sector_size}) or
++      die "Alignment must be set to a multiple of the underlying disk sector size\n";
++
+     # at various points the following code highly depends on the desired disk label!
+     # initialise variables
+     # the id of the extended partition to be created, if required
+@@ -651,10 +647,6 @@
        $next_start = $current_disk->{bios_sectors_per_track} *
          $current_disk->{sector_size};
  
@@ -43,7 +95,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
        # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
        $next_start = 34 * $current_disk->{sector_size};
-@@ -666,13 +648,12 @@
+@@ -666,13 +658,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
@@ -62,3 +114,52 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
+@@ -739,7 +730,7 @@
+         shift @worklist;
+       } else {
+         ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
+-          $config, $disk, $next_start, $min_req_total_space, \@worklist);
++          $config, $disk, $next_start, $block_size, $min_req_total_space, \@worklist);
+ 
+         # msdos does not support partitions larger than 2TiB
+         ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -581,6 +581,10 @@
+         {
+           $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
+         }
++        | /^align-at:(\d+[kMGTPiB]*)/
++        {
++          $FAI::configs{$FAI::device}{align_at} = &FAI::convert_unit($1) * 1024.0 * 1024.0;
++        }
+ 
+     volume: /^vg\s+/ name devices vgcreateopt(s?)
+         | /^raid([0156]|10)\s+/
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -282,6 +282,20 @@
+ .br
+            */
+ .br
++           | align-at:([[:digit:]]+[kMGTPiB]*)
++.br
++           /* Align partitions at multiples of the given block size (unit
++.br
++           defaults to MiB, if omitted). Such an alignment, e.g., 4K, might be
++.br
++           important for proper performance of RAID arrays which use a logical
++.br
++           block size other than the sector size of the underlying disks. It
++.br
++           must, however, always be a multiple of this sector size.
++.br
++           */
++.br
+ 
+ 
+ volume ::= <type> <mountpoint> <size> <filesystem> <mount_options> <fs_options>

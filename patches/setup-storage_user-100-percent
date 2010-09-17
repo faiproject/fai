@@ -33,20 +33,21 @@ Index: trunk/lib/setup-storage/Sizes.pm
    ($start > $curr_part->{count_byte} || $end < $curr_part->{count_byte})
      and warn "Preserved partition $part_dev_name retains size " .
        $curr_part->{count_byte} . "B\n";
-@@ -433,6 +433,7 @@
- # @param $current_disk Current config of this disk
+@@ -434,6 +434,7 @@
  # @param $next_start Start of the next partition
+ # @param $block_size Requested alignment
  # @param $min_req_total_space Minimum space required on disk
 +# @param $max_avail The maximum size of a partition on this disk
  # @param $worklist Reference to the remaining partitions
  #
  # @return Updated values of ($next_start, $min_req_total_space)
-@@ -440,15 +441,14 @@
+@@ -441,15 +442,15 @@
  ################################################################################
  sub do_partition_real {
  
--  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $worklist) = @_;
-+  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $max_avail, $worklist) = @_;
+-  my ($part_id, $config, $disk, $next_start, $block_size, $min_req_total_space, $worklist) = @_;
++  my ($part_id, $config, $disk, $next_start, $block_size, $min_req_total_space,
++    $max_avail, $worklist) = @_;
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
@@ -59,7 +60,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # check, whether the size is fixed
    if ($end != $start) {
-@@ -487,8 +487,7 @@
+@@ -488,8 +489,7 @@
          next;
        } else {
          my ($min_size, $max_size) = &FAI::make_range(
@@ -69,7 +70,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
          # logical partitions require the space for the EPBR to be left
          # out
-@@ -630,6 +629,7 @@
+@@ -640,6 +640,7 @@
        # on msdos disk labels, the first partitions starts at head #1
        $next_start = $current_disk->{bios_sectors_per_track} *
          $current_disk->{sector_size};
@@ -77,7 +78,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
        # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
-@@ -657,6 +657,11 @@
+@@ -667,6 +668,11 @@
        $min_req_total_space += 33 * $current_disk->{sector_size};
      }
  
@@ -89,7 +90,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # the list of partitions that we need to find start and end bytes for
      my @worklist = (&numsort(keys %{ $FAI::configs{$config}{partitions} }));
  
-@@ -703,13 +708,13 @@
+@@ -713,13 +719,14 @@
        # the partition $part_id must be preserved
        } elsif ($part->{size}->{preserve}) {
          ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id,
@@ -100,8 +101,9 @@ Index: trunk/lib/setup-storage/Sizes.pm
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
--          $config, $disk, $next_start, $min_req_total_space, \@worklist);
-+          $config, $disk, $next_start, $min_req_total_space, $max_avail, \@worklist);
+-          $config, $disk, $next_start, $block_size, $min_req_total_space, \@worklist);
++          $config, $disk, $next_start, $block_size, $min_req_total_space,
++          $max_avail, \@worklist);
  
          # msdos does not support partitions larger than 2TiB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
