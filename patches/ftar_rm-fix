@@ -1,0 +1,41 @@
+2010-09-18  Michael Tautschnig  <mt@debian.org>
+
+	* ftar: Only remove files if a matching class/archive file is found.
+Index: trunk/bin/ftar
+===================================================================
+--- trunk.orig/bin/ftar
++++ trunk/bin/ftar	
+@@ -42,6 +42,18 @@
+     local file=$1
+     local catname=$2
+ 
++    if [ $deletefiles -eq 1 ] ; then
++      cd $target/$dir && rm -f  .* * 2>/dev/null
++      deletefiles=0
++    fi
++
++    if [ $removedir -eq 1 ]; then
++        cd $target/$dir
++        [ $PWD = "/" ] && die 3 "ftar WARNING: Will not do recursive removal of directory /"
++        rm -rf .* * 2>/dev/null
++        removedir=0
++    fi
++
+     echo "ftar: extracting $file to $target/$dir"
+     $catname $file | tar -C $target/$dir $vflag -xf -
+     tardone=1
+@@ -114,14 +126,6 @@
+ fpath=$source/$dir
+ [ -d $fpath ] || die 1 "No directory $fpath"
+ 
+-[ $deletefiles -eq 1 ] && cd $target/$dir && rm -f  .* * 2>/dev/null
+-
+-if [ $removedir -eq 1 ]; then
+-    cd $target/$dir
+-    [ $PWD = "/" ] && die 3 "ftar WARNING: Will not do recursive removal of directory /"
+-    rm -rf .* * 2>/dev/null
+-fi
+-
+ for c in $revclasses ; do
+     # what if a directory exists which is equal to the hostname or a classname?
+     [ -f $fpath/$c.tgz ]      && extract $fpath/$c.tgz zcat
