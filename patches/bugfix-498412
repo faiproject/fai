@@ -1,0 +1,316 @@
+2010-09-18  Michael Tautschnig  <mt@debian.org>
+
+	* fai-deps: Added new script for defining subclasses. Thanks Ingo Wichmann for
+		contributing the script (closes: #498412).
+Index: trunk/Makefile
+===================================================================
+--- trunk.orig/Makefile
++++ trunk/Makefile	
+@@ -7,7 +7,7 @@
+ SHAREDIR = $(DESTDIR)/usr/share/fai
+ USRSBIN_SCRIPTS = make-fai-nfsroot fai-setup fcopy ftar install_packages fai-chboot faimond fai-cd fai faireboot fai-statoverride setup-storage dhcp-edit
+ 
+-USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl faimond-gui
++USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl faimond-gui fai-deps
+ 
+ # do not include .svn dir and setup-storage subdir
+ libfiles=$(patsubst lib/setup-storage,,$(wildcard lib/[a-z]*))
+@@ -28,6 +28,7 @@
+ 	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps/small,setup-storage}
+ 	install man/* $(DESTDIR)/man
+ 	pod2man -c '' -r '' -s8 bin/dhcp-edit > $(DESTDIR)/man/dhcp-edit.8
++	pod2man -c '' -r '' -s8 bin/fai-deps > $(DESTDIR)/man/fai-deps.8
+ 	$(MAKE) -C doc install
+ 	-install $(libfiles) $(LIBDIR)
+ 	install lib/setup-storage/* $(SHAREDIR)/setup-storage
+Index: trunk/bin/fai-deps
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ trunk/bin/fai-deps	
+@@ -0,0 +1,264 @@
++#!/usr/bin/perl
++
++=head1 NAME
++
++  fai-deps - class dependencies for FAI
++
++=head1 SYNOPSIS
++
++  fai-deps [-h] [--man] [-d]
++
++=head1 ABSTRACT
++
++  implements dependencies between fai classes.
++
++=head1 DESCRIPTION
++
++fai-deps uses files $FAI/class/*.deps to sort the classes in $LOGDIR/FAI_CLASSES and define additional ones. While doing so, it retains the original order as much as possible.
++
++*.deps files may contain class names, seperated by whitespace. Comments ( after # or ; ) are ignored
++
++e.g. you have a class WORDPRESS that depends on the classes VHOST and POSTGRES . VHOST again may depend on WEBSERVER.
++So if you want to install the blogging software wordpress, you add a file
++
++  $FAI/class/WORDPRESS.deps
++
++that contains the words
++  VHOST
++  POSTGRES
++
++and a file
++  $FAI/class/VHOST.deps
++
++that contains the word
++  WEBSERVER
++
++The order often is important, so this script is taking care of it. The order of the example above would be:
++  WEBSERVER VHOST POSTGRES WORDPRESS
++
++That way, in $FAI/scripts/ first the webserver would be configured, then the vhosts, ...
++
++It removes double entries from FAI_CLASSES and handles circular dependencies[1].
++
++I do not recommend using circular dependencies, but if you accidentally define them, they will not break your neck. But you'll get a warning ...
++
++=head1 ENVIROMENT
++
++One non-standard perl module is required:
++ Graph::Directed;
++On debian install libgraph-perl
++
++The following enviroment variables are used:
++
++ $LOGDIR  : path to fai temporary files
++ $FAI     : path to fai config space
++
++=cut
++
++BEGIN
++{
++  unless ( $ENV{FAI} and $ENV{LOGDIR} )
++  {
++    print STDERR '$ENV{FAI} and $ENV{LOGDIR} are not defined', $/;
++    print STDERR 'This script should be called from within fai', $/;
++    exit 1;
++  }
++}
++
++use strict;
++use warnings;
++
++use lib "$ENV{FAI}/lib";
++
++use Getopt::Long;
++use Pod::Usage;
++use Graph::Directed;
++#use Text::Glob qw(match_glob);
++#use Data::Dumper;
++#use GraphViz;
++
++my %opts;
++GetOptions( \%opts, 'help|h', 'man', 'debug|d' ) or pod2usage(1);
++pod2usage(1) if $opts{help};
++pod2usage(-verbose => 2) if $opts{man};
++
++my $debug = $opts{debug};
++my $fai_classes_file = "$ENV{LOGDIR}/FAI_CLASSES";
++my $class_dir = "$ENV{FAI}/class";
++
++	# main
++{
++	# read classes and dependencies into $digraph
++	# retain order of first appearance in @uniq_classes
++	my $digraph = Graph::Directed->new;
++	my ( @uniq_classes ) =
++		read_fai_classes( $digraph, $fai_classes_file );
++	push @uniq_classes,
++		read_dependencies( $digraph, $class_dir, @uniq_classes );
++	exit if not $digraph->has_edges;
++
++	# debug output
++	if ( $debug ) {
++		print STDERR 'graph:', $/;
++		print STDERR $digraph->stringify(), $/;
++		print STDERR 'is strongly connected', $/
++			if $digraph->is_strongly_connected;
++		#	create_graphviz_output($digraph->edges);
++
++		print STDERR 'unique list of classes, orderd by appearence', $/;
++		print STDERR join('-', @uniq_classes), $/;
++		print STDERR $/;
++	}
++
++	# warn if graph has cycles
++	if ( $digraph->has_a_cycle ) {
++		print STDERR 'Warning: cyclic class dependencies found:', $/;
++		my $copy = $digraph->copy;
++		while ( my @cycle = $copy->find_a_cycle ) {
++			print STDERR join('-', @cycle), $/;
++			$copy->delete_cycle(@cycle);
++		}
++		print STDERR 'I`ll try my best to retain your class order', $/;
++	}
++
++	# sort classes: retain order where possible, respect dependencies where necessary
++	my @sorted_classes = sort_classes( $digraph, @uniq_classes );
++
++	# debug output
++	if ( $debug ) {
++		print STDERR "list of all classes after resolving dependencies:", $/;
++		print STDERR "@sorted_classes", $/;
++		print STDERR 'in debug mode, this script has no effect at all!', $/x5;
++		print STDERR 'Goodbye, and thank you for the fish', $/;
++		exit;
++	}
++	# rewrite $fai_classes_file
++	open FAI_CLASSES, ">$fai_classes_file"
++		or die "$!: $fai_classes_file";
++	print FAI_CLASSES join($/, @sorted_classes), $/;
++	close FAI_CLASSES;
++}
++exit;	# end main
++
++# sort_classes:
++# topological sort classes, retaining order as much as possible
++my %class_finished_for;
++my @order;
++sub sort_classes {
++	my ( $digraph, @uniq_classes ) = @_;
++	@order = @uniq_classes if not @order;
++	my @sorted_classes;
++	for my $class ( @uniq_classes ) {
++		next if exists $class_finished_for{$class};
++		my %unfinished_successor_for =
++			map { $_, 1 }
++			grep { not exists $class_finished_for{$_} }
++			successors($digraph, $class);
++		# retain order for successors
++		my @unfinished_successors =
++			grep { $unfinished_successor_for{$_} }
++			@order;
++		push @sorted_classes, sort_classes( $digraph, @unfinished_successors );
++		push @sorted_classes, $class;
++		$class_finished_for{$class}++;
++	}
++	return @sorted_classes;
++}
++
++# successors: find successors for a given class
++# handle circular dependencies:
++# * do not return circular connected successors
++# * _do_ return all successors of circular connected successors
++sub successors {
++	my ( $digraph, $class ) = @_;
++	my $component = $digraph->strongly_connected_component_by_vertex($class);
++	# strongly connected components to all successors, except own component
++	my %successor_components =
++		map { $_, undef } # turn list into hash for uniqueness
++		grep { $_ ne $component }
++		map { $digraph->strongly_connected_component_by_vertex($_) }
++		$digraph->successors($class);
++	# classes for these components
++	my %successors =
++		map { $_, undef } # turn list into hash for uniqueness
++		map { $digraph->strongly_connected_component_by_index($_) }
++		keys %successor_components;
++	return keys %successors;
++}
++
++# read_fai_classes: reads fai classes from $fai_classes_file
++# usually $LOGDIR/FAI_CLASSES
++sub read_fai_classes {
++	my ( $digraph, $fai_classes_file) = @_;
++	my @uniq_classes;
++	# read plain classes from $LOGDIR/FAI_CLASSES
++	open FAI_CLASSES, $fai_classes_file
++		or die "$!: $fai_classes_file";
++	while ( <FAI_CLASSES> ) {
++		chomp;
++		# skip double classes
++		next if $digraph->has_vertex( $_ );
++		push @uniq_classes, $_;
++		$digraph->add_vertex( $_ );
++	}
++	close FAI_CLASSES;
++	return @uniq_classes;
++}
++
++# read_dependencies: reads dependencies and its classes from $class_dir/*.deps
++my %deps_file_seen_for;
++sub read_dependencies {
++	my ( $digraph, $class_dir, @uniq_classes) = @_;
++	my @new_classes;
++	# read class dependencies from $class_dir/*.deps
++	my $prefix = quotemeta($class_dir);
++	my @deps_files = grep {
++		-f "$class_dir/$_.deps"
++		and not -x "$class_dir/$_.deps"
++	} @uniq_classes;
++	for my $class ( @deps_files ) {
++		next if $deps_file_seen_for{$class}++;
++		open DEPSFILE, "$class_dir/$class.deps"
++			or die "$!: $class";
++		while ( <DEPSFILE> ) {
++			chomp;
++			# remove comments, leading and trailing whitespace
++			s/(#|;).*// ;
++			s/ ^\s+  //x;
++			s/  \s+$ //x;
++			# allow multiple classes per line
++			my @deps = split m/\s+/;
++			for my $dep ( @deps ) {
++				push @new_classes, $dep
++					if not $digraph->has_vertex( $dep );
++				$digraph->add_edge($class, $dep);
++			}
++		}
++		close DEPSFILE;
++		push @new_classes, read_dependencies( $digraph, $class_dir, @new_classes );
++	}
++	return @new_classes;
++}
++
++#sub create_graphviz_output {
++#	my @edges = @_;
++#	my $g = GraphViz->new();
++#	for ( @edges ) {
++#		$g->add_edge( @$_ );
++#	}
++#	return $g->as_png('graph-test.png');
++#}
++
++=head1 SEE ALSO
++
++ http://www.informatik.uni-koeln.de/fai/
++
++=head1 AUTHOR
++
++ Copyright 2008 by Ingo Wichmann <iw@linuxhotel.de>
++
++ This software ist free software; you can redistribute it and/or modify
++ it unter the same terms as Perl itself.
++
++=cut
++
+Index: trunk/debian/control
+===================================================================
+--- trunk.orig/debian/control
++++ trunk/debian/control	
+@@ -13,7 +13,7 @@
+ Package: fai-client
+ Architecture: all
+ Depends: perl, file, libapt-pkg-perl, iproute
+-Recommends: debconf-utils, cfengine2
++Recommends: debconf-utils, cfengine2, libgraph-perl
+ Suggests: logtail
+ Conflicts: fai, fai-kernels
+ Replaces: fai
+Index: trunk/debian/fai-client.install
+===================================================================
+--- trunk.orig/debian/fai-client.install
++++ trunk/debian/fai-client.install	
+@@ -19,3 +19,4 @@
+ usr/sbin/ftar
+ usr/sbin/install_packages
+ usr/sbin/fai-statoverride
++usr/bin/fai-deps
