@@ -1,0 +1,174 @@
+2010-09-18  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Parser,Command,Sizes,Volumes,Fstab}.pm: Added support for
+		using raw disk devices, without partitioning (closes: #589649).
+	* setup-storage.8: Document new raw-disk pseudo partition type.
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -1084,14 +1084,15 @@
+ 
+     if ($FAI::configs{$config}{virtual}) {
+       foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
+-        # reference to the current partition
+-        my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
+         # virtual disks always exist
+         &FAI::push_command( "true", "",
+           "exist_" . &FAI::make_device_name($disk, $part_id) );
+         # no partition table operations
+         $FAI::partition_table_deps{$disk} = "";
+       }
++    } elsif (defined($FAI::configs{$config}{partitions}{0})) {
++      # no partition table operations
++      $FAI::partition_table_deps{$disk} = "";
+     } else {
+       # create partitions on non-virtual configs
+       &FAI::setup_partitions($config);
+@@ -1108,7 +1109,7 @@
+         || $part->{size}->{extended} == 1);
+ 
+       # create the filesystem on the device
+-      &FAI::build_mkfs_commands( &FAI::make_device_name($disk, $part_id), $part );
++      &FAI::build_mkfs_commands( 0 == $part_id ? $disk : &FAI::make_device_name($disk, $part_id), $part );
+     }
+   }
+ }
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -221,7 +221,8 @@
+         # skip extended partitions and entries without a mountpoint
+         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
+ 
+-        my $device_name = &FAI::make_device_name($device, $p_ref->{number});
++        my $device_name = 0 == $p_ref->{number} ? $device :
++          &FAI::make_device_name($device, $p_ref->{number});
+ 
+         # if the mount point the /boot mount point, variables must be set
+         if ($p_ref->{mountpoint} eq $boot_mnt_point) {
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -146,7 +146,8 @@
+ #
+ # @brief Initialise the entry of a partition in @ref $FAI::configs
+ #
+-# @param $type The type of the partition. It must be either primary or logical.
++# @param $type The type of the partition. It must be either primary or logical
++# or raw.
+ #
+ ################################################################################
+ sub init_part_config {
+@@ -154,9 +155,9 @@
+   # the type of the partition to be created
+   my ($type) = @_;
+ 
+-  # type must either be primary or logical, nothing else may be accepted by the
+-  # parser
+-  ($type eq "primary" || $type eq "logical") or 
++  # type must either be primary or logical or raw, nothing else may be accepted
++  # by the parser
++  ($type eq "primary" || $type eq "logical" || $type eq "raw") or
+     &FAI::internal_error("invalid type $type");
+ 
+   # check that a physical device is being configured; logical partitions are
+@@ -179,6 +180,8 @@
+ 
+   # create a primary partition
+   if ($type eq "primary") {
++    (defined($FAI::configs{$FAI::device}{partitions}{0})) and
++      die "You cannot use raw-disk together with primary/logical partitions\n";
+ 
+     # find all previously defined primary partitions
+     foreach my $part_id (&numsort(keys %{ $FAI::configs{$FAI::device}{partitions} })) {
+@@ -201,7 +204,14 @@
+     ($part_number < 5 || $FAI::configs{$FAI::device}{virtual} || 
+       $FAI::configs{$FAI::device}{disklabel} ne "msdos")
+       or die "$part_number are too many primary partitions\n";
++  } elsif ($type eq "raw") {
++    (0 == scalar(keys %{ $FAI::configs{$FAI::device}{partitions} })) or
++      die "You cannot use raw-disk together with primary/logical partitions\n";
++    # special-case hack: part number 0 is invalid otherwise
++    $part_number = 0;
+   } else {
++    (defined($FAI::configs{$FAI::device}{partitions}{0})) and
++      die "You cannot use raw-disk together with primary/logical partitions\n";
+ 
+     # no further checks for the disk label being msdos have to be performed in
+     # this branch, it has been ensured above
+@@ -752,6 +762,12 @@
+           # initialise a logical partition
+           &FAI::init_part_config($item[ 1 ]);
+         }
++        | 'raw-disk'
++        {
++          # initialise a pseudo-partition: this disk will be used without
++          # partitioning it
++          &FAI::init_part_config("raw");
++        }
+         | m{^([^/,\s\-]+)-([^/,\s\-]+)\s+}
+         {
+           # set $FAI::device to VG_$1
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -598,8 +598,10 @@
+     # for RAID, encrypted, tmpfs or LVM, there is nothing to be done here
+     next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
+     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
+-    # nothing to be done, if this is a configuration for a virtual disk
+-    next if $FAI::configs{$config}{virtual};
++    # nothing to be done, if this is a configuration for a virtual disk or a
++    # disk without partitions
++    next if ($FAI::configs{$config}{virtual} ||
++      defined($FAI::configs{$config}{partitions}{0}));
+     my $disk = $1; # the device name of the disk
+     # test, whether $disk is a block special device
+     (-b $disk) or die "$disk is not a valid device name\n";
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -520,12 +520,17 @@
+         next unless ($part->{size}->{preserve} || $part->{size}->{resize});
+         ($part->{size}->{extended}) and die
+           "Preserving extended partitions is not supported; mark all logical partitions instead\n";
+-        defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
+-          "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+-            . " because it does not exist\n";
+-        defined ($part->{size}->{range}) or die
+-          "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+-            . " because it is not defined in the current config\n";
++        if (0 == $part_id) {
++          defined ($FAI::current_config{$1}) or die
++            "Can't preserve $1 because it does not exist\n";
++        } else {
++          defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
++            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
++              . " because it does not exist\n";
++          defined ($part->{size}->{range}) or die
++            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
++              . " because it is not defined in the current config\n";
++        }
+       }
+     } elsif ($config =~ /^VG_(.+)$/) {
+       next if ($1 eq "--ANY--");
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -318,6 +318,10 @@
+ .br
+          /* for physical disks only */
+ .br
++         | raw-disk
++.br
++         /* for physical disks only: do not partition this disk, use it as-is */
++.br
+          | raid[0156]
+ .br
+          /* raid level */
