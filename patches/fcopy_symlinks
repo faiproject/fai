@@ -1,0 +1,168 @@
+2010-09-20  Michael Tautschnig  <mt@debian.org>
+
+	* fcopy: Added option -L to copy symlinks as such (thanks Manuel Hachtkemper
+		for the patch).
+	* fcopy.8: Document new option -L (thanks Edgar Fuß for the patch).
+Index: trunk/bin/fcopy
+===================================================================
+--- trunk.orig/bin/fcopy
++++ trunk/bin/fcopy	
+@@ -65,14 +65,14 @@
+ # getopts:
+ our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_M, $opt_v, $opt_d, $opt_D, $opt_i);
+ our ($opt_B, $opt_c, $opt_C, $opt_h, $opt_F, $opt_l, $opt_L, $opt_P, $opt_b);
+-our ($opt_I, $opt_U, $opt_n);
++our ($opt_I, $opt_U, $opt_n, $opt_H);
+ 
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ sub copy_one {
+ 
+   # copy file $prefix/$source/$class to $target/$source
+   my ($prefix,$source,$target) = @_;
+-  my ($class,$sourcefile,$destfile);
++  my ($class,$sourcefile,$destfile,$sourcelink);
+   # 'normalize' source filenames: very important for updating !
+   $source =~ s/^(\.\/|\/)*//;
+ 
+@@ -89,7 +89,7 @@
+   if (-f $ps) { ewarn("$ps is a file, but must be a directory containing templates.");return };
+   unless (-d $ps) { ewarn("Nonexisting directory $ps. No files copied.");return }
+   # use the last class for which a file exists
+-  foreach (@classes) { $class = $_,last if -f "$ps/$_"; }
++  foreach (@classes) { $class = $_,last if -f "$ps/$_" || ($opt_H && -l "$ps/$_"); }
+   $destfile = "$target/$source";
+ 
+   my $backupfile = $backupdir ? "$backupdir/$source" : "$destfile.pre_fcopy";
+@@ -112,6 +112,16 @@
+   warn "using class: $class\n" if $debug;
+   $tmpfile = $sourcefile = "$ps/$class";
+ 
++  if ($opt_H and -l $sourcefile) {
++    $sourcelink=readlink($sourcefile);
++    if (!defined($sourcelink)) {
++      ewarn("reading symlink $sourcefile failed. $!") ;
++      return;
++    }
++  } else {
++     undef $sourcelink;
++  }
++
+   # do nothing if source and destination files are equal
+   if ($opt_update and not -x "$ps/preinst") {
+     # compare logically
+@@ -149,17 +159,27 @@
+       }
+     }
+ 
+-    if ( compare($tmpfile,$destfile)) {
+-      $logcomment="\t# new (literal)";
++    if (defined($sourcelink)) {
++      # it doesn't harm if the readlink failes
++      if ((-l $destfile) and (readlink($destfile) eq $sourcelink)) {
++        $logcomment="\t# preserved (symlink literal)" if $logfile;
++        $preserve = 1;
++      } else {
++        $logcomment="\t# new (symlink literal)";
++      }
+     } else {
+-      $logcomment="\t# preserved (literal)" if $logfile;
+-      $preserve = 1;
++      if ( compare($tmpfile,$destfile)) {
++        $logcomment="\t# new (literal)";
++      } else {
++        $logcomment="\t# preserved (literal)" if $logfile;
++        $preserve = 1;
++      }
+     }
+   }
+   #if a package is being purged, our information about its config files is
+   #wrong, so first check if they exist. if not, don't preserve, but copy
+   if ($preserve && ! -e $destfile) {
+-    $logcomment="\t# magically disappeared (maybe purged)";
++    $logcomment="\t# magically disappeared (maybe purged or dangling symlink)";
+     $preserve=0;
+   }
+ 
+@@ -185,12 +205,32 @@
+   # what should I do if $destfile is a symlink?
+   $nobackup or (-f $destfile and
+     (-d $bpath or _mkpath($bpath,$debug,0755)) and _move($destfile,$backupfile));
+-  if (_copy($tmpfile,$destfile)) {
+-    print "fcopy: copied $sourcefile to $destfile\n" ;
+-    set_mode($ps,$destfile,$class);
+-    runscript("postinst",$ps,$destfile,$class);
++  if (defined($sourcelink)) {
++    # remove destination if either a regular file or a symlink
++    # complain if existst but neither of these
++    if (-f $destfile or -l $destfile) {
++      if (!_unlink($destfile)) {
++        ewarn("removing destfile $destfile for symlink $sourcefile failed. $!") ;
++	return;
++      }
++    } elsif (-e $destfile) {
++      ewarn("destination $destfile for symlink $sourcefile is neither a regular file nor a symlink $!") ;
++      return;
++    }
++    if (_symlink($sourcelink, $destfile)) {
++      print "fcopy: symlinked $sourcefile -> $sourcelink to $destfile\n" ;
++      runscript("postinst",$ps,$destfile,$class);
++    } else {
++      ewarn("copy symlink $sourcefile -> $sourcelink to $destfile failed. $!") ;
++    }
+   } else {
+-    ewarn("copy $sourcefile to $destfile failed. $!") ;
++    if (_copy($tmpfile,$destfile)) {
++      print "fcopy: copied $sourcefile to $destfile\n" ;
++      set_mode($ps,$destfile,$class);
++      runscript("postinst",$ps,$destfile,$class);
++    } else {
++      ewarn("copy $sourcefile to $destfile failed. $!") ;
++    }
+   }
+   _unlink($tmpfile) unless ($tmpfile eq $sourcefile);
+ }
+@@ -219,6 +259,13 @@
+   copy(@_);
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
++sub _symlink {
++  my($from,$to) = @_;
++
++  return 1 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
++  symlink($from,$to);
++}
++# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ sub runscript {
+ 
+   # returns 0 on success, 1 if the script failed
+@@ -399,6 +446,7 @@
+    -D                   Create debug output.
+    -F file              Read list of sources from file.
+    -h                   Show summary of options.
++   -H			If source is a symlink, make dest a symlink too.
+    -i                   Exit with 0 when no class applies.
+    -I dir[,dir]         Override default list of ignored subdirectories
+    -l                   Do not copy if destination is a symbolic link.
+@@ -421,7 +469,7 @@
+ # main program
+ 
+ $|=1;
+-getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:Un') || usage;
++getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:UnH') || usage;
+ $opt_h && usage;
+ $dryrun = $ENV{FCOPY_DRYRUN} || $opt_n || 0; # is true if in dry-run mode
+ $dryrun and warn "Dry-run only! Nothing is really executed.\n";
+Index: trunk/man/fcopy.8
+===================================================================
+--- trunk.orig/man/fcopy.8
++++ trunk/man/fcopy.8	
+@@ -63,6 +63,9 @@
+ .B \-h
+ Show help, version and summary of options.
+ .TP
++.B \-H
++If source is a symbolic link, make destination a symbolic link too.
++.TP
+ .B \-i
+ Ignore warnings about no matching class and always exit with 0.
+ .TP
