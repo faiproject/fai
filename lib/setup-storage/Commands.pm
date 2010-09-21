@@ -285,28 +285,11 @@ sub build_raid_commands {
       # keep a reference to the current volume
       my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
 
-      # if it is a volume that has to be preserved, there is not much to be
-      # done; its existance has been checked in propagate_and_check_preserve
-      if ($vol->{preserve}) {
-        &FAI::push_command("true", "", "exist_/dev/md$id");
-        # create the filesystem on the volume, if requested
-        &FAI::build_mkfs_commands("/dev/md$id",
-          \%{ $FAI::configs{$config}{volumes}{$id} })
-          if (1 == $vol->{always_format});
-        next;
-      }
-
-      # the desired RAID level
-      my $level = $vol->{mode};
-
-      # prepend "raid", if the mode is numeric-only
-      $level = "raid$level" if ($level =~ /^\d+$/);
-
       # the list of RAID devices
       my @devs = keys %{ $vol->{devices} };
       my @eff_devs = ();
       my @spares = ();
-      my $pre_req;
+      my $pre_req = "";
 
       # set proper partition types for RAID
       foreach my $d (@devs) {
@@ -325,13 +308,40 @@ sub build_raid_commands {
             push @eff_devs, &FAI::enc_name($d);
           }
         }
+
         $d = &FAI::enc_name($d);
-        if (&FAI::set_partition_type_on_phys_dev($d, "raid")) {
+	if ($vol->{preserve}) {
+	  $pre_req .= (&FAI::phys_dev($d))[0] ?
+	      ",pt_complete_" . (&FAI::phys_dev($d))[1] :
+	      ",exist_$d";
+        } elsif (&FAI::set_partition_type_on_phys_dev($d, "raid")) {
           $pre_req .= ",pt_complete_" . (&FAI::phys_dev($d))[1];
         } else {
           $pre_req .= ",exist_$d";
         }
       }
+
+      # if it is a volume that has to be preserved, there is not much to be
+      # done; its existance has been checked in propagate_and_check_preserve
+      if ($vol->{preserve}) {
+	$pre_req =~ s/^,//;
+        # Assemble the array
+        &FAI::push_command(
+	    "mdadm --assemble /dev/md$id " . join(" ", @eff_devs),
+	    "$pre_req", "exist_/dev/md$id");
+
+        # create the filesystem on the volume, if requested
+        &FAI::build_mkfs_commands("/dev/md$id",
+          \%{ $FAI::configs{$config}{volumes}{$id} })
+          if (1 == $vol->{always_format});
+        next;
+      }
+
+      # the desired RAID level
+      my $level = $vol->{mode};
+
+      # prepend "raid", if the mode is numeric-only
+      $level = "raid$level" if ($level =~ /^\d+$/);
 
       my ($create_options) = $FAI::configs{$config}{volumes}{$id}{mdcreateopts};
       # prevent warnings of uninitialized variables

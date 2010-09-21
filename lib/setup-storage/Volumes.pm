@@ -420,17 +420,17 @@ sub get_current_raid {
 
   # try to obtain the list of existing RAID arrays
   my $error =
-    &FAI::execute_ro_command("mdadm --detail --scan --verbose -c partitions",
+    &FAI::execute_ro_command("mdadm --examine --scan --verbose -c partitions",
     \@mdadm_print, 0);
 
 # the expected output is as follows
-# $ mdadm --detail --scan --verbose -c partitions
+# $ mdadm --examine --scan --verbose -c partitions
 # ARRAY /dev/md0 level=linear num-devices=2 UUID=7e11efd6:93e977fd:b110d941:ce79a4f6
 #    devices=/dev/hda1,/dev/hda2
 # ARRAY /dev/md1 level=raid0 num-devices=2 UUID=50d7a6ec:4207f0db:b110d941:ce79a4f6
 #    devices=/dev/md0,/dev/hda3
 # or (newer version of mdadm?)
-# kueppers[~]# mdadm --detail --scan --verbose -c partitions
+# kueppers[~]# mdadm --examine --scan --verbose -c partitions
 # ARRAY /dev/md0 level=raid0 num-devices=3 metadata=00.90
 # UUID=a4553444:0baf31ae:135399f0:a895f15f
 #    devices=/dev/sdf2,/dev/sdd2,/dev/sde2

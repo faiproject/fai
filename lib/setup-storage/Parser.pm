@@ -603,6 +603,9 @@ $FAI::Parser = Parse::RecDescent->new(
           # initialise the preserve flag
           defined($FAI::configs{RAID}{volumes}{$vol_id}{preserve}) or
             $FAI::configs{RAID}{volumes}{$vol_id}{preserve} = 0;
+          # initialise the always_format flag
+          defined($FAI::configs{RAID}{volumes}{$vol_id}{always_format}) or
+            $FAI::configs{RAID}{volumes}{$vol_id}{always_format} = 0;
           # set the reference to the current volume
           # the reference is used by all further processing of this config line
           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
