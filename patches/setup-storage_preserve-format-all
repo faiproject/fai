@@ -315,7 +315,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
          | /^align-at:(\d+[kMGTPiB]*)/
          {
-@@ -604,9 +673,14 @@
+@@ -604,12 +673,14 @@
            $FAI::configs{RAID}{volumes}{$vol_id}{mode} = $1;
            # initialise the hash of devices
            $FAI::configs{RAID}{volumes}{$vol_id}{devices} = {};
@@ -323,16 +323,18 @@ Index: trunk/lib/setup-storage/Parser.pm
 +          # initialise the flags
            defined($FAI::configs{RAID}{volumes}{$vol_id}{preserve}) or
 -            $FAI::configs{RAID}{volumes}{$vol_id}{preserve} = 0;
+-          # initialise the always_format flag
 +            $FAI::configs{RAID}{volumes}{$vol_id}{preserve} =
 +              defined($FAI::configs{RAID}{opts_all}{preserve}) ? 1 :
 +                (defined($FAI::configs{RAID}{opts_all}{preserve_lazy}) ? 2 : 0);
-+          defined($FAI::configs{RAID}{volumes}{$vol_id}{always_format}) or
+           defined($FAI::configs{RAID}{volumes}{$vol_id}{always_format}) or
+-            $FAI::configs{RAID}{volumes}{$vol_id}{always_format} = 0;
 +            $FAI::configs{RAID}{volumes}{$vol_id}{always_format} =
 +              defined($FAI::configs{RAID}{opts_all}{always_format}) ? 1 : 0;
            # set the reference to the current volume
            # the reference is used by all further processing of this config line
            $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
-@@ -677,13 +751,17 @@
+@@ -680,13 +751,17 @@
            # initialise the new hash
            defined($FAI::configs{$FAI::device}{volumes}{$2}) or
              $FAI::configs{$FAI::device}{volumes}{$2} = {};
