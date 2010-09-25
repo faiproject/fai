@@ -1,8 +1,10 @@
 2010-09-17  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage/Parser.pm: Added "all" as valid value for preserve_always,
-		preserve_reinstall, resize, always_format with the same semantics as
-		specifying each device index separately (suggested by Toomas Tamm).
+    preserve_reinstall, resize, always_format with the same semantics as
+    specifying each device index separately; in addition, preserve_always:all
+    makes sure no parted operations on that disk happen at all (suggested by
+    Toomas Tamm).
 	* setup-storage.8: Document this extension.
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
@@ -448,3 +450,17 @@ Index: trunk/man/setup-storage.8
  .br
             /* attempt to resize partitions */
  .br
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -1102,6 +1102,9 @@
+         # no partition table operations
+         $FAI::partition_table_deps{$disk} = "";
+       }
++    } elsif (defined($FAI::configs{$config}{opts_all}{preserve})) {
++      # no changes on this disk
++      $FAI::partition_table_deps{$disk} = "";
+     } else {
+       # create partitions on non-virtual configs
+       &FAI::setup_partitions($config);
