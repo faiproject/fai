@@ -1,0 +1,63 @@
+2010-09-26  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Parser,Commands}.pm: Added partition pseudo-type
+		luks:"<pass>" to create LUKS devices with user-defined passphrase (thanks
+		Patrick Schoenfeld for suggesting this).
+	* setup-storage.8: Document luks:"<pass>".
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -248,6 +248,22 @@
+         # add entries to crypttab
+         push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks";
+ 
++      } elsif ($mode =~ /^luks:"([^"]+)"$/) {
++        my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
++
++        # use specified key for encryption
++        &FAI::push_command("echo '$1' | tee $keyfile", "", "keyfile_$real_dev");
++        # encrypt
++        &FAI::push_command(
++          "yes YES | cryptsetup luksFormat $real_dev $keyfile -c aes-cbc-essiv:sha256 -s 256",
++          "$pre_dep,keyfile_$real_dev", "crypt_format_$real_dev" );
++        &FAI::push_command(
++          "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
++          "crypt_format_$real_dev", "exist_$enc_dev_name" );
++
++        # add entries to crypttab
++        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\tnone\tluks";
++
+       } elsif ($mode eq "tmp" || $mode eq "swap") {
+         &FAI::push_command(
+           "cryptsetup --key-file=/dev/urandom create $enc_dev_short_name $real_dev",
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -710,7 +710,7 @@
+           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
+         }
+         mountpoint devices filesystem mount_options mdcreateopts
+-        | /^(luks|tmp|swap)\s+/
++        | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
+         {
+           ($FAI::device eq "CRYPT") or
+             die "Encrypted device spec $1 invalid in context $FAI::device\n";
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -328,7 +328,11 @@
+ .br
+          | luks
+ .br
+-         /* encrypted partition using LUKS */
++         /* encrypted partition using LUKS and auto-generate a keyfile */
++.br
++         | luks:"[^"]+"
++.br
++         /* encrypted partition using LUKS and use quoted string as passphrase */
+ .br
+          | tmp
+ .br
