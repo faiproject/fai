@@ -98,7 +98,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -          # set the preserve flag for all ids in all cases
 -          $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split (",", $1));
 +          if ($1 eq "all") {
-+            $FAI::configs{RAID}{opts_all}{preserve} = ();
++            $FAI::configs{RAID}{opts_all}{preserve} = 1;
 +          } else {
 +            # set the preserve flag for all ids in all cases
 +            $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split (",", $1));
@@ -111,7 +111,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            if ($FAI::reinstall) {
 -            $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split(",", $1));
 +            if ($1 eq "all") {
-+              $FAI::configs{RAID}{opts_all}{preserve} = ();
++              $FAI::configs{RAID}{opts_all}{preserve} = 1;
 +            } else {
 +              $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split(",", $1));
 +            }
@@ -122,7 +122,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
 -          $FAI::configs{RAID}{volumes}{$_}{preserve} = 2 foreach (split(",", $1));
 +          if ($1 eq "all") {
-+            $FAI::configs{RAID}{opts_all}{preserve_lazy} = ();
++            $FAI::configs{RAID}{opts_all}{preserve_lazy} = 1;
 +          } else {
 +            $FAI::configs{RAID}{volumes}{$_}{preserve} = 2 foreach (split(",", $1));
 +          }
@@ -137,7 +137,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
 -          $FAI::configs{RAID}{volumes}{$_}{always_format} = 1 foreach (split (",", $1));
 +          if ($1 eq "all") {
-+            $FAI::configs{RAID}{opts_all}{always_format} = ();
++            $FAI::configs{RAID}{opts_all}{always_format} = 1;
 +          } else {
 +            $FAI::configs{RAID}{volumes}{$_}{always_format} = 1 foreach (split (",", $1));
 +          }
@@ -157,7 +157,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -              die &FAI::internal_error("VG re-parse failed");
 -            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
 +          if ($1 eq "all") {
-+            $FAI::configs{"VG_--ANY--"}{opts_all}{preserve} = ();
++            $FAI::configs{"VG_--ANY--"}{opts_all}{preserve} = 1;
 +          } else {
 +            # set the preserve flag for all ids in all cases
 +            foreach (split (",", $1)) {
@@ -177,7 +177,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -                die &FAI::internal_error("VG re-parse failed");
 -              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
 +            if ($1 eq "all") {
-+              $FAI::configs{"VG_--ANY--"}{opts_all}{preserve} = ();
++              $FAI::configs{"VG_--ANY--"}{opts_all}{preserve} = 1;
 +            } else {
 +              foreach (split (",", $1)) {
 +                (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
@@ -195,7 +195,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -              die &FAI::internal_error("VG re-parse failed");
 -            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 2;
 +          if ($1 eq "all") {
-+            $FAI::configs{"VG_--ANY--"}{opts_all}{preserve_lazy} = ();
++            $FAI::configs{"VG_--ANY--"}{opts_all}{preserve_lazy} = 1;
 +          } else {
 +            foreach (split (",", $1)) {
 +              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
@@ -213,7 +213,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -              die &FAI::internal_error("VG re-parse failed");
 -            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1;
 +          if ($1 eq "all") {
-+            $FAI::configs{"VG_--ANY--"}{opts_all}{resize} = ();
++            $FAI::configs{"VG_--ANY--"}{opts_all}{resize} = 1;
 +          } else {
 +            # set the resize flag for all ids
 +            foreach (split (",", $1)) {
@@ -236,7 +236,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -              die &FAI::internal_error("VG re-parse failed");
 -            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{always_format} = 1;
 +          if ($1 eq "all") {
-+            $FAI::configs{"VG_--ANY--"}{opts_all}{always_format} = ();
++            $FAI::configs{"VG_--ANY--"}{opts_all}{always_format} = 1;
 +          } else {
 +            foreach (split (",", $1)) {
 +              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
@@ -253,7 +253,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -          # set the preserve flag for all ids in all cases
 -          $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split (",", $1));
 +          if ($1 eq "all") {
-+            $FAI::configs{$FAI::device}{opts_all}{preserve} = ();
++            $FAI::configs{$FAI::device}{opts_all}{preserve} = 1;
 +          } else {
 +            # set the preserve flag for all ids in all cases
 +            $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split (",", $1));
@@ -267,7 +267,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            if ($FAI::reinstall) {
 -            $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split(",", $1));
 +            if ($1 eq "all") {
-+              $FAI::configs{$FAI::device}{opts_all}{preserve} = ();
++              $FAI::configs{$FAI::device}{opts_all}{preserve} = 1;
 +            } else {
 +              $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split(",", $1));
 +            }
@@ -279,7 +279,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
 -          $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 2 foreach (split(",", $1));
 +          if ($1 eq "all") {
-+            $FAI::configs{$FAI::device}{opts_all}{preserve_lazy} = ();
++            $FAI::configs{$FAI::device}{opts_all}{preserve_lazy} = 1;
 +          } else {
 +            $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 2 foreach (split(",", $1));
 +          }
@@ -291,7 +291,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 -          # set the resize flag for all ids
 -          $FAI::configs{$FAI::device}{partitions}{$_}{size}{resize} = 1 foreach (split(",", $1));
 +          if ($1 eq "all") {
-+            $FAI::configs{$FAI::device}{opts_all}{resize} = ();
++            $FAI::configs{$FAI::device}{opts_all}{resize} = 1;
 +          } else {
 +            # set the resize flag for all ids
 +            $FAI::configs{$FAI::device}{partitions}{$_}{size}{resize} = 1 foreach (split(",", $1));
@@ -308,7 +308,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
 -          $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
 +          if ($1 eq "all") {
-+            $FAI::configs{$FAI::device}{opts_all}{always_format} = ();
++            $FAI::configs{$FAI::device}{opts_all}{always_format} = 1;
 +          } else {
 +            $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
 +          }
