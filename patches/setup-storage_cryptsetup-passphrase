@@ -8,26 +8,37 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -248,6 +248,22 @@
+@@ -230,7 +230,7 @@
+         $pre_dep = "random_init_$real_dev";
+       }
+ 
+-      if ($mode eq "luks") {
++      if ($mode =~ /^luks(:"([^"]+)")?$/) {
+         my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
+ 
+         # generate a key for encryption
+@@ -245,9 +245,23 @@
+           "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
+           "crypt_format_$real_dev", "exist_$enc_dev_name" );
+ 
++        if (defined($1)) {
++          my $passphrase = $2;
++
++          # add user-defined key
++          &FAI::push_command(
++            "yes '$passphrase' | cryptsetup luksAddKey --key-file $keyfile $real_dev",
++            "exist_$enc_dev_name", "newkey_$enc_dev_name");
++          # remove previous key
++          &FAI::push_command(
++            "yes '$passphrase' | cryptsetup luksRemoveKey $real_dev $keyfile",
++            "newkey_$enc_dev_name", "removed_key_$enc_dev_name");
++
++          $keyfile = "none";
++        }
++
          # add entries to crypttab
          push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks";
- 
-+      } elsif ($mode =~ /^luks:"([^"]+)"$/) {
-+        my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
-+
-+        # use specified key for encryption
-+        &FAI::push_command("echo '$1' | tee $keyfile", "", "keyfile_$real_dev");
-+        # encrypt
-+        &FAI::push_command(
-+          "yes YES | cryptsetup luksFormat $real_dev $keyfile -c aes-cbc-essiv:sha256 -s 256",
-+          "$pre_dep,keyfile_$real_dev", "crypt_format_$real_dev" );
-+        &FAI::push_command(
-+          "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
-+          "crypt_format_$real_dev", "exist_$enc_dev_name" );
-+
-+        # add entries to crypttab
-+        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\tnone\tluks";
-+
+-
        } elsif ($mode eq "tmp" || $mode eq "swap") {
          &FAI::push_command(
            "cryptsetup --key-file=/dev/urandom create $enc_dev_short_name $real_dev",
