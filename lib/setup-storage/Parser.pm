@@ -613,7 +613,8 @@ $FAI::Parser = Parse::RecDescent->new(
         mountpoint devices filesystem mount_options mdcreateopts
         | /^(luks|tmp|swap)\s+/
         {
-          ($FAI::device eq "CRYPT") or die "Encryted entry invalid in this context\n";
+          ($FAI::device eq "CRYPT") or
+            die "Encrypted device spec $1 invalid in context $FAI::device\n";
           defined ($FAI::configs{CRYPT}) or &FAI::internal_error("CRYPT entry missing");
 
           my $vol_id = 0;
