@@ -447,11 +447,18 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -1102,6 +1102,9 @@
+@@ -1102,6 +1102,16 @@
          # no partition table operations
          $FAI::partition_table_deps{$disk} = "";
        }
 +    } elsif (defined($FAI::configs{$config}{opts_all}{preserve})) {
++      foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
++        # all partitions exist
++        &FAI::push_command( "true", "",
++          "exist_" . &FAI::make_device_name($disk, $part_id) );
++        # no partition table operations
++        $FAI::partition_table_deps{$disk} = "";
++      }
 +      # no changes on this disk
 +      $FAI::partition_table_deps{$disk} = "";
      } else {
