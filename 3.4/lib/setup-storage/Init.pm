@@ -27,7 +27,7 @@ use strict;
 # @brief Initialize all variables and acquire the set of disks of the system.
 #
 # The layout of the data structures is documented in the wiki:
-# http://faiwiki.informatik.uni-koeln.de/index.php/Setup-storage
+# http://wiki.fai-project.org/index.php/Setup-storage
 #
 # $Id$
 #
