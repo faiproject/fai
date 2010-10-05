@@ -436,20 +436,30 @@ sub get_current_raid {
 # ARRAY /dev/md1 level=raid0 num-devices=3 metadata=00.90
 # UUID=77a22e9f:83fd1276:135399f0:a895f15f
 #    devices=/dev/sde3,/dev/sdf3,/dev/sdd3
-
+# and another variant
+# ARRAY /dev/md1 level=raid0 metadata=1.2 num-devices=3
+# UUID=77a22e9f:83fd1276:135399f0:a895f15f
+#    devices=/dev/sde3,/dev/sdf3,/dev/sdd3
 
   # the id of the RAID
   my $id;
 
   # parse the output line by line
   foreach my $line (@mdadm_print) {
-    if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+) level=(\S+) num-devices=\d+(\s+|$)/) {
+    if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+)\s+/) {
       $id = $1;
-      $FAI::current_raid_config{$id}{mode} = $2;
+
+      foreach (split (" ", $line)) {
+	  if ($_ =~ /^level=(\S+)/) {
+	      $FAI::current_raid_config{$id}{mode} = $1;
+	  }
+      }
     } elsif ($line =~ /^\s*devices=(\S+)$/) {
       defined($id) or &FAI::internal_error("mdadm ARRAY line not yet seen");
       push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($_)
         foreach (split (",", $1));
+ 
+      undef($id);
     }
   }
 }
