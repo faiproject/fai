@@ -200,21 +200,7 @@ sub generate_fstab {
         # skip entries without a mountpoint
         next if ($l_ref->{mountpoint} eq "-");
 
-        # real device name
-        my @fstab_key = ();
-
-        # resolve the symlink to the real device
-        # and write it as the first entry
-        &FAI::execute_ro_command("readlink -f /dev/$device/$l", \@fstab_key, 0);
-
-        # remove the newline
-        chomp ($fstab_key[0]);
-
-        # make sure we got back a real device
-        ($FAI::no_dry_run == 0 || -b $fstab_key[0]) 
-          or die "Failed to resolve /dev/$device/$l\n";
-
-        my $device_name = $fstab_key[0];
+        my $device_name = "/dev/$device/$l";
 
         # according to http://grub.enbug.org/LVMandRAID, this should work...
         # if the mount point is / or /boot, the variables should be set, unless
