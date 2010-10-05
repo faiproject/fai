@@ -5,7 +5,7 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-3.0.1, Fri 24 Sep 2010 14:19:06 +0200
+3.0.2, Tue 28 Sep 2010 15:28:00 +0200
 
 :faiver:  3.3
 :nfsrootsize: 380
@@ -888,20 +888,38 @@ server.
 The following tasks are performed during an installation after the
 Linux kernel has booted on the install clients.
 
-. Set up FAI 
-. Define classes
-. Define variables
-. Partition local disks
-. Create and mount local file systems
-. Do debconf preseeding
-. Install software packages
-. Call site specific configuration scripts
-. Call tests if available
-. Save log files
-. Reboot the new installed system
-////
-MT update base missing
-////
+____
+  confdir		# get config space
+  setup			# early part of initialization
+  defclass		# define classes
+  defvar		# define variables
+  action		# evaluate FAI_ACTION
+  install		# Do the initial installation
+  partition		# partition the harddisks, create file systems
+  mountdisks		# mount the file systems
+  extrbase		# extract the minimal base.tgz
+  mirror		# get a Debian mirror via NFS
+  debconf		# do Debian preseeding
+  prepareapt		# preapre some apt-related files in target directory
+  updatebase		# Debian specific
+  HOOK instsoft.FAIBASE	# fcopy kernel-img.conf
+  instsoft		# install software packages
+  configure		# call customization scripts
+  finish		# do some cleanup, show installation time
+  tests			# call tests if defined
+  chboot		# call fai-chboot on the install server
+  HOOK savelog.LAST	# grep for error messages in all log files
+  savelog		# save log file to local dir and remote
+  faiend		# reboot host, eject CD if needed
+____
+____
+
+These are tasks, which are executed when a different action is performed
+
+  dirinstal 	       # install a chroot environment
+  softupdate	       # do a system configuration without the partitioning part
+____
+
 
 You can also define additional programs or scripts which will be run
 on particular occasions. They are called _hooks_. Hooks can add
