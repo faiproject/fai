@@ -259,6 +259,16 @@ export do_init_tasks=0
 [ "$0" = "/etc/init.d/rcS" ] || [ X$UPSTART_JOB = Xfai ] && do_init_tasks=1
 if [ $do_init_tasks -eq 1 ]; then
     hostname $HOSTNAME
+
+    # live-config provides hostname handling through a separate script,
+    # $HOSTNAME isn't available in environment any longer
+    if [ -x /lib/live/config.sh ] ; then
+      LIVE_CONFIGS=hostname /lib/live/config.sh
+      HOSTNAME=$(hostname)
+    fi
+
+    export HOSTNAME
+
     renewclass=1 # always renew class list when installing
     mkdir -p /var/lib/discover /var/discover /etc/sysconfig
 fi
