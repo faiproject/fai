@@ -1,0 +1,46 @@
+2010-10-16  Michael Tautschnig  <mt@debian.org>
+
+	* subroutines: bind-mount /proc and /dev into target. Thanks Michael Prokop
+		<mika@debian.org> for providing all the info and looking at other
+		references.
+	* examples/simple/files/boot/grub/menu.lst/postinst: Call grub-install within
+		chroot, which works with the above change (closes: #523617)
+Index: trunk/lib/subroutines
+===================================================================
+--- trunk.orig/lib/subroutines
++++ trunk/lib/subroutines	
+@@ -421,6 +421,13 @@
+ 	sendmon "TASKERROR mountdisks 705"
+ 	task_error 705
+     fi
++    # mount /dev and /proc on target otherwise grub-installer will fail
++    mount -o bind /dev $FAI_ROOT/dev
++    task_error 706 $?
++    if [ ! -e $FAI_ROOT/proc/version ]; then
++      mount -o bind /proc $FAI_ROOT/proc
++      task_error 707 $?
++    fi
+ }
+ # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ task_configure() {
+@@ -494,6 +501,7 @@
+ 	die "Internal error when calling /tmp/rebootCD."
+     fi
+     umount $FAI_ROOT/proc
++    umount $FAI_ROOT/dev
+     umount -ar
+     exec reboot -dfi
+ }
+Index: trunk/examples/simple/files/boot/grub/menu.lst/postinst
+===================================================================
+--- trunk.orig/examples/simple/files/boot/grub/menu.lst/postinst
++++ trunk/examples/simple/files/boot/grub/menu.lst/postinst	
+@@ -17,7 +17,7 @@
+ [ -z "$BOOT_DEVICE" ]    && exit 701
+ [ -z "$BOOT_PARTITION" ] && exit 702
+ 
+-grub-install --no-floppy --root-directory=$target $BOOT_DEVICE
++$ROOTCMD grub-install --no-floppy $BOOT_DEVICE
+ GROOT=$(device2grub $BOOT_PARTITION)
+ perl -pi -e 's/#(\w+)#/$ENV{$1}/g' $2
+ $ROOTCMD /usr/sbin/update-grub
