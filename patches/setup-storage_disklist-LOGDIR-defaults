@@ -1,0 +1,178 @@
+2010-10-16  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage,setup-storage/{Init,Commands}.pm: Do not require that
+		$disklist and $LOGDIR are provided by the environment, compute input values
+		via disk-info and default to /tmp/fai for $LOGDIR.
+	* setup-storage.8: Correspondingly updated documentation.
+Index: trunk/bin/setup-storage
+===================================================================
+--- trunk.orig/bin/setup-storage
++++ trunk/bin/setup-storage	
+@@ -70,20 +70,6 @@
+        [-h]                     print this help message
+ EOF
+ 
+-################################################################################
+-#
+-# @brief Really write any changes to disk
+-#
+-################################################################################
+-if ($opt_X) {
+-  # we use $ENV{LOGDIR} later on, make sure it is actually set
+-  defined ($ENV{LOGDIR}) or die "Environment variable LOGDIR is not set\n";
+-  $FAI::no_dry_run = 1;
+-} else {
+-  warn "setup-harddisks is running in test-only mode\n";
+-  $FAI::no_dry_run = 0;
+-}
+-
+ # include all subparts, which are part of the FAI perl package
+ use lib "/usr/share/fai/setup-storage/";
+ use Init;
+@@ -97,10 +83,21 @@
+ # enable debug mode, if requested using -d
+ $opt_d and $FAI::debug = 1;
+ 
+-# $disklist must be provided by the environment
+-defined ($ENV{disklist}) or die "Environment variable disklist is not set\n";
+-@FAI::disks = split( /\n/, $ENV{disklist} );
+-print "disklist was: $ENV{disklist}\n" if ($FAI::debug);
++# Really write any changes to disk
++$opt_X and $FAI::no_dry_run = 1;
++warn "setup-storage is running in test-only mode\n" unless ($FAI::no_dry_run);
++
++(-d $FAI::DATADIR) or die
++  (!defined ($ENV{LOGDIR}) ? "Environment variable LOGDIR is not set and " : "")
++  . "$FAI::DATADIR is not a directory\n";
++
++# $disklist may be provided by the environment
++@FAI::disks = split( /\n/, defined ($ENV{disklist}) ? $ENV{disklist} :
++  `disk-info | sort` );
++if ($FAI::debug) {
++  print "disklist: ";
++  print "$_\n" foreach(@FAI::disks);
++}
+ 
+ # the config source file
+ my $config_file = undef;
+@@ -211,23 +208,23 @@
+ # print fstab
+ $FAI::debug and print "$_\n" foreach (@fstab);
+ 
+-# write the proposed contents of fstab to $LOGDIR/fstab
++# write the proposed contents of fstab to $FAI::DATADIR/fstab
+ if ($FAI::no_dry_run) {
+-  open(FSTAB, ">$ENV{LOGDIR}/fstab")
+-    or die "Failed to open $ENV{LOGDIR}/fstab for writing\n";
++  open(FSTAB, ">$FAI::DATADIR/fstab")
++    or die "Failed to open $FAI::DATADIR/fstab for writing\n";
+   print FSTAB "$_\n" foreach (@fstab);
+   close FSTAB;
+ }
+ 
+-# write variables to $LOGDIR/disk_var.sh
++# write variables to $FAI::DATADIR/disk_var.sh
+ # debugging
+ $FAI::debug and print "$_=$FAI::disk_var{$_}\n"
+   foreach (keys %FAI::disk_var);
+ 
+ if ($FAI::no_dry_run)
+ {
+-  open(DISK_VAR, ">$ENV{LOGDIR}/disk_var.sh")
+-    or die "Unable to write to file $ENV{LOGDIR}/disk_var.sh\n";
++  open(DISK_VAR, ">$FAI::DATADIR/disk_var.sh")
++    or die "Unable to write to file $FAI::DATADIR/disk_var.sh\n";
+   print DISK_VAR "$_=$FAI::disk_var{$_}\n" foreach (keys %FAI::disk_var);
+   close DISK_VAR;
+ }
+@@ -235,10 +232,10 @@
+ # print crypttab
+ $FAI::debug and print "$_\n" foreach (@FAI::crypttab);
+ 
+-# write the proposed contents of fstab to $LOGDIR/fstab
++# write the proposed contents of fstab to $FAI::DATADIR/fstab
+ if ($FAI::no_dry_run && scalar(@FAI::crypttab)) {
+-  open(CRYPTTAB, ">$ENV{LOGDIR}/crypttab")
+-    or die "Failed to open $ENV{LOGDIR}/crypttab for writing\n";
++  open(CRYPTTAB, ">$FAI::DATADIR/crypttab")
++    or die "Failed to open $FAI::DATADIR/crypttab for writing\n";
+   print CRYPTTAB "$_\n" foreach (@FAI::crypttab);
+   close CRYPTTAB;
+ }
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm	
+@@ -233,7 +233,7 @@
+       }
+ 
+       if ($mode =~ /^luks(:"([^"]+)")?$/) {
+-        my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
++        my $keyfile = "$FAI::DATADIR/$enc_dev_short_name";
+ 
+         # generate a key for encryption
+         &FAI::push_command(
+Index: trunk/lib/setup-storage/Init.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Init.pm
++++ trunk/lib/setup-storage/Init.pm	
+@@ -45,7 +45,22 @@
+ #
+ ################################################################################
+ $FAI::debug = 0;
+-defined( $ENV{debug} ) and $FAI::debug = $ENV{debug};
++defined ($ENV{debug}) and $FAI::debug = $ENV{debug};
++
++################################################################################
++#
++# @brief Directory to store generated files such as fstab, crypttab
++#
++################################################################################
++$FAI::DATADIR = "/tmp/fai";
++defined ($ENV{LOGDIR}) and $FAI::DATADIR = $ENV{LOGDIR};
++
++################################################################################
++#
++# @brief Write changes to disk only if set to 1
++#
++################################################################################
++$FAI::no_dry_run = 0;
+ 
+ ################################################################################
+ #
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -69,9 +69,9 @@
+ .B disklist
+ The
+ .IR disklist
+-variable must contain a newline separated list of disk drives available in the
++variable may contain a newline separated list of disk drives available in the
+ system. Their order matters as they may be referred to as disk1, etc. in
+-disk_config.
++disk_config. If unset, disk-info will be called to determine the list.
+ .TP
+ .B debug
+ If
+@@ -88,7 +88,8 @@
+ .TP
+ .B LOGDIR
+ \fBsetup-storage\fP
+-generates disk_var.sh and fstab (see below) in this directory.
++generates disk_var.sh, fstab, and possibly crypttab (see below) in this
++directory. Defaults to /tmp/fai if unset.
+ .TP
+ .B flag_initial
+ This variable determines if partitions should be preserved when they
+@@ -108,6 +109,9 @@
+ (which is only set in case this resides on a disk drive) and
+ .IR BOOT_DEVICE .
+ The latter is always resolved to the underlying disk drives.
++Furthermore, if encryption was configured, a proper
++\fBcrypttab\fP(5)
++file plus keyfiles will be generated.
+ .SH SYNTAX
+ This section describes the syntax of disk_config files
+ 
