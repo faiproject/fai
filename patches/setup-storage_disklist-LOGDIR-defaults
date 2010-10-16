@@ -29,7 +29,7 @@ Index: trunk/bin/setup-storage
  # include all subparts, which are part of the FAI perl package
  use lib "/usr/share/fai/setup-storage/";
  use Init;
-@@ -97,10 +83,21 @@
+@@ -97,10 +83,26 @@
  # enable debug mode, if requested using -d
  $opt_d and $FAI::debug = 1;
  
@@ -41,9 +41,14 @@ Index: trunk/bin/setup-storage
 +$opt_X and $FAI::no_dry_run = 1;
 +warn "setup-storage is running in test-only mode\n" unless ($FAI::no_dry_run);
 +
-+(-d $FAI::DATADIR) or die
-+  (!defined ($ENV{LOGDIR}) ? "Environment variable LOGDIR is not set and " : "")
-+  . "$FAI::DATADIR is not a directory\n";
++# Find out whether $LOGDIR is usable or default to /tmp/fai
++if (! -d $FAI::DATADIR) {
++  defined ($ENV{LOGDIR}) and die
++    "Environment variable LOGDIR is set, but $FAI::DATADIR is not a directory\n";
++  mkdir $FAI::DATADIR or die
++    "Failed to create directory $FAI::DATADIR\n";
++  warn "\$LOGDIR not set in environment; created data directory $FAI::DATADIR\n";
++}
 +
 +# $disklist may be provided by the environment
 +@FAI::disks = split( /\n/, defined ($ENV{disklist}) ? $ENV{disklist} :
@@ -55,7 +60,7 @@ Index: trunk/bin/setup-storage
  
  # the config source file
  my $config_file = undef;
-@@ -211,23 +208,23 @@
+@@ -211,23 +213,23 @@
  # print fstab
  $FAI::debug and print "$_\n" foreach (@fstab);
  
@@ -85,7 +90,7 @@ Index: trunk/bin/setup-storage
    print DISK_VAR "$_=$FAI::disk_var{$_}\n" foreach (keys %FAI::disk_var);
    close DISK_VAR;
  }
-@@ -235,10 +232,10 @@
+@@ -235,10 +237,10 @@
  # print crypttab
  $FAI::debug and print "$_\n" foreach (@FAI::crypttab);
  
