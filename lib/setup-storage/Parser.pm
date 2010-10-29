@@ -145,7 +145,8 @@ sub init_disk_config {
 #
 # @brief Initialise the entry of a partition in @ref $FAI::configs
 #
-# @param $type The type of the partition. It must be either primary or logical.
+# @param $type The type of the partition. It must be either primary or logical
+# or raw.
 #
 ################################################################################
 sub init_part_config {
@@ -153,9 +154,9 @@ sub init_part_config {
   # the type of the partition to be created
   my ($type) = @_;
 
-  # type must either be primary or logical, nothing else may be accepted by the
-  # parser
-  ($type eq "primary" || $type eq "logical") or 
+  # type must either be primary or logical or raw, nothing else may be accepted
+  # by the parser
+  ($type eq "primary" || $type eq "logical" || $type eq "raw") or
     &FAI::internal_error("invalid type $type");
 
   # check that a physical device is being configured; logical partitions are
@@ -169,6 +170,8 @@ sub init_part_config {
 
   # create a primary partition
   if ($type eq "primary") {
+    (defined($FAI::configs{$FAI::device}{partitions}{0})) and
+      die "You cannot use raw-disk together with primary/logical partitions\n";
 
     # find all previously defined primary partitions
     foreach my $part_id (&numsort(keys %{ $FAI::configs{$FAI::device}{partitions} })) {
@@ -191,7 +194,14 @@ sub init_part_config {
     ($part_number < 5 || $FAI::configs{$FAI::device}{virtual} || 
       $FAI::configs{$FAI::device}{disklabel} ne "msdos")
       or die "$part_number are too many primary partitions\n";
+  } elsif ($type eq "raw") {
+    (0 == scalar(keys %{ $FAI::configs{$FAI::device}{partitions} })) or
+      die "You cannot use raw-disk together with primary/logical partitions\n";
+    # special-case hack: part number 0 is invalid otherwise
+    $part_number = 0;
   } else {
+    (defined($FAI::configs{$FAI::device}{partitions}{0})) and
+      die "You cannot use raw-disk together with primary/logical partitions\n";
 
     # no further checks for the disk label being msdos have to be performed in
     # this branch, it has been ensured above
@@ -663,6 +673,12 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           # initialise a logical partition
           &FAI::init_part_config($item[ 1 ]);
+        }
+        | 'raw-disk'
+        {
+          # initialise a pseudo-partition: this disk will be used without
+          # partitioning it
+          &FAI::init_part_config("raw");
         }
         | m{^([^/,\s\-]+)-([^/,\s\-]+)\s+}
         {

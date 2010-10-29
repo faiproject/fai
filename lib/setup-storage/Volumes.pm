@@ -530,12 +530,17 @@ sub propagate_and_check_preserve {
         next unless ($part->{size}->{preserve} || $part->{size}->{resize});
         ($part->{size}->{extended}) and die
           "Preserving extended partitions is not supported; mark all logical partitions instead\n";
-        defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
-          "Can't preserve ". &FAI::make_device_name($1, $part->{number})
-            . " because it does not exist\n";
-        defined ($part->{size}->{range}) or die
-          "Can't preserve ". &FAI::make_device_name($1, $part->{number})
-            . " because it is not defined in the current config\n";
+        if (0 == $part_id) {
+          defined ($FAI::current_config{$1}) or die
+            "Can't preserve $1 because it does not exist\n";
+        } else {
+          defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
+            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+              . " because it does not exist\n";
+          defined ($part->{size}->{range}) or die
+            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+              . " because it is not defined in the current config\n";
+        }
       }
     } elsif ($config =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");

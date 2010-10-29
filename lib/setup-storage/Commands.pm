@@ -1088,14 +1088,15 @@ sub build_disk_commands {
 
     if ($FAI::configs{$config}{virtual}) {
       foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
-        # reference to the current partition
-        my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
         # virtual disks always exist
         &FAI::push_command( "true", "",
           "exist_" . &FAI::make_device_name($disk, $part_id) );
         # no partition table operations
         $FAI::partition_table_deps{$disk} = "";
       }
+    } elsif (defined($FAI::configs{$config}{partitions}{0})) {
+      # no partition table operations
+      $FAI::partition_table_deps{$disk} = "";
     } else {
       # create partitions on non-virtual configs
       &FAI::setup_partitions($config);
@@ -1112,7 +1113,7 @@ sub build_disk_commands {
         || $part->{size}->{extended} == 1);
 
       # create the filesystem on the device
-      &FAI::build_mkfs_commands( &FAI::make_device_name($disk, $part_id), $part );
+      &FAI::build_mkfs_commands( 0 == $part_id ? $disk : &FAI::make_device_name($disk, $part_id), $part );
     }
   }
 }

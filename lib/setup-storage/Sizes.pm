@@ -615,8 +615,10 @@ sub compute_partition_sizes
     # for RAID, encrypted, tmpfs or LVM, there is nothing to be done here
     next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
-    # nothing to be done, if this is a configuration for a virtual disk
-    next if $FAI::configs{$config}{virtual};
+    # nothing to be done, if this is a configuration for a virtual disk or a
+    # disk without partitions
+    next if ($FAI::configs{$config}{virtual} ||
+      defined($FAI::configs{$config}{partitions}{0}));
     my $disk = $1; # the device name of the disk
     # test, whether $disk is a block special device
     (-b $disk) or die "$disk is not a valid device name\n";

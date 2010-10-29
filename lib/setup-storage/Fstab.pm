@@ -170,7 +170,8 @@ sub generate_fstab {
         # skip extended partitions and entries without a mountpoint
         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
 
-        my $device_name = &FAI::make_device_name($device, $p_ref->{number});
+        my $device_name = 0 == $p_ref->{number} ? $device :
+          &FAI::make_device_name($device, $p_ref->{number});
 
         # if the mount point is / or /boot, the variables should be set, unless
         # they are already
