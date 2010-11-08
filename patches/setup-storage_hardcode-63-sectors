@@ -1,0 +1,22 @@
+2010-11-04  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Sizes.pm: Do not rely on bios_sectors_per_track information
+		for computing the start location of first partition, always use 63 sectors
+		gap. Thanks Mathieu Alorent for extensive testing.
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -639,9 +639,9 @@
+     my $next_start = 0;
+ 
+     if ($FAI::configs{$config}{disklabel} eq "msdos") {
+-      # on msdos disk labels, the first partitions starts at head #1
+-      $next_start = $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{sector_size};
++      # on msdos disk labels, the first partitions starts at head #1; well,
++      # enforce a 63-sectors-per-track layout
++      $next_start = 63 * $current_disk->{sector_size};
+       $min_req_total_space += $next_start;
+ 
+     } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
