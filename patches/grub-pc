@@ -88,7 +88,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Fstab.pm
 +++ trunk/lib/setup-storage/Fstab.pm	
-@@ -129,6 +129,54 @@
+@@ -129,6 +129,57 @@
    }
  }
  
@@ -109,7 +109,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
 +      foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
 +        my $this_mp = $FAI::configs{$c}{partitions}{$p}{mountpoint};
 +
-+	next if (!defined($this_mp));
++        next if (!defined($this_mp));
 +
 +        return $this_mp if ($this_mp eq "/boot");
 +        $mnt_point = $this_mp if ($this_mp eq "/");
@@ -119,7 +119,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
 +      foreach my $l (keys %{ $FAI::configs{$c}{volumes} }) {
 +        my $this_mp = $FAI::configs{$c}{volumes}{$l}{mountpoint};
 +
-+	next if (!defined($this_mp));
++        next if (!defined($this_mp));
 +
 +        return $this_mp if ($this_mp eq "/boot");
 +        $mnt_point = $this_mp if ($this_mp eq "/");
@@ -128,11 +128,14 @@ Index: trunk/lib/setup-storage/Fstab.pm
 +      foreach my $r (keys %{ $FAI::configs{$c}{volumes} }) {
 +        my $this_mp = $FAI::configs{$c}{volumes}{$r}{mountpoint};
 +
-+	next if (!defined($this_mp));
++        next if (!defined($this_mp));
 +
 +        return $this_mp if ($this_mp eq "/boot");
 +        $mnt_point = $this_mp if ($this_mp eq "/");
 +      }
++    } elsif ($c eq "TMPFS") {
++      # not usable for /boot
++      next;
 +    } else {
 +      &FAI::internal_error("Unexpected key $c");
 +    }
@@ -143,7 +146,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
  
  ################################################################################
  #
-@@ -149,6 +197,9 @@
+@@ -149,6 +200,9 @@
    # the file to be returned, a list of lines
    my @fstab = ();
  
@@ -153,7 +156,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
    # walk through all configured parts
    # the order of entries is most likely wrong, it is fixed at the end
    foreach my $c (keys %$config) {
-@@ -173,15 +224,11 @@
+@@ -173,15 +227,11 @@
          my $device_name = 0 == $p_ref->{number} ? $device :
            &FAI::make_device_name($device, $p_ref->{number});
  
@@ -173,7 +176,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
          }
  
          push @fstab, &FAI::create_fstab_line($p_ref,
-@@ -204,15 +251,13 @@
+@@ -204,15 +254,13 @@
  
          my $device_name = "/dev/$device/$l";
  
@@ -196,7 +199,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
          }
  
          push @fstab, &FAI::create_fstab_line($l_ref,
-@@ -231,15 +276,13 @@
+@@ -231,15 +279,13 @@
  
          my $device_name = "/dev/md$r";
  
@@ -219,7 +222,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
          }
  
          push @fstab, &FAI::create_fstab_line($r_ref,
-@@ -253,8 +296,7 @@
+@@ -253,8 +299,7 @@
  
          my $device_name = &FAI::enc_name($c_ref->{device});
  
@@ -229,7 +232,7 @@ Index: trunk/lib/setup-storage/Fstab.pm
            die "Boot partition cannot be encrypted\n";
  
          push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
-@@ -292,7 +334,10 @@
+@@ -289,7 +334,10 @@
    $FAI::disk_var{SWAPLIST} =~ s/\s*$/"/;
  
    # cleanup the list of boot devices (remove leading space and add quotes)
