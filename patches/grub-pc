@@ -41,13 +41,15 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
 --- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
 +++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
-@@ -2,8 +2,20 @@
+@@ -3,10 +3,21 @@
  
  error=0 ; trap "error=$((error|1))" ERR
  
 -$ROOTCMD grub-mkdevicemap -n -m /boot/grub/device.map
 -$ROOTCMD grub-mkconfig -o /boot/grub/grub.cfg
--$ROOTCMD grub-install --no-floppy "(hd0)"
+-GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
+-$ROOTCMD grub-install --no-floppy "$GROOT"
+-echo "Grub installed on $BOOT_DEVICE = $GROOT"
 +set -a
 +
 +# during softupdate use this file
@@ -58,13 +60,14 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 +$ROOTCMD grub-mkdevicemap --no-floppy
 +
 +for device in $BOOT_DEVICE; do
-+  $ROOTCMD /usr/sbin/grub-install --no-floppy --modules="lvm raid" "$device"
++  GROOT=$($ROOTCMD grub-probe -tdrive -d $device)
++  $ROOTCMD grub-install --no-floppy --modules="lvm raid" "$GROOT"
++  echo "Grub installed on $device = $GROOT"
 +done
 +
 +$ROOTCMD update-grub
  
  exit $error
-+
 Index: trunk/examples/simple/class/50-host-classes
 ===================================================================
 --- trunk.orig/examples/simple/class/50-host-classes
