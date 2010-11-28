@@ -3,10 +3,21 @@
 
 error=0 ; trap "error=$((error|1))" ERR
 
-$ROOTCMD grub-mkdevicemap -n -m /boot/grub/device.map
-$ROOTCMD grub-mkconfig -o /boot/grub/grub.cfg
-GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
-$ROOTCMD grub-install --no-floppy "$GROOT"
-echo "Grub installed on $BOOT_DEVICE = $GROOT"
+set -a
+
+# during softupdate use this file
+[ -r $LOGDIR/disk_var.sh ] && . $LOGDIR/disk_var.sh
+
+[ -z "$BOOT_DEVICE" ]    && exit 701
+
+$ROOTCMD grub-mkdevicemap --no-floppy
+
+for device in $BOOT_DEVICE; do
+  GROOT=$($ROOTCMD grub-probe -tdrive -d $device)
+  $ROOTCMD grub-install --no-floppy --modules="lvm raid" "$GROOT"
+  echo "Grub installed on $device = $GROOT"
+done
+
+$ROOTCMD update-grub
 
 exit $error
