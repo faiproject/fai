@@ -258,9 +258,6 @@ sub generate_fstab {
         push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
       }
     } elsif ($c eq "TMPFS") {
-      # not usable for /boot
-      next;
-    } elsif ($c eq "TMPFS") {
       foreach my $v (keys %{ $config->{$c}->{volumes} }) {
         my $c_ref = $config->{$c}->{volumes}->{$v};
 
