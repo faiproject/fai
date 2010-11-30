@@ -250,7 +250,7 @@ sub get_current_disks {
         # we must have seen the header, otherwise probably the format has
         # changed
         defined ($cols{"File system"}{"start"})
-          or &FAI::internal_error("Table header not seen yet");
+          or &FAI::internal_error("Table header not yet seen while reading $line");
 
         # the info for the partition number
         my $num_cols_before = $cols{"Number"}{"start"};
