@@ -242,6 +242,8 @@ mkiso() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkusb(){
 
+    local device
+
     [ $makeusb -eq 0 ] && return
 
     # TODO: If usbdir is a device (matches /dev/) mount it
@@ -257,7 +259,10 @@ mkusb(){
     fi
     echo $isoversion > $usbdir/.FAI-CD-VERSION
 
-    # now make the USB device bootable
+
+    if [ "$grub_version" -eq 1 ]; then
+
+    # now make the USB device bootable (grub1)
     rootpartition=$(find_fai_data)
     usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
     echo "Root partition is $rootpartition, device is: $usbdev"
@@ -266,6 +271,14 @@ mkusb(){
 	echo -e "root $rootpartition\n setup $usbdev" | grub --batch >/dev/null
     else
 	echo "Device could not be detemined. Installing grub will be skipped."
+    fi
+
+    elif [ "$grub_version" -eq 2 ]; then
+    # detect device of mounted usb stick, grub2
+    device=$(grub-probe -tdrive $usbdir | perl -ane 'm#(/dev/\w+),# && print "$1\n"')
+    echo "Installing grub2 to $device."
+    # this call seems to remove file and copies them again onto the stick
+    grub-install --no-floppy --root-directory=$usbdir $device
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
