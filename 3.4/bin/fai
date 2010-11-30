@@ -273,15 +273,17 @@ fi
 export do_init_tasks=0
 [ "$0" = "/etc/init.d/rcS" ] || [ X$UPSTART_JOB = Xfai ] && do_init_tasks=1
 if [ $do_init_tasks -eq 1 ]; then
+
+    # if hostname was set on the kernel command line (mostly when booting from CD)
+    for word in $(cat /proc/cmdline) ; do
+        case $word in
+            hostname=*)
+	    HOSTNAME=${word#*hostname=}
+	    ;;
+        esac
+    done
+
     hostname $HOSTNAME
-
-    # live-config provides hostname handling through a separate script,
-    # $HOSTNAME isn't available in environment any longer
-    if [ -x /lib/live/config.sh ] ; then
-      LIVE_CONFIGS=hostname /lib/live/config.sh
-      HOSTNAME=$(hostname)
-    fi
-
     export HOSTNAME
 
     renewclass=1 # always renew class list when installing
