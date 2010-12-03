@@ -1,0 +1,244 @@
+2010-12-03  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Fstab.pm,Parser.pm}: Cleanup code for defining BOOT_DEVICE
+		(thanks Julien for doing most of the work).
+	* simple/scripts/GRUB_PC/10-setup: No need to deal with multiple devices
+		anymore, BOOT_DEVICE will always a be single value.
+	* setup-storage: Generate conditional definitions for disk_var.sh such that
+		variables will only be set if not previously defined by users.
+	* setup-storage.8: Properly document semantics of BOOT_DEVICE and disk_var.sh.
+
+Index: trunk/bin/setup-storage
+===================================================================
+--- trunk.orig/bin/setup-storage
++++ trunk/bin/setup-storage	
+@@ -218,14 +218,14 @@
+ 
+ # write variables to $LOGDIR/disk_var.sh
+ # debugging
+-$FAI::debug and print "$_=$FAI::disk_var{$_}\n"
++$FAI::debug and print "$_=\${$_:-$FAI::disk_var{$_}}\n"
+   foreach (keys %FAI::disk_var);
+ 
+ if ($FAI::no_dry_run)
+ {
+   open(DISK_VAR, ">$ENV{LOGDIR}/disk_var.sh")
+     or die "Unable to write to file $ENV{LOGDIR}/disk_var.sh\n";
+-  print DISK_VAR "$_=$FAI::disk_var{$_}\n" foreach (keys %FAI::disk_var);
++  print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
+   close DISK_VAR;
+ }
+ 
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -129,6 +129,57 @@
+   }
+ }
+ 
++################################################################################
++#
++# @brief Find the mount point for /boot
++#
++# @return mount point for /boot
++#
++################################################################################
++sub find_boot_mnt_point {
++  my $mnt_point;
++
++  # walk through all configured parts
++  foreach my $c (keys %FAI::configs) {
++
++    if ($c =~ /^PHY_(.+)$/) {
++      foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
++        my $this_mp = $FAI::configs{$c}{partitions}{$p}{mountpoint};
++
++        next if (!defined($this_mp));
++
++        return $this_mp if ($this_mp eq "/boot");
++        $mnt_point = $this_mp if ($this_mp eq "/");
++      }
++    } elsif ($c =~ /^VG_(.+)$/) {
++      next if ($1 eq "--ANY--");
++      foreach my $l (keys %{ $FAI::configs{$c}{volumes} }) {
++        my $this_mp = $FAI::configs{$c}{volumes}{$l}{mountpoint};
++
++        next if (!defined($this_mp));
++
++        return $this_mp if ($this_mp eq "/boot");
++        $mnt_point = $this_mp if ($this_mp eq "/");
++      }
++    } elsif ($c eq "RAID" || $c eq "CRYPT") {
++      foreach my $r (keys %{ $FAI::configs{$c}{volumes} }) {
++        my $this_mp = $FAI::configs{$c}{volumes}{$r}{mountpoint};
++
++        next if (!defined($this_mp));
++
++        return $this_mp if ($this_mp eq "/boot");
++        $mnt_point = $this_mp if ($this_mp eq "/");
++      }
++    } elsif ($c eq "TMPFS") {
++      # not usable for /boot
++      next;
++    } else {
++      &FAI::internal_error("Unexpected key $c");
++    }
++  }
++
++  return $mnt_point;
++}
+ 
+ ################################################################################
+ #
+@@ -149,6 +200,9 @@
+   # the file to be returned, a list of lines
+   my @fstab = ();
+ 
++  # mount point for /boot
++  my $boot_mnt_point = &FAI::find_boot_mnt_point();
++
+   # walk through all configured parts
+   # the order of entries is most likely wrong, it is fixed at the end
+   foreach my $c (keys %$config) {
+@@ -173,15 +227,11 @@
+         my $device_name = 0 == $p_ref->{number} ? $device :
+           &FAI::make_device_name($device, $p_ref->{number});
+ 
+-        # if the mount point is / or /boot, the variables should be set, unless
+-        # they are already
+-        if ($p_ref->{mountpoint} eq "/boot" || ($p_ref->{mountpoint} eq "/" && 
+-              !defined ($FAI::disk_var{BOOT_PARTITION}))) {
+-          # set the BOOT_DEVICE and BOOT_PARTITION variables, if necessary
++        # if the mount point the /boot mount point, variables must be set
++        if ($p_ref->{mountpoint} eq $boot_mnt_point) {
++          # set the BOOT_DEVICE and BOOT_PARTITION variables
+           $FAI::disk_var{BOOT_PARTITION} = $device_name;
+-          ($c =~ /^PHY_(.+)$/) or &FAI::internal_error("unexpected mismatch");
+-          defined ($FAI::disk_var{BOOT_DEVICE}) and ($FAI::disk_var{BOOT_DEVICE} ne "") or
+-            $FAI::disk_var{BOOT_DEVICE} = $1;
++          $FAI::disk_var{BOOT_DEVICE} = $device;
+         }
+ 
+         push @fstab, &FAI::create_fstab_line($p_ref,
+@@ -204,16 +254,9 @@
+ 
+         my $device_name = "/dev/$device/$l";
+ 
+-        # according to http://grub.enbug.org/LVMandRAID, this should work...
+-        # if the mount point is / or /boot, the variables should be set, unless
+-        # they are already
+-        if ($l_ref->{mountpoint} eq "/boot" || ($l_ref->{mountpoint} eq "/" && 
+-              !defined ($FAI::disk_var{BOOT_PARTITION}))) {
+-          # set the BOOT_DEVICE and BOOT_PARTITION variables, if necessary
+-          $FAI::disk_var{BOOT_PARTITION} = $device_name;
+-          defined ($FAI::disk_var{BOOT_DEVICE}) and ($FAI::disk_var{BOOT_DEVICE} ne "") or
+-            $FAI::disk_var{BOOT_DEVICE} = $device_name;
+-        }
++        # if the mount point the /boot mount point, variables must be set
++        $FAI::disk_var{BOOT_DEVICE} = $device_name
++          if ($l_ref->{mountpoint} eq $boot_mnt_point);
+ 
+         push @fstab, &FAI::create_fstab_line($l_ref,
+           &FAI::get_fstab_key($device_name, $config->{"VG_--ANY--"}->{fstabkey}), $device_name);
+@@ -231,16 +274,9 @@
+ 
+         my $device_name = "/dev/md$r";
+ 
+-        # according to http://grub.enbug.org/LVMandRAID, this should work...
+-        # if the mount point is / or /boot, the variables should be set, unless
+-        # they are already
+-        if ($r_ref->{mountpoint} eq "/boot" || ($r_ref->{mountpoint} eq "/" && 
+-              !defined ($FAI::disk_var{BOOT_PARTITION}))) {
+-          # set the BOOT_DEVICE and BOOT_PARTITION variables, if necessary
+-          $FAI::disk_var{BOOT_PARTITION} = "$device_name";
+-          defined ($FAI::disk_var{BOOT_DEVICE}) and ($FAI::disk_var{BOOT_DEVICE} ne "") or
+-            $FAI::disk_var{BOOT_DEVICE} = "$device_name";
+-        }
++        # if the mount point the /boot mount point, variables must be set
++        $FAI::disk_var{BOOT_DEVICE} = $device_name
++          if ($r_ref->{mountpoint} eq $boot_mnt_point);
+ 
+         push @fstab, &FAI::create_fstab_line($r_ref,
+           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
+@@ -253,8 +289,7 @@
+ 
+         my $device_name = &FAI::enc_name($c_ref->{device});
+ 
+-        ($c_ref->{mountpoint} eq "/boot" || ($c_ref->{mountpoint} eq "/" &&
+-            !defined ($FAI::disk_var{BOOT_PARTITION}))) and
++        ($c_ref->{mountpoint} eq $boot_mnt_point) and
+           die "Boot partition cannot be encrypted\n";
+ 
+         push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
+@@ -265,8 +300,7 @@
+ 
+         next if ($c_ref->{mountpoint} eq "-");
+ 
+-        ($c_ref->{mountpoint} eq "/boot" || ($c_ref->{mountpoint} eq "/" &&
+-            !defined ($FAI::disk_var{BOOT_PARTITION}))) and
++        ($c_ref->{mountpoint} eq $boot_mnt_point) and
+           die "Boot partition cannot be a tmpfs\n";
+ 
+ 	if (($c_ref->{mount_options} =~ m/size=/) || ($c_ref->{mount_options} =~ m/nr_blocks=/)) {
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -557,7 +557,6 @@
+           $FAI::configs{$FAI::device}{bootable} = $1;
+           ($FAI::device =~ /^PHY_(.+)$/) or
+             &FAI::internal_error("unexpected device name");
+-          $FAI::disk_var{BOOT_DEVICE} .= " $1"; 
+         }
+         | 'virtual'
+         {
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8	
+@@ -97,18 +97,19 @@
+ .SH FILES
+ If
+ \fBsetup-storage\fP
+-executes successfully an
++executes successfully, an
+ \fBfstab\fP(5)
+ file matching the specified configuration is generated as
+-$LOGDIR/fstab. Further $LOGDIR/disk_var.sh
+-is generated and may be sourced to get the variables
++$LOGDIR/fstab. Furthermore the file $LOGDIR/disk_var.sh
++is generated. This file defines the following variables, if not yet set:
+ .IR SWAPLIST ,
+ .IR ROOT_PARTITION ,
+ .IR BOOT_PARTITION
+-and
++(which is only set in case this resides on a disk drive), and
+ .IR BOOT_DEVICE .
+-The latter two will only be set in case they
+-reside on a disk drive.
++The latter two describe the partition and disk/RAID/LVM device hosting the mount
++point for /boot. If /boot has no extra mount point, / is used instead.
++You may source $LOGDIR/disk_var.sh to get the variables set.
+ .SH SYNTAX
+ This section describes the syntax of disk_config files
+ 
+Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
+===================================================================
+--- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
++++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
+@@ -12,11 +12,9 @@
+ 
+ $ROOTCMD grub-mkdevicemap --no-floppy
+ 
+-for device in $BOOT_DEVICE; do
+-  GROOT=$($ROOTCMD grub-probe -tdrive -d $device)
+-  $ROOTCMD grub-install --no-floppy --modules="lvm raid" "$GROOT"
+-  echo "Grub installed on $device = $GROOT"
+-done
++GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
++$ROOTCMD grub-install --no-floppy --modules="lvm raid" "$GROOT"
++echo "Grub installed on $BOOT_DEVICE = $GROOT"
+ 
+ $ROOTCMD update-grub
+ 
