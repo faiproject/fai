@@ -1,0 +1,22 @@
+2010-12-04  Michael Tautschnig  <mt@debian.org>
+
+	* fcopy: Write file mode and uid/gid only if actually different (thanks Sabine
+		Schmidt <sabine.schmidt@desy.de> for the initial patch).
+Index: trunk/bin/fcopy
+===================================================================
+--- trunk.orig/bin/fcopy
++++ trunk/bin/fcopy	
+@@ -314,6 +314,13 @@
+   # get mtime,uid,gid,mode from source file
+   my ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+ 
++  # get mtime,uid,gid,mode from destination file
++  my ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
++  # compare time,uid,gid and mode of source file and target file
++  # if different: change the values
++  return if ($stime == $dtime && (($ddefmodes[0] == $defmodes[0]) &&
++      ($ddefmodes[1] == $defmodes[1]) && ($ddefmodes[2] == $defmodes[2])));
++
+   if ($modeset) { # use -m values
+     ($owner,$group,$mode) = @opt_modes;
+   } elsif (-f "$sourcefile/file-modes"){
