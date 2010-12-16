@@ -228,18 +228,23 @@ Index: trunk/examples/simple/scripts/GRUB_PC/10-setup
 ===================================================================
 --- trunk.orig/examples/simple/scripts/GRUB_PC/10-setup
 +++ trunk/examples/simple/scripts/GRUB_PC/10-setup	
-@@ -12,11 +12,9 @@
+@@ -11,13 +11,14 @@
+ [ -z "$BOOT_DEVICE" ]    && exit 701
  
  $ROOTCMD grub-mkdevicemap --no-floppy
++GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
++# see http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=606035
++GROOT=$(echo $GROOT | sed 's:md/:md:g')
  
 -for device in $BOOT_DEVICE; do
 -  GROOT=$($ROOTCMD grub-probe -tdrive -d $device)
 -  $ROOTCMD grub-install --no-floppy --modules="lvm raid" "$GROOT"
 -  echo "Grub installed on $device = $GROOT"
 -done
-+GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
-+$ROOTCMD grub-install --no-floppy --modules="lvm raid" "$GROOT"
++$ROOTCMD grub-install --no-floppy "$GROOT"
 +echo "Grub installed on $BOOT_DEVICE = $GROOT"
  
  $ROOTCMD update-grub
  
++
+ exit $error
