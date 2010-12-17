@@ -181,13 +181,12 @@ sub set_partition_type_on_phys_dev {
   # as that may be created later on
   (-b $disk) or die "Specified disk $disk does not exist in this system!\n";
   # set the raid/lvm unless this is an entire disk flag
-  my $cmd = "parted -s $disk set $part_no $t on";
-  $cmd = "true" if ($part_no == -1);
+  return 0 if ($part_no == -1);
   my $pre = "exist_$d";
   $pre .= ",cleared2_$disk" if (defined($FAI::configs{"PHY_$disk"}));
-  &FAI::push_command( $cmd, "$pre", "type_${t}_$d" );
+  &FAI::push_command( "parted -s $disk set $part_no $t on", $pre, "type_${t}_$d" );
   if (defined($FAI::partition_table_deps{$disk}) &&
-    $FAI::partition_table_deps{$disk} ne "") {
+    $FAI::partition_table_deps{$disk} ne "") {
     $FAI::partition_table_deps{$disk} .= ",type_${t}_$d";
   } else {
     $FAI::partition_table_deps{$disk} = "type_${t}_$d";
@@ -397,16 +396,17 @@ sub create_volume_group {
     my $devs = "";
     # create all the devices
     foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
-      my $dev = &FAI::enc_name($d);
+      $d = &FAI::enc_name($d);
+      my $pre = ",exist_$d";
+      my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
+      $pre = ",pt_complete_$disk"
+        if (&FAI::set_partition_type_on_phys_dev($d, "lvm") &&
+          defined($FAI::configs{"PHY_$disk"}));
 
-      # set proper partition types for LVM
-      my $type_pre = "";
-      $type_pre .= ",type_lvm_$dev" if (&FAI::set_partition_type_on_phys_dev($dev, "lvm"));
-
-      &FAI::push_command( "pvcreate -ff -y $pv_create_options $dev",
-        "all_pv_sigs_removed,exist_$dev$type_pre", "pv_done_$dev");
-      $devs .= " $dev";
-      $pre_dev .= ",pv_done_$dev";
+      &FAI::push_command( "pvcreate -ff -y $pv_create_options $d",
+        "all_pv_sigs_removed$pre", "pv_done_$d");
+      $devs .= " $d";
+      $pre_dev .= ",pv_done_$d";
     }
     $pre_dev =~ s/^,//;
 
@@ -431,24 +431,32 @@ sub create_volume_group {
   my @new_devices = ();
 
   # create an undefined entry for each device
+  my $pre_dev = "vg_exists_$vg";
   foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
     my $denc = &FAI::enc_name($d);
     push @all_devices, $denc;
-    push @new_devices, $denc unless (exists($rm_devs{$denc}));
+    if (exists($rm_devs{$denc})) {
+      my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($denc);
+      $pre_dev .= ($i_p_d && defined($FAI::configs{"PHY_$disk"})) ?
+        ",pt_complete_$disk" : ",exist_$denc";
+    } else {
+      push @new_devices, $denc;
+    }
   }
 
   # remove remaining devices from the list
   delete $rm_devs{$_} foreach (@all_devices);
 
   # create all the devices
-  my $pre_dev = "vg_exists_$vg";
   foreach my $dev (@new_devices) {
-    # set proper partition types for LVM
-    my $type_pre = "";
-    $type_pre .= ",type_lvm_$dev" if (&FAI::set_partition_type_on_phys_dev($dev, "lvm"));
+    my $pre = ",exist_$dev";
+    my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
+    $pre = ",pt_complete_$disk"
+      if (&FAI::set_partition_type_on_phys_dev($dev, "lvm") &&
+        defined($FAI::configs{"PHY_$disk"}));
 
     &FAI::push_command( "pvcreate -ff -y $pv_create_options $dev",
-      "all_pv_sigs_removed,exist_$dev$type_pre", "pv_done_$dev");
+      "all_pv_sigs_removed$pre", "pv_done_$dev");
     $pre_dev .= ",pv_done_$dev";
   }
   $pre_dev =~ s/^,//;
@@ -898,11 +906,15 @@ sub setup_partitions {
     my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
     # get the existing id
     my $mapped_id = $part->{maps_to_existing};
-    # get the intermediate partition id
-    my $p = $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id};
-    # anything to be done?
-    $pre_all_resize .= ",exist_" . &FAI::make_device_name($disk, $p) unless
-      $part->{size}->{resize};
+    # get the intermediate partition id; only available if
+    # rebuild_preserved_partitions was done
+    my $p = undef;
+    if ($needs_resize) {
+      $p = $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id};
+      # anything to be done?
+      $pre_all_resize .= ",exist_" . &FAI::make_device_name($disk, $p) unless
+        $part->{size}->{resize};
+    }
     if ($part->{size}->{resize}) {
       warn &FAI::make_device_name($disk, $mapped_id) . " will be resized\n";
     } else {
@@ -1045,14 +1057,15 @@ sub setup_partitions {
       if ($part->{size}->{preserve} || $part->{size}->{resize});
     $fs = "" if ($fs eq "-");
 
-    my $pre = "";
-    $pre = ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
+    my $pre = "cleared2_$disk";
+    $pre .= ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
     # build a parted command to create the partition
     &FAI::push_command( "parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B",
-      "cleared2_$disk$pre", "exist_" . &FAI::make_device_name($disk, $part_id) );
+      $pre, "exist_" . &FAI::make_device_name($disk, $part_id) );
     $prev_id = $part_id;
   }
 
+  ($prev_id > -1) or &FAI::internal_error("No partitions created");
   $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
     . &FAI::make_device_name($disk, $prev_id);
 
