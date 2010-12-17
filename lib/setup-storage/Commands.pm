@@ -403,7 +403,7 @@ sub create_volume_group {
       my $type_pre = "";
       $type_pre .= ",type_lvm_$dev" if (&FAI::set_partition_type_on_phys_dev($dev, "lvm"));
 
-      &FAI::push_command( "pvcreate $pv_create_options $dev",
+      &FAI::push_command( "pvcreate -ff -y $pv_create_options $dev",
         "all_pv_sigs_removed,exist_$dev$type_pre", "pv_done_$dev");
       $devs .= " $dev";
       $pre_dev .= ",pv_done_$dev";
@@ -447,7 +447,7 @@ sub create_volume_group {
     my $type_pre = "";
     $type_pre .= ",type_lvm_$dev" if (&FAI::set_partition_type_on_phys_dev($dev, "lvm"));
 
-    &FAI::push_command( "pvcreate $pv_create_options $dev",
+    &FAI::push_command( "pvcreate -ff -y $pv_create_options $dev",
       "all_pv_sigs_removed,exist_$dev$type_pre", "pv_done_$dev");
     $pre_dev .= ",pv_done_$dev";
   }
@@ -654,13 +654,12 @@ sub cleanup_vg {
 sub build_lvm_commands {
 
   # disable volumes if there are pre-existing ones
-  my $all_vg_pre = "";
+  &FAI::push_command("vgchange -a n", "", "vgchange_a_n");
+  my $all_vg_pre = "vgchange_a_n";
   if (scalar(keys %FAI::current_lvm_config)) {
-    &FAI::push_command("vgchange -a n", "", "vgchange_a_n");
     foreach my $vg (keys %FAI::current_lvm_config) {
       $all_vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
     }
-    $all_vg_pre =~ s/^,//;
   }
   &FAI::push_command("true", "$all_vg_pre", "all_pv_sigs_removed");
 
