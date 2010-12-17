@@ -557,7 +557,6 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{bootable} = $1;
           ($FAI::device =~ /^PHY_(.+)$/) or
             &FAI::internal_error("unexpected device name");
-          $FAI::disk_var{BOOT_DEVICE} .= " $1"; 
         }
         | 'virtual'
         {
