@@ -218,14 +218,14 @@ if ($FAI::no_dry_run) {
 
 # write variables to $LOGDIR/disk_var.sh
 # debugging
-$FAI::debug and print "$_=$FAI::disk_var{$_}\n"
+$FAI::debug and print "$_=\${$_:-$FAI::disk_var{$_}}\n"
   foreach (keys %FAI::disk_var);
 
 if ($FAI::no_dry_run)
 {
   open(DISK_VAR, ">$ENV{LOGDIR}/disk_var.sh")
     or die "Unable to write to file $ENV{LOGDIR}/disk_var.sh\n";
-  print DISK_VAR "$_=$FAI::disk_var{$_}\n" foreach (keys %FAI::disk_var);
+  print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
   close DISK_VAR;
 }
 
