@@ -128,6 +128,57 @@ sub get_fstab_key {
   }
 }
 
+################################################################################
+#
+# @brief Find the mount point for /boot
+#
+# @return mount point for /boot
+#
+################################################################################
+sub find_boot_mnt_point {
+  my $mnt_point;
+
+  # walk through all configured parts
+  foreach my $c (keys %FAI::configs) {
+
+    if ($c =~ /^PHY_(.+)$/) {
+      foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
+        my $this_mp = $FAI::configs{$c}{partitions}{$p}{mountpoint};
+
+        next if (!defined($this_mp));
+
+        return $this_mp if ($this_mp eq "/boot");
+        $mnt_point = $this_mp if ($this_mp eq "/");
+      }
+    } elsif ($c =~ /^VG_(.+)$/) {
+      next if ($1 eq "--ANY--");
+      foreach my $l (keys %{ $FAI::configs{$c}{volumes} }) {
+        my $this_mp = $FAI::configs{$c}{volumes}{$l}{mountpoint};
+
+        next if (!defined($this_mp));
+
+        return $this_mp if ($this_mp eq "/boot");
+        $mnt_point = $this_mp if ($this_mp eq "/");
+      }
+    } elsif ($c eq "RAID" || $c eq "CRYPT") {
+      foreach my $r (keys %{ $FAI::configs{$c}{volumes} }) {
+        my $this_mp = $FAI::configs{$c}{volumes}{$r}{mountpoint};
+
+        next if (!defined($this_mp));
+
+        return $this_mp if ($this_mp eq "/boot");
+        $mnt_point = $this_mp if ($this_mp eq "/");
+      }
+    } elsif ($c eq "TMPFS") {
+      # not usable for /boot
+      next;
+    } else {
+      &FAI::internal_error("Unexpected key $c");
+    }
+  }
+
+  return $mnt_point;
+}
 
 ################################################################################
 #
@@ -147,6 +198,9 @@ sub generate_fstab {
 
   # the file to be returned, a list of lines
   my @fstab = ();
+
+  # mount point for /boot
+  my $boot_mnt_point = &FAI::find_boot_mnt_point();
 
   # walk through all configured parts
   # the order of entries is most likely wrong, it is fixed at the end
@@ -171,15 +225,11 @@ sub generate_fstab {
 
         my $device_name = &FAI::make_device_name($device, $p_ref->{number});
 
-        # if the mount point is / or /boot, the variables should be set, unless
-        # they are already
-        if ($p_ref->{mountpoint} eq "/boot" || ($p_ref->{mountpoint} eq "/" && 
-              !defined ($FAI::disk_var{BOOT_PARTITION}))) {
-          # set the BOOT_DEVICE and BOOT_PARTITION variables, if necessary
+        # if the mount point the /boot mount point, variables must be set
+        if ($p_ref->{mountpoint} eq $boot_mnt_point) {
+          # set the BOOT_DEVICE and BOOT_PARTITION variables
           $FAI::disk_var{BOOT_PARTITION} = $device_name;
-          ($c =~ /^PHY_(.+)$/) or &FAI::internal_error("unexpected mismatch");
-          defined ($FAI::disk_var{BOOT_DEVICE}) and ($FAI::disk_var{BOOT_DEVICE} ne "") or
-            $FAI::disk_var{BOOT_DEVICE} = $1;
+          $FAI::disk_var{BOOT_DEVICE} = $device;
         }
 
         push @fstab, &FAI::create_fstab_line($p_ref,
@@ -202,16 +252,9 @@ sub generate_fstab {
 
         my $device_name = "/dev/$device/$l";
 
-        # according to http://grub.enbug.org/LVMandRAID, this should work...
-        # if the mount point is / or /boot, the variables should be set, unless
-        # they are already
-        if ($l_ref->{mountpoint} eq "/boot" || ($l_ref->{mountpoint} eq "/" && 
-              !defined ($FAI::disk_var{BOOT_PARTITION}))) {
-          # set the BOOT_DEVICE and BOOT_PARTITION variables, if necessary
-          $FAI::disk_var{BOOT_PARTITION} = $device_name;
-          defined ($FAI::disk_var{BOOT_DEVICE}) and ($FAI::disk_var{BOOT_DEVICE} ne "") or
-            $FAI::disk_var{BOOT_DEVICE} = $device_name;
-        }
+        # if the mount point the /boot mount point, variables must be set
+        $FAI::disk_var{BOOT_DEVICE} = $device_name
+          if ($l_ref->{mountpoint} eq $boot_mnt_point);
 
         push @fstab, &FAI::create_fstab_line($l_ref,
           &FAI::get_fstab_key($device_name, $config->{"VG_--ANY--"}->{fstabkey}), $device_name);
@@ -229,16 +272,9 @@ sub generate_fstab {
 
         my $device_name = "/dev/md$r";
 
-        # according to http://grub.enbug.org/LVMandRAID, this should work...
-        # if the mount point is / or /boot, the variables should be set, unless
-        # they are already
-        if ($r_ref->{mountpoint} eq "/boot" || ($r_ref->{mountpoint} eq "/" && 
-              !defined ($FAI::disk_var{BOOT_PARTITION}))) {
-          # set the BOOT_DEVICE and BOOT_PARTITION variables, if necessary
-          $FAI::disk_var{BOOT_PARTITION} = "$device_name";
-          defined ($FAI::disk_var{BOOT_DEVICE}) and ($FAI::disk_var{BOOT_DEVICE} ne "") or
-            $FAI::disk_var{BOOT_DEVICE} = "$device_name";
-        }
+        # if the mount point the /boot mount point, variables must be set
+        $FAI::disk_var{BOOT_DEVICE} = $device_name
+          if ($r_ref->{mountpoint} eq $boot_mnt_point);
 
         push @fstab, &FAI::create_fstab_line($r_ref,
           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
@@ -251,8 +287,7 @@ sub generate_fstab {
 
         my $device_name = &FAI::enc_name($c_ref->{device});
 
-        ($c_ref->{mountpoint} eq "/boot" || ($c_ref->{mountpoint} eq "/" &&
-            !defined ($FAI::disk_var{BOOT_PARTITION}))) and
+        ($c_ref->{mountpoint} eq $boot_mnt_point) and
           die "Boot partition cannot be encrypted\n";
 
         push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
@@ -263,8 +298,7 @@ sub generate_fstab {
 
         next if ($c_ref->{mountpoint} eq "-");
 
-        ($c_ref->{mountpoint} eq "/boot" || ($c_ref->{mountpoint} eq "/" &&
-            !defined ($FAI::disk_var{BOOT_PARTITION}))) and
+        ($c_ref->{mountpoint} eq $boot_mnt_point) and
           die "Boot partition cannot be a tmpfs\n";
 
 	if (($c_ref->{mount_options} =~ m/size=/) || ($c_ref->{mount_options} =~ m/nr_blocks=/)) {
