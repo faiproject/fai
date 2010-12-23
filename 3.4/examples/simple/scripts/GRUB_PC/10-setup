@@ -11,13 +11,14 @@ set -a
 [ -z "$BOOT_DEVICE" ]    && exit 701
 
 $ROOTCMD grub-mkdevicemap --no-floppy
+GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
+# see http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=606035
+GROOT=$(echo $GROOT | sed 's:md/:md:g')
 
-for device in $BOOT_DEVICE; do
-  GROOT=$($ROOTCMD grub-probe -tdrive -d $device)
-  $ROOTCMD grub-install --no-floppy --modules="lvm raid" "$GROOT"
-  echo "Grub installed on $device = $GROOT"
-done
+$ROOTCMD grub-install --no-floppy "$GROOT"
+echo "Grub installed on $BOOT_DEVICE = $GROOT"
 
 $ROOTCMD update-grub
+
 
 exit $error
