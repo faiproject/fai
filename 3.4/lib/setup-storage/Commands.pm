@@ -882,6 +882,12 @@ sub setup_partitions {
 
   # the list of partitions that must be preserved
   my @to_preserve = &FAI::get_preserved_partitions($config);
+  # resize needed?
+  my $needs_resize = 0;
+  foreach my $part_id (@to_preserve) {
+    $needs_resize = 1 if ($FAI::configs{$config}{partitions}{$part_id}{size}{resize});
+    last if ($needs_resize);
+  }
 
   my $label = $FAI::configs{$config}{disklabel};
   $label = "gpt" if ($label eq "gpt-bios");
@@ -892,10 +898,10 @@ sub setup_partitions {
     or die "Can't change disklabel, partitions are to be preserved\n";
 
   # write the disklabel to drop the previous partition table
-  &FAI::push_command( "parted -s $disk mklabel $label",
+  &FAI::push_command( ($needs_resize ? "parted -s $disk mklabel $label" : "true"),
     "exist_$disk,all_pv_sigs_removed", "cleared1_$disk" );
 
-  &FAI::rebuild_preserved_partitions($config, \@to_preserve);
+  &FAI::rebuild_preserved_partitions($config, \@to_preserve) if ($needs_resize);
 
   my $pre_all_resize = "";
 
