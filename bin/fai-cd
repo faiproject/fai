@@ -6,7 +6,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2010 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2011 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -51,7 +51,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/shar
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2010 Thomas Lange
+	fai-cd Copyright (C) 2004-2011 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -236,7 +236,7 @@ mkiso() {
     [ $makeiso -eq 0 ] && return
 
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    mkisofs --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -l -r -J -b "$boot_image" -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "mkisofs failed." 
+    genisoimage --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -l -r -J -b "$boot_image" -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "genisoimage failed." 
     echo -n "ISO image size and filename: "; du -h $isoname
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -338,7 +338,7 @@ find_fai_data() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 burniso() {
 
-    cdrecord -v -eject $isoname
+    wodim -v -eject $isoname
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
@@ -386,7 +386,7 @@ fi
 [ "$grub_version" -eq 1 ] || [ "$grub_version" -eq 2 ] || die 20 "grub version -G must be either 1 or 2."
 
 if [ $makeiso -eq 1 ]; then
-    [ -x "$(which mkisofs)" ] || die 8 "mkisofs not found. Please install package."
+    [ -x "$(which genisoimage)" ] || die 8 "genisoimage not found. Please install package."
 fi
 
 # use FAI_ETC_DIR from environment variable
