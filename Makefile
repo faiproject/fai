@@ -53,7 +53,7 @@ perlcheck:
 	@echo "Checking for perl syntax errors:"; \
 	for SCRIPT in $(PERL_SCRIPTS); do \
 		test -r $${SCRIPT} || continue ; \
-		perl -w -c $${SCRIPT} || exit ; \
+		perl -Ilib/setup-storage/ -w -c $${SCRIPT} || exit ; \
 	done; \
 	echo "-> perl check done."; \
 
