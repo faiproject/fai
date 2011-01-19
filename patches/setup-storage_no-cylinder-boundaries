@@ -131,13 +131,40 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
            $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
          }
-+        | /^align-at:(\d+[kMGTPiB]*)/
++        | /^align-at:(\d+[kKMGTPiB]*)/
 +        {
 +          $FAI::configs{$FAI::device}{align_at} = &FAI::convert_unit($1) * 1024.0 * 1024.0;
 +        }
  
      volume: /^vg\s+/ name devices vgcreateopt(s?)
          | /^raid([0156]|10)\s+/
+@@ -739,7 +743,7 @@
+           1;
+         }
+ 
+-    size: /^((RAM:\d+%|\d+[kMGTP%iB]*)(-(RAM:\d+%|\d+[kMGTP%iB]*)?)?)(:resize)?/
++    size: /^((RAM:\d+%|\d+[kKMGTP%iB]*)(-(RAM:\d+%|\d+[kKMGTP%iB]*)?)?)(:resize)?/
+         {
+           # complete the size specification to be a range in all cases
+           my $range = $1;
+@@ -770,7 +774,7 @@
+             $FAI::configs{$FAI::device}{preserveparts} = 1;
+           }
+         }
+-        | /^(-(RAM:\d+%|\d+[kMGTP%iB]*))(:resize)?\s+/
++        | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize)?\s+/
+         {
+           # complete the range by assuming 0 as the lower limit 
+           my $range = "0$1";
+@@ -791,7 +795,7 @@
+         }
+         | <error: invalid partition size near "$text">
+ 
+-    tmpfs_size: /^(RAM:(\d+%)|\d+[kMGTPiB]*)\s+/
++    tmpfs_size: /^(RAM:(\d+%)|\d+[kKMGTPiB]*)\s+/
+         {
+           my $size;
+ 
 Index: trunk/man/setup-storage.8
 ===================================================================
 --- trunk.orig/man/setup-storage.8
@@ -146,7 +173,7 @@ Index: trunk/man/setup-storage.8
  .br
             */
  .br
-+           | align-at:([[:digit:]]+[kMGTPiB]*)
++           | align-at:([[:digit:]]+[kKMGTPiB]*)
 +.br
 +           /* Align partitions at multiples of the given block size (unit
 +.br
