@@ -51,10 +51,15 @@ shellcheck:
 
 perlcheck:
 	@echo "Checking for perl syntax errors:"; \
+	mkdir -p perl-dummy/Linux perl-dummy/Tk ; \
+	for f in Linux/LVM.pm Tk.pm Tk/HList.pm Tk/ItemStyle.pm; do \
+		echo '1;' > perl-dummy/$$f ; \
+	done; \
 	for SCRIPT in $(PERL_SCRIPTS); do \
 		test -r $${SCRIPT} || continue ; \
-		perl -Ilib/setup-storage/ -w -c $${SCRIPT} || exit ; \
+		perl -Iperl-dummy/ -Ilib/setup-storage/ -w -c $${SCRIPT} || exit ; \
 	done; \
+	rm -r perl-dummy ; \
 	echo "-> perl check done."; \
 
 clean:
