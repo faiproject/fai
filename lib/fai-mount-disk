@@ -1,16 +1,18 @@
 #! /bin/bash
 
 # $Id$
-# Copyright (c) 2002-2007 by Thomas Lange
+# Copyright (c) 2002-2010 by Thomas Lange
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fstab_mount() {
 
     if [ $fstabcount -eq 1 ]; then
-        # mount the root partition; then mount the rest according to fstab found
+
+	# save fstab
+	cp $FAI_ROOT/$fstabpart/etc/fstab /tmp
 	umount_local_disks
-	mount -o ro /dev/$fstabpart $FAI_ROOT
-	mount2dir $FAI_ROOT $FAI_ROOT/etc/fstab 0 ro
+	# mount according to fstab saved
+	mount2dir $FAI_ROOT /tmp/fstab 0 ro
 	df
     fi
     [ $fstabcount -eq 0 ] && echo "No /etc/fstab found"
