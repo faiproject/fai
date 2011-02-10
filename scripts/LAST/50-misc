@@ -4,11 +4,13 @@
 
 error=0 ; trap "error=$((error|1))" ERR
 
-# remove backup files from cfengine
-dirs="root etc var"
-for path in $dirs; do
-    find $target/$path -maxdepth 20 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
-done
+# remove backup files from cfengine, but only if cfengine is installed
+if [ -x /usr/sbin/cfagent ] || [ -x $target/usr/sbin/cfagent ] ; then
+    dirs="root etc var"
+    for path in $dirs; do
+	find $target/$path -maxdepth 20 -name \*.cfedited -o -name \*.cfsaved | xargs -r rm
+    done
+fi
 
 [ "$FAI_DEBMIRROR" ] && 
   ainsl $target/etc/fstab "#$FAI_DEBMIRROR $MNTPOINT nfs ro 0 0"
