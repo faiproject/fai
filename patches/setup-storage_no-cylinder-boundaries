@@ -14,8 +14,8 @@
 	* setup-storage.8: Document new align-at option.
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
---- trunk.orig/lib/setup-storage/Sizes.pm	2011-02-11 11:04:45.276344608 +0100
-+++ trunk/lib/setup-storage/Sizes.pm	2011-02-11 11:15:09.488499572 +0100
+--- trunk.orig/lib/setup-storage/Sizes.pm	2011-02-11 11:25:13.936859044 +0100
++++ trunk/lib/setup-storage/Sizes.pm	2011-02-11 11:25:53.624346579 +0100
 @@ -436,8 +436,9 @@
  #
  # @param $part_id Partition id within $config
@@ -102,18 +102,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # at various points the following code highly depends on the desired disk label!
      # initialise variables
      # the id of the extended partition to be created, if required
-@@ -653,10 +660,6 @@
-       $next_start = $current_disk->{bios_sectors_per_track} *
-         $current_disk->{sector_size};
- 
--      # the MBR requires space, too
--      $min_req_total_space += $current_disk->{bios_sectors_per_track} *
--        $current_disk->{sector_size};
--
-     } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
-       # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
-       $next_start = 34 * $current_disk->{sector_size};
-@@ -668,13 +671,12 @@
+@@ -668,13 +674,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
@@ -132,7 +121,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
-@@ -741,7 +743,7 @@
+@@ -741,7 +746,7 @@
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
@@ -143,8 +132,8 @@ Index: trunk/lib/setup-storage/Sizes.pm
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
---- trunk.orig/lib/setup-storage/Parser.pm	2011-02-11 11:04:45.272351641 +0100
-+++ trunk/lib/setup-storage/Parser.pm	2011-02-11 11:09:58.512343111 +0100
+--- trunk.orig/lib/setup-storage/Parser.pm	2011-02-11 11:25:13.924842314 +0100
++++ trunk/lib/setup-storage/Parser.pm	2011-02-11 11:25:23.180842395 +0100
 @@ -590,6 +590,10 @@
          {
            $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
@@ -185,8 +174,8 @@ Index: trunk/lib/setup-storage/Parser.pm
  
 Index: trunk/man/setup-storage.8
 ===================================================================
---- trunk.orig/man/setup-storage.8	2011-02-11 11:06:30.096370681 +0100
-+++ trunk/man/setup-storage.8	2011-02-11 11:09:58.512343111 +0100
+--- trunk.orig/man/setup-storage.8	2011-02-11 11:25:13.916862776 +0100
++++ trunk/man/setup-storage.8	2011-02-11 11:25:23.180842395 +0100
 @@ -284,6 +284,20 @@
  .br
             */
