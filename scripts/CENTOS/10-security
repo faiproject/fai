@@ -1,0 +1,13 @@
+#! /bin/bash
+
+# (c) Michael Goetze, 2010-11, mgoetze@mgoetze.net
+
+error=0 ; trap "error=$((error|1))" ERR
+
+$ROOTCMD authconfig --enableshadow --enablemd5 \
+	--enablelocauthorize --updateall
+echo "root:$ROOTPW" | $ROOTCMD chpasswd --encrypted
+
+fcopy -v /etc/selinux/config
+
+exit $error
