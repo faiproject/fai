@@ -1,0 +1,35 @@
+#! /bin/bash
+
+# (c) Michael Goetze, 2010-2011, mgoetze@mgoetze.net
+
+error=0 ; trap "error=$((error|1))" ERR
+
+if [ $FAI_ACTION = "install" ]; then
+    mount -t proc proc $target/proc
+    mount -t sysfs sysfs $target/sys
+    cp /etc/mtab $target/etc/mtab
+
+    # Workaround for #588030
+    #cp $target/etc/modprobe.d/modprobe.conf.dist $target/etc/modprobe.conf
+    # Now done with kudzu
+
+    cat > $target/etc/sysconfig/network <<EOF
+NETWORKING=yes
+HOSTNAME=$HOSTNAME
+GATEWAY=$GATEWAYS_1
+EOF
+    cat > $target/etc/hosts <<EOF
+127.0.0.1	localhost
+$IPADDR	$HOSTNAME
+EOF
+    cat > $target/etc/resolv.conf <<EOF
+nameserver $DNSSRVS_1
+EOF
+fi
+
+fcopy -riv /etc/yum.repos.d/
+#$ROOTCMD yum groupinstall -y core
+
+skiptask prepareapt
+
+exit $error

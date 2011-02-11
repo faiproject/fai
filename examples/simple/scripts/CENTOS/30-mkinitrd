@@ -1,0 +1,24 @@
+#! /bin/bash
+
+# (c) Michael Goetze, 2010-2011, mgoetze@mgoetze.net
+
+error=0 ; trap "error=$((error|1))" ERR
+
+ainsl -v $target/etc/fstab "proc	/proc	proc	defaults	0 0"
+ainsl -v $target/etc/fstab "sysfs	/sys	sysfs	auto		0 0"
+
+version=`$ROOTCMD rpm -qv kernel | cut -d- -f2-`
+$ROOTCMD kudzu -q -k $version
+# Unfortunately mkinitrd is horrible at guessing which modules to include,
+# especially when the running kernel is different than the kernel for which
+# we are creating an initrd...
+drivers=""
+for bus in pci virtio; do
+	for dr in `$ROOTCMD kudzu -p -k $version -b $bus|grep driver:|cut -d' ' -f2|sort -u`; do
+		drivers+=" --preload=$dr"
+	done
+done
+
+$ROOTCMD mkinitrd -f -v $drivers /boot/initrd-$version.img $version
+
+exit $error
