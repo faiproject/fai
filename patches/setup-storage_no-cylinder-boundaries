@@ -1,3 +1,10 @@
+2011-02-11  Julien Blache <jblache@debian.org>
+	* setup-storage/Sizes.pm: for backward compatibility with previous
+	setup-storage versions, msdos partitions must be aligned to cylinder
+	boundary and alignment constraints must not apply for start position of
+	partitions 1 and 5. Preserving partitions on systems installed with
+	previous versions of setup-storage breaks without this.
+
 2010-09-18  Michael Tautschnig  <mt@debian.org>
 
 	* setup-storage/{Parser.pm,Sizes.pm}: Align partition sizes to sectors or
@@ -7,8 +14,8 @@
 	* setup-storage.8: Document new align-at option.
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
---- trunk.orig/lib/setup-storage/Sizes.pm
-+++ trunk/lib/setup-storage/Sizes.pm	
+--- trunk.orig/lib/setup-storage/Sizes.pm	2011-02-11 11:04:45.276344608 +0100
++++ trunk/lib/setup-storage/Sizes.pm	2011-02-11 11:15:09.488499572 +0100
 @@ -436,8 +436,9 @@
  #
  # @param $part_id Partition id within $config
@@ -29,7 +36,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
-@@ -549,34 +550,22 @@
+@@ -549,34 +550,25 @@
        $current_disk->{sector_size};
    }
  
@@ -37,12 +44,15 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -  # resized ntfs
 +  # partition starts at where we currently are + requested alignment, or remains
 +  # fixed in case of resized ntfs
++  # Also, don't apply alignment constraint to partition 1 and 5 in an msdos disklabel
    if ($FAI::configs{$config}{partitions}{$part_id}{size}{resize} &&
      ($current_disk->{partitions}->{$part_id}->{filesystem} eq "ntfs")) {
      ($next_start <= $current_disk->{partitions}->{$part_id}->{begin_byte}) 
        or die "Cannot preserve start byte of ntfs volume on partition $part_id, space before it is too small\n";
      $next_start = $current_disk->{partitions}->{$part_id}->{begin_byte};
-+  } elsif (0 != $next_start % $block_size) {
++  } elsif ((0 != $next_start % $block_size)
++	   && ((($part_id != 5) && ($part_id != 1))
++	       || ($FAI::configs{$config}{disklabel} ne "msdos"))) {
 +    $next_start += $block_size - ($next_start % $block_size);
    }
    $FAI::configs{$config}{partitions}{$part_id}{start_byte} =
@@ -70,21 +80,29 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # set $start and $end to the effective values
    $start = $end_byte - $next_start + 1;
-@@ -625,6 +614,13 @@
+@@ -625,6 +617,21 @@
      # reference to the current disk config
      my $current_disk = $FAI::current_config{$disk};
  
-+    # user-defined alignment or alignment to sector boundaries
++    # align to sector boundary by default
 +    my $block_size = $current_disk->{sector_size};
++    # align to cylinder boundary for msdos disklabels, for backward compatibility
++    if ($FAI::configs{$config}{disklabel} eq "msdos") {
++	$block_size = $current_disk->{sector_size} *
++	    $current_disk->{bios_sectors_per_track} *
++	    $current_disk->{bios_heads};
++    }
++    # but user-specified alignment wins no matter what
 +    defined ($FAI::configs{$config}{align_at}) and
 +      $block_size = $FAI::configs{$config}{align_at};
++
 +    (0 == $block_size % $current_disk->{sector_size}) or
 +      die "Alignment must be set to a multiple of the underlying disk sector size\n";
 +
      # at various points the following code highly depends on the desired disk label!
      # initialise variables
      # the id of the extended partition to be created, if required
-@@ -653,10 +649,6 @@
+@@ -653,10 +660,6 @@
        $next_start = $current_disk->{bios_sectors_per_track} *
          $current_disk->{sector_size};
  
@@ -95,7 +113,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
        # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
        $next_start = 34 * $current_disk->{sector_size};
-@@ -668,13 +660,12 @@
+@@ -668,13 +671,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
@@ -114,7 +132,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
-@@ -741,7 +732,7 @@
+@@ -741,7 +743,7 @@
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
@@ -125,8 +143,8 @@ Index: trunk/lib/setup-storage/Sizes.pm
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
---- trunk.orig/lib/setup-storage/Parser.pm
-+++ trunk/lib/setup-storage/Parser.pm	
+--- trunk.orig/lib/setup-storage/Parser.pm	2011-02-11 11:04:45.272351641 +0100
++++ trunk/lib/setup-storage/Parser.pm	2011-02-11 11:09:58.512343111 +0100
 @@ -590,6 +590,10 @@
          {
            $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
@@ -167,8 +185,8 @@ Index: trunk/lib/setup-storage/Parser.pm
  
 Index: trunk/man/setup-storage.8
 ===================================================================
---- trunk.orig/man/setup-storage.8
-+++ trunk/man/setup-storage.8	
+--- trunk.orig/man/setup-storage.8	2011-02-11 11:06:30.096370681 +0100
++++ trunk/man/setup-storage.8	2011-02-11 11:09:58.512343111 +0100
 @@ -284,6 +284,20 @@
  .br
             */
