@@ -9,13 +9,11 @@
 
 echo 0 > /proc/sys/kernel/printk
 
-# load all IDE drivers
-
-# DMA does not work if we load all modules in drivers/ide, so only try pci modules
-mod=$(find /lib/modules/$(uname -r)/kernel/drivers/ide/pci -type f | sed 's/\.ko$//' | sed 's/.*\///')
-for i in $mod; do
-    modprobe $i 1>/dev/null 2>&1
+depmod -m
+for module in $(pcimodules) ; do
+    modprobe -s -k "$module"
 done
+
 # Booting from CD does not always enable DMA.
 for d in $( echo /proc/ide/hd[a-z] 2>/dev/null); do
     [ -d $d ] && echo "using_dma:1" > $d/settings
