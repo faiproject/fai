@@ -1,0 +1,87 @@
+2011-03-10  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Parser,Sizes,Fstab,Volumes}.pm: Don't keep redundant number
+		field in config data structure.
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm	
+@@ -224,8 +224,8 @@
+         # skip extended partitions and entries without a mountpoint
+         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
+ 
+-        my $device_name = 0 == $p_ref->{number} ? $device :
+-          &FAI::make_device_name($device, $p_ref->{number});
++        my $device_name = 0 == $p ? $device :
++          &FAI::make_device_name($device, $p);
+ 
+         # if the mount point the /boot mount point, variables must be set
+         if ($p_ref->{mountpoint} eq $boot_mnt_point) {
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm	
+@@ -275,10 +275,6 @@
+           size => {}
+         };
+ 
+-      # as we can't compute the index from the reference, we need to store the
+-      # $part_number explicitly
+-      (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{number} = $extended;
+-
+       my $part_size =
+         (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{size};
+ 
+@@ -314,10 +310,6 @@
+     (\%FAI::configs)->{$FAI::device}->{partitions}->{$part_number};
+   $FAI::partition_pointer_dev_name = &FAI::make_device_name($disk, $part_number);
+ 
+-  # as we can't compute the index from the reference, we need to store the
+-  # $part_number explicitly
+-  $FAI::partition_pointer->{number} = $part_number;
+-
+   # the partition is not an extended one
+   $FAI::partition_pointer->{size}->{extended} = 0;
+ 
+@@ -1131,10 +1123,6 @@
+     if ($config =~ /^PHY_(.+)$/) {
+       (scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
+         die "Empty disk_config stanza for device $1\n";
+-      foreach my $part_id (keys %{ $FAI::configs{$config}{partitions} }) {
+-        ($FAI::configs{$config}{partitions}{$part_id}{number} == $part_id) or
+-          &FAI::internal_error("Partition numbers are inconsistent");
+-      }
+     } elsif ($config =~ /^VG_(.+)$/) {
+       next if ($1 eq "--ANY--");
+       (scalar(keys %{ $FAI::configs{$config}{volumes} }) ==
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -687,7 +687,8 @@
+       # partitions
+       $FAI::device = $config;
+       &FAI::init_part_config("primary");
+-      $FAI::configs{$config}{gpt_bios_part} = $FAI::partition_pointer->{number};
++      $FAI::configs{$config}{gpt_bios_part} =
++        (&FAI::phys_dev($FAI::partition_pointer_dev_name))[2];
+       my ($s, $e) = &FAI::make_range("1-1", $current_disk->{size} . "B");
+       # enter the range into the hash
+       $FAI::partition_pointer->{size}->{range} = "$s-$s";
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm	
+@@ -574,10 +574,10 @@
+           defined ($FAI::current_config{$1}) or die
+             "Can't preserve partition on $1 because $1 does not exist\n";
+           defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
+-            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
++            "Can't preserve ". &FAI::make_device_name($1, $part_id)
+               . " because it does not exist\n";
+           defined ($part->{size}->{range}) or die
+-            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
++            "Can't preserve ". &FAI::make_device_name($1, $part_id)
+               . " because it is not defined in the current config\n";
+         }
+       }

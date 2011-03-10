@@ -1,11 +1,14 @@
-2010-09-17  Michael Tautschnig  <mt@debian.org>
+2011-03-10  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage/Parser.pm: Added "all" as valid value for preserve_always,
-    preserve_reinstall, resize, always_format with the same semantics as
-    specifying each device index separately; in addition, preserve_always:all
-    makes sure no parted operations on that disk happen at all (suggested by
-    Toomas Tamm).
+	* setup-storage/{Commands,Parser}.pm: Added "all" as valid value for
+		preserve_always, preserve_reinstall, resize, always_format with the same
+		semantics as specifying each device index separately; in addition,
+		preserve_always:all makes sure no parted operations on that disk happen at
+		all (suggested by Toomas Tamm).
 	* setup-storage.8: Document this extension.
+	* setup-storage/Sizes.pm: Ignore seemingly overflowing partitions if all
+		partitions are to be preserved; thereby we can properly deal with oddly
+		numbered partition tables.
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
@@ -464,3 +467,17 @@ Index: trunk/lib/setup-storage/Commands.pm
      } else {
        # create partitions on non-virtual configs
        &FAI::setup_partitions($config);
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm	
+@@ -318,7 +318,8 @@
+   my $curr_part = $current_disk->{partitions}->{$part_id};
+ 
+   ($next_start > $curr_part->{begin_byte})
+-    and die "Previous partitions overflow begin of preserved partition $part_dev_name\n";
++    and die "Previous partitions overflow begin of preserved partition $part_dev_name\n"
++    unless (defined($FAI::configs{$config}{opts_all}{preserve}));
+ 
+   # get what the user desired
+   my ($start, $end) = &FAI::make_range($part->{size}->{range},
