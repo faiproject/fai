@@ -32,6 +32,8 @@ while (<>) {
     } else {
       $latest_post = "END";
     }
+  } elsif (/^\s*$/) {
+    next;
   } else {
     die;
   }
