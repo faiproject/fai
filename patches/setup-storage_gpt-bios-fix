@@ -1,53 +1,43 @@
-2010-09-17  Michael Tautschnig  <mt@debian.org>
+2011-03-10  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage/{Parser.pm,Sizes.pm}: Make extra partition for gpt-bios the
-		first one.
-Index: trunk/lib/setup-storage/Parser.pm
-===================================================================
---- trunk.orig/lib/setup-storage/Parser.pm
-+++ trunk/lib/setup-storage/Parser.pm	
-@@ -615,6 +615,20 @@
-           # supported by parted could be allowed, but others are not implemented
-           # yet
-           $FAI::configs{$FAI::device}{disklabel} = $1;
-+
-+          # on gpt-bios we'll need an partition at the very beginning to store what
-+          # doesn't fit in the MBR
-+          if ($1 eq "gpt-bios") {
-+            &FAI::init_part_config("primary");
-+            $FAI::configs{$FAI::device}{gpt_bios_part} = $FAI::partition_pointer->{number};
-+            my $s = &FAI::convert_unit("1MiB");
-+            # enter the range into the hash
-+            $FAI::partition_pointer->{size}->{range} = "$s-$s";
-+            # set proper defaults
-+            $FAI::partition_pointer->{encrypt} = 0;
-+            $FAI::partition_pointer->{filesystem} = "-";
-+            $FAI::partition_pointer->{mountpoint} = "-";
-+          }
-         }
-         | /^bootable:(\d+)/
-         {
+	* setup-storage/Sizes.pm: Make extra partition for gpt-bios the
+		first one location-wise but still give it the last id.
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
 +++ trunk/lib/setup-storage/Sizes.pm	
-@@ -682,19 +682,6 @@
- 
-       # the space required by the GPTs
+@@ -684,13 +684,20 @@
        $min_req_total_space += 33 * $current_disk->{sector_size};
--
--      # on gpt-bios we'll need an additional partition to store what doesn't fit
--      # in the MBR
--      $FAI::device = $config;
--      &FAI::init_part_config("primary");
--      $FAI::configs{$config}{gpt_bios_part} = $FAI::partition_pointer->{number};
--      my $s = &FAI::convert_unit("120KiB");
--      # enter the range into the hash
--      $FAI::partition_pointer->{size}->{range} = "$s-$s";
--      # set proper defaults
--      $FAI::partition_pointer->{encrypt} = 0;
--      $FAI::partition_pointer->{filesystem} = "-";
--      $FAI::partition_pointer->{mountpoint} = "-";
-     }
  
-     # the list of partitions that we need to find start and end bytes for
+       # on gpt-bios we'll need an additional partition to store what doesn't fit
+-      # in the MBR
++      # in the MBR; this partition must be at the beginning, but it should be
++      # created at the very end such as not to invalidate indices of other
++      # partitions
+       $FAI::device = $config;
+       &FAI::init_part_config("primary");
+       $FAI::configs{$config}{gpt_bios_part} = $FAI::partition_pointer->{number};
+-      my $s = &FAI::convert_unit("120KiB");
++      my ($s, $e) = &FAI::make_range("1-1", $current_disk->{size} . "B");
+       # enter the range into the hash
+       $FAI::partition_pointer->{size}->{range} = "$s-$s";
++      # retain the free space at the beginning and fix the position
++      $FAI::partition_pointer->{start_byte} = $next_start;
++      $FAI::partition_pointer->{end_byte} = $next_start + $s - 1;
++      $next_start += $s;
++      $min_req_total_space += $s;
+       # set proper defaults
+       $FAI::partition_pointer->{encrypt} = 0;
+       $FAI::partition_pointer->{filesystem} = "-";
+@@ -740,6 +747,11 @@
+ 
+         # partition done
+         shift @worklist;
++      # the gpt-bios special partition is set up already
++      } elsif (defined($FAI::configs{$config}{gpt_bios_part}) &&
++        $FAI::configs{$config}{gpt_bios_part} == $part_id) {
++        # partition done
++        shift @worklist;
+       # the partition $part_id must be preserved
+       } elsif ($part->{size}->{preserve}) {
+         ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id,

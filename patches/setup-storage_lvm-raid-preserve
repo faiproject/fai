@@ -238,13 +238,28 @@ Index: trunk/lib/setup-storage/Commands.pm
    }
  
    # run vgreduce to get them removed
-@@ -623,26 +634,35 @@
+@@ -607,11 +618,13 @@
+         next;
+     } elsif ($dev =~ m{^/dev/md[\/]?(\d+)$}) {
+       my $vol = $1;
++      defined ($FAI::configs{RAID}) or next;
+       defined ($FAI::configs{RAID}{volumes}{$vol}) or next;
+       next if (1 == $FAI::configs{RAID}{volumes}{$vol}{preserve});
+     } elsif ($dev =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
+       my $ivg = $1;
+       my $lv = $2;
++      defined($FAI::configs{"VG_$ivg"}) or next;
+       defined($FAI::configs{"VG_$ivg"}{volumes}{$lv}) or next;
+       next if (1 == $FAI::configs{"VG_$ivg"}{volumes}{$lv}{size}{preserve});
+     } else {
+@@ -623,26 +636,35 @@
    }
  
    if (0 == $clear_vg) {
 -    my $vg_setup_pre = "vgchange_a_n";
+-    if (defined($FAI::configs{"VG_$vg"}{volumes})) {
 +    my $vg_setup_pre = "vgchange_a_n_VG_$vg";
-     if (defined($FAI::configs{"VG_$vg"}{volumes})) {
++    if (defined($FAI::configs{"VG_$vg"})) {
        $FAI::configs{"VG_$vg"}{exists} = 1;
  
        # remove all volumes that do not exist anymore or need not be preserved
@@ -273,12 +288,12 @@ Index: trunk/lib/setup-storage/Commands.pm
        }
      } else {
 -      &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$_") foreach
-+      &FAI::push_command("true", "vgchange_a_n",
++      &FAI::push_command("true", "vgchange_a_n_VG_$vg",
 +        "exist_/dev/$vg/$_,self_cleared_/dev/$vg/$_") foreach
          (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
      }
      &FAI::push_command("true", $vg_setup_pre, "vg_exists_$vg");
-@@ -650,9 +670,16 @@
+@@ -650,9 +672,16 @@
      return 0;
    }
  
@@ -297,7 +312,7 @@ Index: trunk/lib/setup-storage/Commands.pm
      $vg_destroy_pre .= ",lv_rm_$vg/$lv";
    }
    &FAI::push_command( "vgremove $vg", "$vg_destroy_pre", "vg_removed_$vg");
-@@ -662,7 +689,7 @@
+@@ -662,7 +691,7 @@
    $devices .= " " . &FAI::enc_name($_) foreach
      (@{ $FAI::current_lvm_config{$vg}{physical_volumes} });
    $FAI::debug and print "Erased devices:$devices\n";
@@ -306,7 +321,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    return 1;
  }
  
-@@ -676,14 +703,26 @@
+@@ -676,14 +705,26 @@
  sub build_lvm_commands {
  
    # disable volumes if there are pre-existing ones
@@ -340,7 +355,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  
    # loop through all configs
    foreach my $config (keys %FAI::configs) {
-@@ -913,8 +952,15 @@
+@@ -913,8 +954,15 @@
      or die "Can't change disklabel, partitions are to be preserved\n";
  
    # write the disklabel to drop the previous partition table
@@ -460,7 +475,7 @@ Index: trunk/lib/setup-storage/Parser.pm
  }
  
  ################################################################################
-@@ -656,6 +671,18 @@
+@@ -642,6 +657,18 @@
  	  use Storable qw(dclone);
  
  	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
@@ -479,7 +494,7 @@ Index: trunk/lib/setup-storage/Parser.pm
  	}
  	| /^sameas:(\S+)/
  	{
-@@ -665,6 +692,18 @@
+@@ -651,6 +678,18 @@
  	  use Storable qw(dclone);
  
  	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
@@ -498,7 +513,7 @@ Index: trunk/lib/setup-storage/Parser.pm
  	}
          | /^always_format:((\d+(,\d+)*)|all)/
          {
-@@ -708,6 +747,7 @@
+@@ -694,6 +733,7 @@
            # set the reference to the current volume
            # the reference is used by all further processing of this config line
            $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
@@ -506,7 +521,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
          mountpoint devices filesystem mount_options mdcreateopts
          | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
-@@ -728,6 +768,7 @@
+@@ -714,6 +754,7 @@
            $FAI::configs{CRYPT}{volumes}{$vol_id}{preserve} = 0;
  
            $FAI::partition_pointer = (\%FAI::configs)->{CRYPT}->{volumes}->{$vol_id};
@@ -514,7 +529,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
          mountpoint devices filesystem mount_options lv_or_fsopts
          | /^tmpfs\s+/
-@@ -748,6 +789,7 @@
+@@ -734,6 +775,7 @@
            $FAI::configs{TMPFS}{volumes}{$vol_id}{preserve} = 0;
  
            $FAI::partition_pointer = (\%FAI::configs)->{TMPFS}->{volumes}->{$vol_id};
@@ -522,7 +537,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
          mountpoint tmpfs_size mount_options
          | type mountpoint size filesystem mount_options lv_or_fsopts
-@@ -796,6 +838,9 @@
+@@ -782,6 +824,9 @@
            # set the reference to the current volume
            # the reference is used by all further processing of this config line
            $FAI::partition_pointer = (\%FAI::configs)->{$FAI::device}->{volumes}->{$2};
@@ -532,7 +547,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
  
      mountpoint: m{^(-|swap|/[^\s\:]*)(:encrypt(:randinit)?)?}
-@@ -829,6 +874,8 @@
+@@ -815,6 +860,8 @@
              $FAI::configs{$FAI::device}{volumes} = {};
            # initialise the list of physical devices
            $FAI::configs{$FAI::device}{devices} = ();
@@ -541,7 +556,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            # the rule must not return undef
            1;
          }
-@@ -958,15 +1005,21 @@
+@@ -944,15 +991,21 @@
                  "spare" => $spare,
                  "missing" => $missing
                };
