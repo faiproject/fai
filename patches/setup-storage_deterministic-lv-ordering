@@ -25,14 +25,8 @@ Index: trunk/lib/setup-storage/Parser.pm
            # init device tree
            $FAI::dev_children{$FAI::device} = ();
            # the rule must not return undef
-@@ -1127,8 +1131,18 @@
-     if ($config =~ /^PHY_(.+)$/) {
-       (scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
-         die "Empty disk_config stanza for device $1\n";
-+      foreach my $part_id (keys %{ $FAI::configs{$config}{partitions} }) {
-+        ($FAI::configs{$config}{partitions}{$part_id}{number} == $part_id) or
-+          &FAI::internal_error("Partition numbers are inconsistent");
-+      }
+@@ -1140,6 +1144,12 @@
+       }
      } elsif ($config =~ /^VG_(.+)$/) {
        next if ($1 eq "--ANY--");
 +      (scalar(keys %{ $FAI::configs{$config}{volumes} }) ==
@@ -41,9 +35,9 @@ Index: trunk/lib/setup-storage/Parser.pm
 +      defined($FAI::configs{$config}{volumes}{$_}) or
 +        &FAI::internal_error("Inconsistent LV lists - missing entries")
 +        foreach (@{ $FAI::configs{$config}{ordered_lv_list} });
-       next;
-     } elsif ($config eq "RAID") {
-       (scalar(keys %{ $FAI::configs{$config}{volumes} }) > 0) or
+       foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
+         my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
+         next if ($this_mp eq "-");
 Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm

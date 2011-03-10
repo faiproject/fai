@@ -578,3 +578,30 @@ Index: trunk/lib/setup-storage/Parser.pm
              }
            }
            1;
+@@ -1081,6 +1134,8 @@
+         next if ($this_mp eq "-");
+         defined($all_mount_pts{$this_mp}) and die
+           "Mount point $this_mp used twice\n";
++        defined($FAI::dev_children{&FAI::make_device_name($1, $p)}) and die
++          "Mount point $this_mp is shadowed by stacked devices\n";
+         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+       }
+     } elsif ($config =~ /^VG_(.+)$/) {
+@@ -1090,6 +1145,8 @@
+         next if ($this_mp eq "-");
+         defined($all_mount_pts{$this_mp}) and die
+           "Mount point $this_mp used twice\n";
++        defined($FAI::dev_children{"/dev/$1/$p"}) and die
++          "Mount point $this_mp is shadowed by stacked devices\n";
+         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+       }
+       next;
+@@ -1101,6 +1158,8 @@
+         next if ($this_mp eq "-");
+         defined($all_mount_pts{$this_mp}) and die
+           "Mount point $this_mp used twice\n";
++        defined($FAI::dev_children{"/dev/md$p"}) and die
++          "Mount point $this_mp is shadowed by stacked devices\n";
+         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+       }
+     } elsif ($config eq "CRYPT") {
