@@ -6,6 +6,8 @@
 	* setup-storage/Volumes.pm: Proper error reporting for wrong disk names (one
 		die was overridden by yet another die); more verbose output in case of
 		unexpected mdadm output (closes: #611728).
+	* setup-storage/Init.pm: Use Carp::confess to produce stack traces when
+		calling internal_error.
 Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
@@ -51,3 +53,18 @@ Index: trunk/lib/setup-storage/Volumes.pm
            defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
              "Can't preserve ". &FAI::make_device_name($1, $part->{number})
                . " because it does not exist\n";
+Index: trunk/lib/setup-storage/Init.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Init.pm
++++ trunk/lib/setup-storage/Init.pm	
+@@ -302,7 +302,9 @@
+ 
+   my ($error_msg) = @_;
+ 
+-  die <<EOF;
++  use Carp;
++  $Carp::CarpLevel = 1;
++  confess <<EOF;
+ INTERNAL ERROR in setup-storage:
+ $error_msg
+ Please report this error to the Debian Bug Tracking System.
