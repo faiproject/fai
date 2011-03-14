@@ -64,6 +64,7 @@ perlcheck:
 
 clean:
 	find -name svn-commit\*.tmp -o -name svn-commit.tmp~ | xargs -r rm
+	rm -rf perl-dummy
 	$(MAKE) -C doc clean
 
 veryclean: clean
