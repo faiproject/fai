@@ -31,7 +31,7 @@ Index: trunk/lib/setup-storage/Parser.pm
  
      comment: /^\s*#.*/
  
-@@ -1068,20 +1069,57 @@
+@@ -1068,20 +1069,60 @@
  ################################################################################
  sub check_config {
  
@@ -43,6 +43,9 @@ Index: trunk/lib/setup-storage/Parser.pm
        (scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
          die "Empty disk_config stanza for device $1\n";
 +      foreach my $p (keys %{ $FAI::configs{$config}{partitions} }) {
++        next if (1 == $FAI::configs{$config}{partitions}{$p}{size}{extended});
++        defined($FAI::configs{$config}{partitions}{$p}{mountpoint}) or
++          &FAI::internal_error("Undefined mountpoint for non-extended partition");
 +        my $this_mp = $FAI::configs{$config}{partitions}{$p}{mountpoint};
 +        next if ($this_mp eq "-");
 +        defined($all_mount_pts{$this_mp}) and die

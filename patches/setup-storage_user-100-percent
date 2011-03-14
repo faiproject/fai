@@ -33,7 +33,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    ($start > $curr_part->{count_byte} || $end < $curr_part->{count_byte})
      and warn "Preserved partition $part_dev_name retains size " .
        $curr_part->{count_byte} . "B\n";
-@@ -435,6 +435,7 @@
+@@ -431,6 +431,7 @@
  # @param $next_start Start of the next partition
  # @param $block_size Requested alignment
  # @param $min_req_total_space Minimum space required on disk
@@ -41,7 +41,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  # @param $worklist Reference to the remaining partitions
  #
  # @return Updated values of ($next_start, $min_req_total_space)
-@@ -442,15 +443,15 @@
+@@ -438,15 +439,15 @@
  ################################################################################
  sub do_partition_real {
  
@@ -58,9 +58,9 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -    $current_disk->{size} . "B");
 +  my ($start, $end) = &FAI::make_range($part->{size}->{range}, $max_avail);
  
-   # check, whether the size is fixed
-   if ($end != $start) {
-@@ -489,8 +490,7 @@
+   # compute the effective start location on the disk
+   # msdos specific offset for logical partitions
+@@ -510,8 +511,7 @@
          next;
        } else {
          my ($min_size, $max_size) = &FAI::make_range(
@@ -69,8 +69,8 @@ Index: trunk/lib/setup-storage/Sizes.pm
 +          $FAI::configs{$config}{partitions}{$p}{size}{range}, $max_avail);
  
          # logical partitions require the space for the EPBR to be left
-         # out
-@@ -654,6 +654,7 @@
+         # out; in fact, even alignment constraints would have to be considered
+@@ -643,6 +643,7 @@
        # on msdos disk labels, the first partitions starts at head #1
        $next_start = $current_disk->{bios_sectors_per_track} *
          $current_disk->{sector_size};
@@ -78,7 +78,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # the MBR requires space, too
        $min_req_total_space += $current_disk->{bios_sectors_per_track} *
-@@ -705,6 +706,11 @@
+@@ -694,6 +695,11 @@
        $FAI::partition_pointer->{mountpoint} = "-";
      }
  
@@ -90,7 +90,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # the list of partitions that we need to find start and end bytes for
      my @worklist = (&numsort(keys %{ $FAI::configs{$config}{partitions} }));
  
-@@ -756,13 +762,14 @@
+@@ -745,13 +751,14 @@
        # the partition $part_id must be preserved
        } elsif ($part->{size}->{preserve}) {
          ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id,

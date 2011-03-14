@@ -1,9 +1,10 @@
-2011-02-11  Julien Blache <jblache@debian.org>
+2011-02-11  Julien Blache  <jblache@debian.org>
+	
 	* setup-storage/Sizes.pm: for backward compatibility with previous
-	setup-storage versions, msdos partitions must be aligned to cylinder
-	boundary and alignment constraints must not apply for start position of
-	partitions 1 and 5. Preserving partitions on systems installed with
-	previous versions of setup-storage breaks without this.
+		setup-storage versions, msdos partitions must be aligned to cylinder
+		boundary and alignment constraints must not apply for start position of
+		partitions 1 and 5. Preserving partitions on systems installed with previous
+		versions of setup-storage breaks without this.
 
 2010-09-18  Michael Tautschnig  <mt@debian.org>
 
@@ -12,11 +13,50 @@
 		cylinder-alignment. Thanks Patrick Cervicek for suggesting the
 		user-specified alignment.
 	* setup-storage.8: Document new align-at option.
+	* setup-storage/Sizes.pm: Take alignment into account for partition size
+		computation (thanks Frank Doepper for bringing up this problem). Size of
+		extended (partition) boot record is 512B and independent of disk head size.
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
 +++ trunk/lib/setup-storage/Sizes.pm	
-@@ -436,8 +436,9 @@
+@@ -353,9 +353,8 @@
+           $current_disk->{bios_heads})) or 
+       warn "Preserved partition $part_dev_name does not end at a cylinder boundary, parted may fail to restore the partition!\n";
+ 
+-    # add one head of disk usage if this is a logical partition
+-    $min_req_total_space += $current_disk->{bios_sectors_per_track} *
+-      $current_disk->{sector_size} if ($part_id > 4);
++    # add 512B of disk usage if this is a logical partition
++    $min_req_total_space += 512 if ($part_id > 4);
+ 
+     # make sure we don't change extended partitions to ordinary ones and
+     # vice-versa
+@@ -407,9 +406,6 @@
+   ($part_id <= 4) or
+     &FAI::internal_error("Extended partition wouldn't be a primary one");
+ 
+-  my $epbr_size = $current_disk->{bios_sectors_per_track} *
+-    $current_disk->{sector_size};
+-
+   # initialise the size and the start byte
+   $part->{size}->{eff_size} = 0;
+   $part->{start_byte} = -1;
+@@ -418,10 +414,10 @@
+     next if ($p < 5);
+ 
+     $part->{start_byte} = $FAI::configs{$config}{partitions}{$p}{start_byte} -
+-      $epbr_size if (-1 == $part->{start_byte});
++      512 if (-1 == $part->{start_byte});
+ 
+-    $part->{size}->{eff_size} += $FAI::configs{$config}{partitions}{$p}{size}{eff_size} +
+-      $epbr_size;
++    $part->{size}->{eff_size} +=
++      $FAI::configs{$config}{partitions}{$p}{size}{eff_size} + 512;
+ 
+     $part->{end_byte} = $FAI::configs{$config}{partitions}{$p}{end_byte};
+   }
+@@ -436,8 +432,9 @@
  #
  # @param $part_id Partition id within $config
  # @param $config Disk config
@@ -27,7 +67,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  # @param $min_req_total_space Minimum space required on disk
  # @param $worklist Reference to the remaining partitions
  #
-@@ -446,7 +447,7 @@
+@@ -446,7 +443,7 @@
  ################################################################################
  sub do_partition_real {
  
@@ -36,28 +76,102 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
-@@ -549,34 +550,25 @@
-       $current_disk->{sector_size};
-   }
+@@ -456,6 +453,34 @@
+   my ($start, $end) = &FAI::make_range($part->{size}->{range},
+     $current_disk->{size} . "B");
  
--  # partition starts at where we currently are, or remains fixed in case of
--  # resized ntfs
++  # compute the effective start location on the disk
++  # msdos specific offset for logical partitions
++  if (($FAI::configs{$config}{disklabel} eq "msdos")
++    && ($part_id > 4)) {
++
++    # add 512B disk usage if this is a logical partition
++    $min_req_total_space += 512;
++
++    # move the start byte as well
++    $next_start += 512;
++  }
++
 +  # partition starts at where we currently are + requested alignment, or remains
 +  # fixed in case of resized ntfs
 +  # Also, don't apply alignment constraint to partition 1 and 5 in an msdos disklabel
-   if ($FAI::configs{$config}{partitions}{$part_id}{size}{resize} &&
-     ($current_disk->{partitions}->{$part_id}->{filesystem} eq "ntfs")) {
-     ($next_start <= $current_disk->{partitions}->{$part_id}->{begin_byte}) 
-       or die "Cannot preserve start byte of ntfs volume on partition $part_id, space before it is too small\n";
-     $next_start = $current_disk->{partitions}->{$part_id}->{begin_byte};
++  if ($FAI::configs{$config}{partitions}{$part_id}{size}{resize} &&
++    ($current_disk->{partitions}->{$part_id}->{filesystem} eq "ntfs")) {
++    ($next_start <= $current_disk->{partitions}->{$part_id}->{begin_byte})
++      or die "Cannot preserve start byte of ntfs volume on partition $part_id, space before it is too small\n";
++    $next_start = $current_disk->{partitions}->{$part_id}->{begin_byte};
 +  } elsif ((0 != $next_start % $block_size)
 +	   && ((($part_id != 5) && ($part_id != 1))
 +	       || ($FAI::configs{$config}{disklabel} ne "msdos"))) {
 +    $next_start += $block_size - ($next_start % $block_size);
-   }
-   $FAI::configs{$config}{partitions}{$part_id}{start_byte} =
-     $next_start;
++  }
++  $FAI::configs{$config}{partitions}{$part_id}{start_byte} =
++    $next_start;
++
+   # check, whether the size is fixed
+   if ($end != $start) {
  
+@@ -483,11 +508,8 @@
+ 
+         # logical partitions require the space for the EPBR to be left
+         # out
+-        if (($FAI::configs{$config}{disklabel} eq "msdos")
+-          && ($p > 4)) {
+-          $end_of_range -= $current_disk->{bios_sectors_per_track} *
+-            $current_disk->{sector_size};
+-        }
++        $end_of_range -= 512 if (($FAI::configs{$config}{disklabel} eq "msdos")
++            && ($p > 4));
+         last;
+       } elsif ($FAI::configs{$config}{partitions}{$p}{size}{extended}) {
+         next;
+@@ -497,13 +519,11 @@
+           $current_disk->{size} . "B");
+ 
+         # logical partitions require the space for the EPBR to be left
+-        # out
++        # out; in fact, even alignment constraints would have to be considered
+         if (($FAI::configs{$config}{disklabel} eq "msdos")
+-          && ($p > 4)) {
+-          $min_size += $current_disk->{bios_sectors_per_track} *
+-            $current_disk->{sector_size};
+-          $max_size += $current_disk->{bios_sectors_per_track} *
+-            $current_disk->{sector_size};
++          && ($p != $part_id) && ($p > 4)) {
++          $min_size += 512;
++          $max_size += 512;
+         }
+ 
+         $min_req_space += $min_size;
+@@ -535,48 +555,9 @@
+     $end   = $start;
+   }
+ 
+-  # now we compute the effective locations on the disk
+-  # msdos specific offset for logical partitions
+-  if (($FAI::configs{$config}{disklabel} eq "msdos")
+-    && ($part_id > 4)) {
+-
+-    # add one head of disk usage if this is a logical partition
+-    $min_req_total_space += $current_disk->{bios_sectors_per_track} *
+-      $current_disk->{sector_size};
+-
+-    # move the start byte as well
+-    $next_start += $current_disk->{bios_sectors_per_track} *
+-      $current_disk->{sector_size};
+-  }
+-
+-  # partition starts at where we currently are, or remains fixed in case of
+-  # resized ntfs
+-  if ($FAI::configs{$config}{partitions}{$part_id}{size}{resize} &&
+-    ($current_disk->{partitions}->{$part_id}->{filesystem} eq "ntfs")) {
+-    ($next_start <= $current_disk->{partitions}->{$part_id}->{begin_byte}) 
+-      or die "Cannot preserve start byte of ntfs volume on partition $part_id, space before it is too small\n";
+-    $next_start = $current_disk->{partitions}->{$part_id}->{begin_byte};
+-  }
+-  $FAI::configs{$config}{partitions}{$part_id}{start_byte} =
+-    $next_start;
+-
 -  # the end may need some alignment, depending on the disk label
 +  # partitions must end at the requested alignment
    my $end_byte = $next_start + $start - 1;
@@ -80,7 +194,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # set $start and $end to the effective values
    $start = $end_byte - $next_start + 1;
-@@ -625,6 +617,21 @@
+@@ -625,6 +606,21 @@
      # reference to the current disk config
      my $current_disk = $FAI::current_config{$disk};
  
@@ -102,7 +216,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # at various points the following code highly depends on the desired disk label!
      # initialise variables
      # the id of the extended partition to be created, if required
-@@ -668,13 +675,12 @@
+@@ -668,13 +664,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
@@ -121,7 +235,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
-@@ -741,7 +747,7 @@
+@@ -741,7 +736,7 @@
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
