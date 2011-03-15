@@ -64,21 +64,41 @@ Index: trunk/lib/setup-storage/Volumes.pm
    }
  
  }
-@@ -459,8 +475,12 @@
+@@ -447,21 +463,25 @@
+ 
+   # parse the output line by line
+   foreach my $line (@mdadm_print) {
+-    if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+)\s+/) {
+-      $id = $1;
++    if ($line =~ /^ARRAY (\/dev\/md[\/]?(\d+))\s+/) {
++      $id = $2;
++      $FAI::current_raid_config{$id}{device_name} = $1;
+ 
+       foreach (split (" ", $line)) {
+-	  if ($_ =~ /^level=(\S+)/) {
+-	      $FAI::current_raid_config{$id}{mode} = $1;
+-	  }
++        $FAI::current_raid_config{$id}{mode} = $1 if ($_ =~ /^level=(\S+)/);
+       }
+     } elsif ($line =~ /^\s*devices=(\S+)$/) {
        defined($id) or
          &FAI::internal_error("mdadm ARRAY line not yet seen -- unexpected mdadm output:\n"
-           . join("", @mdadm_print));
+-          . join("", @mdadm_print));
 -      push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($_)
 -        foreach (split (",", $1));
+- 
++        . join("", @mdadm_print));
 +      foreach my $d (split (",", $1)) {
 +        push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($d);
 +
 +        # add entry in device tree
-+        push @{ $FAI::current_dev_children{abs_path($d)} }, "/dev/md$id";
++        push @{ $FAI::current_dev_children{abs_path($d)} },
++          $FAI::current_raid_config{$id}{device_name};
 +      }
-  
++
        undef($id);
      }
+   }
 @@ -476,34 +496,49 @@
  #
  ################################################################################
@@ -172,9 +192,9 @@ Index: trunk/lib/setup-storage/Commands.pm
  ################################################################################
  sub build_raid_commands {
  
-+  # RAID arrays if there are pre-existing ones
++  # check RAID arrays if there are pre-existing ones
 +  foreach my $id (keys %FAI::current_raid_config) {
-+    my $md = "/dev/md$id";
++    my $md = $FAI::current_raid_config{$id}{device_name};
 +    my $pre_deps_cl = "";
 +    $pre_deps_cl = "self_cleared_" .
 +      join(",self_cleared_", @{ $FAI::current_dev_children{$md} })
