@@ -6,6 +6,8 @@
 	* setup-storage/{Init,Parser,Volumes}.pm: Build device nesting tree.
 	* setup-storage/Commands.pm: Honor dependencies and nesting of LVM/RAID
 		devices when stopping and removing volumes and partitions.
+	* setup-storage/Commands.pm: Add mdadm-startall call if arrays were detected
+		by mdadm --examine (these might exist but haven't necessarily been started).
 	* setup-storage: Added debug output of device nesting tree.
 
 Index: trunk/lib/setup-storage/Volumes.pm
@@ -64,15 +66,8 @@ Index: trunk/lib/setup-storage/Volumes.pm
    }
  
  }
-@@ -447,21 +463,25 @@
- 
-   # parse the output line by line
-   foreach my $line (@mdadm_print) {
--    if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+)\s+/) {
--      $id = $1;
-+    if ($line =~ /^ARRAY (\/dev\/md[\/]?(\d+))\s+/) {
-+      $id = $2;
-+      $FAI::current_raid_config{$id}{device_name} = $1;
+@@ -451,17 +467,19 @@
+       $id = $1;
  
        foreach (split (" ", $line)) {
 -	  if ($_ =~ /^level=(\S+)/) {
@@ -92,14 +87,13 @@ Index: trunk/lib/setup-storage/Volumes.pm
 +        push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($d);
 +
 +        # add entry in device tree
-+        push @{ $FAI::current_dev_children{abs_path($d)} },
-+          $FAI::current_raid_config{$id}{device_name};
++        push @{ $FAI::current_dev_children{abs_path($d)} }, "/dev/md$id";
 +      }
 +
        undef($id);
      }
    }
-@@ -476,34 +496,49 @@
+@@ -476,34 +494,49 @@
  #
  ################################################################################
  sub mark_preserve {
@@ -165,7 +159,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
      }
    } else {
      warn "Don't know how to mark $device_name for preserve\n";
-@@ -561,7 +596,7 @@
+@@ -561,7 +594,7 @@
            "Can't preserve /dev/$1/$l because it does not exist\n";
          defined ($FAI::configs{$config}{volumes}{$l}{size}{range}) or die
            "Can't preserve /dev/$1/$l because it is not defined in the current config\n";
@@ -174,7 +168,7 @@ Index: trunk/lib/setup-storage/Volumes.pm
        }
      } elsif ($config eq "RAID") {
        # check for volumes that need to be preserved and preserve the underlying
-@@ -575,7 +610,8 @@
+@@ -575,7 +608,8 @@
            "Can't preserve /dev/md$r because it does not exist\n";
          defined ($FAI::configs{$config}{volumes}{$r}{devices}) or die
            "Can't preserve /dev/md$r because it is not defined in the current config\n";
@@ -188,15 +182,16 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm	
-@@ -290,6 +290,17 @@
+@@ -290,6 +290,18 @@
  ################################################################################
  sub build_raid_commands {
  
 +  # check RAID arrays if there are pre-existing ones
++  &FAI::push_command( "mdadm-startall", "", "mdadm_startall")
++    if (scalar(keys %FAI::current_raid_config));
 +  foreach my $id (keys %FAI::current_raid_config) {
-+    my $md = $FAI::current_raid_config{$id}{device_name};
-+    my $pre_deps_cl = "";
-+    $pre_deps_cl = "self_cleared_" .
++    my $md = "/dev/md$id";
++    my $pre_deps_cl = "mdadm_startall,self_cleared_" .
 +      join(",self_cleared_", @{ $FAI::current_dev_children{$md} })
 +      if (defined($FAI::current_dev_children{$md}) &&
 +        scalar(@{ $FAI::current_dev_children{$md} }));
@@ -206,7 +201,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    foreach my $config (keys %FAI::configs) { # loop through all configs
      # no encrypted, tmpfs, LVM or physical devices here
      next if ($config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
-@@ -346,7 +357,7 @@
+@@ -346,7 +358,7 @@
  	$pre_req =~ s/^,//;
          # Assemble the array
          &FAI::push_command(
@@ -215,7 +210,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  	    "$pre_req", "exist_/dev/md$id");
  
          # create the filesystem on the volume, if requested
-@@ -411,14 +422,14 @@
+@@ -411,14 +423,14 @@
      # create all the devices
      foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
        $d = &FAI::enc_name($d);
@@ -233,7 +228,7 @@ Index: trunk/lib/setup-storage/Commands.pm
        $devs .= " $d";
        $pre_dev .= ",pv_done_$d";
      }
-@@ -463,14 +474,14 @@
+@@ -463,14 +475,14 @@
  
    # create all the devices
    foreach my $dev (@new_devices) {
@@ -251,7 +246,7 @@ Index: trunk/lib/setup-storage/Commands.pm
      $pre_dev .= ",pv_done_$dev";
    }
    $pre_dev =~ s/^,//;
-@@ -481,7 +492,7 @@
+@@ -481,7 +493,7 @@
      &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
        "vg_extended_$vg" );
    } else {
@@ -260,7 +255,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    }
  
    # run vgreduce to get them removed
-@@ -607,11 +618,13 @@
+@@ -607,11 +619,13 @@
          next;
      } elsif ($dev =~ m{^/dev/md[\/]?(\d+)$}) {
        my $vol = $1;
@@ -274,7 +269,7 @@ Index: trunk/lib/setup-storage/Commands.pm
        defined($FAI::configs{"VG_$ivg"}{volumes}{$lv}) or next;
        next if (1 == $FAI::configs{"VG_$ivg"}{volumes}{$lv}{size}{preserve});
      } else {
-@@ -623,26 +636,35 @@
+@@ -623,26 +637,35 @@
    }
  
    if (0 == $clear_vg) {
@@ -315,7 +310,7 @@ Index: trunk/lib/setup-storage/Commands.pm
          (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
      }
      &FAI::push_command("true", $vg_setup_pre, "vg_exists_$vg");
-@@ -650,9 +672,16 @@
+@@ -650,9 +673,16 @@
      return 0;
    }
  
@@ -334,7 +329,7 @@ Index: trunk/lib/setup-storage/Commands.pm
      $vg_destroy_pre .= ",lv_rm_$vg/$lv";
    }
    &FAI::push_command( "vgremove $vg", "$vg_destroy_pre", "vg_removed_$vg");
-@@ -662,7 +691,7 @@
+@@ -662,7 +692,7 @@
    $devices .= " " . &FAI::enc_name($_) foreach
      (@{ $FAI::current_lvm_config{$vg}{physical_volumes} });
    $FAI::debug and print "Erased devices:$devices\n";
@@ -343,7 +338,7 @@ Index: trunk/lib/setup-storage/Commands.pm
    return 1;
  }
  
-@@ -676,14 +705,26 @@
+@@ -676,14 +706,26 @@
  sub build_lvm_commands {
  
    # disable volumes if there are pre-existing ones
@@ -377,7 +372,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  
    # loop through all configs
    foreach my $config (keys %FAI::configs) {
-@@ -913,8 +954,15 @@
+@@ -913,8 +955,15 @@
      or die "Can't change disklabel, partitions are to be preserved\n";
  
    # write the disklabel to drop the previous partition table
