@@ -33,7 +33,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    ($start > $curr_part->{count_byte} || $end < $curr_part->{count_byte})
      and warn "Preserved partition $part_dev_name retains size " .
        $curr_part->{count_byte} . "B\n";
-@@ -431,6 +431,7 @@
+@@ -432,6 +432,7 @@
  # @param $next_start Start of the next partition
  # @param $block_size Requested alignment
  # @param $min_req_total_space Minimum space required on disk
@@ -41,7 +41,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  # @param $worklist Reference to the remaining partitions
  #
  # @return Updated values of ($next_start, $min_req_total_space)
-@@ -438,15 +439,15 @@
+@@ -439,15 +440,15 @@
  ################################################################################
  sub do_partition_real {
  
@@ -60,7 +60,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # compute the effective start location on the disk
    # msdos specific offset for logical partitions
-@@ -510,8 +511,7 @@
+@@ -511,8 +512,7 @@
          next;
        } else {
          my ($min_size, $max_size) = &FAI::make_range(
@@ -70,7 +70,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
          # logical partitions require the space for the EPBR to be left
          # out; in fact, even alignment constraints would have to be considered
-@@ -643,6 +643,7 @@
+@@ -644,6 +644,7 @@
        # on msdos disk labels, the first partitions starts at head #1
        $next_start = $current_disk->{bios_sectors_per_track} *
          $current_disk->{sector_size};
@@ -78,7 +78,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # the MBR requires space, too
        $min_req_total_space += $current_disk->{bios_sectors_per_track} *
-@@ -694,6 +695,11 @@
+@@ -695,6 +696,11 @@
        $FAI::partition_pointer->{mountpoint} = "-";
      }
  
@@ -90,7 +90,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # the list of partitions that we need to find start and end bytes for
      my @worklist = (&numsort(keys %{ $FAI::configs{$config}{partitions} }));
  
-@@ -745,13 +751,14 @@
+@@ -746,13 +752,14 @@
        # the partition $part_id must be preserved
        } elsif ($part->{size}->{preserve}) {
          ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id,

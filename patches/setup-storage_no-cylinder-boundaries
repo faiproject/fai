@@ -15,7 +15,7 @@
 	* setup-storage.8: Document new align-at option.
 	* setup-storage/Sizes.pm: Take alignment into account for partition size
 		computation (thanks Frank Doepper for bringing up this problem). Size of
-		extended (partition) boot record is 512B and independent of disk head size.
+		extended (partition) boot record is 2 sectors.
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
@@ -27,8 +27,8 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -    # add one head of disk usage if this is a logical partition
 -    $min_req_total_space += $current_disk->{bios_sectors_per_track} *
 -      $current_disk->{sector_size} if ($part_id > 4);
-+    # add 512B of disk usage if this is a logical partition
-+    $min_req_total_space += 512 if ($part_id > 4);
++    # add two sectors of disk usage if this is a logical partition
++    $min_req_total_space += 2 * $current_disk->{sector_size} if ($part_id > 4);
  
      # make sure we don't change extended partitions to ordinary ones and
      # vice-versa
@@ -42,21 +42,22 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # initialise the size and the start byte
    $part->{size}->{eff_size} = 0;
    $part->{start_byte} = -1;
-@@ -418,10 +414,10 @@
+@@ -418,10 +414,11 @@
      next if ($p < 5);
  
      $part->{start_byte} = $FAI::configs{$config}{partitions}{$p}{start_byte} -
 -      $epbr_size if (-1 == $part->{start_byte});
-+      512 if (-1 == $part->{start_byte});
++      (2 * $current_disk->{sector_size}) if (-1 == $part->{start_byte});
  
 -    $part->{size}->{eff_size} += $FAI::configs{$config}{partitions}{$p}{size}{eff_size} +
 -      $epbr_size;
 +    $part->{size}->{eff_size} +=
-+      $FAI::configs{$config}{partitions}{$p}{size}{eff_size} + 512;
++      $FAI::configs{$config}{partitions}{$p}{size}{eff_size} + (2 *
++        $current_disk->{sector_size});
  
      $part->{end_byte} = $FAI::configs{$config}{partitions}{$p}{end_byte};
    }
-@@ -436,8 +432,9 @@
+@@ -436,8 +433,9 @@
  #
  # @param $part_id Partition id within $config
  # @param $config Disk config
@@ -67,7 +68,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  # @param $min_req_total_space Minimum space required on disk
  # @param $worklist Reference to the remaining partitions
  #
-@@ -446,7 +443,7 @@
+@@ -446,7 +444,7 @@
  ################################################################################
  sub do_partition_real {
  
@@ -76,7 +77,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
-@@ -456,6 +453,34 @@
+@@ -456,6 +454,34 @@
    my ($start, $end) = &FAI::make_range($part->{size}->{range},
      $current_disk->{size} . "B");
  
@@ -85,11 +86,11 @@ Index: trunk/lib/setup-storage/Sizes.pm
 +  if (($FAI::configs{$config}{disklabel} eq "msdos")
 +    && ($part_id > 4)) {
 +
-+    # add 512B disk usage if this is a logical partition
-+    $min_req_total_space += 512;
++    # add 2 sectors of disk usage if this is a logical partition
++    $min_req_total_space += 2 * $current_disk->{sector_size};
 +
 +    # move the start byte as well
-+    $next_start += 512;
++    $next_start += 2 * $current_disk->{sector_size};
 +  }
 +
 +  # partition starts at where we currently are + requested alignment, or remains
@@ -111,7 +112,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # check, whether the size is fixed
    if ($end != $start) {
  
-@@ -483,11 +508,8 @@
+@@ -483,11 +509,8 @@
  
          # logical partitions require the space for the EPBR to be left
          # out
@@ -120,12 +121,12 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -          $end_of_range -= $current_disk->{bios_sectors_per_track} *
 -            $current_disk->{sector_size};
 -        }
-+        $end_of_range -= 512 if (($FAI::configs{$config}{disklabel} eq "msdos")
-+            && ($p > 4));
++        $end_of_range -= 2 * $current_disk->{sector_size} 
++          if (($FAI::configs{$config}{disklabel} eq "msdos") && ($p > 4));
          last;
        } elsif ($FAI::configs{$config}{partitions}{$p}{size}{extended}) {
          next;
-@@ -497,13 +519,11 @@
+@@ -497,13 +520,11 @@
            $current_disk->{size} . "B");
  
          # logical partitions require the space for the EPBR to be left
@@ -138,12 +139,12 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -          $max_size += $current_disk->{bios_sectors_per_track} *
 -            $current_disk->{sector_size};
 +          && ($p != $part_id) && ($p > 4)) {
-+          $min_size += 512;
-+          $max_size += 512;
++          $min_size += 2 * $current_disk->{sector_size};
++          $max_size += 2 * $current_disk->{sector_size};
          }
  
          $min_req_space += $min_size;
-@@ -535,48 +555,9 @@
+@@ -535,48 +556,9 @@
      $end   = $start;
    }
  
@@ -194,7 +195,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # set $start and $end to the effective values
    $start = $end_byte - $next_start + 1;
-@@ -625,6 +606,21 @@
+@@ -625,6 +607,21 @@
      # reference to the current disk config
      my $current_disk = $FAI::current_config{$disk};
  
@@ -216,7 +217,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # at various points the following code highly depends on the desired disk label!
      # initialise variables
      # the id of the extended partition to be created, if required
-@@ -668,13 +664,12 @@
+@@ -668,13 +665,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
@@ -235,7 +236,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
-@@ -741,7 +736,7 @@
+@@ -741,7 +737,7 @@
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 

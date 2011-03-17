@@ -81,8 +81,8 @@ Index: trunk/lib/setup-storage/Sizes.pm
            $current_disk->{bios_heads})) or 
        warn "Preserved partition $part_dev_name does not end at a cylinder boundary, parted may fail to restore the partition!\n";
  
--    # add 512B of disk usage if this is a logical partition
--    $min_req_total_space += 512 if ($part_id > 4);
+-    # add two sectors of disk usage if this is a logical partition
+-    $min_req_total_space += 2 * $current_disk->{sector_size} if ($part_id > 4);
 -
      # make sure we don't change extended partitions to ordinary ones and
      # vice-versa
@@ -96,7 +96,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  }
  
  ################################################################################
-@@ -430,17 +423,15 @@
+@@ -431,17 +424,15 @@
  # @param $disk This disk
  # @param $next_start Start of the next partition
  # @param $block_size Requested alignment
@@ -116,25 +116,25 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
-@@ -451,15 +442,8 @@
+@@ -452,15 +443,8 @@
  
    # compute the effective start location on the disk
    # msdos specific offset for logical partitions
 -  if (($FAI::configs{$config}{disklabel} eq "msdos")
 -    && ($part_id > 4)) {
 -
--    # add 512B disk usage if this is a logical partition
--    $min_req_total_space += 512;
+-    # add 2 sectors of disk usage if this is a logical partition
+-    $min_req_total_space += 2 * $current_disk->{sector_size};
 -
 -    # move the start byte as well
--    $next_start += 512;
+-    $next_start += 2 * $current_disk->{sector_size};
 -  }
-+  $next_start += 512 if (($FAI::configs{$config}{disklabel} eq "msdos")
-+    && ($part_id > 4));
++  $next_start += 2 * $current_disk->{sector_size}
++    if (($FAI::configs{$config}{disklabel} eq "msdos") && ($part_id > 4));
  
    # partition starts at where we currently are + requested alignment, or remains
    # fixed in case of resized ntfs
-@@ -567,13 +551,10 @@
+@@ -568,13 +552,10 @@
    # write the end byte to the configuration
    $part->{end_byte} = $end_byte;
  
@@ -149,7 +149,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  }
  
  ################################################################################
-@@ -633,9 +614,6 @@
+@@ -634,9 +615,6 @@
        }
      }
  
@@ -159,7 +159,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # the start byte for the next partition
      my $next_start = 0;
  
-@@ -643,7 +621,6 @@
+@@ -644,7 +622,6 @@
        # on msdos disk labels, the first partitions starts at head #1; well,
        # enforce a 63-sectors-per-track layout
        $next_start = 63 * $current_disk->{sector_size};
@@ -167,7 +167,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
        # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
-@@ -652,31 +629,24 @@
+@@ -653,31 +630,24 @@
        # modify the disk to claim the space for the second partition table
        $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
  
@@ -201,7 +201,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
        my ($s, $e) = &FAI::make_range("1-1", $current_disk->{size} . "B");
        # enter the range into the hash
        $FAI::partition_pointer->{size}->{range} = "$s-$s";
-@@ -684,7 +654,6 @@
+@@ -685,7 +655,6 @@
        $FAI::partition_pointer->{start_byte} = $next_start;
        $FAI::partition_pointer->{end_byte} = $next_start + $s - 1;
        $next_start += $s;
@@ -209,7 +209,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
        # set proper defaults
        $FAI::partition_pointer->{encrypt} = 0;
        $FAI::partition_pointer->{filesystem} = "-";
-@@ -692,7 +661,7 @@
+@@ -693,7 +662,7 @@
      }
  
      # the size of a 100% partition (the 100% available to the user)
@@ -218,7 +218,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # expressed in bytes
      $max_avail = "${max_avail}B";
  
-@@ -746,15 +715,14 @@
+@@ -747,15 +716,14 @@
          shift @worklist;
        # the partition $part_id must be preserved
        } elsif ($part->{size}->{preserve}) {
@@ -238,7 +238,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
          # msdos does not support partitions larger than 2TiB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
-@@ -766,8 +734,8 @@
+@@ -767,8 +735,8 @@
      }
  
      # check, whether there is sufficient space on the disk
