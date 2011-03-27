@@ -1,0 +1,42 @@
+2011-03-27  Michael Tautschnig  <mt@debian.org>
+
+	* make-fai-nfsroot: Install apt keys from /etc/fai/apt/keys-added into
+		NFSROOT. Thanks David Dreezer <dave@socialstrata.com> for the patch.
+	* make-fai-nfsroot.8: Document this directory and behaviour.
+Index: trunk/bin/make-fai-nfsroot
+===================================================================
+--- trunk.orig/bin/make-fai-nfsroot
++++ trunk/bin/make-fai-nfsroot	
+@@ -380,6 +380,17 @@
+     mount -t proc   /proc  $NFSROOT/proc
+     mount -t sysfs  /sys   $NFSROOT/sys
+     mount -t devpts devpts $NFSROOT/dev/pts
++
++    # add any 3rd party repository keys that you may need installed into the NFSROOT
++    if [ -d $cfdir/apt/keys-added ]; then
++	    mkdir $NFSROOT/etc/apt/keys-added
++	    echo 'These *.asc files are 3rd party repository keys that have been added by make-fai-nfsroot' >> $NFSROOT/README.txt
++    fi
++    for f in `find -type f -name *.asc $cfdir/apt/keys-added`; do
++	    cp -Lp $v $f $NFSROOT/$f
++	    cat $f | $ROOTCMD apt-key add -
++    done
++
+     $ROOTCMD apt-get update
+     $ROOTCMD aptitude -Rfy install fai-nfsroot
+ 
+Index: trunk/man/make-fai-nfsroot.8
+===================================================================
+--- trunk.orig/man/make-fai-nfsroot.8
++++ trunk/man/make-fai-nfsroot.8	
+@@ -165,6 +165,10 @@
+ Copy this file to the NFSROOT.
+ .PD 0
+ .TP
++.FN /etc/fai/apt/keys-added/*.asc
++Repository keys in .asc format found here will be installed into the NFSROOT.
++.PD 0
++.TP
+ .FN /var/run/fai/make-fai-nfsroot/*-stamp
+ Stamp files used for recovery.
+ 
