@@ -8,24 +8,24 @@ free:	text html ps pdf
 #	grep FIXME $(DOC).txt
 
 html:
-	a2x --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f xhtml $(DOC).txt
+	a2x -L --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f xhtml $(DOC).txt
 
 chunked:
-	a2x --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f chunked $(DOC).txt
+	a2x -L --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f chunked $(DOC).txt
 
 pdf:	
-	a2x --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
+	a2x -L --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
 	rm -f $(DOC).xml $(DOC).fo
 
 ps:	
-	a2x --icons -a toc -a toclevels=3 -f ps $(DOC).txt
+	a2x -L --icons -a toc -a toclevels=3 -f ps $(DOC).txt
 	rm -f $(DOC).xml $(DOC).fo
 
 # a2x uses lynx, maybe use w3m instead
 # which texwidth for text output?
 # asciidoc --doctype=article  -a "toc" -a "toclevels=3" -f /etc/asciidoc/text.conf -b html4 -o - "f-guide.txt" | lynx -dump -stdin >"./f-guide.text"
 text:	
-	a2x --icons -a toc -a toclevels=3 -f text $(DOC).txt
+	a2x -L --icons -a toc -a toclevels=3 -f text $(DOC).txt
 
 # for openoffice
 doc:	html
