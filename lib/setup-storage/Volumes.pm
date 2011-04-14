@@ -456,7 +456,9 @@ sub get_current_raid {
 	  }
       }
     } elsif ($line =~ /^\s*devices=(\S+)$/) {
-      defined($id) or &FAI::internal_error("mdadm ARRAY line not yet seen");
+      defined($id) or
+        &FAI::internal_error("mdadm ARRAY line not yet seen -- unexpected mdadm output:\n"
+          . join("", @mdadm_print));
       push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($_)
         foreach (split (",", $1));
  
@@ -534,6 +536,8 @@ sub propagate_and_check_preserve {
           defined ($FAI::current_config{$1}) or die
             "Can't preserve $1 because it does not exist\n";
         } else {
+          defined ($FAI::current_config{$1}) or die
+            "Can't preserve partition on $1 because $1 does not exist\n";
           defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
             "Can't preserve ". &FAI::make_device_name($1, $part->{number})
               . " because it does not exist\n";
