@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # (c) 2002-2006 Henning Glawe <glaweh@debian.org>
+# (c) 2011 Michael Goetze <mgoetze@mgoetze.net>
 
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:
@@ -47,16 +48,24 @@ case $protocol in
 		exit 1
 		;;
 esac
-		
+	
+user=
 [ -n "$username" ] && user="--username $username"
 
 if [ -d "$FAI/.svn" ] ; then
-   echo "Updating SVN in $FAI"
-   cd $FAI
-   svn up $user $pass | grep -v 'Updated to revision' > $LOGDIR/getconf.log
-   task_error 701 ${PIPESTATUS[0]}
+    if [ `svn info $FAI | egrep -m1 -o '://.+'` == "://$svnpath" ]; then
+        echo "Updating SVN in $FAI"
+        cd $FAI
+        svn up $user $pass | grep -v 'Updated to revision' > $LOGDIR/getconf.log
+        task_error 701 ${PIPESTATUS[0]}
+    else
+        echo "$FAI already contains a svn repository, but it is not from $svnurl!" >&2
+        echo "Please delete $FAI manually. Aborting..." >&2
+        task_error 703
+    fi
 else 
    echo "Checking out SVN"
    svn co $user $pass $svnurl $FAI | grep -v 'Checked out revision' > $LOGDIR/getconf.log
    task_error 702 ${PIPESTATUS[0]}
 fi
+

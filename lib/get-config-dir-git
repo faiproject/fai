@@ -2,6 +2,7 @@
 
 # (c) 2002-2006 Henning Glawe <glaweh@debian.org>
 # (c) 2007 Holger Levsen <holger@layer-acht.org> for the modifications to use git
+# (c) 2011 Michael Goetze <mgoetze@mgoetze.net>
 
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:
@@ -28,12 +29,19 @@ case $protocol in
 		exit 1
 		;;
 esac
+
+export GIT_DIR="$FAI/.git"
 		
 if [ -d "$FAI/.git" ] ; then
-   echo "Updating git copy in $FAI"
-   cd $FAI
-   git pull
-   task_error 701 $?
+    if [ `git remote show -n origin | egrep -m1 -o '[^[:space:]]+://.+'` == "$giturl" ]; then
+        echo "Updating git copy in $FAI"
+        git pull
+    	task_error 701 $?
+    else
+        echo "$FAI already contains a git repository, but it is not from $giturl!" >&2
+        echo "Please delete $FAI manually. Aborting..." >&2
+        task_error 703
+    fi
 else 
    echo "Checking out from git"
    # cloning into an existing directory is not allowed
