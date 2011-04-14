@@ -982,5 +982,33 @@ sub run_parser {
   defined $FAI::Parser->file($input) or die "Syntax error\n";
 }
 
+################################################################################
+#
+# @brief Check for invalid configs (despite correct syntax)
+#
+################################################################################
+sub check_config {
+
+  # loop through all configs
+  foreach my $config (keys %FAI::configs) {
+    if ($config =~ /^PHY_(.+)$/) {
+      (scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
+        die "Empty disk_config stanza for device $1\n";
+    } elsif ($config =~ /^VG_(.+)$/) {
+      next if ($1 eq "--ANY--");
+      next;
+    } elsif ($config eq "RAID") {
+      (scalar(keys %{ $FAI::configs{$config}{volumes} }) > 0) or
+        die "Empty RAID configuration\n";
+    } elsif ($config eq "CRYPT") {
+      next;
+    } elsif ($config eq "TMPFS") {
+      next;
+    } else {
+      &FAI::internal_error("Unexpected key $config");
+    }
+  }
+}
+
 1;
 
