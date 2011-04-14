@@ -10,10 +10,10 @@
 # Packages you might want to install to use this Makefile:
 # debootstrap, rinse, xz-utils
 
-ifndef TMPDIR
-TMPDIR:=$(shell mktemp -d /tmp/basefiles.XXXXXXXX)
+ifndef BASEFILEDIR
+BASEFILEDIR:=$(shell mktemp -d /tmp/basefiles.XXXXXXXX)
 endif
-export TMPDIR
+export BASEFILEDIR
 MIRROR_DEBIAN=http://cdn.debian.net/debian/
 MIRROR_UBUNTU=http://ftp.halifax.rwth-aachen.de/ubuntu/
 #MIRROR_CENTOS=http://mirror.netcologne.de/centos/
@@ -29,92 +29,92 @@ GZ=gzip -9
 
 check::
 	@if [ `id -u` != 0 ]; then echo "You must be root to create chroots."; exit 1; fi
-	@mknod ${TMPDIR}/test-dev-null c 1 3 || (echo "Cannot create device files on ${TMPDIR}, aborting."; rm -rf ${TMPDIR}; exit 1)
-	@echo test > ${TMPDIR}/test-dev-null || (echo "Cannot use device files on ${TMPDIR}, aborting."; rm -rf ${TMPDIR}; exit 1)
-	@rm -f ${TMPDIR}/test-dev-null
+	@mknod ${BASEFILEDIR}/test-dev-null c 1 3 || (echo "Cannot create device files on ${BASEFILEDIR}, aborting."; rm -rf ${BASEFILEDIR}; exit 1)
+	@echo test > ${BASEFILEDIR}/test-dev-null || (echo "Cannot use device files on ${BASEFILEDIR}, aborting."; rm -rf ${BASEFILEDIR}; exit 1)
+	@rm -f ${BASEFILEDIR}/test-dev-null
 
 cleanup-deb::
-	chroot ${TMPDIR} aptitude clean
-	rm ${TMPDIR}/etc/hostname
-	rm ${TMPDIR}/etc/resolv.conf
-	rm ${TMPDIR}/etc/udev/rules.d/70-persistent-net.rules || true
-	rm ${TMPDIR}/var/lib/apt/lists/*_*
+	chroot ${BASEFILEDIR} aptitude clean
+	rm ${BASEFILEDIR}/etc/hostname
+	rm ${BASEFILEDIR}/etc/resolv.conf
+	rm ${BASEFILEDIR}/etc/udev/rules.d/70-persistent-net.rules || true
+	rm ${BASEFILEDIR}/var/lib/apt/lists/*_*
 
 cleanup-rinse::
-	rm ${TMPDIR}/etc/resolv.conf
-	cp ${TMPDIR}/etc/modprobe.d/modprobe.conf.dist ${TMPDIR}/etc/modprobe.conf
+	rm ${BASEFILEDIR}/etc/resolv.conf
+	cp ${BASEFILEDIR}/etc/modprobe.d/modprobe.conf.dist ${BASEFILEDIR}/etc/modprobe.conf
 
 CENTOS5_32.tar.xz: check
-	linux32 rinse --directory ${TMPDIR} ${RINSEOPT_CENTOS} --arch i386
+	linux32 rinse --directory ${BASEFILEDIR} ${RINSEOPT_CENTOS} --arch i386
 	$(MAKE) cleanup-rinse
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${XZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${XZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 CENTOS5_32.tar.gz: check
-	linux32 rinse --directory ${TMPDIR} ${RINSEOPT_CENTOS} --arch i386
+	linux32 rinse --directory ${BASEFILEDIR} ${RINSEOPT_CENTOS} --arch i386
 	$(MAKE) cleanup-rinse
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${GZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${GZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 CENTOS5_64.tar.xz: check
-	rinse --directory ${TMPDIR} ${RINSEOPT_CENTOS} --arch amd64
+	rinse --directory ${BASEFILEDIR} ${RINSEOPT_CENTOS} --arch amd64
 	$(MAKE) cleanup-rinse
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${XZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${XZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 CENTOS5_64.tar.gz: check
-	rinse --directory ${TMPDIR} ${RINSEOPT_CENTOS} --arch amd64
+	rinse --directory ${BASEFILEDIR} ${RINSEOPT_CENTOS} --arch amd64
 	$(MAKE) cleanup-rinse
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${GZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${GZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 LUCID32.tar.xz: check
-	debootstrap --arch i386 --exclude=${EXCLUDE_LUCID} lucid ${TMPDIR} ${MIRROR_UBUNTU}
+	debootstrap --arch i386 --exclude=${EXCLUDE_LUCID} lucid ${BASEFILEDIR} ${MIRROR_UBUNTU}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${XZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${XZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 LUCID32.tar.gz: check
-	debootstrap --arch i386 --exclude=${EXCLUDE_LUCID} lucid ${TMPDIR} ${MIRROR_UBUNTU}
+	debootstrap --arch i386 --exclude=${EXCLUDE_LUCID} lucid ${BASEFILEDIR} ${MIRROR_UBUNTU}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${GZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${GZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 LUCID64.tar.xz: check
-	debootstrap --arch amd64 --exclude=${EXCLUDE_LUCID} lucid ${TMPDIR} ${MIRROR_UBUNTU}
+	debootstrap --arch amd64 --exclude=${EXCLUDE_LUCID} lucid ${BASEFILEDIR} ${MIRROR_UBUNTU}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${XZ} > $@ 
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${XZ} > $@ 
+	rm -rf ${BASEFILEDIR}
 
 LUCID64.tar.gz: check
-	debootstrap --arch amd64 --exclude=${EXCLUDE_LUCID} lucid ${TMPDIR} ${MIRROR_UBUNTU}
+	debootstrap --arch amd64 --exclude=${EXCLUDE_LUCID} lucid ${BASEFILEDIR} ${MIRROR_UBUNTU}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${GZ} > $@ 
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${GZ} > $@ 
+	rm -rf ${BASEFILEDIR}
 
 SQUEEZE32.tar.xz: check
-	debootstrap --arch i386 --exclude=${EXCLUDE_SQUEEZE} squeeze ${TMPDIR} ${MIRROR_DEBIAN}
+	debootstrap --arch i386 --exclude=${EXCLUDE_SQUEEZE} squeeze ${BASEFILEDIR} ${MIRROR_DEBIAN}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${XZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${XZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 SQUEEZE32.tar.gz: check
-	debootstrap --arch i386 --exclude=${EXCLUDE_SQUEEZE} squeeze ${TMPDIR} ${MIRROR_DEBIAN}
+	debootstrap --arch i386 --exclude=${EXCLUDE_SQUEEZE} squeeze ${BASEFILEDIR} ${MIRROR_DEBIAN}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${GZ} > $@
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${GZ} > $@
+	rm -rf ${BASEFILEDIR}
 
 SQUEEZE64.tar.xz: check
-	debootstrap --arch amd64 --exclude=${EXCLUDE_SQUEEZE} squeeze ${TMPDIR} ${MIRROR_DEBIAN}
+	debootstrap --arch amd64 --exclude=${EXCLUDE_SQUEEZE} squeeze ${BASEFILEDIR} ${MIRROR_DEBIAN}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${XZ} > $@ 
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${XZ} > $@ 
+	rm -rf ${BASEFILEDIR}
 
 SQUEEZE64.tar.gz: check
-	debootstrap --arch amd64 --exclude=${EXCLUDE_SQUEEZE} squeeze ${TMPDIR} ${MIRROR_DEBIAN}
+	debootstrap --arch amd64 --exclude=${EXCLUDE_SQUEEZE} squeeze ${BASEFILEDIR} ${MIRROR_DEBIAN}
 	$(MAKE) cleanup-deb
-	tar --one-file-system -C ${TMPDIR} -cf - . | ${GZ} > $@ 
-	rm -rf ${TMPDIR}
+	tar --one-file-system -C ${BASEFILEDIR} -cf - . | ${GZ} > $@ 
+	rm -rf ${BASEFILEDIR}
 
 all32: CENTOS5_32.tar.xz LUCID32.tar.xz SQUEEZE32.tar.xz
 
