@@ -732,6 +732,8 @@ $FAI::Parser = Parse::RecDescent->new(
           # make sure, $2 has not been defined already
           defined ($FAI::configs{$FAI::device}{volumes}{$2}{size}{range}) and 
             die "Logical volume $2 has been defined already.\n";
+          # add to ordered list
+          push @{ $FAI::configs{$FAI::device}{ordered_lv_list} }, $2;
           # initialise the new hash
           defined($FAI::configs{$FAI::device}{volumes}{$2}) or
             $FAI::configs{$FAI::device}{volumes}{$2} = {};
@@ -781,6 +783,8 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{$FAI::device}{volumes} = {};
           # initialise the list of physical devices
           $FAI::configs{$FAI::device}{devices} = ();
+          # initialise the ordered list of volumes
+          $FAI::configs{$FAI::device}{ordered_lv_list} = ();
           # init device tree
           $FAI::dev_children{$FAI::device} = ();
           # the rule must not return undef
@@ -1064,6 +1068,12 @@ sub check_config {
       }
     } elsif ($config =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
+      (scalar(keys %{ $FAI::configs{$config}{volumes} }) ==
+        scalar(@{ $FAI::configs{$config}{ordered_lv_list} })) or
+        &FAI::internal_error("Inconsistent LV lists - missing entries");
+      defined($FAI::configs{$config}{volumes}{$_}) or
+        &FAI::internal_error("Inconsistent LV lists - missing entries")
+        foreach (@{ $FAI::configs{$config}{ordered_lv_list} });
       foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
         my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
         next if ($this_mp eq "-");
