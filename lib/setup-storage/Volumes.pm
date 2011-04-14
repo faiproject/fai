@@ -98,6 +98,9 @@ sub get_current_disks {
     # make sure, $disk is a proper block device
     (-b $disk) or die "$disk is not a block special device!\n";
 
+    # init device tree
+    $FAI::current_dev_children{$disk} = ();
+
     # the list to hold the output of parted commands as parsed below
     my @parted_print = ();
 
@@ -326,6 +329,9 @@ sub get_current_disks {
       ( ( $FAI::current_config{$disk}{disklabel} eq "msdos" )
           && ( $6 eq "extended" ) )
         and $FAI::current_config{$disk}{partitions}{$1}{is_extended} = 1;
+
+      # add entry in device tree
+      push @{ $FAI::current_dev_children{$disk} }, &FAI::make_device_name($disk, $1);
     }
 
     # reset the output list
@@ -378,6 +384,9 @@ sub get_current_lvm {
     # initialise the hash entry
     $FAI::current_lvm_config{$vg}{physical_volumes} = ();
 
+    # init device tree
+    $FAI::current_dev_children{"VG_$vg"} = ();
+
     # store the vg size in MB
     my %vg_info = get_volume_group_information($vg);
     if (%vg_info) {
@@ -395,12 +404,19 @@ sub get_current_lvm {
       $FAI::current_lvm_config{$vg}{volumes}{$short_name}{size} =
         &FAI::convert_unit($lv_info{$lv_name}->{lv_size} .
           $lv_info{$lv_name}->{lv_size_unit});
+      # add entry in device tree
+      push @{ $FAI::current_dev_children{"VG_$vg"} }, $lv_name;
     }
 
     # store the physical volumes
     my %pv_info = get_physical_volume_information($vg);
-    push @{ $FAI::current_lvm_config{$vg}{physical_volumes} },
-      abs_path($_) foreach (sort keys %pv_info);
+    foreach my $pv_name (sort keys %pv_info) {
+      push @{ $FAI::current_lvm_config{$vg}{physical_volumes} },
+        abs_path($pv_name);
+
+      # add entry in device tree
+      push @{ $FAI::current_dev_children{abs_path($pv_name)} }, "VG_$vg";
+    }
   }
 
 }
@@ -442,29 +458,37 @@ sub get_current_raid {
 # UUID=77a22e9f:83fd1276:135399f0:a895f15f
 #    devices=/dev/sde3,/dev/sdf3,/dev/sdd3
 
+  # create a temporary mdadm-from-examine.conf
+  open(MDADM_EX, ">$FAI::DATADIR/mdadm-from-examine.conf");
+
   # the id of the RAID
   my $id;
 
   # parse the output line by line
   foreach my $line (@mdadm_print) {
+    print MDADM_EX "$line";
     if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+)\s+/) {
       $id = $1;
 
       foreach (split (" ", $line)) {
-	  if ($_ =~ /^level=(\S+)/) {
-	      $FAI::current_raid_config{$id}{mode} = $1;
-	  }
+        $FAI::current_raid_config{$id}{mode} = $1 if ($_ =~ /^level=(\S+)/);
       }
     } elsif ($line =~ /^\s*devices=(\S+)$/) {
       defined($id) or
         &FAI::internal_error("mdadm ARRAY line not yet seen -- unexpected mdadm output:\n"
-          . join("", @mdadm_print));
-      push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($_)
-        foreach (split (",", $1));
- 
+        . join("", @mdadm_print));
+      foreach my $d (split (",", $1)) {
+        push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($d);
+
+        # add entry in device tree
+        push @{ $FAI::current_dev_children{abs_path($d)} }, "/dev/md$id";
+      }
+
       undef($id);
     }
   }
+
+  close(MDADM_EX);
 }
 
 
@@ -476,34 +500,49 @@ sub get_current_raid {
 #
 ################################################################################
 sub mark_preserve {
-  my ($device_name) = @_;
+  my ($device_name, $missing) = @_;
   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($device_name);
 
   if (1 == $i_p_d) {
-    defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
-      "Can't preserve $device_name because it does not exist\n";
-    if (defined($FAI::configs{"PHY_$disk"}{partitions}{$part_no})) {
+    if (defined($FAI::configs{"PHY_$disk"}) &&
+        defined($FAI::configs{"PHY_$disk"}{partitions}{$part_no})) {
+      defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
+        "Can't preserve $device_name because it does not exist\n";
       $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve} = 1;
       $FAI::configs{"PHY_$disk"}{preserveparts} = 1;
+    } elsif (0 == $missing) {
+      defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
+        "Can't preserve $device_name because it does not exist\n";
     }
   } elsif ($device_name =~ m{^/dev/md[\/]?(\d+)$}) {
     my $vol = $1;
-    defined ($FAI::current_raid_config{$vol}) or die
-      "Can't preserve $device_name because it does not exist\n";
-    if (defined($FAI::configs{RAID}{volumes}{$vol}) && 
-        $FAI::configs{RAID}{volumes}{$vol}{preserve} != 1) {
-      $FAI::configs{RAID}{volumes}{$vol}{preserve} = 1;
-      &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{RAID}{volumes}{$vol}{devices} });
+    if (defined($FAI::configs{RAID}) &&
+        defined($FAI::configs{RAID}{volumes}{$vol})) {
+      defined ($FAI::current_raid_config{$vol}) or die
+        "Can't preserve $device_name because it does not exist\n";
+      if ($FAI::configs{RAID}{volumes}{$vol}{preserve} != 1) {
+        $FAI::configs{RAID}{volumes}{$vol}{preserve} = 1;
+        &FAI::mark_preserve($_, $FAI::configs{RAID}{volumes}{$vol}{devices}{$_}{missing})
+          foreach (keys %{ $FAI::configs{RAID}{volumes}{$vol}{devices} });
+      }
+    } elsif (0 == $missing) {
+      defined ($FAI::current_raid_config{$vol}) or die
+        "Can't preserve $device_name because it does not exist\n";
     }
   } elsif ($device_name =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
     my $vg = $1;
     my $lv = $2;
-    defined ($FAI::current_lvm_config{$vg}{volumes}{$lv}) or die
-      "Can't preserve $device_name because it does not exist\n";
-    if (defined($FAI::configs{"VG_$vg"}{volumes}{$lv}) &&
-        $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} != 1) {
-      $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} = 1;
-      &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{"VG_$vg"}{devices} });
+    if (defined($FAI::configs{"VG_$vg"}) &&
+        defined($FAI::configs{"VG_$vg"}{volumes}{$lv})) {
+      defined ($FAI::current_lvm_config{$vg}{volumes}{$lv}) or die
+        "Can't preserve $device_name because it does not exist\n";
+      if ($FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} != 1) {
+        $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} = 1;
+        &FAI::mark_preserve($_, $missing) foreach (keys %{ $FAI::configs{"VG_$vg"}{devices} });
+      }
+    } elsif (0 == $missing) {
+      defined ($FAI::current_lvm_config{$vg}{volumes}{$lv}) or die
+        "Can't preserve $device_name because it does not exist\n";
     }
   } else {
     warn "Don't know how to mark $device_name for preserve\n";
@@ -561,7 +600,7 @@ sub propagate_and_check_preserve {
           "Can't preserve /dev/$1/$l because it does not exist\n";
         defined ($FAI::configs{$config}{volumes}{$l}{size}{range}) or die
           "Can't preserve /dev/$1/$l because it is not defined in the current config\n";
-        &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{devices} });
+        &FAI::mark_preserve($_, 0) foreach (keys %{ $FAI::configs{$config}{devices} });
       }
     } elsif ($config eq "RAID") {
       # check for volumes that need to be preserved and preserve the underlying
@@ -575,7 +614,8 @@ sub propagate_and_check_preserve {
           "Can't preserve /dev/md$r because it does not exist\n";
         defined ($FAI::configs{$config}{volumes}{$r}{devices}) or die
           "Can't preserve /dev/md$r because it is not defined in the current config\n";
-        &FAI::mark_preserve($_) foreach (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} });
+        &FAI::mark_preserve($_, $FAI::configs{$config}{volumes}{$r}{devices}{$_}{missing})
+          foreach (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} });
       }
     } elsif ($config eq "CRYPT") {
       # We don't do preserve for encrypted partitions
