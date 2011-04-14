@@ -21,9 +21,9 @@ Index: trunk/lib/setup-storage/Parser.pm
 +    partitions => {},
 +    opts_all   => {}
    };
- }
  
-@@ -168,6 +169,15 @@
+   # Init device tree object
+@@ -176,6 +177,15 @@
    # the index of the new partition
    my $part_number = 0;
  
@@ -39,19 +39,18 @@ Index: trunk/lib/setup-storage/Parser.pm
    # create a primary partition
    if ($type eq "primary") {
      (defined($FAI::configs{$FAI::device}{partitions}{0})) and
-@@ -275,8 +285,9 @@
+@@ -283,8 +293,8 @@
        defined ($part_size->{always_format})
          or $part_size->{always_format} = 0;
  
 -      # add the resize = 0 flag, if it doesn't exist already
 -      defined ($part_size->{resize}) or $part_size->{resize} = 0;
 +      # add the resize = default flag, if it doesn't exist already
-+      defined ($part_size->{resize})
-+        or $part_size->{resize} = $resize_default;
-     }
-   }
++      defined ($part_size->{resize}) or $part_size->{resize} = $resize_default;
  
-@@ -300,15 +311,15 @@
+       # add entry to device tree
+       push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $extended);
+@@ -312,15 +322,15 @@
  
    # add the preserve = 0 flag, if it doesn't exist already
    defined ($FAI::partition_pointer->{size}->{preserve})
@@ -67,10 +66,10 @@ Index: trunk/lib/setup-storage/Parser.pm
    defined ($FAI::partition_pointer->{size}->{resize})
 -    or $FAI::partition_pointer->{size}->{resize} = 0;
 +    or $FAI::partition_pointer->{size}->{resize} = $resize_default;
- }
  
- ################################################################################
-@@ -385,6 +396,7 @@
+   # add entry to device tree
+   push @{ $FAI::dev_children{$disk} }, $FAI::partition_pointer_dev_name;
+@@ -401,6 +411,7 @@
            &FAI::in_path("mdadm") or die "mdadm not found in PATH\n";
            $FAI::device = "RAID";
            $FAI::configs{$FAI::device}{fstabkey} = "device";
@@ -78,7 +77,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
          raid_option(s?)
          | 'cryptsetup'
-@@ -405,6 +417,7 @@
+@@ -421,6 +432,7 @@
            # being configured
            $FAI::device = "VG_";
            $FAI::configs{"VG_--ANY--"}{fstabkey} = "device";
@@ -86,7 +85,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
          lvm_option(s?)
          | 'end'
-@@ -436,30 +449,46 @@
+@@ -452,30 +464,46 @@
          option(s?)
          | <error>
  
@@ -142,7 +141,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
  
      cryptsetup_option: /^randinit/
-@@ -467,41 +496,57 @@
+@@ -483,41 +511,57 @@
            $FAI::configs{$FAI::device}{randinit} = 1;
          }
  
@@ -222,7 +221,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            }
          }
          | /^fstabkey:(device|label|uuid)/
-@@ -509,39 +554,59 @@
+@@ -525,39 +569,59 @@
            # the information preferred for fstab device identifieres
            $FAI::configs{"VG_--ANY--"}{fstabkey} = $1;
          }
@@ -297,9 +296,9 @@ Index: trunk/lib/setup-storage/Parser.pm
            $FAI::configs{$FAI::device}{preserveparts} = 1;
          }
          | /^disklabel:(msdos|gpt-bios|gpt)/
-@@ -586,9 +651,13 @@
- 
- 	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
+@@ -626,9 +690,13 @@
+       push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $pd);
+     }
  	}
 -        | /^always_format:(\d+(,\d+)*)/
 +        | /^always_format:((\d+(,\d+)*)|all)/
@@ -313,7 +312,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          }
          | /^align-at:(\d+[kKMGTPiB]*)/
          {
-@@ -613,12 +682,14 @@
+@@ -653,12 +721,14 @@
            $FAI::configs{RAID}{volumes}{$vol_id}{mode} = $1;
            # initialise the hash of devices
            $FAI::configs{RAID}{volumes}{$vol_id}{devices} = {};
@@ -332,7 +331,7 @@ Index: trunk/lib/setup-storage/Parser.pm
            # set the reference to the current volume
            # the reference is used by all further processing of this config line
            $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
-@@ -696,13 +767,17 @@
+@@ -739,13 +809,17 @@
            # initialise the new hash
            defined($FAI::configs{$FAI::device}{volumes}{$2}) or
              $FAI::configs{$FAI::device}{volumes}{$2} = {};
@@ -450,7 +449,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Commands.pm
 +++ trunk/lib/setup-storage/Commands.pm
-@@ -1121,6 +1121,16 @@
+@@ -1171,6 +1171,16 @@
      } elsif (defined($FAI::configs{$config}{partitions}{0})) {
        # no partition table operations
        $FAI::partition_table_deps{$disk} = "";
