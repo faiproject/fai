@@ -96,7 +96,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  }
  
  ################################################################################
-@@ -431,17 +424,15 @@
+@@ -431,16 +424,15 @@
  # @param $disk This disk
  # @param $next_start Start of the next partition
  # @param $block_size Requested alignment
@@ -110,13 +110,12 @@ Index: trunk/lib/setup-storage/Sizes.pm
  ################################################################################
  sub do_partition_real {
  
--  my ($part_id, $config, $disk, $next_start, $block_size, $min_req_total_space,
--    $max_avail, $worklist) = @_;
+-  my ($part_id, $config, $disk, $next_start, $block_size, $min_req_total_space, $max_avail, $worklist) = @_;
 +  my ($part_id, $config, $disk, $next_start, $block_size, $max_avail, $worklist) = @_;
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
-@@ -452,15 +443,8 @@
+@@ -451,15 +443,8 @@
  
    # compute the effective start location on the disk
    # msdos specific offset for logical partitions
@@ -134,7 +133,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # partition starts at where we currently are + requested alignment, or remains
    # fixed in case of resized ntfs
-@@ -568,13 +552,10 @@
+@@ -567,13 +552,10 @@
    # write the end byte to the configuration
    $part->{end_byte} = $end_byte;
  
@@ -149,7 +148,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  }
  
  ################################################################################
-@@ -634,9 +615,6 @@
+@@ -633,9 +615,6 @@
        }
      }
  
@@ -159,7 +158,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # the start byte for the next partition
      my $next_start = 0;
  
-@@ -644,7 +622,6 @@
+@@ -643,7 +622,6 @@
        # on msdos disk labels, the first partitions starts at head #1; well,
        # enforce a 63-sectors-per-track layout
        $next_start = 63 * $current_disk->{sector_size};
@@ -167,7 +166,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
        # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
-@@ -653,31 +630,24 @@
+@@ -652,31 +630,24 @@
        # modify the disk to claim the space for the second partition table
        $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
  
@@ -201,7 +200,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
        my ($s, $e) = &FAI::make_range("1-1", $current_disk->{size} . "B");
        # enter the range into the hash
        $FAI::partition_pointer->{size}->{range} = "$s-$s";
-@@ -685,7 +655,6 @@
+@@ -684,7 +655,6 @@
        $FAI::partition_pointer->{start_byte} = $next_start;
        $FAI::partition_pointer->{end_byte} = $next_start + $s - 1;
        $next_start += $s;
@@ -209,7 +208,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
        # set proper defaults
        $FAI::partition_pointer->{encrypt} = 0;
        $FAI::partition_pointer->{filesystem} = "-";
-@@ -693,7 +662,7 @@
+@@ -692,7 +662,7 @@
      }
  
      # the size of a 100% partition (the 100% available to the user)
@@ -218,7 +217,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # expressed in bytes
      $max_avail = "${max_avail}B";
  
-@@ -747,15 +716,14 @@
+@@ -746,14 +716,14 @@
          shift @worklist;
        # the partition $part_id must be preserved
        } elsif ($part->{size}->{preserve}) {
@@ -231,14 +230,13 @@ Index: trunk/lib/setup-storage/Sizes.pm
          shift @worklist;
        } else {
 -        ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
--          $config, $disk, $next_start, $block_size, $min_req_total_space,
--          $max_avail, \@worklist);
+-          $config, $disk, $next_start, $block_size, $min_req_total_space, $max_avail, \@worklist);
 +        $next_start = &FAI::do_partition_real($part_id, $config, $disk,
 +          $next_start, $block_size, $max_avail, \@worklist);
  
          # msdos does not support partitions larger than 2TiB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
-@@ -767,8 +735,8 @@
+@@ -765,8 +735,8 @@
      }
  
      # check, whether there is sufficient space on the disk

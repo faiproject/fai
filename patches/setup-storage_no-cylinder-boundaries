@@ -66,20 +66,20 @@ Index: trunk/lib/setup-storage/Sizes.pm
  # @param $next_start Start of the next partition
 +# @param $block_size Requested alignment
  # @param $min_req_total_space Minimum space required on disk
+ # @param $max_avail The maximum size of a partition on this disk
  # @param $worklist Reference to the remaining partitions
- #
-@@ -440,7 +438,7 @@
+@@ -441,7 +439,7 @@
  ################################################################################
  sub do_partition_real {
  
--  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $worklist) = @_;
-+  my ($part_id, $config, $disk, $next_start, $block_size, $min_req_total_space, $worklist) = @_;
+-  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $max_avail, $worklist) = @_;
++  my ($part_id, $config, $disk, $next_start, $block_size, $min_req_total_space, $max_avail, $worklist) = @_;
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
 @@ -450,6 +448,34 @@
-   my ($start, $end) = &FAI::make_range($part->{size}->{range},
-     $current_disk->{size} . "B");
+ 
+   my ($start, $end) = &FAI::make_range($part->{size}->{range}, $max_avail);
  
 +  # compute the effective start location on the disk
 +  # msdos specific offset for logical partitions
@@ -121,13 +121,13 @@ Index: trunk/lib/setup-storage/Sizes.pm
 -          $end_of_range -= $current_disk->{bios_sectors_per_track} *
 -            $current_disk->{sector_size};
 -        }
-+        $end_of_range -= 2 * $current_disk->{sector_size} 
++        $end_of_range -= 2 * $current_disk->{sector_size}
 +          if (($FAI::configs{$config}{disklabel} eq "msdos") && ($p > 4));
          last;
        } elsif ($FAI::configs{$config}{partitions}{$p}{size}{extended}) {
          next;
-@@ -491,13 +514,11 @@
-           $current_disk->{size} . "B");
+@@ -490,13 +513,11 @@
+           $FAI::configs{$config}{partitions}{$p}{size}{range}, $max_avail);
  
          # logical partitions require the space for the EPBR to be left
 -        # out
@@ -144,7 +144,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
          }
  
          $min_req_space += $min_size;
-@@ -529,48 +550,9 @@
+@@ -528,48 +549,9 @@
      $end   = $start;
    }
  
@@ -195,7 +195,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # set $start and $end to the effective values
    $start = $end_byte - $next_start + 1;
-@@ -619,6 +601,21 @@
+@@ -618,6 +600,21 @@
      # reference to the current disk config
      my $current_disk = $FAI::current_config{$disk};
  
@@ -236,12 +236,12 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
-@@ -755,7 +751,7 @@
+@@ -760,7 +756,7 @@
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
--          $config, $disk, $next_start, $min_req_total_space, \@worklist);
-+          $config, $disk, $next_start, $block_size, $min_req_total_space, \@worklist);
+-          $config, $disk, $next_start, $min_req_total_space, $max_avail, \@worklist);
++          $config, $disk, $next_start, $block_size, $min_req_total_space, $max_avail, \@worklist);
  
          # msdos does not support partitions larger than 2TiB
          ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
