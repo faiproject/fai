@@ -857,7 +857,7 @@ $FAI::Parser = Parse::RecDescent->new(
           1;
         }
 
-    size: /^((RAM:\d+%|\d+[kMGTP%iB]*)(-(RAM:\d+%|\d+[kMGTP%iB]*)?)?)(:resize)?/
+    size: /^((RAM:\d+%|\d+[kKMGTP%iB]*)(-(RAM:\d+%|\d+[kKMGTP%iB]*)?)?)(:resize)?/
         {
           # complete the size specification to be a range in all cases
           my $range = $1;
@@ -888,7 +888,7 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
         }
-        | /^(-(RAM:\d+%|\d+[kMGTP%iB]*))(:resize)?\s+/
+        | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize)?\s+/
         {
           # complete the range by assuming 0 as the lower limit 
           my $range = "0$1";
@@ -909,7 +909,7 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | <error: invalid partition size near "$text">
 
-    tmpfs_size: /^(RAM:(\d+%)|\d+[kMGTPiB]*)\s+/
+    tmpfs_size: /^(RAM:(\d+%)|\d+[kKMGTPiB]*)\s+/
         {
           my $size;
 
