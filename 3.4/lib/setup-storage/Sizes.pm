@@ -295,13 +295,14 @@ sub compute_lv_sizes {
 # @param $current_disk Current config of this disk
 # @param $next_start Start of the next partition
 # @param $min_req_total_space Minimum space required on disk
+# @param $max_avail The maximum size of a partition on this disk
 #
 # @return Updated values of ($next_start, $min_req_total_space)
 #
 ################################################################################
 sub do_partition_preserve {
 
-  my ($part_id, $config, $disk, $next_start, $min_req_total_space) = @_;
+  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $max_avail) = @_;
   # reference to the current disk config
   my $current_disk = $FAI::current_config{$disk};
 
@@ -320,8 +321,7 @@ sub do_partition_preserve {
     and die "Previous partitions overflow begin of preserved partition $part_dev_name\n";
 
   # get what the user desired
-  my ($start, $end) = &FAI::make_range($part->{size}->{range},
-    $current_disk->{size} . "B");
+  my ($start, $end) = &FAI::make_range($part->{size}->{range}, $max_avail);
   ($start > $curr_part->{count_byte} || $end < $curr_part->{count_byte})
     and warn "Preserved partition $part_dev_name retains size " .
       $curr_part->{count_byte} . "B\n";
@@ -432,6 +432,7 @@ sub do_partition_extended {
 # @param $current_disk Current config of this disk
 # @param $next_start Start of the next partition
 # @param $min_req_total_space Minimum space required on disk
+# @param $max_avail The maximum size of a partition on this disk
 # @param $worklist Reference to the remaining partitions
 #
 # @return Updated values of ($next_start, $min_req_total_space)
@@ -439,15 +440,14 @@ sub do_partition_extended {
 ################################################################################
 sub do_partition_real {
 
-  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $worklist) = @_;
+  my ($part_id, $config, $disk, $next_start, $min_req_total_space, $max_avail, $worklist) = @_;
   # reference to the current disk config
   my $current_disk = $FAI::current_config{$disk};
 
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
 
-  my ($start, $end) = &FAI::make_range($part->{size}->{range},
-    $current_disk->{size} . "B");
+  my ($start, $end) = &FAI::make_range($part->{size}->{range}, $max_avail);
 
   # check, whether the size is fixed
   if ($end != $start) {
@@ -486,8 +486,7 @@ sub do_partition_real {
         next;
       } else {
         my ($min_size, $max_size) = &FAI::make_range(
-          $FAI::configs{$config}{partitions}{$p}{size}{range},
-          $current_disk->{size} . "B");
+          $FAI::configs{$config}{partitions}{$p}{size}{range}, $max_avail);
 
         # logical partitions require the space for the EPBR to be left
         # out
@@ -643,6 +642,7 @@ sub compute_partition_sizes
       # on msdos disk labels, the first partitions starts at head #1
       $next_start = $current_disk->{bios_sectors_per_track} *
         $current_disk->{sector_size};
+      $min_req_total_space += $next_start;
 
       # the MBR requires space, too
       $min_req_total_space += $current_disk->{bios_sectors_per_track} *
@@ -695,6 +695,11 @@ sub compute_partition_sizes
       $FAI::partition_pointer->{mountpoint} = "-";
     }
 
+    # the size of a 100% partition (the 100% available to the user)
+    my $max_avail = $current_disk->{size} - $min_req_total_space;
+    # expressed in bytes
+    $max_avail = "${max_avail}B";
+
     # the list of partitions that we need to find start and end bytes for
     my @worklist = (&numsort(keys %{ $FAI::configs{$config}{partitions} }));
 
@@ -746,13 +751,13 @@ sub compute_partition_sizes
       # the partition $part_id must be preserved
       } elsif ($part->{size}->{preserve}) {
         ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id,
-          $config, $disk, $next_start, $min_req_total_space);
+          $config, $disk, $next_start, $min_req_total_space, $max_avail);
 
         # partition done
         shift @worklist;
       } else {
         ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
-          $config, $disk, $next_start, $min_req_total_space, \@worklist);
+          $config, $disk, $next_start, $min_req_total_space, $max_avail, \@worklist);
 
         # msdos does not support partitions larger than 2TiB
         ($part->{size}->{eff_size} > (&FAI::convert_unit("2TiB") * 1024.0 *
