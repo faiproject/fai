@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# $Id$
+#*********************************************************************
+#
+# get-config-dir-http -- get a tarball of the config dir
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2000-2010 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#*********************************************************************
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:  $FAI_CONFIG_SRC $FAI
+# Suggests-Var:
+# Short-Description: get config space via http
+### END SUBROUTINE INFO
+
+fdir=/var/lib/fai
+
+cd $fdir
+
+# determine basename of tar file to download (later used as class name)
+file=${FAI_CONFIG_SRC##*/}
+base=${file%%.*}
+
+# get md5sum first
+if wget -q -t5 -O $fdir/$file.md5 ${FAI_CONFIG_SRC}.md5; then
+   echo "Checksum file $file.md5 successfully downloaded."
+else
+   echo "Checksum file ${FAI_CONFIG_SRC}.md5 failed to download. Aborting."
+   task_error 701
+fi
+
+# now download tarball of config space
+echo -n "Getting configuration space tarball from $FAI_CONFIG_SRC ..."
+wget -q -t 3 $FAI_CONFIG_SRC && echo "done"
+task_error 702 $?
+
+# check the md5 sum
+md5sum -c $file.md5 || echo "Checksum mismatch "
+task_error 703 $?
+
+# extraxt the downloaded file using ftar. Therefore define a class
+# basename of the file
+echo "extracting config space from $file"
+ftar -c $base -t $FAI -s $fdir .
