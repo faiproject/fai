@@ -1,0 +1,19 @@
+2011-04-15  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Commands.pm: Virtual disks don't have partition types.
+Index: trunk/lib/setup-storage/Commands.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Commands.pm
++++ trunk/lib/setup-storage/Commands.pm
+@@ -180,8 +180,9 @@
+   # make sure this device really exists (we can't check for the partition
+   # as that may be created later on
+   (-b $disk) or die "Specified disk $disk does not exist in this system!\n";
+-  # set the raid/lvm unless this is an entire disk flag
+-  return 0 if ($part_no == -1);
++  # set the raid/lvm unless this is an entire disk flag or a virtual disk
++  return 0 if ($part_no == -1 ||
++    (defined($FAI::configs{"PHY_$disk"}) && $FAI::configs{"PHY_$disk"}{virtual}));
+   my $pre = "exist_$d";
+   $pre .= ",cleared2_$disk" if (defined($FAI::configs{"PHY_$disk"}));
+   &FAI::push_command( "parted -s $disk set $part_no $t on", $pre, "type_${t}_$d" );
