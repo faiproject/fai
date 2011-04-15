@@ -232,7 +232,7 @@ sub build_cryptsetup_commands {
         $pre_dep = "random_init_$real_dev";
       }
 
-      if ($mode eq "luks") {
+      if ($mode =~ /^luks(:"([^"]+)")?$/) {
         my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
 
         # generate a key for encryption
@@ -247,9 +247,23 @@ sub build_cryptsetup_commands {
           "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
           "crypt_format_$real_dev", "exist_$enc_dev_name" );
 
+        if (defined($1)) {
+          my $passphrase = $2;
+
+          # add user-defined key
+          &FAI::push_command(
+            "yes '$passphrase' | cryptsetup luksAddKey --key-file $keyfile $real_dev",
+            "exist_$enc_dev_name", "newkey_$enc_dev_name");
+          # remove previous key
+          &FAI::push_command(
+            "yes '$passphrase' | cryptsetup luksRemoveKey $real_dev $keyfile",
+            "newkey_$enc_dev_name", "removed_key_$enc_dev_name");
+
+          $keyfile = "none";
+        }
+
         # add entries to crypttab
         push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks";
-
       } elsif ($mode eq "tmp" || $mode eq "swap") {
         &FAI::push_command(
           "cryptsetup --key-file=/dev/urandom create $enc_dev_short_name $real_dev",

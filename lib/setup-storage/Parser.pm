@@ -661,7 +661,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer_dev_name = "/dev/md$vol_id";
         }
         mountpoint devices filesystem mount_options mdcreateopts
-        | /^(luks|tmp|swap)\s+/
+        | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
         {
           ($FAI::device eq "CRYPT") or
             die "Encrypted device spec $1 invalid in context $FAI::device\n";

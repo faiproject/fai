@@ -316,7 +316,11 @@ type ::= primary
 .br
          | luks
 .br
-         /* encrypted partition using LUKS */
+         /* encrypted partition using LUKS and auto-generate a keyfile */
+.br
+         | luks:"[^"]+"
+.br
+         /* encrypted partition using LUKS and use quoted string as passphrase */
 .br
          | tmp
 .br
@@ -590,9 +594,11 @@ marker, explicitly set the bootable option. Of course, there are lots of other
 reasons why a system may fail to boot.
 .IP \(bu
 Crypto support requires some site-specific changes: If you use cryptsetup
-stanza, a crypttab file and key files for all luks volumes will be created. The
-key files are left in /tmp/fai; you will want to copy these to some removable
-media.
+stanza, a crypttab file and key files for all luks volumes will be created
+(unless you used the passphrase option). The key files are left in /tmp/fai; you
+will want to copy these to some removable media. To make encrypted root devices
+actually usable, you need to add busybox (and initramfs-tools) to your package
+config.
 .SH SEE ALSO
 This program is part of FAI (Fully Automatic Installation).
 The FAI homepage is http://fai-project.org.
