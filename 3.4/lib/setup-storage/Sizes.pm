@@ -361,15 +361,9 @@ sub do_partition_preserve {
     ($part->{size}->{extended} == $curr_part->{is_extended})
       or die "Preserved partition $part_dev_name can't change extended/normal setting\n";
 
-    # extended partitions consume no space
-    if ($part->{size}->{extended}) {
-
-      # revert the addition of the size
-      $min_req_total_space -= $part->{size}->{eff_size};
-
-      # set the next start to the start of the extended partition
-      $next_start = $part->{start_byte};
-    }
+    # extended partitions are not handled in here (anymore)
+    ($part->{size}->{extended})
+      and die &FAI::internal_error("Preserve must not handle extended partitions\n");
   }
 
   # on gpt, ensure that the partition ends at a sector boundary
@@ -705,34 +699,42 @@ sub compute_partition_sizes
       # reference to the current partition
       my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
 
-      # the partition $part_id must be preserved
-      if ($part->{size}->{preserve}) {
-        ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id, 
-          $config, $disk, $next_start, $min_req_total_space);
-
-        # partition done
-        shift @worklist;
-      }
-
       # msdos specific: deal with extended partitions
-      elsif ($part->{size}->{extended}) {
+      if ($part->{size}->{extended}) {
+        # handle logical partitions first
+        if (scalar (@worklist) > 1) {
+          my @old_worklist = @worklist;
+          @worklist = ();
+          my @primaries = ();
+          foreach my $p (@old_worklist) {
+            if ($p > 4) {
+              push @worklist, $p;
+            } else {
+              push @primaries, $p;
+            }
+          }
+          if (scalar (@worklist)) {
+            push @worklist, @primaries;
+            next;
+          }
+          @worklist = @primaries;
+        }
+
         # make sure that there is only one extended partition
-        ($extended == -1 || 1 == scalar (@worklist))
-          or &FAI::internal_error("More than 1 extended partition");
+        ($extended == -1) or &FAI::internal_error("More than 1 extended partition");
 
         # set the local variable to this id
         $extended = $part_id;
 
-        # the size cannot be determined now, push it to the end of the
-        # worklist; the check against $extended being == -1 ensures that
-        # there is no indefinite loop
-        if (scalar (@worklist) > 1) {
-          push @worklist, shift @worklist;
-          next;
-        }
-
         # determine the size of the extended partition
         &FAI::do_partition_extended($part_id, $config, $current_disk);
+
+        # partition done
+        shift @worklist;
+      # the partition $part_id must be preserved
+      } elsif ($part->{size}->{preserve}) {
+        ($next_start, $min_req_total_space) = &FAI::do_partition_preserve($part_id,
+          $config, $disk, $next_start, $min_req_total_space);
 
         # partition done
         shift @worklist;
