@@ -459,7 +459,7 @@ sub get_current_raid {
 #    devices=/dev/sde3,/dev/sdf3,/dev/sdd3
 
   # create a temporary mdadm-from-examine.conf
-  open(MDADM_EX, ">$ENV{LOGDIR}/mdadm-from-examine.conf");
+  open(MDADM_EX, ">$FAI::DATADIR/mdadm-from-examine.conf");
 
   # the id of the RAID
   my $id;

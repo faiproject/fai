@@ -70,20 +70,6 @@ USAGE: [-X]                     no test, your harddisks will be formated
        [-h]                     print this help message
 EOF
 
-################################################################################
-#
-# @brief Really write any changes to disk
-#
-################################################################################
-if ($opt_X) {
-  # we use $ENV{LOGDIR} later on, make sure it is actually set
-  defined ($ENV{LOGDIR}) or die "Environment variable LOGDIR is not set\n";
-  $FAI::no_dry_run = 1;
-} else {
-  warn "setup-harddisks is running in test-only mode\n";
-  $FAI::no_dry_run = 0;
-}
-
 # include all subparts, which are part of the FAI perl package
 use lib "/usr/share/fai/setup-storage/";
 use Init;
@@ -97,10 +83,31 @@ use Exec;
 # enable debug mode, if requested using -d
 $opt_d and $FAI::debug = 1;
 
-# $disklist must be provided by the environment
-defined ($ENV{disklist}) or die "Environment variable disklist is not set\n";
-@FAI::disks = split( /\n/, $ENV{disklist} );
-print "disklist was: $ENV{disklist}\n" if ($FAI::debug);
+# Really write any changes to disk
+$opt_X and $FAI::no_dry_run = 1;
+warn "setup-storage is running in test-only mode\n" unless ($FAI::no_dry_run);
+
+# Find out whether $LOGDIR is usable or default to /tmp/fai
+if (! -d $FAI::DATADIR) {
+  defined ($ENV{LOGDIR}) and die
+    "Environment variable LOGDIR is set, but $FAI::DATADIR is not a directory\n";
+  mkdir $FAI::DATADIR or die
+    "Failed to create directory $FAI::DATADIR\n";
+  warn "\$LOGDIR not set in environment; created data directory $FAI::DATADIR\n";
+}
+
+# $disklist may be provided by the environment
+my $disklist = $ENV{disklist};
+if (! defined($disklist)) {
+  &FAI::in_path("disk-info") or die "disk-info not found in PATH\n";
+  $disklist = `disk-info | sort`;
+}
+
+@FAI::disks = split( /\n/, $disklist);
+if ($FAI::debug) {
+  print "disklist: ";
+  print "$_\n" foreach(@FAI::disks);
+}
 
 # the config source file
 my $config_file = undef;
@@ -223,23 +230,23 @@ my @fstab = &FAI::generate_fstab(\%FAI::configs);
 # print fstab
 $FAI::debug and print "$_\n" foreach (@fstab);
 
-# write the proposed contents of fstab to $LOGDIR/fstab
+# write the proposed contents of fstab to $FAI::DATADIR/fstab
 if ($FAI::no_dry_run) {
-  open(FSTAB, ">$ENV{LOGDIR}/fstab")
-    or die "Failed to open $ENV{LOGDIR}/fstab for writing\n";
+  open(FSTAB, ">$FAI::DATADIR/fstab")
+    or die "Failed to open $FAI::DATADIR/fstab for writing\n";
   print FSTAB "$_\n" foreach (@fstab);
   close FSTAB;
 }
 
-# write variables to $LOGDIR/disk_var.sh
+# write variables to $FAI::DATADIR/disk_var.sh
 # debugging
 $FAI::debug and print "$_=\${$_:-$FAI::disk_var{$_}}\n"
   foreach (keys %FAI::disk_var);
 
 if ($FAI::no_dry_run)
 {
-  open(DISK_VAR, ">$ENV{LOGDIR}/disk_var.sh")
-    or die "Unable to write to file $ENV{LOGDIR}/disk_var.sh\n";
+  open(DISK_VAR, ">$FAI::DATADIR/disk_var.sh")
+    or die "Unable to write to file $FAI::DATADIR/disk_var.sh\n";
   print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
   close DISK_VAR;
 }
@@ -247,10 +254,10 @@ if ($FAI::no_dry_run)
 # print crypttab
 $FAI::debug and print "$_\n" foreach (@FAI::crypttab);
 
-# write the proposed contents of fstab to $LOGDIR/fstab
+# write the proposed contents of fstab to $FAI::DATADIR/fstab
 if ($FAI::no_dry_run && scalar(@FAI::crypttab)) {
-  open(CRYPTTAB, ">$ENV{LOGDIR}/crypttab")
-    or die "Failed to open $ENV{LOGDIR}/crypttab for writing\n";
+  open(CRYPTTAB, ">$FAI::DATADIR/crypttab")
+    or die "Failed to open $FAI::DATADIR/crypttab for writing\n";
   print CRYPTTAB "$_\n" foreach (@FAI::crypttab);
   close CRYPTTAB;
 }

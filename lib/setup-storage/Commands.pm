@@ -233,7 +233,7 @@ sub build_cryptsetup_commands {
       }
 
       if ($mode =~ /^luks(:"([^"]+)")?$/) {
-        my $keyfile = "$ENV{LOGDIR}/$enc_dev_short_name";
+        my $keyfile = "$FAI::DATADIR/$enc_dev_short_name";
 
         # generate a key for encryption
         &FAI::push_command(
@@ -291,7 +291,7 @@ sub build_cryptsetup_commands {
 sub build_raid_commands {
 
   # check RAID arrays if there are pre-existing ones
-  &FAI::push_command("mdadm --assemble --scan --config=$ENV{LOGDIR}/mdadm-from-examine.conf",
+  &FAI::push_command("mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
     "", "mdadm_startall_examined") if (scalar(keys %FAI::current_raid_config));
   foreach my $id (keys %FAI::current_raid_config) {
     my $md = "/dev/md$id";
