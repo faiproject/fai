@@ -9,26 +9,19 @@ if [ $FAI_ACTION = "install" ]; then
     mount -t sysfs sysfs $target/sys
     cp /etc/mtab $target/etc/mtab
 
-    # Workaround for #588030
-    #cp $target/etc/modprobe.d/modprobe.conf.dist $target/etc/modprobe.conf
-    # Now done with kudzu
-
-    cat > $target/etc/sysconfig/network <<EOF
-NETWORKING=yes
-HOSTNAME=$HOSTNAME
-GATEWAY=$GATEWAYS_1
-EOF
-    cat > $target/etc/hosts <<EOF
-127.0.0.1	localhost
-$IPADDR	$HOSTNAME
-EOF
-    cat > $target/etc/resolv.conf <<EOF
-nameserver $DNSSRVS_1
-EOF
+    cat > $target/etc/sysconfig/network <<-EOF
+		NETWORKING=yes
+		HOSTNAME=$HOSTNAME.$DOMAIN
+		EOF
+    echo "127.0.0.1 localhost" > $target/etc/hosts
+    ifclass DHCPC || ainsl -s $target/etc/hosts "$IPADDR $HOSTNAME.$DOMAIN $HOSTNAME"
+    echo "nameserver $DNSSRVS_1" > $target/etc/resolv.conf
 fi
 
+mkdir $target/dev/pts
+mknod -m 000 $target/dev/pts/ptmx c 5 2
+
 fcopy -riv /etc/yum.repos.d/
-#$ROOTCMD yum groupinstall -y core
 
 skiptask prepareapt
 
