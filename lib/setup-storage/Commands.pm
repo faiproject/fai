@@ -1185,6 +1185,16 @@ sub build_disk_commands {
     } elsif (defined($FAI::configs{$config}{partitions}{0})) {
       # no partition table operations
       $FAI::partition_table_deps{$disk} = "";
+   } elsif (defined($FAI::configs{$config}{opts_all}{preserve})) {
+     foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
+       # all partitions exist
+       &FAI::push_command( "true", "",
+         "exist_" . &FAI::make_device_name($disk, $part_id) );
+       # no partition table operations
+       $FAI::partition_table_deps{$disk} = "";
+     }
+     # no changes on this disk
+     $FAI::partition_table_deps{$disk} = "";
     } else {
       # create partitions on non-virtual configs
       &FAI::setup_partitions($config);

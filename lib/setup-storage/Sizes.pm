@@ -319,7 +319,8 @@ sub do_partition_preserve {
   my $curr_part = $current_disk->{partitions}->{$part_id};
 
   ($next_start > $curr_part->{begin_byte})
-    and die "Previous partitions overflow begin of preserved partition $part_dev_name\n";
+    and die "Previous partitions overflow begin of preserved partition $part_dev_name\n"
+    unless (defined($FAI::configs{$config}{opts_all}{preserve}));
 
   # get what the user desired
   my ($start, $end) = &FAI::make_range($part->{size}->{range}, $max_avail);

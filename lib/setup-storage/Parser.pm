@@ -137,7 +137,8 @@ sub init_disk_config {
     bootable   => -1,
     fstabkey   => "device",
     preserveparts => 0,
-    partitions => {}
+    partitions => {},
+    opts_all   => {}
   };
 
   # Init device tree object
@@ -175,6 +176,15 @@ sub init_part_config {
 
   # the index of the new partition
   my $part_number = 0;
+
+  # defaults from options
+  my $preserve_default =
+    defined($FAI::configs{$FAI::device}{opts_all}{preserve}) ? 1 :
+      (defined($FAI::configs{$FAI::device}{opts_all}{preserve_lazy}) ? 2 : 0);
+  my $always_format_default =
+    defined($FAI::configs{$FAI::device}{opts_all}{always_format}) ? 1 : 0;
+  my $resize_default =
+    defined($FAI::configs{$FAI::device}{opts_all}{resize}) ? 1 : 0;
 
   # create a primary partition
   if ($type eq "primary") {
@@ -283,8 +293,8 @@ sub init_part_config {
       defined ($part_size->{always_format})
         or $part_size->{always_format} = 0;
 
-      # add the resize = 0 flag, if it doesn't exist already
-      defined ($part_size->{resize}) or $part_size->{resize} = 0;
+      # add the resize = default flag, if it doesn't exist already
+      defined ($part_size->{resize}) or $part_size->{resize} = $resize_default;
 
       # add entry to device tree
       push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $extended);
@@ -312,15 +322,15 @@ sub init_part_config {
 
   # add the preserve = 0 flag, if it doesn't exist already
   defined ($FAI::partition_pointer->{size}->{preserve})
-    or $FAI::partition_pointer->{size}->{preserve} = 0;
+    or $FAI::partition_pointer->{size}->{preserve} = $preserve_default;
 
   # add the always_format = 0 flag, if it doesn't exist already
   defined ($FAI::partition_pointer->{size}->{always_format})
-    or $FAI::partition_pointer->{size}->{always_format} = 0;
+    or $FAI::partition_pointer->{size}->{always_format} = $always_format_default;
 
   # add the resize = 0 flag, if it doesn't exist already
   defined ($FAI::partition_pointer->{size}->{resize})
-    or $FAI::partition_pointer->{size}->{resize} = 0;
+    or $FAI::partition_pointer->{size}->{resize} = $resize_default;
 
   # add entry to device tree
   push @{ $FAI::dev_children{$disk} }, $FAI::partition_pointer_dev_name;
@@ -401,6 +411,7 @@ $FAI::Parser = Parse::RecDescent->new(
           &FAI::in_path("mdadm") or die "mdadm not found in PATH\n";
           $FAI::device = "RAID";
           $FAI::configs{$FAI::device}{fstabkey} = "device";
+          $FAI::configs{$FAI::device}{opts_all} = {};
         }
         raid_option(s?)
         | 'cryptsetup'
@@ -421,6 +432,7 @@ $FAI::Parser = Parse::RecDescent->new(
           # being configured
           $FAI::device = "VG_";
           $FAI::configs{"VG_--ANY--"}{fstabkey} = "device";
+          $FAI::configs{"VG_--ANY--"}{opts_all} = {};
         }
         lvm_option(s?)
         | 'end'
@@ -452,30 +464,46 @@ $FAI::Parser = Parse::RecDescent->new(
         option(s?)
         | <error>
 
-    raid_option: /^preserve_always:(\d+(,\d+)*)/
+    raid_option: /^preserve_always:((\d+(,\d+)*)|all)/
         {
-          # set the preserve flag for all ids in all cases
-          $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split (",", $1));
+          if ($1 eq "all") {
+            $FAI::configs{RAID}{opts_all}{preserve} = 1;
+          } else {
+            # set the preserve flag for all ids in all cases
+            $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split (",", $1));
+          }
         }
-        | /^preserve_reinstall:(\d+(,\d+)*)/
+        | /^preserve_reinstall:((\d+(,\d+)*)|all)/
         {
           # set the preserve flag for all ids if $FAI::reinstall is set
           if ($FAI::reinstall) {
-            $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split(",", $1));
+            if ($1 eq "all") {
+              $FAI::configs{RAID}{opts_all}{preserve} = 1;
+            } else {
+              $FAI::configs{RAID}{volumes}{$_}{preserve} = 1 foreach (split(",", $1));
+            }
           }
         }
-        | /^preserve_lazy:(\d+(,\d+)*)/
+        | /^preserve_lazy:((\d+(,\d+)*)|all)/
         {
-          $FAI::configs{RAID}{volumes}{$_}{preserve} = 2 foreach (split(",", $1));
+          if ($1 eq "all") {
+            $FAI::configs{RAID}{opts_all}{preserve_lazy} = 1;
+          } else {
+            $FAI::configs{RAID}{volumes}{$_}{preserve} = 2 foreach (split(",", $1));
+          }
         }
         | /^fstabkey:(device|label|uuid)/
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
-        | /^always_format:(\d+(,\d+)*)/
+        | /^always_format:((\d+(,\d+)*)|all)/
         {
-          $FAI::configs{RAID}{volumes}{$_}{always_format} = 1 foreach (split (",", $1));
+          if ($1 eq "all") {
+            $FAI::configs{RAID}{opts_all}{always_format} = 1;
+          } else {
+            $FAI::configs{RAID}{volumes}{$_}{always_format} = 1 foreach (split (",", $1));
+          }
         }
 
     cryptsetup_option: /^randinit/
@@ -483,41 +511,57 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{randinit} = 1;
         }
 
-    lvm_option: m{^preserve_always:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+    lvm_option: m{^preserve_always:(([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)|all)}
         {
-          # set the preserve flag for all ids in all cases
-          foreach (split (",", $1)) {
-            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
-              die &FAI::internal_error("VG re-parse failed");
-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
-          }
-        }
-        | m{^preserve_reinstall:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
-        {
-          # set the preserve flag for all ids if $FAI::reinstall is set
-          if ($FAI::reinstall) {
+          if ($1 eq "all") {
+            $FAI::configs{"VG_--ANY--"}{opts_all}{preserve} = 1;
+          } else {
+            # set the preserve flag for all ids in all cases
             foreach (split (",", $1)) {
-              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
+              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
                 die &FAI::internal_error("VG re-parse failed");
               $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
             }
           }
         }
-        | m{^preserve_lazy:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+        | m{^preserve_reinstall:(([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)|all)}
         {
-          foreach (split (",", $1)) {
-            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
-              die &FAI::internal_error("VG re-parse failed");
-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 2;
+          # set the preserve flag for all ids if $FAI::reinstall is set
+          if ($FAI::reinstall) {
+            if ($1 eq "all") {
+              $FAI::configs{"VG_--ANY--"}{opts_all}{preserve} = 1;
+            } else {
+              foreach (split (",", $1)) {
+                (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
+                  die &FAI::internal_error("VG re-parse failed");
+                $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 1;
+              }
+            }
           }
         }
-        | m{^resize:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+        | m{^preserve_lazy:(([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)|all)}
         {
-          # set the resize flag for all ids
-          foreach (split (",", $1)) {
-            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or 
-              die &FAI::internal_error("VG re-parse failed");
-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1;
+          if ($1 eq "all") {
+            $FAI::configs{"VG_--ANY--"}{opts_all}{preserve_lazy} = 1;
+          } else {
+            foreach (split (",", $1)) {
+              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
+                die &FAI::internal_error("VG re-parse failed");
+              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{preserve} = 2;
+            }
+          }
+        }
+        | m{^resize:(([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)|all)}
+        {
+          if ($1 eq "all") {
+            $FAI::configs{"VG_--ANY--"}{opts_all}{resize} = 1;
+          } else {
+            # set the resize flag for all ids
+            foreach (split (",", $1)) {
+              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
+                die &FAI::internal_error("VG re-parse failed");
+              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{resize} = 1;
+            }
           }
         }
         | /^fstabkey:(device|label|uuid)/
@@ -525,39 +569,59 @@ $FAI::Parser = Parse::RecDescent->new(
           # the information preferred for fstab device identifieres
           $FAI::configs{"VG_--ANY--"}{fstabkey} = $1;
         }
-        | m{^always_format:([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)}
+        | m{^always_format:(([^/,\s\-]+-[^/,\s\-]+(,[^/,\s\-]+-[^/,\s\-]+)*)|all)}
         {
-          foreach (split (",", $1)) {
-            (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
-              die &FAI::internal_error("VG re-parse failed");
-            $FAI::configs{"VG_$1"}{volumes}{$2}{size}{always_format} = 1;
+          if ($1 eq "all") {
+            $FAI::configs{"VG_--ANY--"}{opts_all}{always_format} = 1;
+          } else {
+            foreach (split (",", $1)) {
+              (m{^([^/,\s\-]+)-([^/,\s\-]+)}) or
+                die &FAI::internal_error("VG re-parse failed");
+              $FAI::configs{"VG_$1"}{volumes}{$2}{size}{always_format} = 1;
+            }
           }
         }
 
 
-    option: /^preserve_always:(\d+(,\d+)*)/
+    option: /^preserve_always:((\d+(,\d+)*)|all)/
         {
-          # set the preserve flag for all ids in all cases
-          $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split (",", $1));
+          if ($1 eq "all") {
+            $FAI::configs{$FAI::device}{opts_all}{preserve} = 1;
+          } else {
+            # set the preserve flag for all ids in all cases
+            $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split (",", $1));
+          }
           $FAI::configs{$FAI::device}{preserveparts} = 1;
         }
-        | /^preserve_reinstall:(\d+(,\d+)*)/
+        | /^preserve_reinstall:((\d+(,\d+)*)|all)/
         {
           # set the preserve flag for all ids if $FAI::reinstall is set
           if ($FAI::reinstall) {
-            $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split(",", $1));
+            if ($1 eq "all") {
+              $FAI::configs{$FAI::device}{opts_all}{preserve} = 1;
+            } else {
+              $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 1 foreach (split(",", $1));
+            }
             $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
         }
-        | /^preserve_lazy:(\d+(,\d+)*)/
+        | /^preserve_lazy:((\d+(,\d+)*)|all)/
         {
-          $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 2 foreach (split(",", $1));
+          if ($1 eq "all") {
+            $FAI::configs{$FAI::device}{opts_all}{preserve_lazy} = 1;
+          } else {
+            $FAI::configs{$FAI::device}{partitions}{$_}{size}{preserve} = 2 foreach (split(",", $1));
+          }
           $FAI::configs{$FAI::device}{preserveparts} = 2;
         }
-        | /^resize:(\d+(,\d+)*)/
+        | /^resize:((\d+(,\d+)*)|all)/
         {
-          # set the resize flag for all ids
-          $FAI::configs{$FAI::device}{partitions}{$_}{size}{resize} = 1 foreach (split(",", $1));
+          if ($1 eq "all") {
+            $FAI::configs{$FAI::device}{opts_all}{resize} = 1;
+          } else {
+            # set the resize flag for all ids
+            $FAI::configs{$FAI::device}{partitions}{$_}{size}{resize} = 1 foreach (split(",", $1));
+          }
           $FAI::configs{$FAI::device}{preserveparts} = 1;
         }
         | /^disklabel:(msdos|gpt-bios|gpt)/
@@ -626,9 +690,13 @@ $FAI::Parser = Parse::RecDescent->new(
       push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $pd);
     }
 	}
-        | /^always_format:(\d+(,\d+)*)/
+        | /^always_format:((\d+(,\d+)*)|all)/
         {
-          $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
+          if ($1 eq "all") {
+            $FAI::configs{$FAI::device}{opts_all}{always_format} = 1;
+          } else {
+            $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
+          }
         }
 
     volume: /^vg\s+/ name devices vgcreateopt(s?)
@@ -649,12 +717,14 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{RAID}{volumes}{$vol_id}{mode} = $1;
           # initialise the hash of devices
           $FAI::configs{RAID}{volumes}{$vol_id}{devices} = {};
-          # initialise the preserve flag
+          # initialise the flags
           defined($FAI::configs{RAID}{volumes}{$vol_id}{preserve}) or
-            $FAI::configs{RAID}{volumes}{$vol_id}{preserve} = 0;
-          # initialise the always_format flag
+            $FAI::configs{RAID}{volumes}{$vol_id}{preserve} =
+              defined($FAI::configs{RAID}{opts_all}{preserve}) ? 1 :
+                (defined($FAI::configs{RAID}{opts_all}{preserve_lazy}) ? 2 : 0);
           defined($FAI::configs{RAID}{volumes}{$vol_id}{always_format}) or
-            $FAI::configs{RAID}{volumes}{$vol_id}{always_format} = 0;
+            $FAI::configs{RAID}{volumes}{$vol_id}{always_format} =
+              defined($FAI::configs{RAID}{opts_all}{always_format}) ? 1 : 0;
           # set the reference to the current volume
           # the reference is used by all further processing of this config line
           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
@@ -737,13 +807,17 @@ $FAI::Parser = Parse::RecDescent->new(
           # initialise the new hash
           defined($FAI::configs{$FAI::device}{volumes}{$2}) or
             $FAI::configs{$FAI::device}{volumes}{$2} = {};
-          # initialise the preserve and resize flags
+          # initialise the flags
           defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{preserve}) or
-            $FAI::configs{$FAI::device}{volumes}{$2}{size}{preserve} = 0;
+            $FAI::configs{$FAI::device}{volumes}{$2}{size}{preserve} =
+              defined($FAI::configs{"VG_--ANY--"}{opts_all}{preserve}) ? 1 :
+                (defined($FAI::configs{"VG_--ANY--"}{opts_all}{preserve_lazy}) ? 2 : 0);
           defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{always_format}) or
-            $FAI::configs{$FAI::device}{volumes}{$2}{size}{always_format} = 0;
+            $FAI::configs{$FAI::device}{volumes}{$2}{size}{always_format} =
+              defined($FAI::configs{"VG_--ANY--"}{opts_all}{always_format}) ? 1 : 0;
           defined($FAI::configs{$FAI::device}{volumes}{$2}{size}{resize}) or
-            $FAI::configs{$FAI::device}{volumes}{$2}{size}{resize} = 0;
+            $FAI::configs{$FAI::device}{volumes}{$2}{size}{resize} =
+              defined($FAI::configs{"VG_--ANY--"}{opts_all}{resize}) ? 1 : 0;
           # set the reference to the current volume
           # the reference is used by all further processing of this config line
           $FAI::partition_pointer = (\%FAI::configs)->{$FAI::device}->{volumes}->{$2};
