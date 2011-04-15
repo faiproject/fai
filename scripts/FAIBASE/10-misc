@@ -5,13 +5,6 @@
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
-# a list of modules which are loaded at boot time
-for module in $MODULESLIST; do
-    ainsl -a $target/etc/modules "^$module$"
-done
-
-fcopy /etc/hostname || echo $HOSTNAME     > $target/etc/hostname
-echo $TIMEZONE    > $target/etc/timezone
 ln -fs /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
 
 if [ -n "$IPADDR" ]; then
