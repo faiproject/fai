@@ -362,19 +362,19 @@ sub convert_unit
       return $val * $totalmem;
   }
 
-  ## don't warn for now, G/GiB/GB are all treated the same way
-  ## ($val =~ /([kKMGTP])\s*$/) and
-  ##   warn "Using $1 as size modifier is deprecated, please use $1iB or $1B
-  ##   instead; in future releases these will be treated as different modifiers\n";
-
   # % is returned as is
   if ($val =~ /^(\d+(\.\d+)?)%\s*$/) { 1; }
   elsif ($val =~ /^(\d+(\.\d+)?)B\s*$/) { $val = $1 * (1 / 1024) * (1 / 1024); }
-  elsif ($val =~ /^(\d+(\.\d+)?)[kK](i)?(B)?\s*$/) { $val = $1 * (1 / 1024); }
-  elsif ($val =~ /^(\d+(\.\d+)?)M(i)?(B)?\s*$/) { $val = $1; }
-  elsif ($val =~ /^(\d+(\.\d+)?)G(i)?(B)?\s*$/) { $val = $1 * 1024; }
-  elsif ($val =~ /^(\d+(\.\d+)?)T(i)?(B)?\s*$/) { $val = $1 * (1024 * 1024); }
-  elsif ($val =~ /^(\d+(\.\d+)?)P(i)?(B)?\s*$/) { $val = $1 * (1024 * 1024 * 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)[kK](iB)?\s*$/) { $val = $1 * (1 / 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)[kK]B\s*$/) { $val = $1 * (1000 / 1024) * (1 / 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)M(iB)?\s*$/) { $val = $1; }
+  elsif ($val =~ /^(\d+(\.\d+)?)MB\s*$/) { $val = $1 * (1000 / 1024) * (1000 / 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)G(iB)?\s*$/) { $val = $1 * 1024; }
+  elsif ($val =~ /^(\d+(\.\d+)?)GB\s*$/) { $val = $1 * 1000 * (1000 / 1024) * (1000 / 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)T(iB)?\s*$/) { $val = $1 * (1024 * 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)TB\s*$/) { $val = $1 * 1000 * 1000 * (1000 / 1024) * (1000 / 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)P(iB)?\s*$/) { $val = $1 * (1024 * 1024 * 1024); }
+  elsif ($val =~ /^(\d+(\.\d+)?)PB\s*$/) { $val = $1 * 1000 * 1000 * 1000 * (1000 / 1024) * (1000 / 1024); }
   else { &FAI::internal_error("convert_unit $val"); }
 
   return $val;
