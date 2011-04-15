@@ -7,19 +7,17 @@ Index: trunk/bin/make-fai-nfsroot
 ===================================================================
 --- trunk.orig/bin/make-fai-nfsroot
 +++ trunk/bin/make-fai-nfsroot
-@@ -383,6 +383,17 @@
+@@ -383,6 +383,15 @@
      mount -t proc   /proc  $NFSROOT/proc
      mount -t sysfs  /sys   $NFSROOT/sys
      mount -t devpts devpts $NFSROOT/dev/pts
 +
 +    # add any 3rd party repository keys that you may need installed into the NFSROOT
 +    if [ -d $cfdir/apt/keys-added ]; then
-+	    mkdir $NFSROOT/etc/apt/keys-added
-+	    echo 'These *.asc files are 3rd party repository keys that have been added by make-fai-nfsroot' >> $NFSROOT/README.txt
++      echo 'These *.asc files are 3rd party repository keys that have been added by make-fai-nfsroot' >> $NFSROOT/etc/apt/keys-added/README
 +    fi
-+    for f in `find -type f -name *.asc $cfdir/apt/keys-added`; do
-+	    cp -Lp $v $f $NFSROOT/$f
-+	    cat $f | $ROOTCMD apt-key add -
++    for f in `find $cfdir/apt/keys-added -type f -name *.asc`; do
++      cat $f | $ROOTCMD apt-key add -
 +    done
 +
      $ROOTCMD apt-get update
