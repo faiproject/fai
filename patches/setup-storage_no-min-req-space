@@ -1,50 +1,7 @@
 2011-03-10  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage/{Parser,Sizes,Fstab,Volumes}.pm: Don't keep redundant number
-		field in config data structure.
 	* setup-storage/Sizes.pm: Removed redundant min_req_total_space tracking
 		variable.
-Index: trunk/lib/setup-storage/Fstab.pm
-===================================================================
---- trunk.orig/lib/setup-storage/Fstab.pm
-+++ trunk/lib/setup-storage/Fstab.pm
-@@ -228,8 +228,8 @@
-         # skip extended partitions and entries without a mountpoint
-         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
- 
--        my $device_name = 0 == $p_ref->{number} ? $device :
--          &FAI::make_device_name($device, $p_ref->{number});
-+        my $device_name = 0 == $p ? $device :
-+          &FAI::make_device_name($device, $p);
- 
-         # if the mount point the /boot mount point, variables must be set
-         if ($p_ref->{mountpoint} eq $boot_mnt_point) {
-Index: trunk/lib/setup-storage/Parser.pm
-===================================================================
---- trunk.orig/lib/setup-storage/Parser.pm
-+++ trunk/lib/setup-storage/Parser.pm
-@@ -275,10 +275,6 @@
-           size => {}
-         };
- 
--      # as we can't compute the index from the reference, we need to store the
--      # $part_number explicitly
--      (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{number} = $extended;
--
-       my $part_size =
-         (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{size};
- 
-@@ -313,10 +309,6 @@
-     (\%FAI::configs)->{$FAI::device}->{partitions}->{$part_number};
-   $FAI::partition_pointer_dev_name = &FAI::make_device_name($disk, $part_number);
- 
--  # as we can't compute the index from the reference, we need to store the
--  # $part_number explicitly
--  $FAI::partition_pointer->{number} = $part_number;
--
-   # the partition is not an extended one
-   $FAI::partition_pointer->{size}->{extended} = 0;
- 
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
@@ -247,20 +204,3 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
      # make sure, extended partitions are only created on msdos disklabels
      ($FAI::configs{$config}{disklabel} ne "msdos" && $extended > -1)
-Index: trunk/lib/setup-storage/Volumes.pm
-===================================================================
---- trunk.orig/lib/setup-storage/Volumes.pm
-+++ trunk/lib/setup-storage/Volumes.pm
-@@ -578,10 +578,10 @@
-           defined ($FAI::current_config{$1}) or die
-             "Can't preserve partition on $1 because $1 does not exist\n";
-           defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
--            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
-+            "Can't preserve ". &FAI::make_device_name($1, $part_id)
-               . " because it does not exist\n";
-           defined ($part->{size}->{range}) or die
--            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
-+            "Can't preserve ". &FAI::make_device_name($1, $part_id)
-               . " because it is not defined in the current config\n";
-         }
-       }

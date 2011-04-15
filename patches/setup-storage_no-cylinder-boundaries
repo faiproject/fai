@@ -16,6 +16,9 @@
 	* setup-storage/Sizes.pm: Take alignment into account for partition size
 		computation (thanks Frank Doepper for bringing up this problem). Size of
 		extended (partition) boot record is 2 sectors.
+	* setup-storage/Sizes.pm: Do not rely on bios_sectors_per_track information
+		for computing the start location of first partition, always use 63 sectors
+		gap. Thanks Mathieu Alorent for extensive testing.
 Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
@@ -217,7 +220,26 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # at various points the following code highly depends on the desired disk label!
      # initialise variables
      # the id of the extended partition to be created, if required
-@@ -663,13 +660,12 @@
+@@ -643,15 +640,11 @@
+     my $next_start = 0;
+ 
+     if ($FAI::configs{$config}{disklabel} eq "msdos") {
+-      # on msdos disk labels, the first partitions starts at head #1
+-      $next_start = $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{sector_size};
++      # on msdos disk labels, the first partitions starts at head #1; well,
++      # enforce a 63-sectors-per-track layout
++      $next_start = 63 * $current_disk->{sector_size};
+       $min_req_total_space += $next_start;
+ 
+-      # the MBR requires space, too
+-      $min_req_total_space += $current_disk->{bios_sectors_per_track} *
+-        $current_disk->{sector_size};
+-
+     } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
+       # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
+       $next_start = 34 * $current_disk->{sector_size};
+@@ -663,13 +656,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
@@ -236,7 +258,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
-@@ -761,7 +757,7 @@
+@@ -761,7 +753,7 @@
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
@@ -249,7 +271,7 @@ Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
 +++ trunk/lib/setup-storage/Parser.pm
-@@ -581,6 +581,10 @@
+@@ -573,6 +573,10 @@
              }
            }
          }
@@ -260,7 +282,7 @@ Index: trunk/lib/setup-storage/Parser.pm
  
  
      option: /^preserve_always:((\d+(,\d+)*)|all)/
-@@ -865,7 +869,7 @@
+@@ -857,7 +861,7 @@
            1;
          }
  
@@ -269,7 +291,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
            # complete the size specification to be a range in all cases
            my $range = $1;
-@@ -896,7 +900,7 @@
+@@ -888,7 +892,7 @@
              $FAI::configs{$FAI::device}{preserveparts} = 1;
            }
          }
@@ -278,7 +300,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
            # complete the range by assuming 0 as the lower limit 
            my $range = "0$1";
-@@ -917,7 +921,7 @@
+@@ -909,7 +913,7 @@
          }
          | <error: invalid partition size near "$text">
  
