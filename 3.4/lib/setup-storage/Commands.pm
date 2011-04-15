@@ -275,6 +275,19 @@ sub build_cryptsetup_commands {
 ################################################################################
 sub build_raid_commands {
 
+  # check RAID arrays if there are pre-existing ones
+  &FAI::push_command("mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
+    "", "mdadm_startall_examined") if (scalar(keys %FAI::current_raid_config));
+  foreach my $id (keys %FAI::current_raid_config) {
+    my $md = "/dev/md$id";
+    my $pre_deps_cl = "mdadm_startall_examined";
+    $pre_deps_cl .= ",self_cleared_" .
+      join(",self_cleared_", @{ $FAI::current_dev_children{$md} })
+      if (defined($FAI::current_dev_children{$md}) &&
+        scalar(@{ $FAI::current_dev_children{$md} }));
+    &FAI::push_command( "mdadm -W --stop $md", "$pre_deps_cl", "self_cleared_$md");
+  }
+
   foreach my $config (keys %FAI::configs) { # loop through all configs
     # no encrypted, tmpfs, LVM or physical devices here
     next if ($config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
@@ -331,7 +344,7 @@ sub build_raid_commands {
 	$pre_req =~ s/^,//;
         # Assemble the array
         &FAI::push_command(
-	    "mdadm --assemble /dev/md$id " . join(" ", @eff_devs),
+	    "mdadm --assemble /dev/md$id " . join(" ", grep(!/^missing$/, @eff_devs)),
 	    "$pre_req", "exist_/dev/md$id");
 
         # create the filesystem on the volume, if requested
@@ -396,14 +409,14 @@ sub create_volume_group {
     # create all the devices
     foreach my $d (keys %{ $FAI::configs{$config}{devices} }) {
       $d = &FAI::enc_name($d);
-      my $pre = ",exist_$d";
+      my $pre = "exist_$d";
       my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
-      $pre = ",pt_complete_$disk"
+      $pre .= ",pt_complete_$disk"
         if (&FAI::set_partition_type_on_phys_dev($d, "lvm") &&
           defined($FAI::configs{"PHY_$disk"}));
 
       &FAI::push_command( "pvcreate -ff -y $pv_create_options $d",
-        "all_pv_sigs_removed$pre", "pv_done_$d");
+        "$pre", "pv_done_$d");
       $devs .= " $d";
       $pre_dev .= ",pv_done_$d";
     }
@@ -448,14 +461,14 @@ sub create_volume_group {
 
   # create all the devices
   foreach my $dev (@new_devices) {
-    my $pre = ",exist_$dev";
+    my $pre = "exist_$dev";
     my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
-    $pre = ",pt_complete_$disk"
+    $pre .= ",pt_complete_$disk"
       if (&FAI::set_partition_type_on_phys_dev($dev, "lvm") &&
         defined($FAI::configs{"PHY_$disk"}));
 
     &FAI::push_command( "pvcreate -ff -y $pv_create_options $dev",
-      "all_pv_sigs_removed$pre", "pv_done_$dev");
+      "$pre", "pv_done_$dev");
     $pre_dev .= ",pv_done_$dev";
   }
   $pre_dev =~ s/^,//;
@@ -466,7 +479,7 @@ sub create_volume_group {
     &FAI::push_command( "vgextend $vg " . join (" ", @new_devices), "$pre_dev",
       "vg_extended_$vg" );
   } else {
-    &FAI::push_command( "true", "all_pv_sigs_removed,$pre_dev", "vg_extended_$vg" );
+    &FAI::push_command( "true", "self_cleared_VG_$vg,$pre_dev", "vg_extended_$vg" );
   }
 
   # run vgreduce to get them removed
@@ -592,11 +605,13 @@ sub cleanup_vg {
         next;
     } elsif ($dev =~ m{^/dev/md[\/]?(\d+)$}) {
       my $vol = $1;
+      defined ($FAI::configs{RAID}) or next;
       defined ($FAI::configs{RAID}{volumes}{$vol}) or next;
       next if (1 == $FAI::configs{RAID}{volumes}{$vol}{preserve});
     } elsif ($dev =~ m{^/dev/([^/\s]+)/([^/\s]+)$}) {
       my $ivg = $1;
       my $lv = $2;
+      defined($FAI::configs{"VG_$ivg"}) or next;
       defined($FAI::configs{"VG_$ivg"}{volumes}{$lv}) or next;
       next if (1 == $FAI::configs{"VG_$ivg"}{volumes}{$lv}{size}{preserve});
     } else {
@@ -608,26 +623,35 @@ sub cleanup_vg {
   }
 
   if (0 == $clear_vg) {
-    my $vg_setup_pre = "vgchange_a_n";
-    if (defined($FAI::configs{"VG_$vg"}{volumes})) {
+    my $vg_setup_pre = "vgchange_a_n_VG_$vg";
+    if (defined($FAI::configs{"VG_$vg"})) {
       $FAI::configs{"VG_$vg"}{exists} = 1;
 
       # remove all volumes that do not exist anymore or need not be preserved
       foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
+        my $pre_deps_cl = "";
+        $pre_deps_cl = ",self_cleared_" .
+          join(",self_cleared_", @{ $FAI::current_dev_children{"/dev/$vg/$lv"} })
+            if (defined($FAI::current_dev_children{"/dev/$vg/$lv"}) &&
+              scalar(@{ $FAI::current_dev_children{"/dev/$vg/$lv"} }));
         # skip preserved/resized volumes
         if (defined ( $FAI::configs{"VG_$vg"}{volumes}{$lv})) {
           if ($FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} == 1 ||
             $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{resize} == 1) {
-            &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$lv");
+            &FAI::push_command("true", "vgchange_a_n_VG_$vg$pre_deps_cl",
+              "exist_/dev/$vg/$lv,self_cleared_/dev/$vg/$lv");
             next;
           }
         }
 
-        &FAI::push_command( "lvremove -f $vg/$lv", "vgchange_a_n", "lv_rm_$vg/$lv");
+        &FAI::push_command( "lvremove -f $vg/$lv",
+          "vgchange_a_n_VG_$vg$pre_deps_cl",
+          "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv");
         $vg_setup_pre .= ",lv_rm_$vg/$lv";
       }
     } else {
-      &FAI::push_command("true", "vgchange_a_n", "exist_/dev/$vg/$_") foreach
+      &FAI::push_command("true", "vgchange_a_n_VG_$vg",
+        "exist_/dev/$vg/$_,self_cleared_/dev/$vg/$_") foreach
         (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
     }
     &FAI::push_command("true", $vg_setup_pre, "vg_exists_$vg");
@@ -635,9 +659,16 @@ sub cleanup_vg {
     return 0;
   }
 
-  my $vg_destroy_pre = "vgchange_a_n";
+  my $vg_destroy_pre = "vgchange_a_n_VG_$vg";
   foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
-    &FAI::push_command( "lvremove -f $vg/$lv", "vgchange_a_n", "lv_rm_$vg/$lv");
+    my $pre_deps_cl = "";
+    $pre_deps_cl = ",self_cleared_" .
+      join(",self_cleared_", @{ $FAI::current_dev_children{"/dev/$vg/$lv"} })
+        if (defined($FAI::current_dev_children{"/dev/$vg/$lv"}) &&
+          scalar(@{ $FAI::current_dev_children{"/dev/$vg/$lv"} }));
+    &FAI::push_command( "lvremove -f $vg/$lv",
+      "vgchange_a_n_VG_$vg$pre_deps_cl",
+      "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv");
     $vg_destroy_pre .= ",lv_rm_$vg/$lv";
   }
   &FAI::push_command( "vgremove $vg", "$vg_destroy_pre", "vg_removed_$vg");
@@ -647,7 +678,7 @@ sub cleanup_vg {
   $devices .= " " . &FAI::enc_name($_) foreach
     (@{ $FAI::current_lvm_config{$vg}{physical_volumes} });
   $FAI::debug and print "Erased devices:$devices\n";
-  &FAI::push_command( "pvremove $devices", "", "pv_sigs_removed_$vg" );
+  &FAI::push_command( "pvremove $devices", "vg_removed_$vg", "pv_sigs_removed_$vg" );
   return 1;
 }
 
@@ -661,14 +692,26 @@ sub cleanup_vg {
 sub build_lvm_commands {
 
   # disable volumes if there are pre-existing ones
-  &FAI::push_command("vgchange -a n", "", "vgchange_a_n");
-  my $all_vg_pre = "vgchange_a_n";
-  if (scalar(keys %FAI::current_lvm_config)) {
-    foreach my $vg (keys %FAI::current_lvm_config) {
-      $all_vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
+  foreach my $d (keys %FAI::current_dev_children) {
+    next unless ($d =~ /^VG_(.+)$/);
+    my $vg = $1;
+    my $vg_pre = "vgchange_a_n_VG_$vg";
+    my $pre_deps_vgc = "";
+    foreach my $c (@{ $FAI::current_dev_children{$d} }) {
+      $pre_deps_vgc = ",self_cleared_" .
+        join(",self_cleared_", @{ $FAI::current_dev_children{$c} })
+        if (defined($FAI::current_dev_children{$c}) &&
+          scalar(@{ $FAI::current_dev_children{$c} }));
     }
+    $pre_deps_vgc =~ s/^,//;
+    &FAI::push_command("vgchange -a n $1", "$pre_deps_vgc", $vg_pre);
+    $vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
+    my $pre_deps_cl = "";
+    $pre_deps_cl = ",self_cleared_" .
+      join(",self_cleared_", @{ $FAI::current_dev_children{$d} })
+      if (scalar(@{ $FAI::current_dev_children{$d} }));
+    &FAI::push_command("true", "$vg_pre$pre_deps_cl", "self_cleared_VG_$vg");
   }
-  &FAI::push_command("true", "$all_vg_pre", "all_pv_sigs_removed");
 
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
@@ -898,8 +941,15 @@ sub setup_partitions {
     or die "Can't change disklabel, partitions are to be preserved\n";
 
   # write the disklabel to drop the previous partition table
+  my $pre_deps = "";
+  foreach my $c (@{ $FAI::current_dev_children{$disk} }) {
+    $pre_deps .= ",self_cleared_" .
+    join(",self_cleared_", @{ $FAI::current_dev_children{$c} })
+    if (defined($FAI::current_dev_children{$c}) &&
+      scalar(@{ $FAI::current_dev_children{$c} }));
+  }
   &FAI::push_command( ($needs_resize ? "parted -s $disk mklabel $label" : "true"),
-    "exist_$disk,all_pv_sigs_removed", "cleared1_$disk" );
+    "exist_$disk$pre_deps", "cleared1_$disk" );
 
   &FAI::rebuild_preserved_partitions($config, \@to_preserve) if ($needs_resize);
 

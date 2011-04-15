@@ -177,6 +177,15 @@ $FAI::error_codes = [
     exit_codes   => [0..255],
   },
   {
+    error        => "mdadm_assemble",
+    message      => "mdadm tried to assemble arrays but failed, ignoring as arrays might be running already\n",
+    stderr_regex => '^$',
+    stdout_regex => '^$',
+    program      => "mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
+    response     => "warn",
+    exit_codes   => [2],
+  },
+  {
     error        => "catch_all_nonzero_exit_code",
     message      => "Command had non-zero exit code\n",
     stderr_regex => "",

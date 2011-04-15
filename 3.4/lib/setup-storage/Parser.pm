@@ -138,6 +138,11 @@ sub init_disk_config {
     preserveparts => 0,
     partitions => {}
   };
+
+  # Init device tree object
+  $FAI::dev_children{$disk} = ();
+
+  return 1;
 }
 
 ################################################################################
@@ -159,9 +164,12 @@ sub init_part_config {
 
   # check that a physical device is being configured; logical partitions are
   # only supported on msdos disk labels.
-  ($FAI::device =~ /^PHY_/ && ($type ne "logical"
+  ($FAI::device =~ /^PHY_(.+)$/ && ($type ne "logical"
       || $FAI::configs{$FAI::device}{disklabel} eq "msdos")) or 
     die "Syntax error: invalid partition type";
+
+  # the disk
+  my $disk = $1;
 
   # the index of the new partition
   my $part_number = 0;
@@ -266,6 +274,9 @@ sub init_part_config {
 
       # add the resize = 0 flag, if it doesn't exist already
       defined ($part_size->{resize}) or $part_size->{resize} = 0;
+
+      # add entry to device tree
+      push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $extended);
     }
   }
 
@@ -279,6 +290,7 @@ sub init_part_config {
   # the reference is used by all further processing of this config line
   $FAI::partition_pointer =
     (\%FAI::configs)->{$FAI::device}->{partitions}->{$part_number};
+  $FAI::partition_pointer_dev_name = &FAI::make_device_name($disk, $part_number);
 
   # as we can't compute the index from the reference, we need to store the
   # $part_number explicitly
@@ -298,6 +310,9 @@ sub init_part_config {
   # add the resize = 0 flag, if it doesn't exist already
   defined ($FAI::partition_pointer->{size}->{resize})
     or $FAI::partition_pointer->{size}->{resize} = 0;
+
+  # add entry to device tree
+  push @{ $FAI::dev_children{$disk} }, $FAI::partition_pointer_dev_name;
 }
 
 ################################################################################
@@ -566,6 +581,18 @@ $FAI::Parser = Parse::RecDescent->new(
 	  use Storable qw(dclone);
 
 	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
+    # add entries to device tree
+    defined($FAI::dev_children{$ref_dev}) or
+      &FAI::internal_error("dev_children missing reference entry");
+    ($FAI::device =~ /^PHY_(.+)$/) or
+      &FAI::internal_error("unexpected device name");
+    my $disk = $1;
+    foreach my $p (@{ $FAI::dev_children{$ref_dev} }) {
+      my ($i_p_d, $rd, $pd) = &FAI::phys_dev($p);
+      (1 == $i_p_d) or next;
+      ($rd eq $ref_dev) or &FAI::internal_error("dev_children is inconsistent");
+      push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $pd);
+    }
 	}
 	| /^sameas:(\S+)/
 	{
@@ -575,6 +602,18 @@ $FAI::Parser = Parse::RecDescent->new(
 	  use Storable qw(dclone);
 
 	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
+    # add entries to device tree
+    defined($FAI::dev_children{$ref_dev}) or
+      &FAI::internal_error("dev_children missing reference entry");
+    ($FAI::device =~ /^PHY_(.+)$/) or
+      &FAI::internal_error("unexpected device name");
+    my $disk = $1;
+    foreach my $p (@{ $FAI::dev_children{$ref_dev} }) {
+      my ($i_p_d, $rd, $pd) = &FAI::phys_dev($p);
+      (1 == $i_p_d) or next;
+      ($rd eq $ref_dev) or &FAI::internal_error("dev_children is inconsistent");
+      push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $pd);
+    }
 	}
         | /^always_format:(\d+(,\d+)*)/
         {
@@ -608,6 +647,7 @@ $FAI::Parser = Parse::RecDescent->new(
           # set the reference to the current volume
           # the reference is used by all further processing of this config line
           $FAI::partition_pointer = (\%FAI::configs)->{RAID}->{volumes}->{$vol_id};
+          $FAI::partition_pointer_dev_name = "/dev/md$vol_id";
         }
         mountpoint devices filesystem mount_options mdcreateopts
         | /^(luks|tmp|swap)\s+/
@@ -628,6 +668,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{CRYPT}{volumes}{$vol_id}{preserve} = 0;
 
           $FAI::partition_pointer = (\%FAI::configs)->{CRYPT}->{volumes}->{$vol_id};
+          $FAI::partition_pointer_dev_name = "CRYPT$vol_id";
         }
         mountpoint devices filesystem mount_options lv_or_fsopts
         | /^tmpfs\s+/
@@ -648,6 +689,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{TMPFS}{volumes}{$vol_id}{preserve} = 0;
 
           $FAI::partition_pointer = (\%FAI::configs)->{TMPFS}->{volumes}->{$vol_id};
+          $FAI::partition_pointer_dev_name = "TMPFS$vol_id";
         }
         mountpoint tmpfs_size mount_options
         | type mountpoint size filesystem mount_options lv_or_fsopts
@@ -686,6 +728,9 @@ $FAI::Parser = Parse::RecDescent->new(
           # set the reference to the current volume
           # the reference is used by all further processing of this config line
           $FAI::partition_pointer = (\%FAI::configs)->{$FAI::device}->{volumes}->{$2};
+          $FAI::partition_pointer_dev_name = "/dev/$1/$2";
+          # add entry to device tree
+          push @{ $FAI::dev_children{$FAI::device} }, $FAI::partition_pointer_dev_name;
         }
 
     mountpoint: m{^(-|swap|/[^\s\:]*)(:encrypt(:randinit)?)?}
@@ -719,6 +764,8 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{$FAI::device}{volumes} = {};
           # initialise the list of physical devices
           $FAI::configs{$FAI::device}{devices} = ();
+          # init device tree
+          $FAI::dev_children{$FAI::device} = ();
           # the rule must not return undef
           1;
         }
@@ -848,15 +895,21 @@ $FAI::Parser = Parse::RecDescent->new(
                 "spare" => $spare,
                 "missing" => $missing
               };
+              # add entry to device tree
+              push @{ $FAI::dev_children{$dev} }, $FAI::partition_pointer_dev_name;
             } elsif ($FAI::device eq "CRYPT") {
               die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
               $FAI::partition_pointer->{device} = $candidates[0];
               &FAI::mark_encrypted($candidates[0]);
+              # add entry to device tree
+              push @{ $FAI::dev_children{$candidates[0]} }, $FAI::partition_pointer_dev_name;
             } else {
               die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
               $dev = $candidates[0];
               # create an empty hash for each device
               $FAI::configs{$FAI::device}{devices}{$dev} = {};
+              # add entry to device tree
+              push @{ $FAI::dev_children{$dev} }, $FAI::device;
             }
           }
           1;
@@ -988,6 +1041,8 @@ sub check_config {
         next if ($this_mp eq "-");
         defined($all_mount_pts{$this_mp}) and die
           "Mount point $this_mp used twice\n";
+        defined($FAI::dev_children{&FAI::make_device_name($1, $p)}) and die
+          "Mount point $this_mp is shadowed by stacked devices\n";
         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
       }
     } elsif ($config =~ /^VG_(.+)$/) {
@@ -997,6 +1052,8 @@ sub check_config {
         next if ($this_mp eq "-");
         defined($all_mount_pts{$this_mp}) and die
           "Mount point $this_mp used twice\n";
+        defined($FAI::dev_children{"/dev/$1/$p"}) and die
+          "Mount point $this_mp is shadowed by stacked devices\n";
         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
       }
       next;
@@ -1008,6 +1065,8 @@ sub check_config {
         next if ($this_mp eq "-");
         defined($all_mount_pts{$this_mp}) and die
           "Mount point $this_mp used twice\n";
+        defined($FAI::dev_children{"/dev/md$p"}) and die
+          "Mount point $this_mp is shadowed by stacked devices\n";
         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
       }
     } elsif ($config eq "CRYPT") {
