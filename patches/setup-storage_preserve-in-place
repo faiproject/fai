@@ -1,0 +1,92 @@
+2011-04-15  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: Permit :preserve_* after size specification to
+		specify preserving a partition in place.
+	* setup-storage.8: Update grammar.
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm
+@@ -861,7 +861,7 @@
+           1;
+         }
+ 
+-    size: /^((RAM:\d+%|\d+[kKMGTP%iB]*)(-(RAM:\d+%|\d+[kKMGTP%iB]*)?)?)(:resize)?/
++    size: /^((RAM:\d+%|\d+[kKMGTP%iB]*)(-(RAM:\d+%|\d+[kKMGTP%iB]*)?)?)(:resize|:preserve_(always|reinstall|lazy))?/
+         {
+           # complete the size specification to be a range in all cases
+           my $range = $1;
+@@ -886,13 +886,20 @@
+           $range = "$min-$max";
+           # enter the range into the hash
+           $FAI::partition_pointer->{size}->{range} = $range;
+-          # set the resize flag, if required
++          # set the resize or preserve flag, if required
+           if (defined ($5)) {
+-            $FAI::partition_pointer->{size}->{resize} = 1;
+             $FAI::configs{$FAI::device}{preserveparts} = 1;
++            $FAI::partition_pointer->{size}->{resize} = 1 if ($5 =~ /^:resize/);
++            $FAI::partition_pointer->{size}->{preserve} = 1 if ($5 =~ /^:preserve_always/);
++            $FAI::partition_pointer->{size}->{preserve} = 1
++              if ($FAI::reinstall && $5 =~ /^:preserve_reinstall/);
++            if ($5 =~ /^:preserve_lazy/) {
++              $FAI::configs{$FAI::device}{preserveparts} = 2;
++              $FAI::partition_pointer->{size}->{preserve} = 2;
++            }
+           }
+         }
+-        | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize)?\s+/
++        | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize|:preserve_(always|reinstall|lazy))?\s+/
+         {
+           # complete the range by assuming 0 as the lower limit 
+           my $range = "0$1";
+@@ -905,10 +912,17 @@
+           $range = "$min-$max";
+           # enter the range into the hash
+           $FAI::partition_pointer->{size}->{range} = $range;
+-          # set the resize flag, if required
++          # set the resize or preserve flag, if required
+           if (defined ($3)) {
+-            $FAI::partition_pointer->{size}->{resize} = 1;
+             $FAI::configs{$FAI::device}{preserveparts} = 1;
++            $FAI::partition_pointer->{size}->{resize} = 1 if ($3 =~ /^:resize/);
++            $FAI::partition_pointer->{size}->{preserve} = 1 if ($3 =~ /^:preserve_always/);
++            $FAI::partition_pointer->{size}->{preserve} = 1
++              if ($FAI::reinstall && $3 =~ /^:preserve_reinstall/);
++            if ($3 =~ /^:preserve_lazy/) {
++              $FAI::configs{$FAI::device}{preserveparts} = 2;
++              $FAI::partition_pointer->{size}->{preserve} = 2;
++            }
+           }
+         }
+         | <error: invalid partition size near "$text">
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8
+@@ -596,13 +596,13 @@
+           * multiplier */
+ 
+ 
+-size ::= <sizespec>(-(<sizespec>)?)?(:resize)?
++size ::= <sizespec>(-(<sizespec>)?)?(:resize|:preserve_(always|reinstall|lazy))?
+ .br
+          /* size, possibly given as a range; physical partitions or lvm logical
+ .br
+           * volumes only */
+ .br
+-         | -<sizespec>(:resize)?
++         | -<sizespec>(:resize|:preserve_(always|reinstall|lazy))?
+ .br
+          /* size given as upper limit; physical partitions or lvm logical
+ .br
+@@ -663,7 +663,8 @@
+ and bootable.  preserve_always is equivalent to the previous preserveX option,
+ whereas preserve_reinstall preserves the partition unless "initial" is given as
+ one of the FAI_FLAGS. preserve_lazy allows to preserve partitions only if these
+-exist already. Otherwise they are created.
++exist already. Otherwise they are created. Yet, all preserve_* options may also
++be given with the size specification, as in: 200M:preserve_lazy.
+ .IP \(bu
+ The "always_format" option overrides preserving filesystems (via one of the
+ "preserveX" options), like the "format" option in setup_harddisks.
