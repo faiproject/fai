@@ -578,10 +578,10 @@ sub propagate_and_check_preserve {
           defined ($FAI::current_config{$1}) or die
             "Can't preserve partition on $1 because $1 does not exist\n";
           defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
-            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+            "Can't preserve ". &FAI::make_device_name($1, $part_id)
               . " because it does not exist\n";
           defined ($part->{size}->{range}) or die
-            "Can't preserve ". &FAI::make_device_name($1, $part->{number})
+            "Can't preserve ". &FAI::make_device_name($1, $part_id)
               . " because it is not defined in the current config\n";
         }
       }

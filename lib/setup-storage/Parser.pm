@@ -275,10 +275,6 @@ sub init_part_config {
           size => {}
         };
 
-      # as we can't compute the index from the reference, we need to store the
-      # $part_number explicitly
-      (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{number} = $extended;
-
       my $part_size =
         (\%FAI::configs)->{$FAI::device}->{partitions}->{$extended}->{size};
 
@@ -312,10 +308,6 @@ sub init_part_config {
   $FAI::partition_pointer =
     (\%FAI::configs)->{$FAI::device}->{partitions}->{$part_number};
   $FAI::partition_pointer_dev_name = &FAI::make_device_name($disk, $part_number);
-
-  # as we can't compute the index from the reference, we need to store the
-  # $part_number explicitly
-  $FAI::partition_pointer->{number} = $part_number;
 
   # the partition is not an extended one
   $FAI::partition_pointer->{size}->{extended} = 0;
