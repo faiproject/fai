@@ -1,5 +1,6 @@
 #! /usr/bin/perl
 # copyright Thomas Lange 2001-2010, lange@debian.org
+# copyright Michael Goetze 2011, mgoetze@mgoetze.net
 # map "normal" device notation to grub notation
 
 # TODO: read from stdin if no parameter given
@@ -12,10 +13,13 @@ my $grubdevice;
 my %map;
 
 my $device=shift;
-my $devicemap="$ENV{target}/boot/grub/device.map";
+my $devicemap = `mktemp`;
+chomp $devicemap;
 my $devbyid = "/dev/disk/by-id";
 
-open (DEVICEMAP,"<$devicemap") || die "Can't open $devicemap\n";
+system("/usr/sbin/grub-mkdevicemap", "-m", "$devicemap") == 0 or die "Could not run grub-mkdevicemap\n";
+
+open (DEVICEMAP,"<$devicemap") || die "Can't open device map $devicemap\n";
 while (<DEVICEMAP>) {
   my ($grubdevice,$olddevice) = split;
   $map{$olddevice} = $grubdevice;
@@ -51,4 +55,5 @@ if ($partition) {
 }
 
 print "$grubdevice\n";
+unlink("$devicemap");
 exit 0;
