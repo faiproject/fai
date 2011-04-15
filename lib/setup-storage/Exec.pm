@@ -182,7 +182,7 @@ $FAI::error_codes = [
     message      => "mdadm tried to assemble arrays but failed, ignoring as arrays might be running already\n",
     stderr_regex => '^$',
     stdout_regex => '^$',
-    program      => "mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
+    program      => "mdadm --assemble --scan --config=$ENV{LOGDIR}/mdadm-from-examine.conf",
     response     => "warn",
     exit_codes   => [2],
   },
