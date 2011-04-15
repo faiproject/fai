@@ -573,6 +573,10 @@ $FAI::Parser = Parse::RecDescent->new(
             }
           }
         }
+        | /^align-at:(\d+[kKMGTPiB]*)/
+        {
+          $FAI::configs{$FAI::device}{align_at} = &FAI::convert_unit($1) * 1024.0 * 1024.0;
+        }
 
 
     option: /^preserve_always:((\d+(,\d+)*)|all)/
