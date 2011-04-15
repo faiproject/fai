@@ -522,6 +522,10 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{"VG_$1"}{volumes}{$2}{size}{always_format} = 1;
           }
         }
+        | /^align-at:(\d+[kKMGTPiB]*)/
+        {
+          $FAI::configs{$FAI::device}{align_at} = &FAI::convert_unit($1) * 1024.0 * 1024.0;
+        }
 
 
     option: /^preserve_always:(\d+(,\d+)*)/
