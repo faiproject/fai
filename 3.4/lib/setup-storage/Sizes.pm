@@ -675,13 +675,20 @@ sub compute_partition_sizes
       $min_req_total_space += 33 * $current_disk->{sector_size};
 
       # on gpt-bios we'll need an additional partition to store what doesn't fit
-      # in the MBR
+      # in the MBR; this partition must be at the beginning, but it should be
+      # created at the very end such as not to invalidate indices of other
+      # partitions
       $FAI::device = $config;
       &FAI::init_part_config("primary");
       $FAI::configs{$config}{gpt_bios_part} = $FAI::partition_pointer->{number};
-      my $s = &FAI::convert_unit("120KiB");
+      my ($s, $e) = &FAI::make_range("1-1", $current_disk->{size} . "B");
       # enter the range into the hash
       $FAI::partition_pointer->{size}->{range} = "$s-$s";
+      # retain the free space at the beginning and fix the position
+      $FAI::partition_pointer->{start_byte} = $next_start;
+      $FAI::partition_pointer->{end_byte} = $next_start + $s - 1;
+      $next_start += $s;
+      $min_req_total_space += $s;
       # set proper defaults
       $FAI::partition_pointer->{encrypt} = 0;
       $FAI::partition_pointer->{filesystem} = "-";
@@ -729,6 +736,11 @@ sub compute_partition_sizes
         # determine the size of the extended partition
         &FAI::do_partition_extended($part_id, $config, $current_disk);
 
+        # partition done
+        shift @worklist;
+      # the gpt-bios special partition is set up already
+      } elsif (defined($FAI::configs{$config}{gpt_bios_part}) &&
+        $FAI::configs{$config}{gpt_bios_part} == $part_id) {
         # partition done
         shift @worklist;
       # the partition $part_id must be preserved
