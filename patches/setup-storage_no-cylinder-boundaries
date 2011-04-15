@@ -20,7 +20,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Sizes.pm
 +++ trunk/lib/setup-storage/Sizes.pm
-@@ -353,9 +353,8 @@
+@@ -354,9 +354,8 @@
            $current_disk->{bios_heads})) or 
        warn "Preserved partition $part_dev_name does not end at a cylinder boundary, parted may fail to restore the partition!\n";
  
@@ -32,7 +32,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
      # make sure we don't change extended partitions to ordinary ones and
      # vice-versa
-@@ -401,9 +400,6 @@
+@@ -402,9 +401,6 @@
    ($part_id <= 4) or
      &FAI::internal_error("Extended partition wouldn't be a primary one");
  
@@ -42,7 +42,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # initialise the size and the start byte
    $part->{size}->{eff_size} = 0;
    $part->{start_byte} = -1;
-@@ -412,10 +408,11 @@
+@@ -413,10 +409,11 @@
      next if ($p < 5);
  
      $part->{start_byte} = $FAI::configs{$config}{partitions}{$p}{start_byte} -
@@ -57,7 +57,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
      $part->{end_byte} = $FAI::configs{$config}{partitions}{$p}{end_byte};
    }
-@@ -430,8 +427,9 @@
+@@ -431,8 +428,9 @@
  #
  # @param $part_id Partition id within $config
  # @param $config Disk config
@@ -68,7 +68,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  # @param $min_req_total_space Minimum space required on disk
  # @param $max_avail The maximum size of a partition on this disk
  # @param $worklist Reference to the remaining partitions
-@@ -441,7 +439,7 @@
+@@ -442,7 +440,7 @@
  ################################################################################
  sub do_partition_real {
  
@@ -77,7 +77,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # reference to the current disk config
    my $current_disk = $FAI::current_config{$disk};
  
-@@ -450,6 +448,34 @@
+@@ -451,6 +449,34 @@
  
    my ($start, $end) = &FAI::make_range($part->{size}->{range}, $max_avail);
  
@@ -112,7 +112,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
    # check, whether the size is fixed
    if ($end != $start) {
  
-@@ -477,11 +503,8 @@
+@@ -478,11 +504,8 @@
  
          # logical partitions require the space for the EPBR to be left
          # out
@@ -126,7 +126,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
          last;
        } elsif ($FAI::configs{$config}{partitions}{$p}{size}{extended}) {
          next;
-@@ -490,13 +513,11 @@
+@@ -491,13 +514,11 @@
            $FAI::configs{$config}{partitions}{$p}{size}{range}, $max_avail);
  
          # logical partitions require the space for the EPBR to be left
@@ -144,7 +144,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
          }
  
          $min_req_space += $min_size;
-@@ -528,48 +549,9 @@
+@@ -529,48 +550,9 @@
      $end   = $start;
    }
  
@@ -195,7 +195,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
    # set $start and $end to the effective values
    $start = $end_byte - $next_start + 1;
-@@ -618,6 +600,21 @@
+@@ -619,6 +601,21 @@
      # reference to the current disk config
      my $current_disk = $FAI::current_config{$disk};
  
@@ -217,7 +217,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      # at various points the following code highly depends on the desired disk label!
      # initialise variables
      # the id of the extended partition to be created, if required
-@@ -662,13 +659,12 @@
+@@ -663,13 +660,12 @@
        $min_req_total_space += (34 + 33) * $current_disk->{sector_size};
  
      } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
@@ -236,7 +236,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
  
        # apparently parted insists in having some space left at the end too
        # modify the disk to claim the space for the second partition table
-@@ -760,7 +756,7 @@
+@@ -761,7 +757,7 @@
          shift @worklist;
        } else {
          ($next_start, $min_req_total_space) = &FAI::do_partition_real($part_id, 
@@ -249,18 +249,18 @@ Index: trunk/lib/setup-storage/Parser.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Parser.pm
 +++ trunk/lib/setup-storage/Parser.pm
-@@ -630,6 +630,10 @@
-         {
-           $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
+@@ -581,6 +581,10 @@
+             }
+           }
          }
 +        | /^align-at:(\d+[kKMGTPiB]*)/
 +        {
 +          $FAI::configs{$FAI::device}{align_at} = &FAI::convert_unit($1) * 1024.0 * 1024.0;
 +        }
  
-     volume: /^vg\s+/ name devices vgcreateopt(s?)
-         | /^raid([0156]|10)\s+/
-@@ -791,7 +795,7 @@
+ 
+     option: /^preserve_always:((\d+(,\d+)*)|all)/
+@@ -865,7 +869,7 @@
            1;
          }
  
@@ -269,7 +269,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
            # complete the size specification to be a range in all cases
            my $range = $1;
-@@ -822,7 +826,7 @@
+@@ -896,7 +900,7 @@
              $FAI::configs{$FAI::device}{preserveparts} = 1;
            }
          }
@@ -278,7 +278,7 @@ Index: trunk/lib/setup-storage/Parser.pm
          {
            # complete the range by assuming 0 as the lower limit 
            my $range = "0$1";
-@@ -843,7 +847,7 @@
+@@ -917,7 +921,7 @@
          }
          | <error: invalid partition size near "$text">
  
@@ -291,7 +291,7 @@ Index: trunk/man/setup-storage.8
 ===================================================================
 --- trunk.orig/man/setup-storage.8
 +++ trunk/man/setup-storage.8
-@@ -284,6 +284,20 @@
+@@ -497,6 +497,20 @@
  .br
             */
  .br
