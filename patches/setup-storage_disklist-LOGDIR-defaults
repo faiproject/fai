@@ -1,8 +1,8 @@
 2010-10-16  Michael Tautschnig  <mt@debian.org>
 
-	* setup-storage,setup-storage/{Init,Commands}.pm: Do not require that
-		$disklist and $LOGDIR are provided by the environment, compute input values
-		via disk-info and default to /tmp/fai for $LOGDIR.
+	* setup-storage,setup-storage/{Init,Commands,Volumes,Exec}.pm: Do not require
+		that $disklist and $LOGDIR are provided by the environment, compute input
+		values via disk-info and default to /tmp/fai for $LOGDIR.
 	* setup-storage.8: Correspondingly updated documentation.
 Index: trunk/bin/setup-storage
 ===================================================================
@@ -122,6 +122,15 @@ Index: trunk/lib/setup-storage/Commands.pm
  
          # generate a key for encryption
          &FAI::push_command(
+@@ -291,7 +291,7 @@
+ sub build_raid_commands {
+ 
+   # check RAID arrays if there are pre-existing ones
+-  &FAI::push_command("mdadm --assemble --scan --config=$ENV{LOGDIR}/mdadm-from-examine.conf",
++  &FAI::push_command("mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
+     "", "mdadm_startall_examined") if (scalar(keys %FAI::current_raid_config));
+   foreach my $id (keys %FAI::current_raid_config) {
+     my $md = "/dev/md$id";
 Index: trunk/lib/setup-storage/Init.pm
 ===================================================================
 --- trunk.orig/lib/setup-storage/Init.pm
@@ -186,3 +195,29 @@ Index: trunk/man/setup-storage.8
  .SH SYNTAX
  This section describes the syntax of disk_config files
  
+Index: trunk/lib/setup-storage/Exec.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Exec.pm
++++ trunk/lib/setup-storage/Exec.pm
+@@ -182,7 +182,7 @@
+     message      => "mdadm tried to assemble arrays but failed, ignoring as arrays might be running already\n",
+     stderr_regex => '^$',
+     stdout_regex => '^$',
+-    program      => "mdadm --assemble --scan --config=$ENV{LOGDIR}/mdadm-from-examine.conf",
++    program      => "mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
+     response     => "warn",
+     exit_codes   => [2],
+   },
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm
+@@ -459,7 +459,7 @@
+ #    devices=/dev/sde3,/dev/sdf3,/dev/sdd3
+ 
+   # create a temporary mdadm-from-examine.conf
+-  open(MDADM_EX, ">$ENV{LOGDIR}/mdadm-from-examine.conf");
++  open(MDADM_EX, ">$FAI::DATADIR/mdadm-from-examine.conf");
+ 
+   # the id of the RAID
+   my $id;
