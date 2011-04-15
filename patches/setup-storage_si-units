@@ -1,0 +1,55 @@
+2011-04-15  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/Parser.pm: Treat MiB differently from MB and friends as lvm2
+		does as of version 2.02.54. Use MiB for factor 1024 or MB for factor 1000.
+	* setup-storage.8: Reflect this change.
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm
+@@ -354,19 +354,19 @@
+       return $val * $totalmem;
+   }
+ 
+-  ## don't warn for now, G/GiB/GB are all treated the same way
+-  ## ($val =~ /([kKMGTP])\s*$/) and
+-  ##   warn "Using $1 as size modifier is deprecated, please use $1iB or $1B
+-  ##   instead; in future releases these will be treated as different modifiers\n";
+-
+   # % is returned as is
+   if ($val =~ /^(\d+(\.\d+)?)%\s*$/) { 1; }
+   elsif ($val =~ /^(\d+(\.\d+)?)B\s*$/) { $val = $1 * (1 / 1024) * (1 / 1024); }
+-  elsif ($val =~ /^(\d+(\.\d+)?)[kK](i)?(B)?\s*$/) { $val = $1 * (1 / 1024); }
+-  elsif ($val =~ /^(\d+(\.\d+)?)M(i)?(B)?\s*$/) { $val = $1; }
+-  elsif ($val =~ /^(\d+(\.\d+)?)G(i)?(B)?\s*$/) { $val = $1 * 1024; }
+-  elsif ($val =~ /^(\d+(\.\d+)?)T(i)?(B)?\s*$/) { $val = $1 * (1024 * 1024); }
+-  elsif ($val =~ /^(\d+(\.\d+)?)P(i)?(B)?\s*$/) { $val = $1 * (1024 * 1024 * 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)[kK](iB)?\s*$/) { $val = $1 * (1 / 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)[kK]B\s*$/) { $val = $1 * (1000 / 1024) * (1 / 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)M(iB)?\s*$/) { $val = $1; }
++  elsif ($val =~ /^(\d+(\.\d+)?)MB\s*$/) { $val = $1 * (1000 / 1024) * (1000 / 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)G(iB)?\s*$/) { $val = $1 * 1024; }
++  elsif ($val =~ /^(\d+(\.\d+)?)GB\s*$/) { $val = $1 * 1000 * (1000 / 1024) * (1000 / 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)T(iB)?\s*$/) { $val = $1 * (1024 * 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)TB\s*$/) { $val = $1 * 1000 * 1000 * (1000 / 1024) * (1000 / 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)P(iB)?\s*$/) { $val = $1 * (1024 * 1024 * 1024); }
++  elsif ($val =~ /^(\d+(\.\d+)?)PB\s*$/) { $val = $1 * 1000 * 1000 * 1000 * (1000 / 1024) * (1000 / 1024); }
+   else { &FAI::internal_error("convert_unit $val"); }
+ 
+   return $val;
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8
+@@ -591,9 +591,9 @@
+ .br
+           * only, no decimal numbers.
+ .br          
+-          * In future releases KB, MB, GB, ... will be treated as 1000 instead
++          * Use KB, MB, GB, ... for a factor of 1000 instead of 1024 as
+ .br
+-          * of 1024 (KiB, MiB, GiB, ...) multipliers */
++          * multiplier */
+ 
+ 
+ size ::= <sizespec>(-(<sizespec>)?)?(:resize)?
