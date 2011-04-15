@@ -508,7 +508,7 @@ sub setup_logical_volumes {
   my $vg = $1; # the actual volume group
 
   # now create or resize the configured logical volumes
-  foreach my $lv (keys %{ $FAI::configs{$config}{volumes} }) {
+  foreach my $lv (@{ $FAI::configs{$config}{ordered_lv_list} }) {
     # reference to the size of the current logical volume
     my $lv_size = (\%FAI::configs)->{$config}->{volumes}->{$lv}->{size};
     # skip preserved partitions, but ensure that they exist
