@@ -127,7 +127,7 @@ sub init_disk_config {
 
   # test, whether this is the first disk_config stanza to configure $disk
   defined ($FAI::configs{$FAI::device})
-    and die "Duplicate configuration for disk $FAI::disks[ $1-1 ]\n";
+    and die "Duplicate configuration for disk $disk\n";
 
   # Initialise the entry in $FAI::configs
   $FAI::configs{$FAI::device} = {
@@ -362,6 +362,7 @@ $FAI::Parser = Parse::RecDescent->new(
     line: <skip: qr/[ \t]*/> "\\n"
         | <skip: qr/[ \t]*/> comment "\\n"
         | <skip: qr/[ \t]*/> config "\\n"
+        | <error>
 
     comment: /^\s*#.*/
 
@@ -972,20 +973,60 @@ sub run_parser {
 ################################################################################
 sub check_config {
 
+  my %all_mount_pts = ();
+
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
     if ($config =~ /^PHY_(.+)$/) {
       (scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
         die "Empty disk_config stanza for device $1\n";
+      foreach my $p (keys %{ $FAI::configs{$config}{partitions} }) {
+        next if (1 == $FAI::configs{$config}{partitions}{$p}{size}{extended});
+        defined($FAI::configs{$config}{partitions}{$p}{mountpoint}) or
+          &FAI::internal_error("Undefined mountpoint for non-extended partition");
+        my $this_mp = $FAI::configs{$config}{partitions}{$p}{mountpoint};
+        next if ($this_mp eq "-");
+        defined($all_mount_pts{$this_mp}) and die
+          "Mount point $this_mp used twice\n";
+        ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+      }
     } elsif ($config =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
+      foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
+        my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
+        next if ($this_mp eq "-");
+        defined($all_mount_pts{$this_mp}) and die
+          "Mount point $this_mp used twice\n";
+        ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+      }
       next;
     } elsif ($config eq "RAID") {
       (scalar(keys %{ $FAI::configs{$config}{volumes} }) > 0) or
         die "Empty RAID configuration\n";
+      foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
+        my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
+        next if ($this_mp eq "-");
+        defined($all_mount_pts{$this_mp}) and die
+          "Mount point $this_mp used twice\n";
+        ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+      }
     } elsif ($config eq "CRYPT") {
+      foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
+        my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
+        next if ($this_mp eq "-");
+        defined($all_mount_pts{$this_mp}) and die
+          "Mount point $this_mp used twice\n";
+        ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+      }
       next;
     } elsif ($config eq "TMPFS") {
+      foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
+        my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
+        next if ($this_mp eq "-");
+        defined($all_mount_pts{$this_mp}) and die
+          "Mount point $this_mp used twice\n";
+        ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+      }
       next;
     } else {
       &FAI::internal_error("Unexpected key $config");
