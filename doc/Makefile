@@ -1,7 +1,7 @@
 #!/bin/make -s
 
 DOC = fai-guide
-MISC_DOC = classes_description.txt links.html changelog.old
+MISC_DOC = classes_description.txt links.html changelog.old lenny-instructions.txt
 
 free:	text html ps pdf
 #	echo "`grep -c FIXME $(DOC).txt` FIXMEs left to fix:"
