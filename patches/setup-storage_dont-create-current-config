@@ -1,0 +1,40 @@
+2011-04-16  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage/{Volumes,Sizes}.pm: Do not unintentionally create entries in
+		current_config and properly test before using it (user may have missed to
+		add the disks to $disklist). Thanks Alexander Swen for describing the
+		problem.
+Index: trunk/lib/setup-storage/Sizes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Sizes.pm
++++ trunk/lib/setup-storage/Sizes.pm
+@@ -581,6 +581,8 @@
+     # test, whether $disk is a block special device
+     (-b $disk) or die "$disk is not a valid device name\n";
+     # reference to the current disk config
++    defined ($FAI::current_config{$disk}) or
++      die "Device $disk was not specified in \$disklist\n";
+     my $current_disk = $FAI::current_config{$disk};
+ 
+     # align to sector boundary by default
+Index: trunk/lib/setup-storage/Volumes.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Volumes.pm
++++ trunk/lib/setup-storage/Volumes.pm
+@@ -506,12 +506,14 @@
+   if (1 == $i_p_d) {
+     if (defined($FAI::configs{"PHY_$disk"}) &&
+         defined($FAI::configs{"PHY_$disk"}{partitions}{$part_no})) {
+-      defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
++      (defined ($FAI::current_config{$disk}) &&
++        defined ($FAI::current_config{$disk}{partitions}{$part_no})) or die
+         "Can't preserve $device_name because it does not exist\n";
+       $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve} = 1;
+       $FAI::configs{"PHY_$disk"}{preserveparts} = 1;
+     } elsif (0 == $missing) {
+-      defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
++      (defined ($FAI::current_config{$disk}) &&
++        defined ($FAI::current_config{$disk}{partitions}{$part_no})) or die
+         "Can't preserve $device_name because it does not exist\n";
+     }
+   } elsif ($device_name =~ m{^/dev/md[\/]?(\d+)$}) {
