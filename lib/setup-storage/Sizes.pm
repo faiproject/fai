@@ -451,6 +451,9 @@ sub do_partition_real {
     ($next_start <= $current_disk->{partitions}->{$part_id}->{begin_byte})
       or die "Cannot preserve start byte of ntfs volume on partition $part_id, space before it is too small\n";
     $next_start = $current_disk->{partitions}->{$part_id}->{begin_byte};
+  } else {
+    $next_start += $block_size - ($next_start % $block_size)
+      unless (0 == ($next_start % $block_size));
   }
 
   $FAI::configs{$config}{partitions}{$part_id}{start_byte} =
