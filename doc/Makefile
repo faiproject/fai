@@ -39,7 +39,7 @@ install:
 	cp -p $(MISC_DOC) $(DOCDIR)
 
 clean: 
-	rm -rf .a2x-icons
+	rm -rf .a2x-icons fai-guide.chunked
 	rm -f $(DOC).text $(DOC).html $(DOC).doc $(DOC).pdf $(DOC).xml $(DOC).ps docbook-xsl.css
 
 test:
