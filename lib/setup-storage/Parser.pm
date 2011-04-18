@@ -573,10 +573,6 @@ $FAI::Parser = Parse::RecDescent->new(
             }
           }
         }
-        | /^align-at:(\d+[kKMGTPiB]*)/
-        {
-          $FAI::configs{$FAI::device}{align_at} = &FAI::convert_unit($1) * 1024.0 * 1024.0;
-        }
 
 
     option: /^preserve_always:((\d+(,\d+)*)|all)/
@@ -693,6 +689,11 @@ $FAI::Parser = Parse::RecDescent->new(
           } else {
             $FAI::configs{$FAI::device}{partitions}{$_}{size}{always_format} = 1 foreach (split(",", $1));
           }
+        }
+        | /^align-at:(\d+[kKMGTPiB]*)/
+        {
+          my $u = defined($2) ? $2 : "MiB";
+          $FAI::configs{$FAI::device}{align_at} = &FAI::convert_unit("$1$u") * 1024.0 * 1024.0;
         }
 
     volume: /^vg\s+/ name devices vgcreateopt(s?)
