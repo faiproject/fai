@@ -539,9 +539,9 @@ then
     [ -L $NFSROOT/proc/self ] && umount $NFSROOT/proc || true
     [ -L $NFSROOT/proc/self ] && die 1 "/proc is still mounted inside the nfsroot."
     umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount 
-    rm -rf $oldnfsroot/.??* $oldnfsroot/*
-    # also remove files $NFSROOT/.? but not . and ..
-    find $oldnfsroot -xdev -maxdepth 1 ! -type d | xargs -r rm -f
+    # remove old nfsroot in background
+    mv $oldnfsroot/live $oldnfsroot/.will-now-be-deleted
+    nice rm -rf $oldnfsroot/.will-now-be-deleted & 
 fi
 
 # Create a new nfsroot
