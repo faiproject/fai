@@ -279,8 +279,15 @@ create_base() {
     call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
-    echo "Creating base.tgz"
-    tar --one-file-system -C $NFSROOT -cf - --exclude var/tmp/base.tgz --exclude 'var/lib/apt/lists/*_*' . | gzip > $NFSROOT/var/tmp/base.tgz
+    if [ $usexz -eq 0 ]; then
+	echo "Creating base.tgz"
+	tar --one-file-system -C $NFSROOT -cf - --exclude var/tmp/base.tgz --exclude 'var/lib/apt/lists/*_*' . | gzip > $NFSROOT/var/tmp/base.tgz
+    else
+	echo "Creating base.tar.xz"
+	tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+	nice xz $NFSROOT/var/tmp/base.tar &
+	xzpid=$!
+    fi
     touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -291,10 +298,22 @@ extract_base() {
     fi
 
     if cd $NFSROOT ; then
+
       echo "Do not call debootstrap. Instead extract base.tgz"
       printf "Extracting $basetgz: "
-      tar -C $NFSROOT -zxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
-      cp -p "$basetgz" $NFSROOT/var/tmp/base.tgz
+
+      case $basetgz in
+	  *tar.gz|*.tgz)
+	      tar -C $NFSROOT -zxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
+	      cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.gz
+	      ;;
+
+	    *tar.xz|*.txz)
+	      tar -C $NFSROOT -Jxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
+	      cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.xz
+	      ;;
+	  esac
+
       touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
       echo done
     fi
@@ -528,12 +547,18 @@ fi
 # Create a new nfsroot
 [ ! -x "$(which debootstrap)" ] && die 1 "Can't find debootstrap command. Aborting."
 
+usexz=0
+if [ -x "$(which xz)" ]; then
+    usexz=1
+fi
+
 call_with_stamp create_nfsroot
 
 kernel_install
 run_hooks
 check_nfsroot
 umount_dirs
+# print warning if xz is still running
 echo "make-fai-nfsroot finished $merror."
 exit 0
 } 2>&1 | tee -a /var/log/fai/make-fai-nfsroot.log
