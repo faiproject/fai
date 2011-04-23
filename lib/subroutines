@@ -784,19 +784,21 @@ call_debootstrap() {
 task_extrbase() {
 
     local fs=$FAI_ROOT/etc/fstab
-    local basefile=/var/tmp/base.tgz
 
     echo "Unpacking Debian base archive"
+    # remember, ftar extracts into $FAI_ROOT by default, so / means $FAI_ROOT/
     # copy the base file class based if it exists
     [ -d $FAI/basefiles ] && ftar -1v -s $FAI/basefiles /
     if [ $? -ne 0 ]; then
-	[ $do_init_tasks -eq 0 ] && basefile=$NFSROOT/live/filesystem.dir/var/tmp/base.tgz
-	if [ -f $basefile ]; then
-	    # extract the tar file which was the result of debootstrap
-	    echo "Extracting $basefile"
-	    gzip -dc $basefile | tar -C $FAI_ROOT -xpf -
+	if [ $do_init_tasks -eq 1 ]; then
+	    ftar -1v -c base -s /var/tmp /
 	else
-	    echo "No base.tgz found. Calling debootstrap."
+	    ftar -1v -c base -s $NFSROOT/live/filesystem.dir/var/tmp /
+	fi
+
+	# if no base file was extracted, call debootstrap
+	if [ ! -d $FAI_ROOT/etc ]; then
+	    echo "No base file found. Calling debootstrap."
 	    [ -z "$FAI_DEBOOTSTRAP" ] && die "$FAI_DEBOOTSTRAP undefined. Aborting"
 	    call_debootstrap $FAI_DEBOOTSTRAP
 	    task_error 801 $?
