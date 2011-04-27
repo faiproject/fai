@@ -14,19 +14,25 @@ fi
 bootdev=`device2grub $BOOT_DEVICE`
 bootpart=`device2grub $BOOT_PARTITION`
 version=`$ROOTCMD rpm -qv kernel | cut -d- -f2-`
+
 if grep '[[:space:]]/boot[[:space:]]' $LOGDIR/fstab; then
 	bootdir=''
 else
 	bootdir='/boot'
 fi
 
+mount -o bind /dev $target/dev
+
 $ROOTCMD grub-install --just-copy
 
-$ROOTCMD grub --no-floppy --batch <<-EOF
+$ROOTCMD grub --device-map=/dev/null --no-floppy --batch <<-EOF
+	device $bootdev $BOOT_DEVICE
 	root $bootpart
 	setup $bootdev
 	quit
 	EOF
+
+umount $target/dev
 
 ln -s ./menu.lst $target/boot/grub/grub.conf
 
