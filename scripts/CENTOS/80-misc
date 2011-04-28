@@ -1,0 +1,13 @@
+#! /bin/bash
+
+error=0 ; trap "error=$((error|1))" ERR
+
+# add a demo user account
+if ! $ROOTCMD getent passwd demo ; then
+    $ROOTCMD adduser -c "fai demo user" demo
+    # echo "demo:$ROOTPW" | $ROOTCMD chpasswd --encrypted
+    $ROOTCMD usermod -p "$ROOTPW" demo
+fi
+
+exit $error
+
