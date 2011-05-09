@@ -606,9 +606,17 @@ marker, explicitly set the bootable option. Of course, there are lots of other
 reasons why a system may fail to boot.
 .IP \(bu
 Crypto support requires some site-specific changes: If you use cryptsetup
-stanza, a crypttab file and key files for all luks volumes will be created. The
-key files are left in /tmp/fai; you will want to copy these to some removable
-media.
+stanza, a \fBcrypttab\fP(5) file and key files for all luks volumes will be created
+(unless you used the passphrase option). The key files are left in /tmp/fai; you
+will want to copy these to some removable media. To make encrypted root devices
+actually usable, you need to add busybox (and initramfs-tools) to your package
+config.
+.IP \(bu
+For backwards compatibility or other system-specific reasons an alignment to
+cylinder boundaries may be necessary. Yet other systems will have other
+alignment constraints. setup-storage sets the alignment as follows: If align-at
+is set, align accordingly. Otherwise, if any partition on the particular disk is
+to be preserved, default to cylinder alignment. Else use sector alignment.
 .SH SEE ALSO
 This program is part of FAI (Fully Automatic Installation).
 The FAI homepage is http://fai-project.org.
