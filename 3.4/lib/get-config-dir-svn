@@ -51,10 +51,16 @@ esac
 [ -n "$username" ] && user="--username $username"
 
 if [ -d "$FAI/.svn" ] ; then
-   echo "Updating SVN in $FAI"
-   cd $FAI
-   svn up $user $pass | grep -v 'Updated to revision' > $LOGDIR/getconf.log
-   task_error 701 ${PIPESTATUS[0]}
+    if [ `svn info $FAI | grep '^URL:' | egrep -o '://.+'` == "://$svnpath" ]; then
+        echo "Updating SVN in $FAI"
+        cd $FAI
+        svn up $user $pass | grep -v 'Updated to revision' > $LOGDIR/getconf.log
+        task_error 701 ${PIPESTATUS[0]}
+    else
+        echo "$FAI already contains a svn repository, but it is not from $svnurl!" >&2
+        echo "Please delete $FAI manually. Fatal error." >&2
+        task_error 703
+    fi
 else 
    echo "Checking out SVN"
    svn co $user $pass $svnurl $FAI | grep -v 'Checked out revision' > $LOGDIR/getconf.log
