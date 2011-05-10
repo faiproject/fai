@@ -123,6 +123,18 @@ Finally release new stable version:
   % git add debian/changelog
   % NEW_VERSION=$(dpkg-parsechangelog | awk '/^Version:/ {print $2}')
   % git commit -s -m "Release new version ${NEW_VERSION}."
+
+Build source package:
+
+  % git-buildpackage --git-ignore-branch -S
+
+Then the usual Q/A takes place once again - using cowbuilder for
+building the binary package, running lintian on the resulting
+fai*.changes file, testing the result.
+
+If everything is fine finally push and tag the stable release in svn:
+
+  % git svn dcommit
   % git svn tag -m "Tagging stable release ${NEW_VERSION}." "${NEW_VERSION}"
 
 Push changes + tags to the stable git repository at git.grml.org
@@ -134,13 +146,14 @@ Push changes + tags to the stable git repository at git.grml.org
   % git tag -u $DEBSIGN_KEYID -s v3.4.8 -m "release 3.4.8"
   % git push --tags grml
 
-Finally debsign the fai*.changes file upload the package to Debian:
+Finally debsign the fai*.changes file and upload it to Debian:
 
   % dput ftp-master fai...*changes
 
 --------------------------------------------------------------------------------
 Document History:
 
+May 10 2011: Mention test cycle; dcommit before tagging + releasing.
 Apr 15 2011: Improve document structure, adjust workflow so git commit
              IDs aren't rewritten after releasing, thanks to Michael
              Tautschnig for feedback.
