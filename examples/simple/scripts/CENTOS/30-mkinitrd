@@ -1,6 +1,7 @@
 #! /bin/bash
 
 # (c) Michael Goetze, 2010-2011, mgoetze@mgoetze.net
+# (c) Thomas Lange, 2011, Uni Koeln
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
@@ -15,10 +16,19 @@ $ROOTCMD kudzu -q -k $version
 drivers=""
 for bus in pci virtio; do
 	for dr in `$ROOTCMD kudzu -p -k $version -b $bus|grep driver:|cut -d' ' -f2|sort -u`; do
+	    found=`find $target/lib/modules/$version/ -name $dr.ko 2>/dev/null`
+	    if [ -n "$found" ]; then
+		# add driver only if it's available as .ko module in the destination kernel
 		drivers+=" --with=$dr"
+	    fi
 	done
 done
 
 $ROOTCMD mkinitrd -f -v $drivers /boot/initrd-$version.img $version
+
+if [ $? -eq 1 ]; then
+    echo "WARNING: generating initrd with list of drivers failed. Trying without."
+    $ROOTCMD mkinitrd -f -v /boot/initrd-$version.img $version
+fi
 
 exit $error
