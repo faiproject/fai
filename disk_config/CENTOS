@@ -4,11 +4,15 @@
 
 disk_config disk1 disklabel:msdos bootable:1 fstabkey:label
 
-# Note that the CentOS 5 version of GRUB cannot read from ext3 filesystems
-# with inode_size > 128
+# Note that the CentOS 5 version of GRUB cannot read from ext3 filesystems with inode_size > 128
+# CentOS 5.6 needs /boot as ext3, so we use ext3 for /
+
 primary /      350      ext3  rw,noatime,errors=remount-ro createopts="-L ROOT -I 128"
+# use following line for CentOS 6
+# primary /      350      ext4  rw,noatime,errors=remount-ro createopts="-L ROOT"
+
 logical swap   200-1000 swap  rw                           createopts="-L SWAP"
-logical /var   600-2500 ext3  rw,noatime                   createopts="-L VAR -m 5" tuneopts="-c 0 -i 0"
-logical /tmp   100-1G   ext3  rw,noatime,nosuid,nodev      createopts="-L TMP -m 0" tuneopts="-c 0 -i 0"
-logical /usr   1G-8G    ext3  rw,noatime,nodev             createopts="-L USR"
-logical /home  100-50%  ext3  rw,noatime,nosuid,nodev      createopts="-L HOME -m 1" tuneopts="-c 0 -i 0"
+logical /var   600-2500 ext4  rw,noatime                   createopts="-L VAR -m 5" tuneopts="-c 0 -i 0"
+logical /tmp   100-1G   ext4  rw,noatime,nosuid,nodev      createopts="-L TMP -m 0" tuneopts="-c 0 -i 0"
+logical /usr   1G-8G    ext4  rw,noatime,nodev             createopts="-L USR"
+logical /home  100-50%  ext4  rw,noatime,nosuid,nodev      createopts="-L HOME -m 1" tuneopts="-c 0 -i 0"
