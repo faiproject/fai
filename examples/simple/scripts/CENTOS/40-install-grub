@@ -23,6 +23,7 @@ fi
 
 mount -o bind /dev $target/dev
 
+
 $ROOTCMD grub-install --just-copy
 
 $ROOTCMD grub --device-map=/dev/null --no-floppy --batch <<-EOF
@@ -42,17 +43,27 @@ else
 	pretty="color cyan/blue white/blue"
 fi
 
+if [ -f $target/sbin/dracut ]; then
+    # CentOS 6
+    iname=initramfs
+else
+    # CentOS 5
+    iname=initrd
+fi
+title=`head -1 $target/etc/redhat-release`
+
 cat > $target/boot/grub/grub.conf <<-EOF
 	timeout 5
 	default 0
 	$pretty
 	hiddenmenu
 	
-	title CentOS ($version)
+	title $title
 	  root $bootpart
 	  kernel $bootdir/vmlinuz-$version root=$ROOT_PARTITION ro
-	  initrd $bootdir/initrd-$version.img
+	  initrd $bootdir/$iname-$version.img
 	EOF
+
 
 echo ""
 echo "Grub installed on $BOOT_DEVICE = $bootdev"
