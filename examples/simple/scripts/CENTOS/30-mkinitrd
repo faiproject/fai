@@ -12,13 +12,14 @@ version=`$ROOTCMD rpm -qv kernel | cut -d- -f2-`
 
 use_mkinitrd() {
 
-# CentOS 5 uses mkinitrd
-$ROOTCMD kudzu -q -k $version
-# Unfortunately mkinitrd is horrible at guessing which modules to include,
-# especially when the running kernel is different than the kernel for which
-# we are creating an initrd...
-drivers=""
-for bus in pci virtio; do
+    # CentOS 5 uses mkinitrd
+    $ROOTCMD kudzu -q -k $version
+    # Unfortunately mkinitrd is horrible at guessing which modules to include,
+    # especially when the running kernel is different than the kernel for which
+    # we are creating an initrd...
+
+    drivers=""
+    for bus in pci virtio; do
 	for dr in `$ROOTCMD kudzu -p -k $version -b $bus|grep driver:|cut -d' ' -f2|sort -u`; do
 	    found=`find $target/lib/modules/$version/ -name $dr.ko 2>/dev/null`
 	    if [ -n "$found" ]; then
@@ -26,15 +27,14 @@ for bus in pci virtio; do
 		drivers+=" --with=$dr"
 	    fi
 	done
-done
+    done
 
-$ROOTCMD mkinitrd -f -v $drivers /boot/initrd-$version.img $version
+    $ROOTCMD mkinitrd -f -v $drivers /boot/initrd-$version.img $version
 
-if [ $? -eq 1 ]; then
-    echo "WARNING: generating initrd with list of drivers failed. Trying without."
-    $ROOTCMD mkinitrd -f -v /boot/initrd-$version.img $version
-fi
-
+    if [ $? -eq 1 ]; then
+	echo "WARNING: generating initrd with list of drivers failed. Trying without."
+	$ROOTCMD mkinitrd -f -v /boot/initrd-$version.img $version
+    fi
 }
 
 if [ -f $target/sbin/dracut ]; then
