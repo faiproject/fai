@@ -1,8 +1,6 @@
 fai (4.0~beta2) unstable; urgency=low
 
   [ Thomas Lange ]
-  * get-config-dir-http: new script to get a tarball of the config space
-    (thanks to Waldemar Brodkorb for the initial patch)
   * faimond-gui: add option -s
   * make-fai-nfsroot.conf: set NFSROOT_HOOKS by default
   * updatebase: remove pre-lenny code
@@ -39,7 +37,7 @@ fai (4.0~beta2) unstable; urgency=low
   * fai: cleanup code
   * device2grub: fix indentation, minor code fix
   * fai-start-stop-daemon: remove it, because not needed any more,
-    policy-rc.d is sufficient
+    policy-rc.d is sufficient; remove man page as well [r6261]
   * fai-server.install, updatebase, make-fai-nfsroot, Makefile: remove
     fai-start-stop-daemon
   * make-fai-nfsroot: minor cleanup
@@ -64,19 +62,261 @@ fai (4.0~beta2) unstable; urgency=low
   * mkdebmirror: use cdn.debian.net
   * 10-conffiles, 50-host-classes: add support for hosts named client01,...
   * install_packages: add cupt support
-  
+  * fai-guide.txt: minor URL fix [r6168]
+  * get-boot-info: do only list NICs which also have a link (means cable
+    connected) [r6234]
+  * control:
+    - change Uploaders: remove Holger, add Mika [r6176]
+    - new URL for browsable svn repository [r6547]
+  * simple example:
+    - do not use fcopy for /etc/modules [r6196]
+    - do not copy file if target is a symlink [r6197]
+    - apply patch from experimental, install grub into all raid devices
+      [r6203]
+    - new code for trap ERR, it now saves the maximum value of all errors
+      [r6291]
+    - use pcimodules command to load kernel driver [r6294]
+    - remove option -s -k from modprobe, they do not exist [r6297]
+    - $FAI_ROOT -> $target [r6298]
+    - replace console-common by console-setup and kbd [r6299]
+    - remove usbkbd, year++ [r6325]
+    - use newer code for error trap [r6353]
+    - use ext4 in Debian examples [r6417]
+    - package_config/DEBIAN: use same linux-image package names as in NFSROOT,
+      add initramfs-tools [r6478]
+    - package_config/FAISERVER: replace transitional package name [r6479]
+    - package_config/XFCE: new example [r6484]
+    - grub.cfg: grub2 (for fai-cd) now asks for user and password  [r6486]
+    - class/50-host-classes: add xfcehost [r6491]
+    - grub.cfg,menu.lst: do not use ip= kernel parameter, dhcp is now the
+      default [r6495]
+    - grub.cfg: set default boot to boot from local disk (same as in grub1
+      menu.lst) [r6496]
+    - class/CENTOS.var: new font does not destroy red text on console [r6504]
+    - hooks/prepareapt.CENTOS: add a hint how to disable the fastestmirror
+      plugin [r6508]
+    - scripts/CENTOS/40-install-grub: print boot and grub config to stdout
+      [r6509]
+    - scripts/CENTOS/40-install-grub: use /dev from nfsroot, define device in
+      grub [r6510]
+    - scripts/CENTOS/20-makedev: not needed any more, since we use /dev from
+      the nfsroot [r6511]
+    - scripts/CENTOS/50-misc,scripts/CENTOS/50-sysconfig: use a more
+      descriptive name [r6512]
+    - scripts/CENTOS/80-misc: add user demo [r6513]
+    - scripts/FAIBASE/10-misc: add -c to chmod, chown [r6514]
+    - class/50-host-classes: a host named slchost will be installed using
+      Scientific Linux Cern [r6516]
+    - basefiles/Makefile,basefiles/mk-basefile: replace Makefile
+      implementation with shell script [r6524]
+    - hooks/instsoft.DEBIAN: set executable flag [r6545]
+    - scripts/FAIBASE/10-misc: if not IP was set, add special host entry
+      [r6546]
+    - basefiles/mk-basefile: remove debugging line [r6556]
+    - class/CENTOS.var: addcomment [r6557]
+    - disk_config/CENTOS: increase max size of /var [r6558]
+    - package_config/XORG: use these packages only for DEBIAN [r6559]
+    - package_config/CENTOS: add packages for XORG [r6560]
+    - scripts/CENTOS/30-mkinitrd: safer generation of initrd, add drivers only
+      if available [r6561]
+    - scripts/CENTOS/80-misc: if gdm is installed, start graphical login
+      [r6562]
+    - scripts/CENTOS/30-mkinitrd,scripts/CENTOS/40-install-grub: add support
+      for CentOD6/SLC6 [r6564]
+    - scripts/CENTOS/30-mkinitrd: whitespace fix [r6565]
+    - scripts/CENTOS/30-mkinitrd: fix syntax error [r6566]
+    - disk_config/CENTOS: use ext4 except for /, add comments about ext3
+      issues [r6567]
+  * fai: unset variable after use [r6195]
+  * fai-do-scripts.1: more precise description of matching file names [r6264]
+  * make-fai-nfsroot:
+    - mdadm.conf should not contain info from the install server [r6232]
+    - add patterns, that indicate an error [r6292]
+    - use xz compression for creating the base.tar file if available [r6499]
+    - remove old nfsroot with background process [r6500]
+    - print message if xz is still running [r6505]
+  * make-fai-nfsroot,control: use pxelinux.0 from inside the nfsroot, add
+    depends on syslinux-common [r6409]
+  * task_sysinfo:
+    - start software raid when doing sysinfo [r6233]
+    - print disk devices and their mapping to device names [r6284]
+    - add pcimodules command [r6293]
+    - print info about audio device [r6301]
+  * mkramdisk: fix umount when directory is a mount point [r6235]
+  * fai-mount-disk: fix for mounting of partitions based on fstab [r6274]
+  * Makefile:
+    - remove bin/setup_harddisks from list [r6305]
+    - remove temporary directory in clean target [r6313]
+    - remove fai-guide.chunked directory in clean target [r6492]
+  * control,Makefile: remove build dependencies that were only needed for
+    lenny, use -L with a2x [r6327]
+  * THANKS,rshall: convert to UTF-8 [r6307]
+  * NFSROOT: remove unneeded aufs packages [r6311]
+  * NFSROOT: remove unused classes [r6413]
+  * FAQ: remove very old FAQ [r6489]
+  * docs: remove FAQ [r6490]
+  * subroutines: use ftar for extracting base file (add support for xz
+    compression) [r6501]
+  * ftar: print only one / in path names, year++ [r6503]
+  * fai-cd: call genisoimage with -R instead of -r [r6522]
+  * prcopyleft: year++ [r6544]
+
+  [ Michael Goetze ]
+  * simple examples:
+    - Add missing svn:executable property to example scripts. [r6275] [r6348]
+    - Add to simple-examples a Makefile for creating basefiles. [r6276]
+    - Use mktemp, s/-/_/ in class names. [r6277]
+    - Deduplicate scripts/{DEBIAN,FAIBASE}/40-misc in simple-examples [r6280]
+    - Add some CentOS-related ignore patterns to savelog.LAST.source [r6287]
+    - Initial checkin of CentOS support for simple examples. [r6288]
+    - Copy fai.conf and a small fix, so that fai softupdate runs without error
+      on a fresh installation with simple-examples [r6290]
+    - rename TMPDIR to BASEFILEDIR to avoid accidental setting [r6336]
+    - hooks/updatebase.CENTOS: =~ s/yum/yum -y/ [r6342]
+    - package_config/CENTOS: install sendmail [r6343]
+    - split up some variables into DEBIAN and CENTOS and implement them on
+      CENTOS [r6345]
+    - CENTOS/30-mkinitrd: --with is enough, we don't need --preload [r6346]
+    - Install redhat-lsb on CentOS, thanks to Stephan Adig for the idea
+      [r6347]
+    - Replace CENTOS/20-mknod by CENTOS/20-makedev, thanks to Stephan Adig for
+      the patch [r6349]
+    - Cleanup move of variables from FAIBASE to DEBIAN [r6395]
+    - CENTOS/40-install-grub: fix typo [r6397]
+    - Move some things from scripts/FAIBASE/10-misc to scripts/DEBIAN/40-misc
+      [r6398]
+    - Make static network configuration work on CentOS [r6454]
+  * NFSROOT, NEWS, simple example: Remove cfengine2 from default NFSROOT, as
+    it is no longer needed for the simple-examples. Only do cfengine cleanup
+    if it is installed. [r6283] [r6289]
+  * setup-storage.8: Update AUTHORS in setup-storage(8) [r6312]
+  * get-config-dir-git: Add support for git+ssh config dir [r6339] [r6354]
+  * get-config-dir-git,get-config-dir-hg,get-config-dir-svn:
+    get-config-dir-{svn,git}: check whether source is correct before update
+    [r6340]
+  * get-boot-info: Assume localdomain if no domain name received by DHCP
+    [r6341]
+
+  [ Michael Prokop ]
+  * Makefile,control: Add syntax checks to catch possible syntax problems
+    (perl/bashism/bash). Make perlcheck work without perl-tk and
+    liblinux-lvm-perl. Closes: #610509 [r6272] [r6260] [r6262] [r6263] [r6267]
+    [r6270]
+  * developer-policy.txt: Add initial developer policy instructions (WIP).
+    [r6460]
+  * release-management.txt: Add document regarding release management of FAI
+    stable using git-svn. [r6461] [r6541]
+ 
   [ Michael Tautschnig ]
   * fcopy.8: describe behaviour if preinst has nonzero exit code
   * examples/simple/package_config/GNOME: Remove gnome-apt, ice*-gnome-support
     as these don't exist in squeeze anymore (thanks Karl Wallner for reporting
     this)
-  * setup-storage/{Parser,Command,Sizes,Volumes,Fstab}.pm: Added support for
-    using raw disk devices, without partitioning (thanks Jordi Funollet
-    for testing, closes: #589649).
-  * setup-storage.8: Document new raw-disk pseudo partition type.
+  * setup-storage:
+    - Added support for using raw disk devices, without partitioning. Thanks
+      Jordi Funollet. Closes: #589649 [r6169]
+    - Generate conditional definitions for disk_var.sh such that variables
+      will only be set if not previously defined by users. [r6240]
+    - Partition pseudo-type luks:"<pass>" for LUKS device with user-defined
+      passphrase. Thanks Patrick Schoenfeld for suggesting this and extensive
+      testing. [r6405]
+    - If $disklist or $LOGDIR are not provided, find sane default values.
+      [r6406]
+    - Added "all" as valid value for preserve*, resize, always_format. Thanks
+      Toomas Tamm for suggesting this. [r6408]
+    - Man page: Move examples section to the front, several clarifications,
+      additional (simple) RAID example. [r6410]
+    - Add comment to generated fstab denoting actual device in case of UUID or
+      LABEL being used as identifier. [r6411]
+    - Distinct treatment of MiB vs. MB and friends. [r6412]
+    - Don't keep redundant number field in config data structure. [r6416]
+  * dev-utils: New directory for scripts which are helpful for development of
+    FAI [r6239] [r6302]
+  * Makefile: Make sure that all example scripts are executable [r6268]
+  * examples/more-tests: Tests moved to test-suite [r6359-r6366] [r6372]
 
- -- Julien BLACHE <jblache@debian.org>  Fri, 01 Oct 2010 12:25:40 +0200
+ -- Michael Tautschnig <mt@debian.org>  Sun, 05 Jun 2011 19:16:51 +0100
   
+fai (3.4.8) unstable; urgency=low
+
+  [ Michael Goetze ]
+  * [eeae848] package_config/FAISERVER: remove mkisofs
+  * [af1d1de] simple-examples: in squeeze, the GRUB 1 package is called
+    "grub-legacy".
+  * [f895526] Document http method for $FAI_CONFIG_SRC in fai-guide
+  * [f3574fb] Use $ROOTCMD grub-install for grub1
+  * [248edd7] menu.lst/postinst: Use grub device name for $ROOTCMD grub-
+    install
+  * [b264ac0] Make device2grub use grub-mkdevicemap rather than stuff in
+    target
+
+  [ Michael Prokop ]
+  * [cffdba6] debian/changelog: update git commit IDs - thanks to
+    Michael Tautschnig for helping
+  * [81085f7] bin/fai-do-scripts: also ignore files with suffix .dpkg-
+    dist and .dpkg-tmp
+  * [8893351] FAIBASE/30-interface: bugfix so fai softupdate runs
+    without error on a fresh installation with simple-examples -
+    backported patch by Michael Goetze
+  * [07b42af] fai-guide: adjusting quoting of variables like
+    FAI_CONFIG_SRC for proper output
+  * [8e201f9] Move get-config-dir-http to according space for stable-
+    branch.
+  * [a9c1065] Remove 99-discover-bug script, deprecated since lenny.
+  * [e21417e] Bump Standards-Version to 3.9.2.
+
+  [ Michael Tautschnig ]
+  * [b261425] setup-storage/Sizes.pm: Properly handle extended
+    partitions that aren't the last primary partition.
+  * [d939b6d] setup-storage/Sizes.pm: gpt-bios must be sector-wise first
+    partition.
+  * [cf1d068] setup-storage, setup-storage/Parser.pm: sanity checks.
+  * [e014096] setup-storage.8: Clarify that partition/volume sizes are
+    integers.
+  * [a801de8] setup-storage/{Parser,Volumes,Init}.pm: Improved error
+    reporting. (Closes: #617720, #611728) - thanks to Toomas Tamm
+  * [7715da4] setup-storage, setup-storage/{Volumes,Commands,Exec,
+    Init,Parser}.pm: Software RAID bugfixes
+  * [282e36a] setup-storage/{Parser,Commands}.pm: Make on-disk LV order
+    consistent with disk_config
+  * [01002aa] setup-storage: Revert incomplete $FAI::DATADIR use to
+    $ENV{LOGDIR}
+  * [01865ee] make-fai-nfsroot: Remove Ubuntu-specific
+    lib/udev/rules.d/85-lvm2.rules to avoid LVM auto-start
+  * [bbfb13b] setup-storage/Sizes.pm: Make 100% a valid partition size.
+    (Closes: #619136)
+  * [6e47075] setup-storage/Parser.pm: Support k and K for kilobytes
+  * [bdfc127] setup-storage: Added align-at option for user-defined
+    alignment - thanks to Mathieu Alorent
+  * [37b2520] setup-storage/Parser.pm: Fixed mis-merge of align-at
+    parsing and made it more robust.
+  * [d9f96fe] setup-storage/Sizes.pm: Apply alignment constraints to start
+    of first partition.
+  * [1a904b3] setup-storage/Parser.pm: Finally fix align-at parser bug.
+  * [cee3610] setup-storage.8: Document alignment strategy of setup-storage.
+  * [91ab2d0] get-config-dir-svn: really fix broken SVN URL comparison
+  * [2b7475d] get-config-dir-svn: Fix broken-pipe error in SVN URL check
+
+  [ Thomas Lange ]
+  * [d7099c5] add initramfs-tools, workaround for fai-mirror problem
+  * [012e755] diverting nis not needed any more, tested with lenny and
+    squeeze (Closes: #612481)
+  * [225c726] use new command names for cdrecord and mkisofs
+    (Closes: #609568)
+  * [a8b5849] get-config-dir-http: new script to get a tarball of the
+    config space - thanks to Waldemar Brodkorb for the initial patch
+  * [bf6b52d] fix comment in get-config-dir-http
+  * [b196fb4] get-config-dir-http: minor change in messages
+  * [4a8422a] fix wrong file name for memtest boot option
+    (Closes: #620798)
+  * [bfa7406] year++
+  * [84a367d] use same linux-image package names as in NFSROOT
+  * [aba26b4] replace transitional package name for dhcp-client
+  * [64edc5e] call genisoimage with -R instead of -r, thanks to
+    Syd Alsobrook for report and suggestion
+
+ -- Michael Prokop <mika@debian.org>  Tue, 10 May 2011 12:39:55 +0200
+
 fai (3.4.7) unstable; urgency=low
 
   [ Michael Tautschnig ]
