@@ -83,15 +83,11 @@ Index: trunk/lib/setup-storage/Commands.pm
    }
  }
  
-@@ -1128,11 +1132,16 @@
-       if ($part->{size}->{preserve} || $part->{size}->{resize});
-     $fs = "" if ($fs eq "-");
- 
-+    my $dn = &FAI::make_device_name($disk, $part_id);
+@@ -1131,8 +1135,13 @@
      my $pre = "cleared2_$disk";
--    $pre .= ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
-+    $pre .= ",exist_$dn" if ($prev_id > -1);
+     $pre .= ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
      # build a parted command to create the partition
++    my $dn = &FAI::make_device_name($disk, $part_id);
      &FAI::push_command( "parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B",
 -      $pre, "exist_" . &FAI::make_device_name($disk, $part_id) );
 +      $pre, "prep2_$dn");
