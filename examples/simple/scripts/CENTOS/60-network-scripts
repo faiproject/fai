@@ -20,8 +20,10 @@ then
     # Kudzu for some reason won't write eth0 into /etc/sysconfig/hwconf
     # from within the chroot. The following hack puts it in there
     # so that Kudzu doesn't overwrite our config on first boot.
-    grep eth0 $target/etc/sysconfig/hwconf || $ROOTCMD kudzu -c NETWORK -p \
+    if [ -f $target/sbin/kudzu ]; then
+	grep eth0 $target/etc/sysconfig/hwconf || $ROOTCMD kudzu -c NETWORK -p \
         >> $target/etc/sysconfig/hwconf
+    fi
 fi
 
 fcopy -iv /etc/sysconfig/network /etc/resolv.conf /etc/networks
