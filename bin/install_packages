@@ -125,15 +125,6 @@ $rootcmd = ($FAI_ROOT eq "/" ) ? '' : "chroot $FAI_ROOT";
 @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 foreach (@classes) { $classisdef{$_}=1;}
 
-# do not use AptPkg if target is not a Debian system
-if ($use_aptpkg) {
-  $_config->init;                 # initialize AptPkg
-  $_config->set("Dir",$FAI_ROOT); # simulate "chroot"
-  $_config->{quiet}=2;            # don't show cache initialization messages
-  $_system = $_config->system;
-  $cache = new AptPkg::Cache;
-}
-
 warn "$0: reading config files from directory $classpath\n" if $verbose;
 foreach (@classes) {
   &readconfig($classpath,$_) if -f "$classpath/$_"; # read all package config files
@@ -143,6 +134,15 @@ foreach (@classes) {
 my @debiantypes= qw/taskinst cupt cupt-r aptitude aptitude-r install remove dselect-upgrade smarti/;
 foreach my $dt (@debiantypes) {
   $types{$dt} and $hasdebian=1;
+}
+
+# use AptPkg only if target uses apt and Apt::Pkg is available
+if ($use_aptpkg && $hasdebian) {
+  $_config->init;                 # initialize AptPkg
+  $_config->set("Dir",$FAI_ROOT); # simulate "chroot"
+  $_config->{quiet}=2;            # don't show cache initialization messages
+  $_system = $_config->system;
+  $cache = new AptPkg::Cache;
 }
 
 if ($types{'smarti'}) {  # smarti is used in a packages_config file
