@@ -13,7 +13,7 @@ Index: trunk/lib/setup-storage/Sizes.pm
      (-b $disk) or die "$disk is not a valid device name\n";
      # reference to the current disk config
 +    defined ($FAI::current_config{$disk}) or
-+      die "Device $disk was not specified in \$disklist\n";
++      &FAI::internal_error("Device $disk missing in \$disklist - check buggy");
      my $current_disk = $FAI::current_config{$disk};
  
      # align to sector boundary by default
@@ -38,3 +38,32 @@ Index: trunk/lib/setup-storage/Volumes.pm
          "Can't preserve $device_name because it does not exist\n";
      }
    } elsif ($device_name =~ m{^/dev/md[\/]?(\d+)$}) {
+@@ -562,21 +564,20 @@
+   foreach my $config (keys %FAI::configs) {
+ 
+     if ($config =~ /^PHY_(.+)$/) {
++      defined ($FAI::current_config{$1}) or
++        die "Device $1 was not specified in \$disklist\n";
++      defined ($FAI::current_config{$1}{partitions}) or
++        &FAI::internal_error("Missing key \"partitions\"");
++
+       foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
+         my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
+         $part->{size}->{preserve} =
+-          ((defined($FAI::current_config{$1}) &&
+-              defined($FAI::current_config{$1}{partitions}{$part_id})) ? 1 : 0)
++          (defined($FAI::current_config{$1}{partitions}{$part_id}) ? 1 : 0)
+           if (2 == $part->{size}->{preserve});
+         next unless ($part->{size}->{preserve} || $part->{size}->{resize});
+         ($part->{size}->{extended}) and die
+           "Preserving extended partitions is not supported; mark all logical partitions instead\n";
+-        if (0 == $part_id) {
+-          defined ($FAI::current_config{$1}) or die
+-            "Can't preserve $1 because it does not exist\n";
+-        } else {
+-          defined ($FAI::current_config{$1}) or die
+-            "Can't preserve partition on $1 because $1 does not exist\n";
++        if (0 != $part_id) {
+           defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
+             "Can't preserve ". &FAI::make_device_name($1, $part_id)
+               . " because it does not exist\n";
