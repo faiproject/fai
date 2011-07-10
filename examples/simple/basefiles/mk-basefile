@@ -11,8 +11,8 @@
 # Supported distributions (each i386/amd64):
 # Debian GNU/Linux 6.0
 # Ubuntu 10.04
-# CentOS 5
-# Scientific Linux Cern 5
+# CentOS 5/6
+# Scientific Linux Cern 5/6
 #
 # Packages you might want to install to use this command:
 # debootstrap, rinse, xz-utils
@@ -131,12 +131,13 @@ tarit() {
 centos() {
 
     local arch=$1
+    local vers=$2
     local domain=$(domainname)
 
     check
     setarch $arch
     mkpost-centos
-    $l32 rinse --directory $xtmp --distribution centos-5 --arch $arch --before-post-install $xtmp/post
+    $l32 rinse --directory $xtmp --distribution centos-$vers --arch $arch --before-post-install $xtmp/post
     domainname $domain # workaround for #613377
     cleanup-rinse
     tarit
@@ -184,6 +185,7 @@ unknown() {
     echo "Available:
 
     CENTOS5_32   CENTOS5_64
+    CENTOS6_32   CENTOS6_64
     SLC5_32      SLC5_64
     SLC6_32      SLC6_64
     LUCID32      LUCID64
@@ -210,8 +212,10 @@ shift $(($OPTIND - 1))
 target=$1 # also the name of the output file
 
 case "$target" in
-    CENTOS5_32) centos i386 ;;
-    CENTOS5_64) centos amd64 ;;
+    CENTOS5_32) centos i386 5 ;;
+    CENTOS5_64) centos amd64 5 ;;
+    CENTOS6_32) centos i386 6 ;;
+    CENTOS6_64) centos amd64 6 ;;
     SLC5_32) slc i386 5 ;;
     SLC5_64) slc amd64 5 ;;
     SLC6_32) slc i386 6 ;;
