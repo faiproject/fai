@@ -6,7 +6,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2010 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2011 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -58,11 +58,25 @@ defnop() {
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:      none
 # Required-Var:      $classes
-# Short-Description: test if class is defined
+# Short-Description: test if one or multiple classes are defined
 ### END SUBROUTINE INFO
 
 ifclass() {
 
+    if [ $# -eq 1 ]; then
+	_ifclass $1
+	return $?
+    fi
+
+    case $1 in
+	-a) shift ; _ifclass_and $* ; return $? ;;
+	-o) shift ; _ifclass_or $*  ; return $? ;;
+    esac
+}
+
+_ifclass() {
+
+    # check one single class
     [ "$debug" ] && echo "Test if class $1 is in $classes" >&2
     # test if a class is defined
     local cl
@@ -73,6 +87,28 @@ ifclass() {
     done
     [ "$debug" ] && echo "ifclass returns $ret" >&2
     return $ret
+}
+
+_ifclass_and() {
+
+    # check if all classes are defined (logical AND)
+    local cl
+
+    for cl in $*; do
+	ifclass $cl || return 1
+    done
+    return 0
+}
+
+_ifclass_or() {
+
+    # check if one of the classes is defined (logical OR)
+    local cl
+
+    for cl in $*; do
+	ifclass $cl && return 0
+    done
+    return 1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rwmount() {
