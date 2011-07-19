@@ -402,6 +402,7 @@ upgrade_nfsroot() {
     mount -t proc   /proc  $NFSROOT/proc
     mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
+    /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
 
@@ -437,6 +438,7 @@ umount_dirs() {
     [ -d $NFSROOT/sys/class ] && umount $NFSROOT/sys
     [ -d $NFSROOT/proc/self ] && die 1 "/proc still mounted inside the nfsroot."
     umount $NFSROOT/dev/pts 2> /dev/null || true
+    /usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg
 
     if [ -n "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
