@@ -373,7 +373,7 @@ EOF
 	find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
     fi
 
-    rm -f etc/mdadm/mdadm.conf # remove file which contains info of the install server
+    rm -f etc/mdadm/mdadm.conf # remove file which may contain info of the install server
     # this second rm of the same file is needed!
     rm -f etc/udev/rules.d/70-persistent-net.rules 
     # remove Ubuntu-specific rules to auto-start volume groups, which confuses
@@ -403,6 +403,7 @@ upgrade_nfsroot() {
     mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
     /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg
+    mkdir $NFSROOT/etc/mdadm; touch $NFSROOT/etc/mdadm/mdadm.conf # stop mdadm from calling mkconf
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
 
