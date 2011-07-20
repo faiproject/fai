@@ -285,7 +285,7 @@ create_base() {
     else
 	echo "Creating base.tar.xz"
 	tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
-	nice xz $NFSROOT/var/tmp/base.tar &
+	nice xz $NFSROOT/var/tmp/base.tar >/dev/null 2>&1 &
 	xzpid=$!
     fi
     touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
@@ -438,7 +438,11 @@ umount_dirs() {
     [ -d $NFSROOT/sys/class ] && umount $NFSROOT/sys
     [ -d $NFSROOT/proc/self ] && die 1 "/proc still mounted inside the nfsroot."
     umount $NFSROOT/dev/pts 2> /dev/null || true
-    /usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg
+
+    mount | grep -q "on $NFSROOT/var/lib/dpkg type tmpfs"
+    if [ $? -eq 0 ]; then
+	/usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg
+    fi
 
     if [ -n "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
@@ -536,7 +540,7 @@ fi
 # Kill the directory if not in recover mode
 if [ -d $NFSROOT/proc -a ! "$recover" ]
 then
-    echo $NFSROOT already exists. Removing $NFSROOT
+    echo $NFSROOT already exists. Removing it.
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
     [ -L $NFSROOT/proc/self ] && umount $NFSROOT/proc || true
     [ -L $NFSROOT/proc/self ] && die 1 "/proc is still mounted inside the nfsroot."
@@ -563,7 +567,7 @@ umount_dirs
 
 if [ -n "$xzpid" ]; then
     ps -p $xzpid >/dev/null 2>&1
-    [ $? -eq 1 ] &&  echo "xz compression of $NFSROOT/var/tmp/base.tar is still running in the background."
+    [ $? -eq 0 ] &&  echo "xz compression of $NFSROOT/var/tmp/base.tar is still running in the background."
 fi
 echo "make-fai-nfsroot finished $merror."
 exit 0
