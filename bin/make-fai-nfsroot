@@ -56,7 +56,11 @@ check_nfsroot() {
 
     set +e
     # simple test, to see if important thing are available inside the nfsroot
-    [ -x $NFSROOT/usr/share/initramfs-tools/scripts/live ] || die 1 "live-initramfs was not installed inside the nfsroot."
+    [ -x $NFSROOT/usr/share/initramfs-tools/scripts/live ] || die 1 "live-boot was not installed inside the nfsroot."
+
+    echo "FAI packages inside the nfsroot:"
+    $ROOTCMD dpkg -l fai-client  fai-nfsroot fai-setup-storage |grep fai
+
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
     [ -z "$files" ] && die 1 "No initrd installed."
     egrep -q "^ERROR: |^E: Sub-process |^dpkg: error processing |^dpkg: dependency problems" /var/log/fai/make-fai-nfsroot.log && bad_exit
