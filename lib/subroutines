@@ -700,13 +700,16 @@ eval_cmdline() {
     echo -n "Kernel currently running: "
     uname -rsmo
     echo -n "Kernel parameters: "; cat /proc/cmdline
+    shopt -s extglob
     for word in $(cat /proc/cmdline) ; do
 	case $word in
-	    [a-zA-Z]*=*)
+	    *([a-zA-Z0-9_])=*)
 		eval "export $word"
 		;;
 	esac
     done
+    shopt -u extglob
+
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
