@@ -237,6 +237,8 @@ copy_fai_files() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
     
+    [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
+
     # check if NFSROOT directory is mounted with bad options
     fs=$(df -P $NFSROOT | tail -1 | awk '{print $6}')
     if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
@@ -278,8 +280,6 @@ local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cu
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
-
     call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
@@ -292,7 +292,6 @@ create_base() {
 	nice xz $NFSROOT/var/tmp/base.tar >/dev/null 2>&1 &
 	xzpid=$!
     fi
-    touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract_base() {
@@ -318,7 +317,6 @@ extract_base() {
 	      ;;
 	  esac
 
-      touch $NFSROOT/.THIS_IS_THE_FAI_NFSROOT
       echo done
     fi
 }
@@ -333,6 +331,7 @@ create_nfsroot() {
     else
       call_with_stamp create_base
     fi
+    touch .THIS_IS_THE_FAI_NFSROOT
     # save the list of all packages in the base.tgz
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
