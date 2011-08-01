@@ -157,7 +157,15 @@ do_script() {
 	    fc_check_status $file $exitcode | tee -a $LOGDIR/expect.log
 	;;
 
-	*) echo "File $file has unsupported type $filetype." ;;
+	*"python"*"script"*)
+	    echo "Executing  python: $file"
+	    echo "=====   python: $file   =====" >> $LOGDIR/python.log 2>&1
+	    ./$file >> $LOGDIR/python.log 2>&1
+	    savemaxstatus $?
+	    fc_check_status $file $exitcode | tee -a $LOGDIR/python.log
+	;;
+
+ 	*) echo "File $file has unsupported type $filetype." ;;
     esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
