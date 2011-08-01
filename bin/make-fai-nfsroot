@@ -97,7 +97,7 @@ while getopts hervC:B:f:kKpU opt ; do
         C) cfdir=$OPTARG ;;
         B) basetgz=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
-        r) recover=1 ;;
+        r) die 1 "Option -r is not supported any more." ;;
         f) die 1 "Option -f is not supported any more. Use option -C instead" ;;
         k) kinstall=1 ;;
         K) kremove=1;;
@@ -146,26 +146,13 @@ oldnfsroot=$NFSROOT
 NFSROOT="$NFSROOT/live/filesystem.dir"
 ROOTCMD="chroot $NFSROOT"
 
-RUNDIR=/var/run/fai/make-fai-nfsroot
-mkdir -p $RUNDIR
 export DEBIAN_FRONTEND=noninteractive
-[ "$recover" ] || rm -rf $RUNDIR/*
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bad_exit() {
 
     merror="with errors"
     echo "An error occured during make-fai-nfsroot."
     echo "Please fix the error or try make-fai-nfsroot -v"
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-call_with_stamp() {
-
-    local func=$1
-    local stamp=$RUNDIR/$func
-    # call subroutine
-    [ "$recover" -a -f $stamp ] && return 0 
-    # make a stamp only on success.
-    "$@" && : > $stamp
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_verbose() {
@@ -280,7 +267,7 @@ local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cu
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    call_with_stamp call_debootstrap $FAI_DEBOOTSTRAP
+    call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
     if [ $usexz -eq 0 ]; then
@@ -327,9 +314,9 @@ create_nfsroot() {
     cd $NFSROOT || die 1 "Can't cd to $NFSROOT"
 
     if [ -n "$basetgz" ] ; then
-      call_with_stamp extract_base
+      extract_base
     else
-      call_with_stamp create_base
+      create_base
     fi
     touch .THIS_IS_THE_FAI_NFSROOT
     # save the list of all packages in the base.tgz
@@ -356,14 +343,14 @@ APT::Get::AllowUnauthenticated "true";
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
     echo "Upgrading $NFSROOT"
-    LC_ALL=C call_verbose call_with_stamp upgrade_nfsroot  
+    LC_ALL=C call_verbose upgrade_nfsroot  
 
     # overwrite default live.conf
     [ -f $cfdir/live.conf ] || die 1 "$cfdir/live.conf not found."
     cp -Lp $cfdir/live.conf etc/live.conf
 
-    LC_ALL=C call_with_stamp add_packages_nfsroot
-    call_with_stamp copy_fai_files
+    LC_ALL=C add_packages_nfsroot
+    copy_fai_files
 
     # set timezone in nfsroot
     timezone=$(readlink /etc/localtime | sed 's%^/usr/share/zoneinfo/%%')
@@ -393,7 +380,7 @@ EOF
         . /tmp/fai/variables.log 2>/dev/null
 EOF
 
-    call_verbose call_with_stamp setup_ssh
+    call_verbose setup_ssh
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
@@ -476,8 +463,8 @@ fdivert() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 kernel_install() {
 
-    call_with_stamp install_kernel_nfsroot
-    call_with_stamp setup_dhcp
+    install_kernel_nfsroot
+    setup_dhcp
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 run_hooks() {
@@ -561,7 +548,7 @@ if [ -x "$(which xz)" ]; then
     usexz=1
 fi
 
-call_with_stamp create_nfsroot
+create_nfsroot
 
 kernel_install
 run_hooks
