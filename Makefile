@@ -28,7 +28,9 @@ bashismcheck:
 		echo -n "Checking for bashisms"; \
 		for SCRIPT in $(SHELL_SCRIPTS); do \
 			test -r $${SCRIPT} || continue ; \
-			checkbashisms -x $${SCRIPT} || exit ; \
+			ec=0
+			checkbashisms -x $${SCRIPT} || ec=$$? ; \
+			if [ $${ec} -ne 0 ] && [ $${ec} -ne 2 ] ; then exit $${ec} ; fi ; \
 			echo -n "."; \
 		done; \
 		echo " done."; \
@@ -44,7 +46,7 @@ shellcheck:
 	@echo -n "Checking for shell syntax errors"; \
 	for SCRIPT in $(BASH_SCRIPTS) $(SHELL_SCRIPTS); do \
 		test -r $${SCRIPT} || continue ; \
-		bash -n $${SCRIPT} || exit ; \
+		bash -O extglob -n $${SCRIPT} || exit ; \
 		echo -n "."; \
 	done; \
 	echo " done."; \
