@@ -28,7 +28,7 @@ bashismcheck:
 		echo -n "Checking for bashisms"; \
 		for SCRIPT in $(SHELL_SCRIPTS); do \
 			test -r $${SCRIPT} || continue ; \
-			ec=0
+			ec=0 ; \
 			checkbashisms -x $${SCRIPT} || ec=$$? ; \
 			if [ $${ec} -ne 0 ] && [ $${ec} -ne 2 ] ; then exit $${ec} ; fi ; \
 			echo -n "."; \
