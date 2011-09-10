@@ -46,7 +46,7 @@ shellcheck:
 	@echo -n "Checking for shell syntax errors"; \
 	for SCRIPT in $(BASH_SCRIPTS) $(SHELL_SCRIPTS); do \
 		test -r $${SCRIPT} || continue ; \
-		bash -O extglob -n $${SCRIPT} || exit ; \
+		bash -n $${SCRIPT} || exit ; \
 		echo -n "."; \
 	done; \
 	echo " done."; \
