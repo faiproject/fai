@@ -79,12 +79,17 @@ _ifclass() {
     # check one single class
     [ "$debug" ] && echo "Test if class $1 is in $classes" >&2
     # test if a class is defined
-    local cl
-    local ret=1
+    local ret
 
-    for cl in $classes; do
-	[ x$cl = x$1 ] && ret=0 && break
-    done
+    if [ "${#hclasses[@]}" = 0 ]; then
+	echo "ifclass: WARNING. Associative array hclasses is empty." >&2
+    fi
+
+    if [ X${hclasses[$1]} = X1 ]; then
+	ret=0
+    else
+    	ret=1
+    fi
     [ "$debug" ] && echo "ifclass returns $ret" >&2
     return $ret
 }
@@ -399,6 +404,9 @@ task_defclass() {
     cfclasses=$(echo $classes)
     cfclasses=${cfclasses// /.}
     [ "$debug" ] && echo "cfclasses: $cfclasses"
+    # define a bash hash with all class names. Without this, ifclass does not work
+    declare -A hclasses
+    for c in $classes; do hclasses[$c]=1;done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 _defvar() {
