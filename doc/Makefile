@@ -8,10 +8,10 @@ free:	text html ps pdf
 #	grep FIXME $(DOC).txt
 
 html:
-	a2x -L --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f xhtml $(DOC).txt
+	a2x -L --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" --xsltproc-opts="--stringparam use.id.as.filename 1" -f xhtml $(DOC).txt
 
 chunked:
-	a2x -L --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" -f chunked $(DOC).txt
+	a2x -L --icons-dir=.a2x-icons --icons --copy --asciidoc-opt="-a toc -a toclevels=3" --xsltproc-opts="--stringparam use.id.as.filename 1" -f chunked $(DOC).txt
 
 pdf:	
 	a2x -L --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
