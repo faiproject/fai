@@ -82,17 +82,9 @@ PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 merror="properly"
 sshpreserve=0
-divert=0
-
-if [ -f /etc/lsb-release ]; then
-    . /etc/lsb-release
-    case "$DISTRIB_ID" in
-	Ubuntu) divert=0 ;;
-    esac
-fi
 
 # option e currently does nothing
-while getopts hervC:B:f:kKpU opt ; do
+while getopts hervC:B:f:kKp opt ; do
     case "$opt" in
         C) cfdir=$OPTARG ;;
         B) basetgz=$OPTARG ;;
@@ -104,7 +96,6 @@ while getopts hervC:B:f:kKpU opt ; do
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
-        U) divert=0 ;; # compability option, default used to be 1 by default
         ?) exit 5 ;; # error in option parsing
     esac
 done
@@ -163,15 +154,6 @@ call_verbose() {
     else
 	"$@" > /dev/null
 	return $?
-    fi
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-install_kernel_nfsroot() {
-
-    if [ $divert = 1 ]; then
-	rm $NFSROOT/usr/sbin/update-initramfs
-	LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /usr/sbin/update-initramfs
-	$ROOTCMD update-initramfs -k all -t -u
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -396,11 +378,6 @@ upgrade_nfsroot() {
     mkdir $NFSROOT/etc/mdadm; touch $NFSROOT/etc/mdadm/mdadm.conf # stop mdadm from calling mkconf
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
-
-    if [ $divert = 1 ]; then
-	fdivert /usr/sbin/update-initramfs
-	ln -sf /bin/true $NFSROOT/usr/sbin/update-initramfs
-    fi
     $ROOTCMD apt-get -y dist-upgrade
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -460,12 +437,6 @@ fdivert() {
 	LC_ALL=C $ROOTCMD dpkg-divert --quiet --add --rename $item
     done
 }
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-kernel_install() {
-
-    install_kernel_nfsroot
-    setup_dhcp
-}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 run_hooks() {
 
@@ -501,14 +472,10 @@ trap "bad_exit" ERR
 [ -n "$kinstall" ] && {
     trap "true" EXIT
     echo "Upgrading nfsroot and installing new packages into the nfsroot."
-    if [ $divert = 1 ]; then
-	fdivert /usr/sbin/update-initramfs
-	ln -sf /bin/true $NFSROOT/usr/sbin/fai
-    fi
     $ROOTCMD apt-get update
     $ROOTCMD apt-get -y dist-upgrade
     LC_ALL=C add_packages_nfsroot
-    kernel_install
+    setup_dhcp
     run_hooks
     umount_dirs
     trap "true" EXIT
@@ -549,7 +516,6 @@ if [ -x "$(which xz)" ]; then
 fi
 
 create_nfsroot
-
 kernel_install
 run_hooks
 check_nfsroot
