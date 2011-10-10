@@ -81,6 +81,7 @@ EOF
 PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 
 merror="properly"
+exitcode=0
 sshpreserve=0
 
 # option e currently does nothing
@@ -146,6 +147,7 @@ fi
 bad_exit() {
 
     merror="with errors"
+    exitcode=1
     echo "An error occured during make-fai-nfsroot."
     echo "Please fix the error or try make-fai-nfsroot -v"
 }
@@ -479,7 +481,7 @@ trap "bad_exit" ERR
     umount_dirs
     trap "true" EXIT
     echo "make-fai-nfsroot finished $merror."
-    exit 0
+    exit $exitcode
 }
 
 # repeat message, so it will appear in the log file
@@ -518,7 +520,7 @@ if [ -n "$xzpid" ]; then
     [ $? -eq 0 ] &&  echo "xz compression of $NFSROOT/var/tmp/base.tar is still running in the background."
 fi
 echo "make-fai-nfsroot finished $merror."
-exit 0
+exit $exitcode
 } 2>&1 | tee -a /var/log/fai/make-fai-nfsroot.log
 umount_dirs
 trap "true" EXIT
