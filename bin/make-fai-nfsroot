@@ -321,6 +321,7 @@ create_nfsroot() {
     # liloconfig, dump needs these files
     echo "# UNCONFIGURED FSTAB FOR BASE SYSTEM" > etc/fstab
 
+    # this copies sources.list into the nfsroot
     cp -La $cfdir/apt $NFSROOT/etc
 
     add_etc_hosts_entries
@@ -369,7 +370,6 @@ EOF
         . /tmp/fai/variables.log 2>/dev/null
 EOF
 
-    call_verbose setup_ssh
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
@@ -394,7 +394,8 @@ add_packages_nfsroot() {
     export FAI_ROOT=$NFSROOT
     export classes="NFSROOT $iarch"
 
-cat > $NFSROOT/etc/kernel-img.conf << EOF
+    # is this still needed? All these variables are not documented in kernel-img.conf(5) in squeeze
+    cat > $NFSROOT/etc/kernel-img.conf << EOF
 do_bootloader = No
 do_initrd = No
 warn_initrd = No
@@ -511,6 +512,7 @@ if [ -d $NFSROOT/proc ]; then
 fi
 
 create_nfsroot
+call_verbose setup_ssh
 run_hooks
 check_nfsroot
 umount_dirs
