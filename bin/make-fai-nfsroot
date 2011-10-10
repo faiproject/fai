@@ -136,8 +136,12 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 oldnfsroot=$NFSROOT
 NFSROOT="$NFSROOT/live/filesystem.dir"
 ROOTCMD="chroot $NFSROOT"
-
 export DEBIAN_FRONTEND=noninteractive
+
+usexz=0
+if [ -x "$(which xz)" ]; then
+    usexz=1
+fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bad_exit() {
 
@@ -241,7 +245,7 @@ add_etc_hosts_entries() {
     ainsl     $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
 
     # add entries for all network devices
-local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
+    local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
     for eth in $ips; do
 	getent hosts $eth >> etc/hosts || true
     done
@@ -249,6 +253,7 @@ local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cu
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
+    [ ! -x "$(which debootstrap)" ] && die 1 "Can't find debootstrap command. Aborting."
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
@@ -455,12 +460,6 @@ run_hooks() {
 trap 'echo "Aborting";umount_dirs' EXIT
 trap "bad_exit" ERR
 
-# repeat message, so it will appear in the log file
-[ "$verbose" ] && echo "Using configuration files from $cfdir" > /var/log/fai/make-fai-nfsroot.log
-
-{
-
-
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
     echo "Removing all kernels from NFSROOT."
@@ -483,6 +482,10 @@ trap "bad_exit" ERR
     exit 0
 }
 
+# repeat message, so it will appear in the log file
+[ "$verbose" ] && echo "Using configuration files from $cfdir" > /var/log/fai/make-fai-nfsroot.log
+
+{
 echo "Creating FAI nfsroot in $NFSROOT."
 echo "This may take a long time."
 
@@ -505,16 +508,7 @@ if [ -d $NFSROOT/proc ]; then
     nice rm -rf $oldnfsroot/.will-now-be-deleted & 
 fi
 
-# Create a new nfsroot
-[ ! -x "$(which debootstrap)" ] && die 1 "Can't find debootstrap command. Aborting."
-
-usexz=0
-if [ -x "$(which xz)" ]; then
-    usexz=1
-fi
-
 create_nfsroot
-kernel_install
 run_hooks
 check_nfsroot
 umount_dirs
