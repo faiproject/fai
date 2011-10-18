@@ -552,7 +552,7 @@ task_install() {
     task extrbase
     task mirror
     task debconf
-    task prepareapt
+    task repository
     task updatebase
     task instsoft
     task configure
@@ -620,7 +620,7 @@ task_dirinstall() {
     [ -f $target/etc/fstab ] || touch $target/etc/fstab
     task mirror
     task debconf
-    task prepareapt
+    task repository
     task updatebase
     task instsoft
     task configure
@@ -889,7 +889,22 @@ task_debconf () {
 # Short-Description: prepare package repository access
 ### END SUBROUTINE INFO
 
-task_prepareapt () {
+task_repository () {
+
+    # check for old hooks for task prepareapt
+    local hook cl hfile
+    hook=prepareapt
+    for cl in $classes; do
+	hfile=$FAI/hooks/$hook.$cl
+	if [ -f $hfile ]; then
+	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile to repository.$cl."
+	    continue
+	fi
+	if [ -f $hfile.source ]; then
+	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile.source to repository.$cl.source."
+	    continue
+	fi
+    done
 
     [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
 
