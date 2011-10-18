@@ -8,29 +8,6 @@
 
 echo "Updating base"
 
-# add apt keys for signed repositories
-
-declare -A keys
-# store all available *.asc files
-for f in `cd $FAI/package_config; ls *.asc 2>/dev/null`; do
-    keys["$f"]=1
-done
-
-for keyfile in $classes; do
-    [ ! -f $FAI/package_config/$keyfile ] && continue
-    echo -n "Loading APT key from $keyfile "
-    cat $FAI/package_config/$keyfile | $ROOTCMD apt-key add -
-    unset keys["$keyfile"]
-done
-
-if [ ${#keys[@]} -ne 0 ]; then
-    echo "Following signatures are not loaded:"
-    for i in "${!keys[@]}"; do
-	echo "$i"
-    done
-    echo "You have to rename them to match a class name."
-fi
-
 # first setup the environment in /target
 if [ "$FAI_ACTION" = "install" -o "$FAI_ACTION" = "dirinstall" ]; then
     mount -t proc   proc   $FAI_ROOT/proc

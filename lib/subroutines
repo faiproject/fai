@@ -884,7 +884,7 @@ task_debconf () {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    none
-# Requires-Var:    $FAI_ROOT $FAI_ETC_DIR $FAI_ALLOW_UNSIGNED
+# Requires-Var:    $classes $FAI $FAI_ROOT $FAI_ETC_DIR $FAI_ALLOW_UNSIGNED
 # Suggests-Var:
 # Short-Description: prepare package repository access
 ### END SUBROUTINE INFO
@@ -911,6 +911,31 @@ task_prepareapt () {
 APT::Get::AllowUnauthenticated "true";
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
+    fi
+
+    # add apt keys for signed repositories
+
+    declare -A keys
+    # remember all available *.asc files
+    for f in `cd $FAI/package_config; ls *.asc 2>/dev/null`; do
+	keys["$f"]=1
+    done
+
+    # add apt keys for all classes
+    for keyfile in $classes; do
+	[ ! -f $FAI/package_config/$keyfile ] && continue
+	echo -n "Loading APT key from $keyfile "
+	cat $FAI/package_config/$keyfile | $ROOTCMD apt-key add -
+	unset keys["$keyfile"]
+    done
+
+    # print which *.asc files were not loaded
+    if [ ${#keys[@]} -ne 0 ]; then
+	echo "Following signatures are not loaded:"
+	for i in "${!keys[@]}"; do
+	    echo "$i"
+	done
+	echo "You have to rename them to match a class name."
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
