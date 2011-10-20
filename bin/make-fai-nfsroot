@@ -256,6 +256,11 @@ add_etc_hosts_entries() {
     for eth in $ips; do
 	getent hosts $eth >> etc/hosts || true
     done
+
+    if [ -f /etc/resolv.conf ]; then
+	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
+	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
@@ -326,17 +331,18 @@ create_nfsroot() {
     # liloconfig, dump needs these files
     echo "# UNCONFIGURED FSTAB FOR BASE SYSTEM" > etc/fstab
 
-    # this copies sources.list into the nfsroot
-    cp -La $cfdir/apt $NFSROOT/etc
-
-    add_etc_hosts_entries
-
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
     cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
 APT::Get::AllowUnauthenticated "true";
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
+
+    # this copies sources.list into the nfsroot
+    cp -La $cfdir/apt $NFSROOT/etc
+
+    add_etc_hosts_entries
+
     echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose upgrade_nfsroot  
 
@@ -379,10 +385,6 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
 
-    if [ -f /etc/resolv.conf ]; then
-	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
-	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
-    fi
     mount -t proc   /proc  $NFSROOT/proc
     mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
