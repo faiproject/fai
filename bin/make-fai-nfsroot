@@ -83,10 +83,14 @@ PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 merror="properly"
 exitcode=0
 sshpreserve=0
+adjust=0
+generic=0
 
 # option e currently does nothing
-while getopts hervC:B:f:kKpU opt ; do
+while getopts aghervC:B:f:kKpU opt ; do
     case "$opt" in
+        a) adjust=1 ;;
+        g) generic=1 ;;
         C) cfdir=$OPTARG ;;
         B) basetgz=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
@@ -144,6 +148,17 @@ usexz=0
 if [ -x "$(which xz)" ]; then
     usexz=1
 fi
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+adjust_nfsroot() {
+
+    # add install server specific data (like network parameters) into the nfsroot
+    # a generic nfsroot must already be available
+    trap '' EXIT
+    add_etc_hosts_entries
+    copy_fai_files
+    exit 0
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 bad_exit() {
 
@@ -200,6 +215,7 @@ setup_ssh() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 copy_fai_files() {
 
+    [ $generic = 1 ] && return # do nothing here if we generate a generic nfsroot
     # copy to nfsroot
     $ROOTCMD usermod -p "$FAI_ROOTPW" root
     mkdir -p $NFSROOT/etc/fai # create empty directory
@@ -253,8 +269,11 @@ add_etc_hosts_entries() {
 
     # add entries for all network devices
     local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
+
+    local line
     for eth in $ips; do
-	getent hosts $eth >> etc/hosts || true
+	line=$(getent hosts $eth)
+	ainsl -v $NFSROOT/etc/hosts "$line"
     done
 
     if [ -f /etc/resolv.conf ]; then
@@ -470,6 +489,8 @@ run_hooks() {
 trap 'echo "Aborting";umount_dirs' EXIT
 trap "bad_exit" ERR
 
+[ $adjust = 1 ] && adjust_nfsroot
+
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
     echo "Removing all kernels from NFSROOT."
@@ -522,6 +543,12 @@ create_nfsroot
 call_verbose setup_ssh
 run_hooks
 check_nfsroot
+
+if [ $generic = 1 ]; then
+    # remove fai.conf which comes from package fai-client
+    rm -f $NFSROOT/etc/hosts $NFSROOT/etc/resolv.conf* $NFSROOT/etc/fai/fai.conf
+    ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
+fi
 umount_dirs
 
 if [ -n "$xzpid" ]; then
