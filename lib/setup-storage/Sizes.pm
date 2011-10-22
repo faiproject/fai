@@ -622,27 +622,15 @@ sub compute_partition_sizes
       }
     }
 
-    # the start byte for the next partition
-    my $next_start = 0;
+    # the start byte for the next partition - first partition starts at 1M as is
+    # new default for most systems it seems
+    my $next_start = 1024 * 1024;
 
-    if ($FAI::configs{$config}{disklabel} eq "msdos") {
-      # on msdos disk labels, the first partitions starts at head #1; well,
-      # enforce a 63-sectors-per-track layout
-      $next_start = 63 * $current_disk->{sector_size};
-
-    } elsif ($FAI::configs{$config}{disklabel} eq "gpt") {
-      # on GPT-EFI disk labels the first 34 and last 33 sectors must be left alone
-      $next_start = 34 * $current_disk->{sector_size};
-
+    if ($FAI::configs{$config}{disklabel} eq "gpt") {
       # modify the disk to claim the space for the second partition table
       $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
 
     } elsif ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
-      # the MBR requires space, too
-      $next_start = $current_disk->{sector_size};
-      # not too sure whether this is needed: standard GPT partition table space
-      $next_start += 33 * $current_disk->{sector_size};
-
       # apparently parted insists in having some space left at the end too
       # modify the disk to claim the space for the second partition table
       $current_disk->{end_byte} -= 33 * $current_disk->{sector_size};
