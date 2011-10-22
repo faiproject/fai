@@ -64,6 +64,9 @@ sub in_path {
   # ignored in syntax-check mode
   return 1 if ($FAI::check_only);
 
+  # check full path names first
+  ($cmd =~ /^\//) and return (-x "$cmd");
+
   # split $PATH into its components, search all of its components
   # and test for $cmd being executable
   (-x "$_/$cmd") and return 1 foreach (split (":", $ENV{PATH}));

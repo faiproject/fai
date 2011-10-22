@@ -59,8 +59,8 @@ my $version = "1.3";
 use Getopt::Std;
 $main::VERSION = $version;
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s); # the variables for getopt
-(&getopts('Xf:hds') && !$opt_h) || die <<EOF;
+our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L); # the variables for getopt
+(&getopts('Xf:hdsD:L:') && !$opt_h) || die <<EOF;
 setup-storage version $version
 
 USAGE: [-X]                     no test, your harddisks will be formated
@@ -68,6 +68,8 @@ USAGE: [-X]                     no test, your harddisks will be formated
        [-f<config-filename>]    default: parse classes
        [-d]                     enable debug output (equivalent to debug=1)
        [-s]                     perform syntax check only and exit
+       [-D<disks>]              override disklist variable by space-separated <disks>
+       [-L<logdir>]             use <logdir> instead of LOGDIR variable
        [-h]                     print this help message
 EOF
 
@@ -92,19 +94,21 @@ warn "setup-storage is running in test-only mode\n" unless ($FAI::no_dry_run);
 $opt_s and $FAI::check_only = 1;
 
 # Find out whether $LOGDIR is usable or default to /tmp/fai
+$opt_L and $FAI::DATADIR = $opt_L;
 if (! -d $FAI::DATADIR) {
-  defined ($ENV{LOGDIR}) and die
+  !defined($opt_L) and defined ($ENV{LOGDIR}) and die
     "Environment variable LOGDIR is set, but $FAI::DATADIR is not a directory\n";
   mkdir $FAI::DATADIR or die
     "Failed to create directory $FAI::DATADIR\n";
-  warn "\$LOGDIR not set in environment; created data directory $FAI::DATADIR\n";
+  warn "Created data directory $FAI::DATADIR\n";
 }
 
 # $disklist may be provided by the environment
 my $disklist = $ENV{disklist};
+$opt_D and $disklist = $opt_D;
 if (! defined($disklist)) {
-  &FAI::in_path("disk-info") or die "disk-info not found in PATH\n";
-  $disklist = `disk-info | sort`;
+  &FAI::in_path("/usr/lib/fai/disk-info") or die "/usr/lib/fai/disk-info not found\n";
+  $disklist = `/usr/lib/fai/disk-info | sort`;
 }
 
 @FAI::disks = split( /[\n ]/, $disklist);
