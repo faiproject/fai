@@ -61,6 +61,9 @@ sub in_path {
   # initialize the parameter
   my ($cmd) = @_;
 
+  # ignored in syntax-check mode
+  return 1 if ($FAI::check_only);
+
   # split $PATH into its components, search all of its components
   # and test for $cmd being executable
   (-x "$_/$cmd") and return 1 foreach (split (":", $ENV{PATH}));
@@ -82,9 +85,11 @@ sub in_path {
 sub resolve_disk_shortname {
   my ($disk) = @_;
 
+  $disk = "sdx" . chr(ord('a') + $disk - 1)
+    if ($FAI::check_only && $disk =~ /^\d+$/);
+
   # test $disk for being numeric
   if ($disk =~ /^\d+$/) {
-
     # $disk-1 must be a valid index in the map of all disks in the system
     (scalar(@FAI::disks) >= $disk)
       or die "this system does not have a physical disk $disk\n";
