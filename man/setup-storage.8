@@ -596,13 +596,13 @@ sizespec ::= RAM:[[:digit:]]+%|[[:digit:]]+[kKMGTP%iB]*
           * multiplier */
 
 
-size ::= <sizespec>(-(<sizespec>)?)?(:resize)?
+size ::= <sizespec>(-(<sizespec>)?)?(:resize|:preserve_(always|reinstall|lazy))?
 .br
          /* size, possibly given as a range; physical partitions or lvm logical
 .br
           * volumes only */
 .br
-         | -<sizespec>(:resize)?
+         | -<sizespec>(:resize|:preserve_(always|reinstall|lazy))?
 .br
          /* size given as upper limit; physical partitions or lvm logical
 .br
@@ -663,7 +663,8 @@ disk_config line, using preserve_reinstall, preserve_always, or preserve_lazy,
 and bootable.  preserve_always is equivalent to the previous preserveX option,
 whereas preserve_reinstall preserves the partition unless "initial" is given as
 one of the FAI_FLAGS. preserve_lazy allows to preserve partitions only if these
-exist already. Otherwise they are created.
+exist already. Otherwise they are created. Yet, all preserve_* options may also
+be given with the size specification, as in: 200M:preserve_lazy.
 .IP \(bu
 The "always_format" option overrides preserving filesystems (via one of the
 "preserveX" options), like the "format" option in setup_harddisks.

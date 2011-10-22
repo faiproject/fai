@@ -372,6 +372,40 @@ sub convert_unit
   return $val;
 }
 
+################################################################################
+#
+# @brief Fill the "size" key of a partition or volume entry
+#
+# @param $range Actual size
+# @param $options Additional options such as preserve or resize
+#
+################################################################################
+sub set_volume_size
+{
+  my ($range, $options) = @_;
+
+  # convert the units, if necessary
+  my ($min, $max) = split (/-/, $range);
+  $min .= "MiB" if ($min =~ /\d\s*$/);
+  $min   = &FAI::convert_unit($min);
+  $max .= "MiB" if ($max =~ /\d\s*$/);
+  $max   = &FAI::convert_unit($max);
+  # enter the range into the hash
+  $FAI::partition_pointer->{size}->{range} = "$min-$max";
+  # set the resize or preserve flag, if required
+  if (defined ($options)) {
+    $FAI::configs{$FAI::device}{preserveparts} = 1;
+    $FAI::partition_pointer->{size}->{resize} = 1 if ($options =~ /^:resize/);
+    $FAI::partition_pointer->{size}->{preserve} = 1 if ($options =~ /^:preserve_always/);
+    $FAI::partition_pointer->{size}->{preserve} = 1
+    if ($FAI::reinstall && $options =~ /^:preserve_reinstall/);
+    if ($options =~ /^:preserve_lazy/) {
+      $FAI::configs{$FAI::device}{preserveparts} = 2;
+      $FAI::partition_pointer->{size}->{preserve} = 2;
+    }
+  }
+}
+
 # have RecDescent do proper error reporting
 $::RD_HINT = 1;
 
@@ -862,7 +896,7 @@ $FAI::Parser = Parse::RecDescent->new(
           1;
         }
 
-    size: /^((RAM:\d+%|\d+[kKMGTP%iB]*)(-(RAM:\d+%|\d+[kKMGTP%iB]*)?)?)(:resize)?/
+    size: /^((RAM:\d+%|\d+[kKMGTP%iB]*)(-(RAM:\d+%|\d+[kKMGTP%iB]*)?)?)(:resize|:preserve_(always|reinstall|lazy))?/
         {
           # complete the size specification to be a range in all cases
           my $range = $1;
@@ -876,41 +910,14 @@ $FAI::Parser = Parse::RecDescent->new(
           {
             # range has no upper limit, assume the whole disk
             $range = "${range}100%";
-          } 
-
-          # convert the units, if necessary
-          my ($min, $max) = split (/-/, $range);
-          $min .= "MiB" if ($min =~ /\d\s*$/);
-          $min   = &FAI::convert_unit($min);
-          $max .= "MiB" if ($max =~ /\d\s*$/);
-          $max   = &FAI::convert_unit($max);
-          $range = "$min-$max";
-          # enter the range into the hash
-          $FAI::partition_pointer->{size}->{range} = $range;
-          # set the resize flag, if required
-          if (defined ($5)) {
-            $FAI::partition_pointer->{size}->{resize} = 1;
-            $FAI::configs{$FAI::device}{preserveparts} = 1;
           }
+
+          &FAI::set_volume_size($range, $5);
         }
-        | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize)?\s+/
+        | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize|:preserve_(always|reinstall|lazy))?\s+/
         {
           # complete the range by assuming 0 as the lower limit 
-          my $range = "0$1";
-          # convert the units, if necessary
-          my ($min, $max) = split (/-/, $range);
-          $min .= "MiB" if ($min =~ /\d\s*$/);
-          $min   = &FAI::convert_unit($min);
-          $max .= "MiB" if ($max =~ /\d\s*$/);
-          $max   = &FAI::convert_unit($max);
-          $range = "$min-$max";
-          # enter the range into the hash
-          $FAI::partition_pointer->{size}->{range} = $range;
-          # set the resize flag, if required
-          if (defined ($3)) {
-            $FAI::partition_pointer->{size}->{resize} = 1;
-            $FAI::configs{$FAI::device}{preserveparts} = 1;
-          }
+          &FAI::set_volume_size("0$1", $3);
         }
         | <error: invalid partition size near "$text">
 
