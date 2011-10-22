@@ -350,6 +350,15 @@ create_nfsroot() {
     # liloconfig, dump needs these files
     echo "# UNCONFIGURED FSTAB FOR BASE SYSTEM" > etc/fstab
 
+    # Work around Ubuntu's failure in installing rsyslog with
+    # "start: Unable to connect to Upstart: Failed to connect to
+    # socket /com/ubuntu/upstart: Connection refused"
+    if $ROOTCMD test -x /usr/sbin/dpkg-divert && [ -x $NFSROOT/sbin/initctl ] ; then
+      LC_ALL=C $ROOTCMD dpkg-divert --quiet --add --rename /sbin/initctl
+      ln -sf /bin/true $NFSROOT/sbin/initctl
+      INITCTL_DIVERT=true
+    fi
+
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
     cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
@@ -549,6 +558,13 @@ if [ $generic = 1 ]; then
     rm -f $NFSROOT/etc/hosts $NFSROOT/etc/resolv.conf* $NFSROOT/etc/fai/fai.conf
     ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
 fi
+
+# get rid of initctl divert again
+if [ "$INITCTL_DIVERT" = true ] ; then
+  rm -f $NFSROOT/sbin/initctl
+  LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /sbin/initctl
+fi
+
 umount_dirs
 
 if [ -n "$xzpid" ]; then
