@@ -292,8 +292,12 @@ sub build_cryptsetup_commands {
 sub build_raid_commands {
 
   # check RAID arrays if there are pre-existing ones
-  &FAI::push_command("mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
-    "", "mdadm_startall_examined") if (scalar(keys %FAI::current_raid_config));
+  if (scalar(keys %FAI::current_raid_config))
+  {
+    &FAI::push_command("mdadm --stop --scan", "", "stop_for_assemble");
+    &FAI::push_command("mdadm --assemble --scan --config=$FAI::DATADIR/mdadm-from-examine.conf",
+      "stop_for_assemble", "mdadm_startall_examined");
+  }
   foreach my $id (keys %FAI::current_raid_config) {
     my $md = "/dev/md$id";
     my $pre_deps_cl = "mdadm_startall_examined";
