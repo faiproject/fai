@@ -664,8 +664,11 @@ sub cleanup_vg {
           }
         }
 
-        &FAI::push_command( "lvremove -f $vg/$lv",
+        &FAI::push_command( "wipefs -a $vg/$lv",
           "vgchange_a_n_VG_$vg$pre_deps_cl",
+          "wipefs_$vg/$lv");
+        &FAI::push_command( "lvremove -f $vg/$lv",
+          "wipefs_$vg/$lv",
           "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv");
         $vg_setup_pre .= ",lv_rm_$vg/$lv";
       }
@@ -686,8 +689,11 @@ sub cleanup_vg {
       join(",self_cleared_", @{ $FAI::current_dev_children{"/dev/$vg/$lv"} })
         if (defined($FAI::current_dev_children{"/dev/$vg/$lv"}) &&
           scalar(@{ $FAI::current_dev_children{"/dev/$vg/$lv"} }));
-    &FAI::push_command( "lvremove -f $vg/$lv",
+    &FAI::push_command( "wipefs -a $vg/$lv",
       "vgchange_a_n_VG_$vg$pre_deps_cl",
+      "wipefs_$vg/$lv");
+    &FAI::push_command( "lvremove -f $vg/$lv",
+      "wipefs_$vg/$lv",
       "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv");
     $vg_destroy_pre .= ",lv_rm_$vg/$lv";
   }
@@ -697,8 +703,15 @@ sub cleanup_vg {
   my $devices = "";
   $devices .= " " . &FAI::enc_name($_) foreach
     (@{ $FAI::current_lvm_config{$vg}{physical_volumes} });
+  ($devices =~ /^\s*$/) and &FAI::internal_error("Empty PV device set");
   $FAI::debug and print "Erased devices:$devices\n";
-  &FAI::push_command( "pvremove $devices", "vg_removed_$vg", "pv_sigs_removed_$vg" );
+  &FAI::push_command( "pvremove $devices", "vg_removed_$vg", "pvremove_$vg");
+  my $post_wipe = "pvremove_$vg";
+  foreach my $d (split (" ", $devices)) {
+    $post_wipe .= ",pv_sigs_removed_wipe_${d}_$vg";
+    &FAI::push_command( "wipefs -a $d", "pvremove_$vg", "pv_sigs_removed_wipe_${d}_$vg");
+  }
+  &FAI::push_command( "true", $post_wipe, "pv_sigs_removed_$vg" );
   return 1;
 }
 
@@ -961,7 +974,7 @@ sub setup_partitions {
   # A new disk label may only be written if no partitions need to be
   # preserved
   (($label eq $FAI::current_config{$disk}{disklabel})
-    || (scalar (@to_preserve) == 0)) 
+    || (scalar (@to_preserve) == 0))
     or die "Can't change disklabel, partitions are to be preserved\n";
 
   # write the disklabel to drop the previous partition table
@@ -971,6 +984,16 @@ sub setup_partitions {
     join(",self_cleared_", @{ $FAI::current_dev_children{$c} })
     if (defined($FAI::current_dev_children{$c}) &&
       scalar(@{ $FAI::current_dev_children{$c} }));
+    my ($i_p_d, $d, $part_no) = &FAI::phys_dev($c);
+    ($i_p_d && $d eq $disk) or &FAI::internal_error("Invalid dev children entry");
+    my $wipe_cmd = "wipefs -a $c";
+    foreach my $part_id (@to_preserve) {
+      # get the existing id
+      my $mapped_id = $FAI::configs{$config}{partitions}{$part_id}{maps_to_existing};
+      $wipe_cmd = "true" if ($mapped_id == $part_no);
+    }
+    &FAI::push_command($wipe_cmd, "exist_$disk$pre_deps", "wipefs_$c");
+    $pre_deps .= ",wipefs_$c";
   }
   &FAI::push_command( ($needs_resize ? "parted -s $disk mklabel $label" : "true"),
     "exist_$disk$pre_deps", "cleared1_$disk" );
