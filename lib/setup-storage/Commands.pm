@@ -165,14 +165,14 @@ sub handle_oldstyle_encrypt_device {
 
 ################################################################################
 #
-# @brief Set the partition type $t on a device $d. This is a no-op if $d is not
+# @brief Set the partition flag $t on a device $d. This is a no-op if $d is not
 # a physical device
 #
 # @param $d Device name
-# @param $t Type (e.g., lvm or raid)
+# @param $t Flag (e.g., lvm or raid)
 #
 ################################################################################
-sub set_partition_type_on_phys_dev {
+sub set_partition_flag_on_phys_dev {
 
   my ($d, $t) = @_;
   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
@@ -185,12 +185,12 @@ sub set_partition_type_on_phys_dev {
     (defined($FAI::configs{"PHY_$disk"}) && $FAI::configs{"PHY_$disk"}{virtual}));
   my $pre = "exist_$d";
   $pre .= ",cleared2_$disk" if (defined($FAI::configs{"PHY_$disk"}));
-  &FAI::push_command( "parted -s $disk set $part_no $t on", $pre, "type_${t}_$d" );
+  &FAI::push_command( "parted -s $disk set $part_no $t on", $pre, "flag_${t}_$d" );
   if (defined($FAI::partition_table_deps{$disk}) &&
     $FAI::partition_table_deps{$disk} ne "") {
-    $FAI::partition_table_deps{$disk} .= ",type_${t}_$d";
+    $FAI::partition_table_deps{$disk} .= ",flag_${t}_$d";
   } else {
-    $FAI::partition_table_deps{$disk} = "type_${t}_$d";
+    $FAI::partition_table_deps{$disk} = "flag_${t}_$d";
   }
   return 1;
 }
@@ -349,7 +349,7 @@ sub build_raid_commands {
           $pre_req .= ($i_p_d && defined($FAI::configs{"PHY_$disk"})) ?
             ",pt_complete_$disk" :
             ",exist_$d";
-        } elsif (&FAI::set_partition_type_on_phys_dev($d, "raid")) {
+        } elsif (&FAI::set_partition_flag_on_phys_dev($d, "raid")) {
           $pre_req .= defined($FAI::configs{"PHY_$disk"}) ?
             ",pt_complete_$disk" :
             ",exist_$d";
@@ -432,7 +432,7 @@ sub create_volume_group {
       my $pre = "exist_$d";
       my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
       $pre .= ",pt_complete_$disk"
-        if (&FAI::set_partition_type_on_phys_dev($d, "lvm") &&
+        if (&FAI::set_partition_flag_on_phys_dev($d, "lvm") &&
           defined($FAI::configs{"PHY_$disk"}));
 
       &FAI::push_command( "pvcreate -ff -y $pv_create_options $d",
@@ -484,7 +484,7 @@ sub create_volume_group {
     my $pre = "exist_$dev";
     my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
     $pre .= ",pt_complete_$disk"
-      if (&FAI::set_partition_type_on_phys_dev($dev, "lvm") &&
+      if (&FAI::set_partition_flag_on_phys_dev($dev, "lvm") &&
         defined($FAI::configs{"PHY_$disk"}));
 
     &FAI::push_command( "pvcreate -ff -y $pv_create_options $dev",
@@ -1169,30 +1169,25 @@ sub setup_partitions {
     $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
     &FAI::push_command($cmd, "prep2_$dn", "exist_$dn");
 
+    # (re-)set all flags
+    my $flags = "";
+    $flags = $FAI::current_config{$disk}{partitions}{$mapped_id}{flags}
+      if ($part->{size}->{preserve} || $part->{size}->{resize});
+    # set the bootable flag, if requested at all
+    $flags .= ",boot" if($FAI::configs{$config}{bootable} == $part_id);
+    # set the bios_grub flag on BIOS compatible GPT tables
+    $flags .= ",bios_grub" if($FAI::configs{$config}{disklabel} eq "gpt-bios"
+      && $FAI::configs{$config}{gpt_bios_part} == $part_id);
+	  $flags =~ s/^,//;
+    &FAI::set_partition_flag_on_phys_dev($dn, $_)
+      foreach (split(',', $flags));
+
     $prev_id = $part_id;
   }
 
   ($prev_id > -1) or &FAI::internal_error("No partitions created");
   $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
     . &FAI::make_device_name($disk, $prev_id);
-
-  # set the bootable flag, if requested at all
-  if ($FAI::configs{$config}{bootable} > -1) {
-    &FAI::push_command( "parted -s $disk set " .
-      $FAI::configs{$config}{bootable} . " boot on", "exist_" .
-      &FAI::make_device_name($disk, $FAI::configs{$config}{bootable}),
-      "boot_set_$disk" );
-    $FAI::partition_table_deps{$disk} .= ",boot_set_$disk";
-  }
-
-  # set the bios_grub flag on BIOS compatible GPT tables
-  if ($FAI::configs{$config}{disklabel} eq "gpt-bios") {
-    &FAI::push_command( "parted -s $disk set " .
-      $FAI::configs{$config}{gpt_bios_part} . " bios_grub on", "exist_" .
-      &FAI::make_device_name($disk, $FAI::configs{$config}{gpt_bios_part}),
-      "bios_grub_set_$disk" );
-    $FAI::partition_table_deps{$disk} .= ",bios_grub_set_$disk";
-  }
 }
 
 
@@ -1293,6 +1288,10 @@ sub restore_partition_table {
 
       # build a parted command to create the partition
       &FAI::execute_command("parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B");
+
+      # re-set all flags
+      &FAI::execute_command("parted -s $disk set $part_id $_ on")
+        foreach (split(',', $curr_part->{flags}));
     }
     warn "Partition table of disk $disk has been restored\n";
   }

@@ -249,6 +249,11 @@ sub get_current_disks {
           };
           $col_start += $col_width;
         }
+
+        defined ($cols{"Flags"}{"start"})
+          or &FAI::internal_error("Column Flags not found in parted output");
+        ($col_start == $cols{"Flags"}{"start"} + $cols{"Flags"}{"length"})
+          or &FAI::internal_error("Flags column is not last");
       } else { # one of the partitions
 
         # we must have seen the header, otherwise probably the format has
@@ -263,6 +268,9 @@ sub get_current_disks {
         # the info for the file system column
         my $fs_cols_before = $cols{"File system"}{"start"};
         my $fs_col_width   = $cols{"File system"}{"length"};
+
+        # the info for the flags column
+        my $flags_cols_before = $cols{"Flags"}{"start"};
 
         # get the partition number, if any
         $line =~ /^.{$num_cols_before}(.{$num_col_width})/;
@@ -290,6 +298,19 @@ sub get_current_disks {
 
         # store the information in the hash
         $FAI::current_config{$disk}{partitions}{$id}{filesystem} = $fs;
+
+        # extract the file system information
+        my $flags = "";
+        if (length ($line) > $flags_cols_before) {
+          $line =~ /^.{$flags_cols_before}(.+)$/;
+          $flags = $1;
+        }
+
+        # remove any space
+        $flags =~ s/\s//g;
+
+        # store the information in the hash
+        $FAI::current_config{$disk}{partitions}{$id}{flags} = $flags;
       }
     }
 
