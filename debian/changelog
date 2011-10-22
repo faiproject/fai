@@ -44,7 +44,7 @@ fai (4.0~beta3) unstable; urgency=low
   * make-fai-nfsroot: remove diversion of discover-modprobe
   * make-fai-nfsroot: die() subroutine now takes exit code, remove several
     else branches
-  * savelog.LAST: add ignore pattern
+  * savelog.LAST: add ignore pattern [?] [r6619] [r6621] [r6631]
   * ftar: die() subroutine now takes exit code, code cleanup
   * fai-mirror: code cleanup
   * updatebase, subroutines: move code for loading apt keys to updatebase
@@ -61,13 +61,25 @@ fai (4.0~beta3) unstable; urgency=low
   * add approx support in class FAISERVER
   * mkdebmirror: use cdn.debian.net
   * 10-conffiles, 50-host-classes: add support for hosts named client01,...
-  * install_packages: add cupt support
-  * fai-guide.txt: minor URL fix [r6168]
+  * install_packages:
+    - add cupt support
+    - create aptpkg cache only if $hasdebian is also set [r6579]
+    - year++ [r6580]
+    - if -l is given, do not write $FAI_ROOT/var/log/install_packages.list
+      [r6634]
+  * fai-guide.txt:
+    - minor URL fix [r6168]
+    - adjust to new task name [r6693]
+    - improve explanation of flag "reboot" [r6627]
+    - minor improvement [r6676]
   * get-boot-info: do only list NICs which also have a link (means cable
     connected) [r6234]
   * control:
     - change Uploaders: remove Holger, add Mika [r6176]
     - new URL for browsable svn repository [r6547]
+    - remove Replaces and Conflicts to fai and fai-kernels [r6606]
+    - syslinux-common is not needed on the host, pxelinux.0 is copied from the
+      nfsroot [r6677]
   * simple example:
     - do not use fcopy for /etc/modules [r6196]
     - do not copy file if target is a symlink [r6197]
@@ -108,25 +120,37 @@ fai (4.0~beta3) unstable; urgency=low
     - class/50-host-classes: a host named slchost will be installed using
       Scientific Linux Cern [r6516]
     - basefiles/Makefile,basefiles/mk-basefile: replace Makefile
-      implementation with shell script [r6524]
+      implementation with shell script [r6524] [r6556] [r6593] [r6656]
     - hooks/instsoft.DEBIAN: set executable flag [r6545]
     - scripts/FAIBASE/10-misc: if not IP was set, add special host entry
       [r6546]
-    - basefiles/mk-basefile: remove debugging line [r6556]
     - class/CENTOS.var: addcomment [r6557]
     - disk_config/CENTOS: increase max size of /var [r6558]
     - package_config/XORG: use these packages only for DEBIAN [r6559]
-    - package_config/CENTOS: add packages for XORG [r6560]
+    - package_config/CENTOS: add packages for XORG [r6560], SLC6 [r6578],
+      authconfig [r6582], remove redhat-lsb [r6583], make packages for
+      CentOS/slc 6 the default [r6596]
     - scripts/CENTOS/30-mkinitrd: safer generation of initrd, add drivers only
       if available [r6561]
     - scripts/CENTOS/80-misc: if gdm is installed, start graphical login
       [r6562]
     - scripts/CENTOS/30-mkinitrd,scripts/CENTOS/40-install-grub: add support
       for CentOD6/SLC6 [r6564]
-    - scripts/CENTOS/30-mkinitrd: whitespace fix [r6565]
-    - scripts/CENTOS/30-mkinitrd: fix syntax error [r6566]
+    - scripts/CENTOS/30-mkinitrd: whitespace fix [r6565], fix syntax error
+      [r6566]
     - disk_config/CENTOS: use ext4 except for /, add comments about ext3
       issues [r6567]
+    - scripts/CENTOS/60-network-scripts: fix typo [r6577], add check if kudzu
+      exists [r6581]
+    - class/50-host-classes: use CentOS 6 and SLC6 instead of version 5
+      [r6594] [r6595]
+    - scripts/DEBIAN/40-misc: add FAI_CONFIG_SRC to fai.conf [r6620]
+    - debconf/DEBIAN: remove non-existing debconf data [r6632]
+    - hooks/prepareapt.CENTOS: copy resolv.conf to target [r6662]
+    - package_config/fai-project.asc: add gpg key from fai-project.org
+      repository [r6672]
+    - package_config/DEBIAN.asc,simple/package_config/fai-project.asc: rename
+      key file [r6674] [r6675]
   * fai: unset variable after use [r6195]
   * fai-do-scripts.1: more precise description of matching file names [r6264]
   * make-fai-nfsroot:
@@ -135,6 +159,29 @@ fai (4.0~beta3) unstable; urgency=low
     - use xz compression for creating the base.tar file if available [r6499]
     - remove old nfsroot with background process [r6500]
     - print message if xz is still running [r6505]
+    - add info about different base files [r6599]
+    - use ramdisk for speeding up package installation [r6600]
+    - year++ [r6602]
+    - several minor fixes [r6604]
+    - stop mdadm from calling mkconf [r6605]
+    - remove obsolete call. It's the default behaviour [r6612]
+    - remove rsize [r6613]
+    - remove message about size of nfsroot [r6614]
+    - change comment [r6615]
+    - remove unused code [r6616]
+    - add check for fai packages inside the nfsroot [r6624]
+    - minor code cleanup [r6635]
+    - remove recover function and option -r [r6636]
+    - remove option -U [r6678]
+    - remove unused variable [r6680]
+    - code cleanup [r6681]
+    - add variable $exitcode [r6682]
+    - add comments, code cleanup [r6683]
+    - add warning about -U [r6684]
+    - do not copy fai files into the nfsroot [r6692]
+    - code restructuring for getting generic nfsroot easier [r6695]
+    - ignore error [r6696]
+    - add options -a and -g [r6698]
   * make-fai-nfsroot,control: use pxelinux.0 from inside the nfsroot, add
     depends on syslinux-common [r6409]
   * task_sysinfo:
@@ -148,18 +195,61 @@ fai (4.0~beta3) unstable; urgency=low
     - remove bin/setup_harddisks from list [r6305]
     - remove temporary directory in clean target [r6313]
     - remove fai-guide.chunked directory in clean target [r6492]
+    - remove unused script [r6597]
+    - remove non-existing script [r6630]
+    - remove -f from checkbashism [r6648]
+    - use more verbose filenames (like
+      _anchor_id_advanced_xreflabel_advanced_advanced_fai.html) [r6671]
   * control,Makefile: remove build dependencies that were only needed for
     lenny, use -L with a2x [r6327]
   * THANKS,rshall: convert to UTF-8 [r6307]
-  * NFSROOT: remove unneeded aufs packages [r6311]
-  * NFSROOT: remove unused classes [r6413]
+  * NFSROOT:
+    - remove unneeded aufs packages [r6311]
+    - remove unused classes [r6413]
+    - add firmware packages to the nfsroot [r6601]
   * FAQ: remove very old FAQ [r6489]
   * docs: remove FAQ [r6490]
-  * subroutines: use ftar for extracting base file (add support for xz
-    compression) [r6501]
+  * subroutines:
+    - add options -a, -o to ifclass(), check multiple classes (logical AND,
+      OR) [r6603]
+    - use ftar for extracting base file (add support for xz compression)
+      [r6501]
+    -  add BASHOPTS to pattern [r6611]
+    -  remove unused code. Writing to /tmp/l seems to be for debugging [r6623]
+    -  cleanup code when to reboot or when to wait for keystroke [r6628]
+    -  improve matching of cmdline (closes: #607285, #632350) [r6633]
+    -  add short descriptions [r6687]
+    -  add comment, move code [r6688]
+  * subroutines,fai-class.1: use bash regex matching instead of associative
+    array [r6668] [r6669] [r6728]
+  * subroutines,updatebase: move code for loading apt keys into
+    task_prepareapt [r6690]
   * ftar: print only one / in path names, year++ [r6503]
   * fai-cd: call genisoimage with -R instead of -r [r6522]
   * prcopyleft: year++ [r6544]
+  * updatebase:
+    - load apt keys by class names [r6625]
+    - print a warning if some *.asc file are not used [r6629]
+    - fix wrong test [r6647]
+    - remove comments [r6686]
+    - prettify code [r6689]
+  * faireboot: fix wrong message [r6591]
+  * fai,fai-cd,make-fai-nfsroot,fai.conf: remove variable $FAI from fai.conf,
+    set default value in programs [r6607]
+  * fai,fai-mirror,make-fai-nfsroot,fai.conf: remove $MNTPOINT from fai.conf,
+    set default value where needed [r6608]
+  * fai-chboot: first, check if any hosts are specified [r6609]
+  * fai-chboot.8: add -u to more examples [r6610]
+  * fai-chboot.8: add -P to some examples, remove stupid example [r6622]
+  * fai: do not exit if /etc/fai does not exist. [r6617]
+  * get-config-dir: check if $FAI is defined [r6618]
+  * fai-do-scripts: add python support Closes: #635880 [r6637]
+  * make-fai-nfsroot.conf: move important variables to top, no other changes
+    [r6670]
+  * sources.list: enable fai-project.org repository by default [r6673]
+  * setup-storage: the disklist can now also be space separated [r6679]
+  * faimond-gui,subroutines: rename task prepareapt to repository, add
+    warnings for hooks using the old name [r6691]
 
   [ Michael Goetze ]
   * simple examples:
@@ -198,15 +288,28 @@ fai (4.0~beta3) unstable; urgency=low
     [r6341]
 
   [ Michael Prokop ]
-  * Makefile,control: Add syntax checks to catch possible syntax problems
-    (perl/bashism/bash). Make perlcheck work without perl-tk and
-    liblinux-lvm-perl. Closes: #610509 [r6272] [r6260] [r6262] [r6263] [r6267]
-    [r6270]
+  * Makefile,control:
+    - Add syntax checks to catch possible syntax problems (perl/bashism/bash).
+      Make perlcheck work without perl-tk and liblinux-lvm-perl.
+      Closes: #610509 [r6272] [r6260] [r6262] [r6263] [r6267] [r6270]
+    - Drop cfengine2 from recommends of fai-client [r6701]
+    - Use syslinux as alternative for syslinux-common in depends of
+      fai-nfsroot [r6718]
   * developer-policy.txt: Add initial developer policy instructions (WIP).
     [r6460]
   * release-management.txt: Add document regarding release management of FAI
     stable using git-svn. [r6461] [r6541]
- 
+  * NFSROOT:
+    - Drop duplicate firmware-bnx2x entry and use firmware-bnx2 instead.
+      Thanks Jens Abromeit <j.abromeit@jpberlin.de> [r6720]
+    - Install xz-utils in nfsroot by default [r6721]
+  * fai-quickstart.postinst: make sure FAI_CONFIGDIR is set, otherwise inform
+    user [r6685]
+  * make-fai-nfsroot:
+    - Make sure we exit with actual return code of subshell [r6697]
+    - Divert /sbin/initctl if the executable is present [r6723]
+  * simple/package_config/DEMO: drop rusers + rusersd packages [r6729]
+
   [ Michael Tautschnig ]
   * fcopy.8: describe behaviour if preinst has nonzero exit code
   * examples/simple/package_config/GNOME: Remove gnome-apt, ice*-gnome-support
@@ -230,10 +333,31 @@ fai (4.0~beta3) unstable; urgency=low
       LABEL being used as identifier. [r6411]
     - Distinct treatment of MiB vs. MB and friends. [r6412]
     - Don't keep redundant number field in config data structure. [r6416]
+    - preserve_* now supported for each partition in place. Thanks Edgar Fuß
+      [r6703]
+    - Virtual disks don't have partition types. [r6704]
+    - Keep current_config consistent [r6705]
+    - Better error message for invalid string X in disklabel:X. [r6706]
+    - Start first partition at 1M [r6707]
+    - Support for /dev/loop*, parse floating point output of parted [r6708]
+    - Added new option -s to perform syntax check only. Closes: #627913
+      [r6709]
+    - Stop RAID arrays before re-assembling. Thanks David Dreezer [r6710]
+    - Properly handle alignment and preserving first partition. [r6711]
+    - Bugfixes to properly read volume id [r6712]
+    - Fix 100%-on-gpt configuration issue. Closes: #619136 [r6713]
+    - Use wipefs to purge (RAID) signatures [r6714] [r6722]
+    - Retain partition flags of preserved partitions. [r6715]
+    - Added options -D <disks>, -L <logdir> [r6716]
+    - Test mdadm-startall for existence before running it [r6724]
   * dev-utils: New directory for scripts which are helpful for development of
     FAI [r6239] [r6302]
-  * Makefile: Make sure that all example scripts are executable [r6268]
+  * Makefile: Make sure that all example scripts are executable, fix syntax
+    check [r6268] [r6650] [r6652]
   * examples/more-tests: Tests moved to test-suite [r6359-r6366] [r6372]
+  * Makefile,fai-client.lintian-overrides,subroutines: Using shopt -s extglob
+    won't work because bash fails with syntax error before [r6654] [r6658]
+  * subroutines: Require nonempty variable name as suggested by Thomas [r6660]
 
  -- Michael Tautschnig <mt@debian.org>  Sun, 05 Jun 2011 19:16:51 +0100
   
