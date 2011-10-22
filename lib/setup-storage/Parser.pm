@@ -650,12 +650,15 @@ $FAI::Parser = Parse::RecDescent->new(
           }
           $FAI::configs{$FAI::device}{preserveparts} = 1;
         }
-        | /^disklabel:(msdos|gpt-bios|gpt)/
+        | /^disklabel:(\S+)/
         {
+          my $dl = $1;
+          ($dl =~ /^(msdos|gpt-bios|gpt)$/) or die
+            "Invalid disk label $dl; use one of msdos|gpt-bios|gpt\n";
           # set the disk label - actually not only the above, but all types 
           # supported by parted could be allowed, but others are not implemented
           # yet
-          $FAI::configs{$FAI::device}{disklabel} = $1;
+          $FAI::configs{$FAI::device}{disklabel} = $dl;
         }
         | /^bootable:(\d+)/
         {
