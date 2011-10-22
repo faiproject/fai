@@ -1,0 +1,152 @@
+2011-10-22  Michael Tautschnig  <mt@debian.org>
+
+	* setup-storage: Added new options -D <disks>, -L <logdir> to override
+		disklist/LOGDIR variable values. Updated man-page accordingly.
+	* setup-storage: Use disk-info, fai-vol_id with full path.
+Index: trunk/bin/setup-storage
+===================================================================
+--- trunk.orig/bin/setup-storage
++++ trunk/bin/setup-storage
+@@ -59,8 +59,8 @@
+ use Getopt::Std;
+ $main::VERSION = $version;
+ $Getopt::Std::STANDARD_HELP_VERSION = 1;
+-our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s); # the variables for getopt
+-(&getopts('Xf:hds') && !$opt_h) || die <<EOF;
++our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L); # the variables for getopt
++(&getopts('Xf:hdsD:L:') && !$opt_h) || die <<EOF;
+ setup-storage version $version
+ 
+ USAGE: [-X]                     no test, your harddisks will be formated
+@@ -68,6 +68,8 @@
+        [-f<config-filename>]    default: parse classes
+        [-d]                     enable debug output (equivalent to debug=1)
+        [-s]                     perform syntax check only and exit
++       [-D<disks>]              override disklist variable by space-separated <disks>
++       [-L<logdir>]             use <logdir> instead of LOGDIR variable
+        [-h]                     print this help message
+ EOF
+ 
+@@ -92,19 +94,21 @@
+ $opt_s and $FAI::check_only = 1;
+ 
+ # Find out whether $LOGDIR is usable or default to /tmp/fai
++$opt_L and $FAI::DATADIR = $opt_L;
+ if (! -d $FAI::DATADIR) {
+-  defined ($ENV{LOGDIR}) and die
++  !defined($opt_L) and defined ($ENV{LOGDIR}) and die
+     "Environment variable LOGDIR is set, but $FAI::DATADIR is not a directory\n";
+   mkdir $FAI::DATADIR or die
+     "Failed to create directory $FAI::DATADIR\n";
+-  warn "\$LOGDIR not set in environment; created data directory $FAI::DATADIR\n";
++  warn "Created data directory $FAI::DATADIR\n";
+ }
+ 
+ # $disklist may be provided by the environment
+ my $disklist = $ENV{disklist};
++$opt_D and $disklist = $opt_D;
+ if (! defined($disklist)) {
+-  &FAI::in_path("disk-info") or die "disk-info not found in PATH\n";
+-  $disklist = `disk-info | sort`;
++  &FAI::in_path("/usr/lib/fai/disk-info") or die "/usr/lib/fai/disk-info not found\n";
++  $disklist = `/usr/lib/fai/disk-info | sort`;
+ }
+ 
+ @FAI::disks = split( /[\n ]/, $disklist);
+Index: trunk/lib/setup-storage/Parser.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Parser.pm
++++ trunk/lib/setup-storage/Parser.pm
+@@ -64,6 +64,9 @@
+   # ignored in syntax-check mode
+   return 1 if ($FAI::check_only);
+ 
++  # check full path names first
++  ($cmd =~ /^\//) and return (-x "$cmd");
++
+   # split $PATH into its components, search all of its components
+   # and test for $cmd being executable
+   (-x "$_/$cmd") and return 1 foreach (split (":", $ENV{PATH}));
+Index: trunk/lib/setup-storage/Fstab.pm
+===================================================================
+--- trunk.orig/lib/setup-storage/Fstab.pm
++++ trunk/lib/setup-storage/Fstab.pm
+@@ -101,8 +101,9 @@
+   # or labels, use these if available
+   my @uuid = ();
+   `$FAI::udev_settle`;
++  &FAI::in_path("/usr/lib/fai/fai-vol_id") or die "/usr/lib/fai/fai-vol_id not found\n";
+   &FAI::execute_ro_command(
+-    "fai-vol_id -u $device_name", \@uuid, 0);
++    "/usr/lib/fai/fai-vol_id -u $device_name", \@uuid, 0);
+ 
+   # every device must have a uuid, otherwise this is an error (unless we
+   # are testing only)
+@@ -116,7 +117,7 @@
+   my @label = ();
+   `$FAI::udev_settle`;
+   &FAI::execute_ro_command(
+-    "fai-vol_id -l $device_name", \@label, 0);
++    "/usr/lib/fai/fai-vol_id -l $device_name", \@label, 0);
+ 
+   # print uuid and label to console
+   warn "$device_name UUID=$uuid[0]" if @uuid;
+Index: trunk/man/setup-storage.8
+===================================================================
+--- trunk.orig/man/setup-storage.8
++++ trunk/man/setup-storage.8
+@@ -9,6 +9,9 @@
+ [\fB\-f\fP \fIfilename\fP]
+ [\fB\-d\fP]
+ [\fB\-h\fP]
++[\fB\-s\fP]
++[\fB\-D\fP \fIdisks\fP]
++[\fB\-L\fP \fIdirectory\fP]
+ .SH DESCRIPTION
+ Using FAI disk_config files,
+ \fBsetup-storage\fP
+@@ -61,6 +64,20 @@
+ .IR debug
+ set to a non-zero value. See below for further details.
+ 
++.TP
++\fB\-s\fP
++Perform syntax check of disk_config file only and exit.
++
++.TP
++\fB\-D\fP \fIdisks\fP
++Specify the list of disk drives to be configured using
++\fBsetup-storage\fP. Overrides
++.IR disklist.
++
++.TP
++\fB\-L\fP \fIdirectory\fP
++Use the specified directory instead of
++.IR LOGDIR.
+ 
+ .TP
+ \fB\-h\fP
+@@ -70,9 +87,11 @@
+ will use the following environment variables:
+ .TP
+ .B disklist
+-The
++If option
++\fB\-D\fP
++is not used, the
+ .IR disklist
+-variable may contain a newline separated list of disk drives available in the
++variable may contain a space separated list of disk drives available in the
+ system. Their order matters as they may be referred to as disk1, etc. in
+ disk_config. If unset, disk-info will be called to determine the list.
+ .TP
+@@ -93,6 +112,9 @@
+ \fBsetup-storage\fP
+ generates disk_var.sh, fstab, and possibly crypttab (see below) in this
+ directory. Defaults to /tmp/fai if unset.
++Option
++\fB\-L\fP
++overrides this.
+ .TP
+ .B flag_initial
+ This variable determines if partitions should be preserved when they
