@@ -932,15 +932,15 @@ EOF
 
     # add apt keys for all classes
     for keyfile in $classes; do
-	[ ! -f $FAI/package_config/$keyfile ] && continue
-	echo -n "Loading APT key from $keyfile "
-	cat $FAI/package_config/$keyfile | $ROOTCMD apt-key add -
-	unset keys["$keyfile"]
+	[ ! -f $FAI/package_config/$keyfile.asc ] && continue
+	echo -n "Loading APT key from $keyfile.asc "
+	cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key add -
+	unset keys["$keyfile.asc"]
     done
 
     # print which *.asc files were not loaded
     if [ ${#keys[@]} -ne 0 ]; then
-	echo "Following signatures are not loaded:"
+	echo "Following apt keys are not loaded:"
 	for i in "${!keys[@]}"; do
 	    echo "$i"
 	done
