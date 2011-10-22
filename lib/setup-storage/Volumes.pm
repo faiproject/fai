@@ -506,12 +506,14 @@ sub mark_preserve {
   if (1 == $i_p_d) {
     if (defined($FAI::configs{"PHY_$disk"}) &&
         defined($FAI::configs{"PHY_$disk"}{partitions}{$part_no})) {
-      defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
+      (defined ($FAI::current_config{$disk}) &&
+        defined ($FAI::current_config{$disk}{partitions}{$part_no})) or die
         "Can't preserve $device_name because it does not exist\n";
       $FAI::configs{"PHY_$disk"}{partitions}{$part_no}{size}{preserve} = 1;
       $FAI::configs{"PHY_$disk"}{preserveparts} = 1;
     } elsif (0 == $missing) {
-      defined ($FAI::current_config{$disk}{partitions}{$part_no}) or die
+      (defined ($FAI::current_config{$disk}) &&
+        defined ($FAI::current_config{$disk}{partitions}{$part_no})) or die
         "Can't preserve $device_name because it does not exist\n";
     }
   } elsif ($device_name =~ m{^/dev/md[\/]?(\d+)$}) {
@@ -562,21 +564,20 @@ sub propagate_and_check_preserve {
   foreach my $config (keys %FAI::configs) {
 
     if ($config =~ /^PHY_(.+)$/) {
+      defined ($FAI::current_config{$1}) or
+        die "Device $1 was not specified in \$disklist\n";
+      defined ($FAI::current_config{$1}{partitions}) or
+        &FAI::internal_error("Missing key \"partitions\"");
+
       foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
         my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
         $part->{size}->{preserve} =
-          ((defined($FAI::current_config{$1}) &&
-              defined($FAI::current_config{$1}{partitions}{$part_id})) ? 1 : 0)
+          (defined($FAI::current_config{$1}{partitions}{$part_id}) ? 1 : 0)
           if (2 == $part->{size}->{preserve});
         next unless ($part->{size}->{preserve} || $part->{size}->{resize});
         ($part->{size}->{extended}) and die
           "Preserving extended partitions is not supported; mark all logical partitions instead\n";
-        if (0 == $part_id) {
-          defined ($FAI::current_config{$1}) or die
-            "Can't preserve $1 because it does not exist\n";
-        } else {
-          defined ($FAI::current_config{$1}) or die
-            "Can't preserve partition on $1 because $1 does not exist\n";
+        if (0 != $part_id) {
           defined ($FAI::current_config{$1}{partitions}{$part_id}) or die
             "Can't preserve ". &FAI::make_device_name($1, $part_id)
               . " because it does not exist\n";

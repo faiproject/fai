@@ -584,6 +584,8 @@ sub compute_partition_sizes
     # test, whether $disk is a block special device
     (-b $disk) or die "$disk is not a valid device name\n";
     # reference to the current disk config
+    defined ($FAI::current_config{$disk}) or
+      &FAI::internal_error("Device $disk missing in \$disklist - check buggy");
     my $current_disk = $FAI::current_config{$disk};
 
     # align to sector boundary by default
