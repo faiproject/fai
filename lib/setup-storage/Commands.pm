@@ -992,6 +992,8 @@ sub setup_partitions {
       my $mapped_id = $FAI::configs{$config}{partitions}{$part_id}{maps_to_existing};
       $wipe_cmd = "true" if ($mapped_id == $part_no);
     }
+    $wipe_cmd = "true" if
+      ($FAI::current_config{$disk}{partitions}{$part_no}{is_extended});
     &FAI::push_command($wipe_cmd, "exist_$disk$pre_deps", "wipefs_$c");
     $pre_deps .= ",wipefs_$c";
   }
