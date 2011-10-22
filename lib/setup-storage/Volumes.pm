@@ -348,7 +348,7 @@ sub get_current_disks {
    # find the BIOS geometry that looks like this:
    # BIOS cylinder,head,sector geometry: 10011,255,63.  Each cylinder is 8225kB.
       if ($line =~
-        /^BIOS cylinder,head,sector geometry:\s*(\d+),(\d+),(\d+)\.\s*Each cylinder is \d+kB\.$/) {
+        /^BIOS cylinder,head,sector geometry:\s*(\d+),(\d+),(\d+)\.\s*Each cylinder is \d+(\.\d+)?kB\.$/) {
         $FAI::current_config{$disk}{bios_cylinders}         = $1;
         $FAI::current_config{$disk}{bios_heads}             = $2;
         $FAI::current_config{$disk}{bios_sectors_per_track} = $3;

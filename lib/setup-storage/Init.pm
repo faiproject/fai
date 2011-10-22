@@ -197,6 +197,22 @@ sub numsort { return sort { $a <=> $b } @_; }
 
 ################################################################################
 #
+# @brief Test whether device is a loopback device and, if so, extract the
+# numeric device id
+#
+# @param $dev Device name of disk
+#
+# @return 1, iff it is a loopback device, and device id as second item
+#
+################################################################################
+sub loopback_dev {
+  my ($dev) = @_;
+  return (1, $1) if ($dev =~ m{^/dev/loop(\d+)$});
+  return (0, -1);
+}
+
+################################################################################
+#
 # @brief Check, whether $dev is a physical device, and extract sub-parts
 #
 # @param $dev Device string
@@ -217,6 +233,11 @@ sub phys_dev {
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $3);
+  }
+  elsif ((&FAI::loopback_dev($dev))[0])
+  {
+    # we can't tell whether this is a disk of its own or a partition
+    return (1, $dev, -1);
   }
   return (0, "", -2);
 }
@@ -293,6 +314,11 @@ sub make_device_name {
   my ($dev, $p) = @_;
   $dev .= "p" if ($dev =~
     m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)$});
+  if ((&FAI::loopback_dev($dev))[0])
+  {
+    $p += (&FAI::loopback_dev($dev))[1];
+    $dev = "/dev/loop"
+  }
   $dev .= $p;
   internal_error("Invalid device $dev") unless (&FAI::phys_dev($dev))[0];
   return $dev;

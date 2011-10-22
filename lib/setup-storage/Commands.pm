@@ -917,12 +917,16 @@ sub rebuild_preserved_partitions {
     $part_nr++;
     $FAI::current_config{$disk}{partitions}{$mapped_id}{new_id} = $part_nr;
 
-    my $post = "exist_" . &FAI::make_device_name($disk, $part_nr);
-    $post .= ",rebuilt_" . &FAI::make_device_name($disk, $part_nr) if
-      $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
     # build a parted command to create the partition
+    my $dn = &FAI::make_device_name($disk, $part_nr);
     &FAI::push_command( "parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B",
-      "cleared1_$disk", $post );
+      "cleared1_$disk", "prep1_$dn" );
+    my $post = "exist_$dn";
+    $post .= ",rebuilt_$dn" if
+      $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
+    my $cmd = "true";
+    $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
+    &FAI::push_command($cmd, "prep1_$dn", $post);
   }
 }
 
@@ -1131,8 +1135,13 @@ sub setup_partitions {
     my $pre = "cleared2_$disk";
     $pre .= ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
     # build a parted command to create the partition
+    my $dn = &FAI::make_device_name($disk, $part_id);
     &FAI::push_command( "parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B",
-      $pre, "exist_" . &FAI::make_device_name($disk, $part_id) );
+      $pre, "prep2_$dn");
+    my $cmd = "true";
+    $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
+    &FAI::push_command($cmd, "prep2_$dn", "exist_$dn");
+
     $prev_id = $part_id;
   }
 

@@ -123,6 +123,9 @@ sub init_disk_config {
 
   $disk = &FAI::resolve_disk_shortname($disk);
 
+  &FAI::in_path("losetup") or die "losetup not found in PATH\n"
+    if ((&FAI::loopback_dev($disk))[0]);
+
   # prepend PHY_
   $FAI::device = "PHY_$disk";
 
