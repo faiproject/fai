@@ -100,6 +100,7 @@ sub get_fstab_key {
   # write the device name as the first entry; if the user prefers uuids
   # or labels, use these if available
   my @uuid = ();
+  `$FAI::udev_settle`;
   &FAI::execute_ro_command(
     "fai-vol_id -u $device_name", \@uuid, 0);
 
@@ -113,6 +114,7 @@ sub get_fstab_key {
   # get the label -- this is likely empty; exit code 3 if no label, but that is
   # ok here
   my @label = ();
+  `$FAI::udev_settle`;
   &FAI::execute_ro_command(
     "fai-vol_id -l $device_name", \@label, 0);
 
