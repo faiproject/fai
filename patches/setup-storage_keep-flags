@@ -67,7 +67,7 @@ Index: trunk/lib/setup-storage/Commands.pm
          defined($FAI::configs{"PHY_$disk"}));
  
      &FAI::push_command( "pvcreate -ff -y $pv_create_options $dev",
-@@ -1169,30 +1169,24 @@
+@@ -1169,30 +1169,25 @@
      $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
      &FAI::push_command($cmd, "prep2_$dn", "exist_$dn");
  
@@ -80,6 +80,7 @@ Index: trunk/lib/setup-storage/Commands.pm
 +    # set the bios_grub flag on BIOS compatible GPT tables
 +    $flags .= ",bios_grub" if($FAI::configs{$config}{disklabel} eq "gpt-bios"
 +      && $FAI::configs{$config}{gpt_bios_part} == $part_id);
++	  $flags =~ s/^,//;
 +    &FAI::set_partition_flag_on_phys_dev($dn, $_)
 +      foreach (split(',', $flags));
 +
@@ -110,7 +111,7 @@ Index: trunk/lib/setup-storage/Commands.pm
  }
  
  
-@@ -1293,6 +1287,10 @@
+@@ -1293,6 +1288,10 @@
  
        # build a parted command to create the partition
        &FAI::execute_command("parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B");
