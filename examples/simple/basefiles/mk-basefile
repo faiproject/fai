@@ -18,12 +18,6 @@
 # debootstrap, rinse, xz-utils
 
 
-xtmp=$(mktemp -d /tmp/basefiles.XXXXXXXX)
-if [ $? -eq 1 ]; then
-    echo "mktemp failed. Aborting."
-    exit 2
-fi
-
 # Define your local mirros here
 # For the first stage, set the CentOS/SLC mirror in /etc/rinse/rinse.conf
 MIRROR_DEBIAN=http://cdn.debian.net/debian/
@@ -201,15 +195,22 @@ unknown() {
 
 ext=tar
 zip=cat
+tmpdir=/var/tmp
 
-while getopts zJ opt ; do
+while getopts zJd: opt ; do
     case "$opt" in
+	d) tmpdir=$OPTARG ;;
 	z) zip="gzip -9"; ext=tar.gz ;;
 	J) zip="xz -8" ext=tar.xz ;;
     esac
 done
 shift $(($OPTIND - 1))
 
+xtmp=$(mktemp -d $tmpdir/basefiles.XXXXXXXX)
+if [ $? -eq 1 ]; then
+    echo "mktemp failed. Aborting."
+    exit 2
+fi
 
 target=$1 # also the name of the output file
 
