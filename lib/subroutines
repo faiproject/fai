@@ -81,11 +81,7 @@ _ifclass() {
     # test if a class is defined
     local ret
 
-    if [ "${#hclasses[@]}" = 0 ]; then
-	echo "ifclass: WARNING. Associative array hclasses is empty." >&2
-    fi
-
-    if [ X${hclasses[$1]} = X1 ]; then
+    if [[ "$classes" =~ (^|[[:space:]]+)$1($|[[:space:]]+) ]]; then
 	ret=0
     else
     	ret=1
@@ -369,7 +365,7 @@ task_action() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
-# Provides-Var:    $classes $hclasses $cfclasses
+# Provides-Var:    $classes $cfclasses
 # Requires-Var:    $LOGDIR
 # Suggests-Var:    $renewclass
 # Short-Description: define FAI classes and store them in several shell variables
@@ -405,8 +401,6 @@ task_defclass() {
     cfclasses=${cfclasses// /.}
     [ "$debug" ] && echo "cfclasses: $cfclasses"
     # define a bash hash with all class names. Without this, ifclass does not work
-    declare -A hclasses
-    for c in $classes; do hclasses[$c]=1;done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 _defvar() {
