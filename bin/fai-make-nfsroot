@@ -429,6 +429,15 @@ upgrade_nfsroot() {
     mount -t devpts devpts $NFSROOT/dev/pts
     /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg
     mkdir $NFSROOT/etc/mdadm; touch $NFSROOT/etc/mdadm/mdadm.conf # stop mdadm from calling mkconf
+
+    # add any 3rd party repository keys that you may need installed into the NFSROOT
+    if [ -d $cfdir/apt/keys-added ]; then
+      echo 'These *.asc files are 3rd party repository keys that have been added by make-fai-nfsroot' >> $NFSROOT/etc/apt/keys-added/README
+    fi
+    for f in `find $cfdir/apt/keys-added -type f -name *.asc`; do
+      cat $f | $ROOTCMD apt-key add -
+    done
+
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
     $ROOTCMD apt-get -y dist-upgrade
