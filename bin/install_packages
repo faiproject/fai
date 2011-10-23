@@ -276,13 +276,21 @@ sub readconfig {
       # by default no classes are listed after this command so doit
       $doit = 1;
       if ($cllist) {
-	# no classes specified after PACKAGES command
+        # no classes specified after PACKAGES command
         # so add all packages listed
-	# use packages on for a list of classes
-	$doit = 0; # assume no class is defined
-	@oclasses = split(/\s+/,$cllist);
-	# if a listed class is defined, add the packaes, otherwise skip these packages
-	foreach (@oclasses) { exists $classisdef{$_} and $doit = 1;}
+        # use packages on for a list of classes
+        $doit = 0; # assume no class is defined
+        @oclasses = split(/\s+/,$cllist);
+        # if all listed class are defined, add the packaes, otherwise skip these packages
+        foreach (@oclasses) {
+          if (/^!/) {
+            s/^!//;
+            not exists $classisdef{$_} and $doit = 1 or $doit = 0 or last;
+          }
+          else {
+            exists $classisdef{$_} and $doit = 1 or $doit = 0 or last;
+          }
+        }
       }
       next;
     }
