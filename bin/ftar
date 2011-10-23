@@ -79,11 +79,13 @@ deletefiles=0
 removedir=0
 tardone=0
 single=0
+ignore=0
 
-while getopts 1hDdrvs:t:c: opt ; do
+while getopts 1hDdrvs:t:c:i opt ; do
         case "$opt" in
         d) deletefiles=1 ;;
         D) debug=1 ;;
+        i) ignore=1 ;;
         r) removedir=1 ;;
 #        v) verbose=1 ;;
         1) single=1 ;;
@@ -132,7 +134,14 @@ for c in $revclasses ; do
     [ -f $fpath/$c.txz ]      && extract $fpath/$c.txz xzcat
 done
 
-[ $tardone -eq 0 ] && die 1 "ftar: No matching class found in $fpath"
+if [ $tardone -eq 0 ]; then
+    if [ $ignore -eq 1 ]; then
+	echo "ftar: No matching class found in $fpath"
+	exit 0
+    else
+	die 1 "ftar: No matching class found in $fpath"
+    fi
+fi
 
 exit 0
 
