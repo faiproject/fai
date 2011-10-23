@@ -144,7 +144,7 @@ sub get_fstab_key {
 #
 ################################################################################
 sub find_boot_mnt_point {
-  my $mnt_point;
+  my $mnt_point = ".NO_SUCH_MOUNTPOINT";
 
   # walk through all configured parts
   foreach my $c (keys %FAI::configs) {
