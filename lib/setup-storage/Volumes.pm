@@ -208,7 +208,8 @@ sub get_current_disks {
       # now we test line by line - some of them may be ignored
       next if ($line =~ /^Disk / || $line =~ /^Model: / || $line =~ /^\s*$/
         || $line =~ /^WARNING: You are not superuser/
-        || $line =~ /^Warning: Not all of the space available to/);
+        || $line =~ /^Warning: Not all of the space available to/
+        || $line =~ /^Warning: Unable to open \S+ read-write/);
 
       # determine the logical sector size
       if ($line =~ /^Sector size \(logical\/physical\): (\d+)B\/\d+B$/) {
