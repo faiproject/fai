@@ -9,7 +9,7 @@ blkid="/sbin/blkid"
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_uuid() {
 
-  if [ -z $vol_id ] ; then
+  if [ -n "$blkid" ] ; then
     $blkid -c /dev/null -s UUID -o value $1
     exit $?
   fi
@@ -20,7 +20,7 @@ get_uuid() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_label() {
 
-  if [ -z $vol_id ] ; then
+  if [ -n "$blkid" ] ; then
     $blkid -c /dev/null -s LABEL -o value $1
     exit $?
   fi
@@ -36,10 +36,11 @@ get_label() {
 
 # main program
 
-if [ -e $blkid ] ; then
+if [ -x $blkid ] ; then
   vol_id=""
 else
-  if [ ! -e $vol_id ] ; then
+  blkid=""
+  if [ ! -x $vol_id ] ; then
     "Neither udev vol_id nor blkid found!"
     exit 1
   fi
