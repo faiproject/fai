@@ -85,9 +85,10 @@ exitcode=0
 sshpreserve=0
 adjust=0
 generic=0
+force=0
 
 # option e currently does nothing
-while getopts aghervC:B:f:kKpU opt ; do
+while getopts aghervC:B:fkKpU opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
@@ -96,7 +97,7 @@ while getopts aghervC:B:f:kKpU opt ; do
         v) verbose=1 ; v=-v ;;
         U) die 1 "Option -U is not supported any more." ;;
         r) die 1 "Option -r is not supported any more." ;;
-        f) die 1 "Option -f is not supported any more. Use option -C instead" ;;
+        f) force=1 ;;
         k) kinstall=1 ;;
         K) kremove=1;;
         h) usage ;;
@@ -526,6 +527,16 @@ trap "bad_exit" ERR
 [ "$verbose" ] && echo "Using configuration files from $cfdir" > /var/log/fai/make-fai-nfsroot.log
 
 {
+if [ -d $NFSROOT ] && [ "$force" -ne 1 ] ; then
+    echo "-----------------------------------------------------------------"
+    echo "Error: $NFSROOT exists already." >&2
+    echo "Neither force nor update option present, exiting." >&2
+    echo "-----------------------------------------------------------------"
+    echo "NOTE: Use -f option to force overwriting an existing nfsroot."
+    echo "      Use -k option to update/install packages defined in NFSROOT config."
+    exit 1
+fi
+
 echo "Creating FAI nfsroot in $NFSROOT."
 echo "This may take a long time."
 
