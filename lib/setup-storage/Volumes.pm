@@ -118,14 +118,9 @@ sub get_current_disks {
       die "Failed to determine size and contents of $disk, but partitions should have been preserved\n";
     }
 
-    # parted_2 happens when the disk has no disk label, parted_4 means unaligned
-    # partitions
-    if ($error eq "parted_2" || $error eq "parted_2_new" ||
-      $error eq "parted_4" || $error eq "parted_4_new") {
-
-      $FAI::no_dry_run or die 
-        "Can't run on test-only mode on this system because there is no disklabel on $disk\n";
-
+    # write a fresh disklabel if no useable data was found and dry_run is not
+    # set
+    if ($error ne "" && $FAI::no_dry_run) {
       # write the disk label as configured
       my $label = $FAI::configs{"PHY_$disk"}{disklabel};
       $label = "gpt" if ($label eq "gpt-bios");
