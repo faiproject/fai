@@ -647,9 +647,9 @@ sub compute_partition_sizes
       $FAI::configs{$config}{gpt_bios_part} =
         (&FAI::phys_dev($FAI::partition_pointer_dev_name))[2];
       # enter the range into the hash
-      my $s = 1024 * 1024;
-      $FAI::partition_pointer->{size}->{range} = "$s-$s";
+      $FAI::partition_pointer->{size}->{range} = "1-1";
       # retain the free space at the beginning and fix the position
+      my $s = 1024 * 1024;
       if ($FAI::configs{$config}{partitions}{1}{size}{preserve})
       {
         # try to squeeze it in before first partition
