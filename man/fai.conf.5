@@ -1,0 +1,124 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH fai.conf 5 "23 October 2011" "FAI 4.0"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+fai.conf \- FAI Configuration
+.SH SYNOPSIS
+.B /etc/fai/fai.conf
+.SH DESCRIPTION
+FAI - Fully Automatic Installation - allows for non-interactive
+initial installation and online maintenance ("softupdates") of operating systems
+according to a user-defined configuration.
+See
+.BR fai (8)
+for the possible operation modes of FAI.
+.LP
+To manage a set of configurations, FAI implements a concept of
+classes, i.e., a list of symbolic names, which is determined at the start of
+FAI on a given host.
+Each host is associated with an ordered set of classes.
+.LP
+The configuration for a target host consists of two parts:
+.IP \(bu
+The
+\fINFSROOT\fP, a very basic yet complete root file system,
+which is exported to clients.
+The NFSROOT is built using
+.BR make-fai-nfsroot (8).
+.IP \(bu
+The
+\fIconfiguration space\fP, which is loaded as one of the first steps of a FAI run.
+Several tools and protocols are supported for maintaining and accessing the
+configuration space.
+See
+.BR FAI_CONFIG_SRC
+below.
+.LP
+.BR fai.conf
+defines the essential options to successfully start a FAI run.
+
+.SH OPTIONS
+.BR fai.conf
+is sourced by
+.BR fai (8)
+and thus must be valid
+.BR bash (1)
+code.
+All options described below are variables that must be assigned to using
+.BR bash (1)
+syntax.
+
+.TP
+\fBFAI_CONFIG_SRC\fP URL to access configuration space
+A protocol-specific URL defining the server and directory/repository to fetch
+the configuration space from.
+If left undefined, the assumed default value is
+nfs://<install server>/$FAI_CONFIGDIR
+.LP
+The following protocols and URL schemes are currently supported:
+.IP \(bu
+NFS: nfs://<server>/<exported directory>
+.IP \(bu
+Local file: file://<directory>
+.IP \(bu
+CVS: cvs[+ssh]://<user>@<host>/<cvs root> <module>[=<tag>]
+.IP \(bu
+Subversion: svn[+(file|http|https|ssh)]://[<user>@]<host>/<repository>
+.IP \(bu
+Git: git[+(http|ssh)]://<git path>
+.IP \(bu
+Mercurial: hg+(http|https)://<hg path>
+.IP \(bu
+HTTP: http://<server>/<filename>
+where <filename> is a (compressed) tar archive. For verification purposes, also
+an
+.BR md5sum (1)
+generated hash must exist at the same location as <filename>, with the suffix
+\.md5 replacing the suffix of <filename>.
+
+.TP
+\fBLOGUSER\fP Account name on the install server to save log files and call
+.BR fai-chboot (8).
+At the end of an installation,
+.BR fai (8)
+may connect to the install server using
+.BR FAI_LOGPROTO
+(see below) to store the generated log files and to change the network boot
+configuration of the target host.
+To fully enable this, configure .rhosts and PAM such that the configured user
+can log in from all install clients without password.
+This account should have write permissions for /srv/tftp/fai. For example, you
+can use write permissions for the group linuxadm. chgrp linuxadm
+/srv/tftp/fai;chmod g+w /srv/tftp/fai.
+If the variable is undefined, this feature is disabled.
+
+.TP
+\fBFAI_LOGPROTO\fP Protocol for saving logs
+Supported values are: ssh, rsh, and ftp. Defaults to ssh and will only be used
+if
+.BR LOGUSER
+is set.
+
+.TP
+\fBFAI_DEBMIRROR\fP Access Debian mirror via NFS-mounted directory
+If defined, install clients mount the NFS share to $MNTPOINT.
+Syntax: <host>:<exported directory>
+
+.SH SEE ALSO
+.br
+This file is part of FAI (Fully Automatic Installation).  See the FAI manual
+for more information on how to use ainsl.  The FAI homepage is http://fai-project.org.
+
+.SH AUTHOR
+This man page was written by Michael Tautschnig <mt@debian.org>.
