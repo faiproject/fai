@@ -1187,6 +1187,10 @@ sub setup_partitions {
     $prev_id = $part_id;
   }
 
+  &FAI::push_command("echo ,,,* | sfdisk --force $disk -N1",
+    "pt_complete_$disk", "gpt_bios_fake_bootable")
+    if($FAI::configs{$config}{disklabel} eq "gpt-bios");
+
   ($prev_id > -1) or &FAI::internal_error("No partitions created");
   $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
     . &FAI::make_device_name($disk, $prev_id);
