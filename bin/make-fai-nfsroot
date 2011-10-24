@@ -273,8 +273,12 @@ add_etc_hosts_entries() {
 
     local line
     for eth in $ips; do
-	line=$(getent hosts $eth)
-	ainsl -v $NFSROOT/etc/hosts "$line"
+	line=$(getent hosts $eth || true)
+	if [ -n "$line" ] ; then
+	  ainsl -v $NFSROOT/etc/hosts "$line"
+        else
+	  echo "Warning: no hostname for $eth found, not adding to /etc/hosts."
+        fi
     done
 
     if [ -f /etc/resolv.conf ]; then
