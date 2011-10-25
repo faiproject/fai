@@ -1,0 +1,101 @@
+#! /bin/bash
+
+# fai-kvm, start kvm host for testing FAI software
+#
+# Author:    Thomas Lange, Uni Koeln, 2011
+# License:   GPL v2 or any later version
+
+fix="-vga std -k us"  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
+# without it centos initrd is not created properly and results in kernel panic
+
+
+user=1
+size=5   # default size of the disk image
+ram=2000
+disks=1
+cdimage=/files/scratch/fai-cd.iso # default name for CD image
+diskdir=/dev/shm     # directory where the disk images will be created
+
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+boot_pxe() {
+
+  # PXE boot
+  set -x
+  kvm $gopt -boot order=nc $net $disk
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+boot_faicd() {
+
+  [ -n "$1" ] && cdimage=$1
+  # boot fai-cd
+  set -x
+  kvm $gopt $net $disk -cdrom $cdimage
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+die() {
+  echo "$2" 1>&2
+  exit $1
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+usage() {
+
+  cat <<EOF
+
+ fai-kvm [options] pxe   # start a host booting with PXE from NIC
+ fai-kvm [options] faicd [imagename] # start a host booting from a ISO image
+
+ -n          create a new empty disk image, which is used as a local disk
+ -s <size>   size of the local disk (GB, defaults to 5GB)
+ -d <num>    number of local disks (default is one)
+ -m <mem>    RAM size (MB, defaults to 2000MB)
+ -u <num>    number of the user (so multiple users can call this script)
+
+EOF
+  exit 0
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - -
+
+while getopts "hnu:s:m:d:" opt ; do
+    case "$opt" in
+        n) newdisk=1    ;;
+	u) user=$OPTARG ;;
+	m) ram=$OPTARG ;;
+	s) size=$OPTARG ;;
+	d) disks=$OPTARG ;;
+        h) usage;;
+        ?) die 1 "Unknown option";;
+    esac
+done
+shift $(($OPTIND - 1))
+
+hex=$(echo $user 16o p | dc)
+diskfile=$diskdir/faitest-disk-$user
+mac=52:54:00:11:23:$hex
+
+net="-net nic,macaddr=$mac,model=virtio -net tap,ifname=tap$user,script=no,downscript=no"
+disk=""
+for i in `seq 1 $disks` ; do
+  disk="$disk -drive file=$diskfile-$i.qcow2,if=virtio,index=$i"
+  if [ $i -eq 1 ] ; then
+    disk="$disk,boot=on"
+  fi
+done
+gopt="$fix -m $ram -smp 2 -name FAI-test"
+
+# create new disk image
+if [ X$newdisk = X1 ]; then
+  for i in `seq 1 $disks` ; do
+    rm -f $diskfile-$i.qcow2
+    qemu-img create -f qcow2 -o preallocation=metadata $diskfile-$i.qcow2 ${size}G
+  done
+fi
+
+case "$1" in
+    pxe) boot_pxe ;;
+    faicd) boot_faicd $2 ;;
+    *)
+	echo "Missing argument."
+	usage
+	;;
+esac
