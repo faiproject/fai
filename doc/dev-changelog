@@ -1,0 +1,428 @@
+fai (4.0~beta3) unstable; urgency=low
+
+  [ Thomas Lange ]
+  * faimond-gui: add option -s
+  * make-fai-nfsroot.conf: set NFSROOT_HOOKS by default
+  * updatebase: remove pre-lenny code
+  * copy pxelinux.0 to TFTPROOT only if it's not already existing
+    remove unneeded else
+  * faimond-gui: Tk::Balloon is not used atm.
+  * subroutines: show rx and tx bytes for network device at the end
+  * subroutines: add commentary how to create variables.log for sourcing
+    them later again (thanks to Andreas Schuldei)
+  * fai-client.install: remove list_disks
+  * make-fai-nfsroot: add test if etc/init is available
+  * fai-client.install, copyright, bootexample.txt, fai-guide.txt,
+    subroutines, THANKS, setup-storage.8, Makefile, FAIBASE.var: remove
+    setup_harddisks and variable USE_SETUP_STORAGE
+  * NEWS: add info about setup_harddisks removal
+  * fai-mirror, control: replace apt-move by reprepro
+  * 99-discover-bug: remove unused script
+  * 30-demo: replace script with shell code in 10-misc
+  * 40-misc: replace cfengine script with shell script
+  * subroutines: df output also shows type of file system
+  * mkramdisk,task_sysinfo,updatebase,fai-do-scripts,fai-debconf,
+    faimond-gui,setup-storage,Commands.pm,Exec.pm,Fstab.pm,Init.pm,
+    Parser.pm,Sizes.pm,Volumes.pm: add $Id$
+  * control: fix duplicate Depends on iproute
+  * fai-savelog: add messages, if some variables are not defined,
+    minor code cleanup
+  * fai-debconf: exit 0 all the time, change comment
+  * make-fai-nfsroot: remove variable $FAI_BOOT
+  * Makefile: add support for small pixmaps in faimond-gui
+  * fai-chboot, fai-chboot.8: support for MAC address, same as host name
+    (thanks to Torge Gipp for the initial patch)
+  * THANKS: add Torge
+  * fai-vol_id: cleanup code
+  * fai: cleanup code
+  * device2grub: fix indentation, minor code fix
+  * fai-start-stop-daemon: remove it, because not needed any more,
+    policy-rc.d is sufficient; remove man page as well [r6261]
+  * fai-server.install, updatebase, make-fai-nfsroot, Makefile: remove
+    fai-start-stop-daemon
+  * make-fai-nfsroot: minor cleanup
+  * make-fai-nfsroot: remove diversion of discover-modprobe
+  * make-fai-nfsroot: die() subroutine now takes exit code, remove several
+    else branches
+  * savelog.LAST: add ignore pattern [?] [r6619] [r6621] [r6631]
+  * ftar: die() subroutine now takes exit code, code cleanup
+  * fai-mirror: code cleanup
+  * updatebase, subroutines: move code for loading apt keys to updatebase
+  * subroutines: new code for prepareapt(). First, try to copy important
+    files (hosts, resolv.conf, sources.list, preferences) from the config
+    space, if not found use version from the nfsroot. Also try whole
+    directory tree /etc/apt from config space
+  * simple examples: move all Debian specific parts into new class DEBIAN
+    (Thanks to Michael Goetze for the patch)
+  * THANKS: add Michael
+  * remove apt-proxy
+  * use 192.168.33.0/24 subnet for class FAISERVER
+  * S99fai-setup: do not call fai-setup
+  * add approx support in class FAISERVER
+  * mkdebmirror: use cdn.debian.net
+  * 10-conffiles, 50-host-classes: add support for hosts named client01,...
+  * install_packages:
+    - add cupt support
+    - create aptpkg cache only if $hasdebian is also set [r6579]
+    - year++ [r6580]
+    - if -l is given, do not write $FAI_ROOT/var/log/install_packages.list
+      [r6634]
+  * fai-guide.txt:
+    - minor URL fix [r6168]
+    - adjust to new task name [r6693]
+    - improve explanation of flag "reboot" [r6627]
+    - minor improvement [r6676]
+  * get-boot-info: do only list NICs which also have a link (means cable
+    connected) [r6234]
+  * control:
+    - change Uploaders: remove Holger, add Mika [r6176]
+    - new URL for browsable svn repository [r6547]
+    - remove Replaces and Conflicts to fai and fai-kernels [r6606]
+    - syslinux-common is not needed on the host, pxelinux.0 is copied from the
+      nfsroot [r6677]
+  * simple example:
+    - do not use fcopy for /etc/modules [r6196]
+    - do not copy file if target is a symlink [r6197]
+    - apply patch from experimental, install grub into all raid devices
+      [r6203]
+    - new code for trap ERR, it now saves the maximum value of all errors
+      [r6291]
+    - use pcimodules command to load kernel driver [r6294]
+    - remove option -s -k from modprobe, they do not exist [r6297]
+    - $FAI_ROOT -> $target [r6298]
+    - replace console-common by console-setup and kbd [r6299]
+    - remove usbkbd, year++ [r6325]
+    - use newer code for error trap [r6353]
+    - use ext4 in Debian examples [r6417]
+    - package_config/DEBIAN: use same linux-image package names as in NFSROOT,
+      add initramfs-tools [r6478]
+    - package_config/FAISERVER: replace transitional package name [r6479]
+    - package_config/XFCE: new example [r6484]
+    - grub.cfg: grub2 (for fai-cd) now asks for user and password  [r6486]
+    - class/50-host-classes: add xfcehost [r6491]
+    - grub.cfg,menu.lst: do not use ip= kernel parameter, dhcp is now the
+      default [r6495]
+    - grub.cfg: set default boot to boot from local disk (same as in grub1
+      menu.lst) [r6496]
+    - class/CENTOS.var: new font does not destroy red text on console [r6504]
+    - hooks/prepareapt.CENTOS: add a hint how to disable the fastestmirror
+      plugin [r6508]
+    - scripts/CENTOS/40-install-grub: print boot and grub config to stdout
+      [r6509]
+    - scripts/CENTOS/40-install-grub: use /dev from nfsroot, define device in
+      grub [r6510]
+    - scripts/CENTOS/20-makedev: not needed any more, since we use /dev from
+      the nfsroot [r6511]
+    - scripts/CENTOS/50-misc,scripts/CENTOS/50-sysconfig: use a more
+      descriptive name [r6512]
+    - scripts/CENTOS/80-misc: add user demo [r6513]
+    - scripts/FAIBASE/10-misc: add -c to chmod, chown [r6514]
+    - class/50-host-classes: a host named slchost will be installed using
+      Scientific Linux Cern [r6516]
+    - basefiles/Makefile,basefiles/mk-basefile: replace Makefile
+      implementation with shell script [r6524] [r6556] [r6593] [r6656]
+      [r6750]; add optiopn -d for target directory, set default to /var/tmp
+      [r6751]
+    - hooks/instsoft.DEBIAN: set executable flag [r6545]
+    - scripts/FAIBASE/10-misc: if not IP was set, add special host entry
+      [r6546]
+    - class/CENTOS.var: addcomment [r6557]
+    - disk_config/CENTOS: increase max size of /var [r6558]
+    - package_config/XORG: use these packages only for DEBIAN [r6559]
+    - package_config/CENTOS: add packages for XORG [r6560], SLC6 [r6578],
+      authconfig [r6582], remove redhat-lsb [r6583], make packages for
+      CentOS/slc 6 the default [r6596]
+    - scripts/CENTOS/30-mkinitrd: safer generation of initrd, add drivers only
+      if available [r6561]
+    - scripts/CENTOS/80-misc: if gdm is installed, start graphical login
+      [r6562]
+    - scripts/CENTOS/30-mkinitrd,scripts/CENTOS/40-install-grub: add support
+      for CentOD6/SLC6 [r6564]
+    - scripts/CENTOS/30-mkinitrd: whitespace fix [r6565], fix syntax error
+      [r6566]
+    - disk_config/CENTOS: use ext4 except for /, add comments about ext3
+      issues [r6567]
+    - scripts/CENTOS/60-network-scripts: fix typo [r6577], add check if kudzu
+      exists [r6581]
+    - class/50-host-classes: use CentOS 6 and SLC6 instead of version 5
+      [r6594] [r6595]
+    - scripts/DEBIAN/40-misc: add FAI_CONFIG_SRC to fai.conf [r6620]
+    - debconf/DEBIAN: remove non-existing debconf data [r6632]
+    - hooks/prepareapt.CENTOS: copy resolv.conf to target [r6662]
+    - package_config/fai-project.asc: add gpg key from fai-project.org
+      repository [r6672]
+    - package_config/DEBIAN.asc,simple/package_config/fai-project.asc: rename
+      key file [r6674] [r6675]
+    - hooks/prepareapt.CENTOS,hooks/repository.CENTOS: rename file, because
+      task was renamed [r6739]
+    - scripts/LAST/50-misc: hwclock should not be called with ROOTCMD [r6745]
+  * fai: unset variable after use [r6195]
+  * fai-do-scripts.1: more precise description of matching file names [r6264]
+  * make-fai-nfsroot:
+    - mdadm.conf should not contain info from the install server [r6232]
+    - add patterns, that indicate an error [r6292]
+    - use xz compression for creating the base.tar file if available [r6499]
+    - remove old nfsroot with background process [r6500]
+    - print message if xz is still running [r6505]
+    - add info about different base files [r6599]
+    - use ramdisk for speeding up package installation [r6600]
+    - year++ [r6602]
+    - several minor fixes [r6604]
+    - stop mdadm from calling mkconf [r6605]
+    - remove obsolete call. It's the default behaviour [r6612]
+    - remove rsize [r6613]
+    - remove message about size of nfsroot [r6614]
+    - change comment [r6615]
+    - remove unused code [r6616]
+    - add check for fai packages inside the nfsroot [r6624]
+    - minor code cleanup [r6635]
+    - remove recover function and option -r [r6636]
+    - remove option -U [r6678]
+    - remove unused variable [r6680]
+    - code cleanup [r6681]
+    - add variable $exitcode [r6682]
+    - add comments, code cleanup [r6683]
+    - add warning about -U [r6684]
+    - do not copy fai files into the nfsroot [r6692]
+    - code restructuring for getting generic nfsroot easier [r6695]
+    - ignore error [r6696]
+    - add options -a and -g [r6698]
+  * make-fai-nfsroot,control: use pxelinux.0 from inside the nfsroot, add
+    depends on syslinux-common [r6409]
+  * task_sysinfo:
+    - start software raid when doing sysinfo [r6233]
+    - print disk devices and their mapping to device names [r6284]
+    - add pcimodules command [r6293]
+    - print info about audio device [r6301]
+  * mkramdisk: fix umount when directory is a mount point [r6235]
+  * fai-mount-disk: fix for mounting of partitions based on fstab [r6274]
+  * Makefile:
+    - remove bin/setup_harddisks from list [r6305]
+    - remove temporary directory in clean target [r6313]
+    - remove fai-guide.chunked directory in clean target [r6492]
+    - remove unused script [r6597]
+    - remove non-existing script [r6630]
+    - remove -f from checkbashism [r6648]
+    - use more verbose filenames (like
+      _anchor_id_advanced_xreflabel_advanced_advanced_fai.html) [r6671]
+  * control,Makefile: remove build dependencies that were only needed for
+    lenny, use -L with a2x [r6327]
+  * THANKS,rshall: convert to UTF-8 [r6307]
+  * NFSROOT:
+    - remove unneeded aufs packages [r6311]
+    - remove unused classes [r6413]
+    - add firmware packages to the nfsroot [r6601]
+  * FAQ: remove very old FAQ [r6489]
+  * docs: remove FAQ [r6490]
+  * subroutines:
+    - add options -a, -o to ifclass(), check multiple classes (logical AND,
+      OR) [r6603]
+    - use ftar for extracting base file (add support for xz compression)
+      [r6501]
+    - add BASHOPTS to pattern [r6611]
+    - remove unused code. Writing to /tmp/l seems to be for debugging [r6623]
+    - cleanup code when to reboot or when to wait for keystroke [r6628]
+    - improve matching of cmdline (closes: #607285, #632350) [r6633]
+    - add short descriptions [r6687]
+    - add comment, move code [r6688]
+    - add missing suffix .asc in file name, minor change in message [r6742]
+    - ignore no matching class when using ftar for basefiles/ [r6766]
+  * subroutines,fai-class.1: use bash regex matching instead of associative
+    array [r6668] [r6669] [r6728]
+  * subroutines,updatebase: move code for loading apt keys into
+    task_prepareapt [r6690]
+  * ftar: print only one / in path names, year++ [r6503]
+  * fai-cd: call genisoimage with -R instead of -r [r6522]
+  * prcopyleft: year++ [r6544]
+  * updatebase:
+    - load apt keys by class names [r6625]
+    - print a warning if some *.asc file are not used [r6629]
+    - fix wrong test [r6647]
+    - remove comments [r6686]
+    - prettify code [r6689]
+  * faireboot: fix wrong message [r6591]
+  * fai,fai-cd,make-fai-nfsroot,fai.conf: remove variable $FAI from fai.conf,
+    set default value in programs [r6607]
+  * fai,fai-mirror,make-fai-nfsroot,fai.conf: remove $MNTPOINT from fai.conf,
+    set default value where needed [r6608]
+  * fai-chboot: first, check if any hosts are specified [r6609]
+  * fai-chboot.8: add -u to more examples [r6610]
+  * fai-chboot.8: add -P to some examples, remove stupid example [r6622]
+  * fai: do not exit if /etc/fai does not exist. [r6617]
+  * get-config-dir: check if $FAI is defined [r6618]
+  * fai-do-scripts: add python support Closes: #635880 [r6637]
+  * make-fai-nfsroot.conf: move important variables to top, no other changes
+    [r6670]
+  * sources.list: enable fai-project.org repository by default [r6673]
+  * setup-storage: the disklist can now also be space separated [r6679]
+  * faimond-gui,subroutines: rename task prepareapt to repository, add
+    warnings for hooks using the old name [r6691]
+  * fai.conf: do not set LOGUSER by default [r6736]
+  * fai,fai-setup,fai.conf: use default value for FAI_LOGPROTO [r6737]
+  * faimond-gui.1: add option -s [r6749]
+  * mkdebmirror: option pdiff was renamed [r6753]
+  * fai-chboot: check if configuration directory exists [r6755]
+  * get-config-dir-*,subroutines: raise error values from 70x to 88x. [r6758]
+  * make-fai-nfsroot,simple/files/etc/kernel-img.conf/DEBIAN: kernel-img.conf
+    is not needed any more [r6760]
+  * Makefile,all_hosts,prtnetgr,rshall: remove obsolete utils which are not
+    closely connected to fai. Closes: #618521 [r6763]
+  * ftar,ftar.8: add option -i.  Ignore "no matching class" and exit with 0
+    [r6765]
+  * fai-kvm: add utility for starting kvm hosts for testing FAI software
+    [r6773] [r6774]
+  * get-boot-info: copy live.log to LOGDIR [r6775]
+  * Makefile,fai-nfsroot2image,fai-server.install,fai-server.manpages,
+    fai-nfsroot2image.8: add fai-nfsroot2image script and man page [r6776]
+  * make-fai-nfsroot,Makefile,fai-server.install,fai-server.links:
+    make-fai-nfsroot -> fai-make-nfsroot transition [r6777] [r6778] [r6779]
+  * fai-chboot.8: add example [r6781]
+
+  [ Michael Goetze ]
+  * simple examples:
+    - Add missing svn:executable property to example scripts. [r6275] [r6348]
+    - Add to simple-examples a Makefile for creating basefiles. [r6276]
+    - Use mktemp, s/-/_/ in class names. [r6277]
+    - Deduplicate scripts/{DEBIAN,FAIBASE}/40-misc in simple-examples [r6280]
+    - Add some CentOS-related ignore patterns to savelog.LAST.source [r6287]
+    - Initial checkin of CentOS support for simple examples. [r6288]
+    - Copy fai.conf and a small fix, so that fai softupdate runs without error
+      on a fresh installation with simple-examples [r6290]
+    - rename TMPDIR to BASEFILEDIR to avoid accidental setting [r6336]
+    - hooks/updatebase.CENTOS: =~ s/yum/yum -y/ [r6342]
+    - package_config/CENTOS: install sendmail [r6343]
+    - split up some variables into DEBIAN and CENTOS and implement them on
+      CENTOS [r6345]
+    - CENTOS/30-mkinitrd: --with is enough, we don't need --preload [r6346]
+    - Install redhat-lsb on CentOS, thanks to Stephan Adig for the idea
+      [r6347]
+    - Replace CENTOS/20-mknod by CENTOS/20-makedev, thanks to Stephan Adig for
+      the patch [r6349]
+    - Cleanup move of variables from FAIBASE to DEBIAN [r6395]
+    - CENTOS/40-install-grub: fix typo [r6397]
+    - Move some things from scripts/FAIBASE/10-misc to scripts/DEBIAN/40-misc
+      [r6398]
+    - Make static network configuration work on CentOS [r6454]
+  * NFSROOT, NEWS, simple example: Remove cfengine2 from default NFSROOT, as
+    it is no longer needed for the simple-examples. Only do cfengine cleanup
+    if it is installed. [r6283] [r6289]
+  * setup-storage.8: Update AUTHORS in setup-storage(8) [r6312]
+  * get-config-dir-git: Add support for git+ssh config dir [r6339] [r6354]
+  * get-config-dir-git,get-config-dir-hg,get-config-dir-svn:
+    get-config-dir-{svn,git}: check whether source is correct before update
+    [r6340]
+  * get-boot-info: Assume localdomain if no domain name received by DHCP
+    [r6341]
+
+  [ Michael Prokop ]
+  * Makefile,control:
+    - Add syntax checks to catch possible syntax problems (perl/bashism/bash).
+      Make perlcheck work without perl-tk and liblinux-lvm-perl.
+      Closes: #610509 [r6272] [r6260] [r6262] [r6263] [r6267] [r6270]
+    - Drop cfengine2 from recommends of fai-client [r6701]
+    - Use syslinux as alternative for syslinux-common in depends of
+      fai-nfsroot [r6718]
+  * developer-policy.txt: Add initial developer policy instructions (WIP).
+    [r6460]
+  * release-management.txt: Add document regarding release management of FAI
+    stable using git-svn. [r6461] [r6541]
+  * NFSROOT:
+    - Drop duplicate firmware-bnx2x entry and use firmware-bnx2 instead.
+      Thanks Jens Abromeit <j.abromeit@jpberlin.de> [r6720]
+    - Install xz-utils in nfsroot by default [r6721]
+  * fai-quickstart.postinst: make sure FAI_CONFIGDIR is set, otherwise inform
+    user [r6685]
+  * make-fai-nfsroot:
+    - Make sure we exit with actual return code of subshell [r6697]
+    - Divert /sbin/initctl if the executable is present [r6723]
+  * simple/package_config/DEMO: drop rusers + rusersd packages [r6729]
+  * simple/package_config/UBUNTU: add UBUNTU class file to package_config
+    [r6740]
+  * etc/sources.list: remove deprecated examples/etc/sources.list config file
+    [r6741]
+  * conf/NFSROOT: provide commented package selection examples for Ubuntu
+    [r6743]
+  * simple/package_config/FAIBASE: drop jove, nscd + tcsh from package_config,
+    replace exim4 with nullmailer [r6746]
+  * NFSROOT,simple/package_config/DEBIAN: software selection: use
+    linux-image-686 as default for I386 [r6747]
+  * conf/NFSROOT: drop jove, discover, liblinux-lvm-perl, libapt-pkg-perl and
+    add git [r6748]
+  * make-fai-nfsroot,make-fai-nfsroot.8: do not overwrite existing nfsroot by
+    default, use option -f to force overwriting [r6752]
+  * fai-mirror.1: fix typo in usage example (debmirrir->debmirror) [r6762]
+  * make-fai-nfsroot: do not error out if getent hosts fails [r6770]
+  * make-fai-nfsroot: do not error out if grep on mount output fails in
+    umount_dirs() [r6771]
+  * make-fai-nfsroot: provide proper return code in fdivert() [r6772]
+  * fai-make-nfsroot,fai-make-nfsrot: rename fix: fai-make-nfsrot should be
+    fai-make-nfsroot of course. Thanks Jan-Marek Glogowski for reporting on
+    IRC [r6782]
+  * fai-server.links: fix fai-make-nfsroot symlinks in Debian package. Thanks
+    Jan-Marek Glogowski for bugreport and patch. [r6783]
+
+  [ Michael Tautschnig ]
+  * fcopy.8: describe behaviour if preinst has nonzero exit code
+  * examples/simple/package_config/GNOME: Remove gnome-apt, ice*-gnome-support
+    as these don't exist in squeeze anymore (thanks Karl Wallner for reporting
+    this)
+  * setup-storage:
+    - Added support for using raw disk devices, without partitioning. Thanks
+      Jordi Funollet. Closes: #589649 [r6169]
+    - Generate conditional definitions for disk_var.sh such that variables
+      will only be set if not previously defined by users. [r6240]
+    - Partition pseudo-type luks:"<pass>" for LUKS device with user-defined
+      passphrase. Thanks Patrick Schoenfeld for suggesting this and extensive
+      testing. [r6405]
+    - If $disklist or $LOGDIR are not provided, find sane default values.
+      [r6406]
+    - Added "all" as valid value for preserve*, resize, always_format. Thanks
+      Toomas Tamm for suggesting this. [r6408]
+    - Man page: Move examples section to the front, several clarifications,
+      additional (simple) RAID example. [r6410] Added Holger's example for SW
+      RAID+LVM. Thanks Holger Levsen. Closes: #645167 [r6769]
+    - Add comment to generated fstab denoting actual device in case of UUID or
+      LABEL being used as identifier. [r6411]
+    - Distinct treatment of MiB vs. MB and friends. [r6412]
+    - Don't keep redundant number field in config data structure. [r6416]
+    - preserve_* now supported for each partition in place. Thanks Edgar Fuß
+      [r6703]
+    - Virtual disks don't have partition types. [r6704]
+    - Keep current_config consistent [r6705]
+    - Better error message for invalid string X in disklabel:X. [r6706]
+    - Start first partition at 1M [r6707]
+    - Support for /dev/loop*, parse floating point output of parted [r6708]
+    - Added new option -s to perform syntax check only. Closes: #627913
+      [r6709]
+    - Stop RAID arrays before re-assembling. Thanks David Dreezer [r6710]
+    - Properly handle alignment and preserving first partition. [r6711]
+    - Bugfixes to properly read volume id [r6712]
+    - Fix 100%-on-gpt configuration issue. Closes: #619136 [r6713]
+    - Use wipefs to purge (RAID) signatures [r6714] [r6722]
+    - Retain partition flags of preserved partitions. [r6715]
+    - Added options -D <disks>, -L <logdir> [r6716]
+    - Test mdadm-startall for existence before running it [r6724]
+    - Try to write disklabel in -X mode, regardless of exact error message
+      [r6754]
+    - Ignore warning about read-only device for reading partition table
+      [r6756]
+    - Initialize boot_mnt_point [r6757]
+    - Add gpt-bios partition with size 1MB initially [r6759]
+    - Set bootable flag on gpt-bios disk [r6761]
+  * dev-utils: New directory for scripts which are helpful for development of
+    FAI [r6239] [r6302]
+  * Makefile: Make sure that all example scripts are executable, fix syntax
+    check [r6268] [r6650] [r6652]
+  * examples/more-tests: Tests moved to test-suite [r6359-r6366] [r6372]
+  * Makefile,fai-client.lintian-overrides,subroutines: Using shopt -s extglob
+    won't work because bash fails with syntax error before [r6654] [r6658]
+  * subroutines: Require nonempty variable name as suggested by Thomas [r6660]
+  * control: Remove fai-server's recommends of fai-setup-storage. Closes:
+    #644516 [r6738]
+  * get-config-dir-hg: Added get-config pattern for hg+https. Closes: #631495
+    [r6744]
+  * fai.conf,fai.conf.5: Added man page for fai.conf [r6767]
+  * fai-vol_id: merged Jan's/Limux changes [r6768]
+
+ -- Michael Tautschnig <mt@debian.org>  Sun, 05 Jun 2011 19:16:51 +0100
+
