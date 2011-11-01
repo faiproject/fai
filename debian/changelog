@@ -121,6 +121,8 @@ fai (4.0~beta3) unstable; urgency=low
       Scientific Linux Cern [r6516]
     - basefiles/Makefile,basefiles/mk-basefile: replace Makefile
       implementation with shell script [r6524] [r6556] [r6593] [r6656]
+      [r6750]; add optiopn -d for target directory, set default to /var/tmp
+      [r6751]
     - hooks/instsoft.DEBIAN: set executable flag [r6545]
     - scripts/FAIBASE/10-misc: if not IP was set, add special host entry
       [r6546]
@@ -151,6 +153,9 @@ fai (4.0~beta3) unstable; urgency=low
       repository [r6672]
     - package_config/DEBIAN.asc,simple/package_config/fai-project.asc: rename
       key file [r6674] [r6675]
+    - hooks/prepareapt.CENTOS,hooks/repository.CENTOS: rename file, because
+      task was renamed [r6739]
+    - scripts/LAST/50-misc: hwclock should not be called with ROOTCMD [r6745]
   * fai: unset variable after use [r6195]
   * fai-do-scripts.1: more precise description of matching file names [r6264]
   * make-fai-nfsroot:
@@ -214,12 +219,14 @@ fai (4.0~beta3) unstable; urgency=low
       OR) [r6603]
     - use ftar for extracting base file (add support for xz compression)
       [r6501]
-    -  add BASHOPTS to pattern [r6611]
-    -  remove unused code. Writing to /tmp/l seems to be for debugging [r6623]
-    -  cleanup code when to reboot or when to wait for keystroke [r6628]
-    -  improve matching of cmdline (closes: #607285, #632350) [r6633]
-    -  add short descriptions [r6687]
-    -  add comment, move code [r6688]
+    - add BASHOPTS to pattern [r6611]
+    - remove unused code. Writing to /tmp/l seems to be for debugging [r6623]
+    - cleanup code when to reboot or when to wait for keystroke [r6628]
+    - improve matching of cmdline (closes: #607285, #632350) [r6633]
+    - add short descriptions [r6687]
+    - add comment, move code [r6688]
+    - add missing suffix .asc in file name, minor change in message [r6742]
+    - ignore no matching class when using ftar for basefiles/ [r6766]
   * subroutines,fai-class.1: use bash regex matching instead of associative
     array [r6668] [r6669] [r6728]
   * subroutines,updatebase: move code for loading apt keys into
@@ -250,6 +257,26 @@ fai (4.0~beta3) unstable; urgency=low
   * setup-storage: the disklist can now also be space separated [r6679]
   * faimond-gui,subroutines: rename task prepareapt to repository, add
     warnings for hooks using the old name [r6691]
+  * fai.conf: do not set LOGUSER by default [r6736]
+  * fai,fai-setup,fai.conf: use default value for FAI_LOGPROTO [r6737]
+  * faimond-gui.1: add option -s [r6749]
+  * mkdebmirror: option pdiff was renamed [r6753]
+  * fai-chboot: check if configuration directory exists [r6755]
+  * get-config-dir-*,subroutines: raise error values from 70x to 88x. [r6758]
+  * make-fai-nfsroot,simple/files/etc/kernel-img.conf/DEBIAN: kernel-img.conf
+    is not needed any more [r6760]
+  * Makefile,all_hosts,prtnetgr,rshall: remove obsolete utils which are not
+    closely connected to fai. Closes: #618521 [r6763]
+  * ftar,ftar.8: add option -i.  Ignore "no matching class" and exit with 0
+    [r6765]
+  * fai-kvm: add utility for starting kvm hosts for testing FAI software
+    [r6773] [r6774]
+  * get-boot-info: copy live.log to LOGDIR [r6775]
+  * Makefile,fai-nfsroot2image,fai-server.install,fai-server.manpages,
+    fai-nfsroot2image.8: add fai-nfsroot2image script and man page [r6776]
+  * make-fai-nfsroot,Makefile,fai-server.install,fai-server.links:
+    make-fai-nfsroot -> fai-make-nfsroot transition [r6777] [r6778] [r6779]
+  * fai-chboot.8: add example [r6781]
 
   [ Michael Goetze ]
   * simple examples:
@@ -309,6 +336,30 @@ fai (4.0~beta3) unstable; urgency=low
     - Make sure we exit with actual return code of subshell [r6697]
     - Divert /sbin/initctl if the executable is present [r6723]
   * simple/package_config/DEMO: drop rusers + rusersd packages [r6729]
+  * simple/package_config/UBUNTU: add UBUNTU class file to package_config
+    [r6740]
+  * etc/sources.list: remove deprecated examples/etc/sources.list config file
+    [r6741]
+  * conf/NFSROOT: provide commented package selection examples for Ubuntu
+    [r6743]
+  * simple/package_config/FAIBASE: drop jove, nscd + tcsh from package_config,
+    replace exim4 with nullmailer [r6746]
+  * NFSROOT,simple/package_config/DEBIAN: software selection: use
+    linux-image-686 as default for I386 [r6747]
+  * conf/NFSROOT: drop jove, discover, liblinux-lvm-perl, libapt-pkg-perl and
+    add git [r6748]
+  * make-fai-nfsroot,make-fai-nfsroot.8: do not overwrite existing nfsroot by
+    default, use option -f to force overwriting [r6752]
+  * fai-mirror.1: fix typo in usage example (debmirrir->debmirror) [r6762]
+  * make-fai-nfsroot: do not error out if getent hosts fails [r6770]
+  * make-fai-nfsroot: do not error out if grep on mount output fails in
+    umount_dirs() [r6771]
+  * make-fai-nfsroot: provide proper return code in fdivert() [r6772]
+  * fai-make-nfsroot,fai-make-nfsrot: rename fix: fai-make-nfsrot should be
+    fai-make-nfsroot of course. Thanks Jan-Marek Glogowski for reporting on
+    IRC [r6782]
+  * fai-server.links: fix fai-make-nfsroot symlinks in Debian package. Thanks
+    Jan-Marek Glogowski for bugreport and patch. [r6783]
 
   [ Michael Tautschnig ]
   * fcopy.8: describe behaviour if preinst has nonzero exit code
@@ -328,7 +379,8 @@ fai (4.0~beta3) unstable; urgency=low
     - Added "all" as valid value for preserve*, resize, always_format. Thanks
       Toomas Tamm for suggesting this. [r6408]
     - Man page: Move examples section to the front, several clarifications,
-      additional (simple) RAID example. [r6410]
+      additional (simple) RAID example. [r6410] Added Holger's example for SW
+      RAID+LVM. Thanks Holger Levsen. Closes: #645167 [r6769]
     - Add comment to generated fstab denoting actual device in case of UUID or
       LABEL being used as identifier. [r6411]
     - Distinct treatment of MiB vs. MB and friends. [r6412]
@@ -350,6 +402,13 @@ fai (4.0~beta3) unstable; urgency=low
     - Retain partition flags of preserved partitions. [r6715]
     - Added options -D <disks>, -L <logdir> [r6716]
     - Test mdadm-startall for existence before running it [r6724]
+    - Try to write disklabel in -X mode, regardless of exact error message
+      [r6754]
+    - Ignore warning about read-only device for reading partition table
+      [r6756]
+    - Initialize boot_mnt_point [r6757]
+    - Add gpt-bios partition with size 1MB initially [r6759]
+    - Set bootable flag on gpt-bios disk [r6761]
   * dev-utils: New directory for scripts which are helpful for development of
     FAI [r6239] [r6302]
   * Makefile: Make sure that all example scripts are executable, fix syntax
@@ -358,6 +417,12 @@ fai (4.0~beta3) unstable; urgency=low
   * Makefile,fai-client.lintian-overrides,subroutines: Using shopt -s extglob
     won't work because bash fails with syntax error before [r6654] [r6658]
   * subroutines: Require nonempty variable name as suggested by Thomas [r6660]
+  * control: Remove fai-server's recommends of fai-setup-storage. Closes:
+    #644516 [r6738]
+  * get-config-dir-hg: Added get-config pattern for hg+https. Closes: #631495
+    [r6744]
+  * fai.conf,fai.conf.5: Added man page for fai.conf [r6767]
+  * fai-vol_id: merged Jan's/Limux changes [r6768]
 
  -- Michael Tautschnig <mt@debian.org>  Sun, 05 Jun 2011 19:16:51 +0100
   
