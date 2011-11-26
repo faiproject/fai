@@ -41,14 +41,14 @@ umount_ramdisk() {
 
     # put contents of ramdisk back to original location on harddisk
 
-    disk=$(readlink -f $1)
-    ram=${disk}-in-ramdisk
+    local disk=$(readlink -f $1)
+    local ram=${disk}-in-ramdisk
 
-    # test, if a ramdisk is mounted to this directory 
-    mount | grep -q " $1 type tmpfs"
+    # test, if a ramdisk is mounted to this directory
+    mount | grep -q " $disk type tmpfs"
     if [ $? -eq 1 ]; then
-	echo "$d is not a mounted ramdisk."
-	return
+        echo "$disk is not a mounted ramdisk."
+        return
     fi
 
     set -e
@@ -57,7 +57,7 @@ umount_ramdisk() {
     rm -rf $disk/* $disk/.??* || true
     cp -a  $ram/. $disk/.   # copy ramdisk contents to disk
     umount $ram
-    echo "Ramdisk on $d umounted"
+    echo "Ramdisk on $disk umounted"
     rmdir  $ram
     set +e
 }
