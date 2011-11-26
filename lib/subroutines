@@ -77,16 +77,16 @@ ifclass() {
 _ifclass() {
 
     # check one single class
-    [ "$debug" ] && echo "Test if class $1 is in $classes" >&2
+    [ "${debug:-}" ] && echo "Test if class $1 is in ${classes:-}" >&2
     # test if a class is defined
     local ret
 
-    if [[ "$classes" =~ (^|[[:space:]]+)$1($|[[:space:]]+) ]]; then
+    if [[ "${classes:-}" =~ (^|[[:space:]]+)$1($|[[:space:]]+) ]]; then
 	ret=0
     else
     	ret=1
     fi
-    [ "$debug" ] && echo "ifclass returns $ret" >&2
+    [ "${debug:-}" ] && echo "ifclass returns $ret" >&2
     return $ret
 }
 
@@ -393,13 +393,13 @@ task_defclass() {
     else
 	classes=$(< /var/lib/fai/FAI_CLASSES)
     fi
-    echo "List of all classes: " $classes
+    echo "List of all classes: " ${classes:-}
 
     # define classes as: a.b.c.d for cfengine -D
     # this doesn't work without echo
-    cfclasses=$(echo $classes)
+    cfclasses=$(echo ${classes:-})
     cfclasses=${cfclasses// /.}
-    [ "$debug" ] && echo "cfclasses: $cfclasses"
+    [ "${debug:-}" ] && echo "cfclasses: $cfclasses"
     # define a bash hash with all class names. Without this, ifclass does not work
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -416,7 +416,7 @@ task_defvar() {
     local svar=$LOGDIR/showvar.log
     local odir=$(pwd)
     cd $FAI/class
-    for class in $classes ; do
+    for class in ${classes:-} ; do
 	if [ -f $class.var -a -r $class.var ]; then
 	    [ "$verbose" ] && echo "Executing $class.var"
 	    # show only lines with ++, we cannot use a pipe, since it would call
@@ -888,7 +888,7 @@ task_repository () {
     # check for old hooks for task prepareapt
     local hook cl hfile
     hook=prepareapt
-    for cl in $classes; do
+    for cl in ${classes:-}; do
 	hfile=$FAI/hooks/$hook.$cl
 	if [ -f $hfile ]; then
 	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile to repository.$cl."
@@ -931,7 +931,7 @@ EOF
     done
 
     # add apt keys for all classes
-    for keyfile in $classes; do
+    for keyfile in ${classes:-}; do
 	[ ! -f $FAI/package_config/$keyfile.asc ] && continue
 	echo -n "Loading APT key from $keyfile.asc "
 	cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key add -
