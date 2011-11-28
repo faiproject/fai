@@ -28,6 +28,9 @@ are only treated specialy at the beginning or end of the pattern and
 are used for matching, not when adding the line. Additionaly,
 the following characters are escaped in LINE: ( ) +
 
+The exit code returned by ainsl is 0 on success and non-zero
+on error.  See the section EXIT CODES.
+
 .SH OPTIONS
 .TP
 .B \-a
@@ -63,6 +66,22 @@ isn't already inlcuded.
 ainsl \-s /etc/exports '/srv/www @linuxhosts(async,rw) backup(async,ro)'
 
 Add exports entry without exactly matching spaces.
+
+.SH EXIT CODES
+.TP
+.B 0
+Success: Either FILE contains the LINE/PATTERN or LINE was appended to FILE.
+.TP
+.B 13
+Permissions do not allow writing to FILE and LINE/PATTERN was not found in file.
+.TP
+.B 28
+FILE cannot written because the filesystem has no space and LINE/PATTERN was not
+found in file.
+.TP
+.B 30
+FILE cannot written because the filesystem is read-only and LINE/PATTERN was not
+found in file.
 
 .SH NOTES
 This is a similar function to AppendIfNoSuchLine from cfengine(8).

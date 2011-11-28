@@ -120,7 +120,11 @@ rwmount() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
 
-    dmesg > $LOGDIR/dmesg.log
+    if [ -r /var/run/fai/kern.log.offset ] ; then
+      logtail -t -f /var/log/kern.log -o /var/run/fai/kern.log.offset > $LOGDIR/dmesg.log
+    else
+      dmesg > $LOGDIR/dmesg.log
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_csspace() {
@@ -483,6 +487,7 @@ task_tests() {
 task_savelog() {
 
     mkdir -p $FAI_ROOT/var/{lib,log}/fai
+    rm -f /var/run/fai/kern.log.offset
     fai-savelog -l
     [ -f $LOGDIR/FAI_CLASSES ] && cp -pu $LOGDIR/FAI_CLASSES $FAI_ROOT/var/lib/fai
     [ -f $LOGDIR/disk_var.sh ] && cp -pu $LOGDIR/disk_var.sh $FAI_ROOT/var/lib/fai
@@ -701,10 +706,14 @@ eval_cmdline() {
 
     echo -n "Kernel currently running: "
     uname -rsmo
-    echo -n "Kernel parameters: "; cat /proc/cmdline
-    for word in $(cat /proc/cmdline) ; do
+    eval "cmdline=($(</proc/cmdline))"
+    echo "Kernel parameters: ${cmdline[*]}"
+    for word in "${cmdline[@]}"; do
       if echo "$word" | egrep -q '^[a-zA-Z0-9_]+=' ; then
-		eval "export $word"
+		varname=${word%%=*}
+		word=${word#*=}
+		eval $varname=\$word
+		eval export $varname
       fi
     done
 
