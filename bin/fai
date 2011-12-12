@@ -66,9 +66,9 @@ fai_init() {
     . /usr/lib/fai/subroutines
 
     [ -f "$stamp" ] && {
-       echo -n "$0 already running or was aborted before. PID: "
-       cat $stamp
-       echo "You may remove $stamp and try again."
+       echo -n "$0 already running or was aborted before. PID: " >&2
+       cat $stamp >&2
+       echo "You may remove $stamp and try again." >&2
        exit 1
     }
 
@@ -173,7 +173,7 @@ while true ; do
 	    shift 2 ;;
 	-c|--class)
 	    if [ $renewclass -eq 1 ]; then
-		echo "You can't use -c|--classes and -N|--new at the same time."
+		echo "You can't use -c|--classes and -N|--new at the same time." >&2
 		exit 9
 	    fi
 	    export cmdlineclasses=$2
@@ -189,7 +189,7 @@ while true ; do
             shift
             break ;;
          *)
-            echo "$0: command line parsing error ! $@"
+            echo "$0: command line parsing error ! $@" >&2
             exit 1 ;;
     esac
 done
@@ -211,11 +211,11 @@ export FAI_ETC_DIR
 
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
-	echo "Please specify a target directory. Aborted"
+	echo "Please specify a target directory. Aborted" >&2
 	exit 3
     fi
     if [ $renewclass -eq 0 -a -z "$cmdlineclasses" ]; then
-	echo "Please use -c or -N. Aborted"
+	echo "Please use -c or -N. Aborted" >&2
 	exit 4
     fi
 
@@ -226,14 +226,14 @@ if [ X$action = Xdirinstall ]; then
     # check if target directory is mounted with bad options
     fs=$(df -P $FAI_ROOT | tail -1 | awk '{print $6}')
     if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
-	echo "Target directory is mounted using nosuid or nodev. Aborting"
+	echo "Target directory is mounted using nosuid or nodev. Aborting" >&2
 	exit 5
     fi
     unset fs
 
     if [ ! -e $FAI_ETC_DIR/make-fai-nfsroot.conf ]; then
-	echo "$FAI_ETC_DIR/make-fai-nfsroot.conf not found."
-	echo "You may want to install the package fai-server"
+	echo "$FAI_ETC_DIR/make-fai-nfsroot.conf not found." >&2
+	echo "You may want to install the package fai-server" >&2
 	exit 7
     fi
     export NFSROOT=$(source $FAI_ETC_DIR/make-fai-nfsroot.conf; echo $NFSROOT)
@@ -243,13 +243,13 @@ if [ X$action = Xdirinstall ]; then
 fi
 
 if [ $(id -u) != "0" ]; then
-    echo "Run this program as root."
+    echo "Run this program as root." >&2
     exit 1
 fi
 
 # exit if we do not run from nfsroot and no parameter is given
 if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
-    echo "Please give more parameters if not run from the nfsroot."
+    echo "Please give more parameters if not run from the nfsroot." >&2
     exit 2
 fi
 
