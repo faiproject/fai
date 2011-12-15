@@ -280,7 +280,7 @@ $kernel
 EOM
 
   $append="append $initrd $bootprot $rootfs $opt_k $flags $action\n";
-  print FILE $append;
+  print FILE "$append" unless ($append =~ /append\s+$/);
   print FILE "IPAPPEND 3\n" if $opt_P;
   close FILE;
 }
@@ -469,7 +469,8 @@ $opt_u and $flags.=" FAI_CONFIG_SRC=$opt_u"; # set -u as FAI_CONFIG_SRC
 
 die "No host specified.\n" unless @ARGV;
 warn "Booting $kernelname\n" if $verbose;
-warn " append $initrd $bootprot $opt_k\n    $flags\n\n" if $verbose;
+warn " append $initrd $bootprot $opt_k\n" if ( $verbose and ("$initrd $bootprot $opt_k" !~ /^\s+$/));
+warn "   $flags\n\n" if ($verbose and $flags);
 $opt_k && print "Kernel parameters: $opt_k\n";
 
 foreach (@ARGV) { mkpxecfg($_,$kernelname,$rootfs,$initrd); }
