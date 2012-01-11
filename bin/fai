@@ -98,7 +98,17 @@ fai_init() {
 	ifup lo
 	[ -x /sbin/portmap ] && /sbin/portmap
 	[ -x /sbin/rpcbind ] && /sbin/rpcbind
-	mount -t devpts devpts /dev/pts
+
+	# NFS v4 support
+	sed -i -e '/Nobody-/d' /etc/idmapd.conf
+	ainsl -v /etc/idmapd.conf 'Nobody-User = root'
+	ainsl -v /etc/idmapd.conf 'Nobody-Group = root'
+	rpc.statd # idmapd needs this
+	rpc.idmapd -C # idmapd needs option -v or rpc.statd must be running. Otherwise the next command (like mount, ls -l) hangs.
+
+	if grep -wq devpts /proc/mounts; then
+	    mount -t devpts devpts /dev/pts
+	fi
 	cat /proc/kmsg >/dev/tty4 &
     fi
 
