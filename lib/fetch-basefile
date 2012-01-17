@@ -1,0 +1,89 @@
+#! /bin/bash
+
+# fetch-basefile, fetch a basefile via ftp or http using classes
+#
+# (c) Thomas Lange, 2011-2012
+#
+# Try to download a CLASSNAME.tar.gz (or tgz, or tar.xz,...) from an URL which matches a class name
+# The URL must provide a listing of all files in there
+# e.g.: FAI_BASEFILEURL=http://fai-project.org/download/basefiles
+#
+# variables needed: $classes, $FAI, $FAI_BASEFILEURL
+
+FAI_BASEFILEURL=http://fai-project.org/download/basefiles
+classes="ABC A123 CENTOS SLC6_ ENTOS5_32 DEBIAN SQUEEZE"
+FAI=/dev/shm
+mkdir -p $FAI/basefiles
+verbose=1
+
+mount_ramdisk() {
+
+    # put ramdisk on config space and download file
+    mount -t tmpfs tmpfs $FAI/basefiles # this makes files from NFS invisible
+    if [ $? -eq 1]; then
+	echo "mount ramdisk onto $FAI/basefiles failed."
+	exit 3
+    fi
+}
+
+[ X$FAI_BASEFILEURL = X ] && exit 0
+url=$FAI_BASEFILEURL
+[ "$verbose" ] && echo "Fetching basefile from $url"
+
+error=0
+found=0
+mount=0
+
+while getopts m opt ; do
+        case "$opt" in
+        m) mount=1 ;;
+        esac
+done
+#shift $(($OPTIND - 1))
+
+# get list of all files at URL
+flist=$(lftp -e 'cls;exit' $url 2>/dev/null)
+
+# create a hash like thing
+# key (here variable name) is the basename of the file found
+# value is the complete filename
+for f in $flist; do
+  # echo file found: $f
+  base=${f%%.*}   # basename is the class name
+  eval "found_$base=$f"
+done
+
+# reverse order of classes
+for c in $classes; do
+    revclasses="$c $revclasses"
+done
+
+# now search for each class, if a basename matches
+for c in $revclasses; do
+  id="found_$c"  # prepare for indirect variable name
+  if [ X${!id} != X ]; then
+      # hash lookup succeeded
+      found=1
+      [ $mount = 1 ] && mount_ramdisk
+      cd $FAI/basefiles || exit 3
+      if [ -f ${!id} ]; then
+	  echo "${!id} already exists"
+	  error=1
+	  break
+      fi
+
+      echo "Downloading $url/${!id}"
+      #  wget -nv $url/${!id}    # creates a new file with suffix .1, .2,.. if file already exists. Bad.
+      lftp -e "get $url/${!id};exit" # fails if file already exists. this is nice.
+      error=$?
+      break
+  fi
+done
+
+if [ X$found = X0 ]; then
+  echo No basefile matching a class name was found at $url
+fi
+
+exit $error
+
+# the rest is done by task extrbase using ftar
