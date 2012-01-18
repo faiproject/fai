@@ -21,7 +21,7 @@ mount_ramdisk() {
     # put ramdisk on config space and download file
     mount -t tmpfs tmpfs $FAI/basefiles # this makes files from NFS invisible
     if [ $? -eq 1]; then
-	echo "mount ramdisk onto $FAI/basefiles failed."
+	echo "mount ramdisk onto $FAI/basefiles failed." >&2
 	exit 3
     fi
 }
@@ -67,7 +67,7 @@ for c in $revclasses; do
       [ $mount = 1 ] && mount_ramdisk
       cd $FAI/basefiles || exit 3
       if [ -f ${!id} ]; then
-	  echo "${!id} already exists"
+	  echo "${!id} already exists" >&2
 	  error=1
 	  break
       fi
@@ -81,7 +81,7 @@ for c in $revclasses; do
 done
 
 if [ X$found = X0 ]; then
-  echo No basefile matching a class name was found at $url
+  echo "No basefile matching a class name was found at $url" >&2
 fi
 
 exit $error
