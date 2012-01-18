@@ -33,11 +33,11 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2011 Thomas Lange
+	Copyright (C) 1999-2012 Thomas Lange
 
-	Usage: make-fai-nfsroot [OPTIONS]
+	Usage: fai-make-nfsroot [OPTIONS]
   Create an NFSROOT for FAI.
-	Read the man pages pages make-fai-nfsroot(8).
+	Read the man pages pages fai-make-nfsroot(8).
 EOF
     exit 0
 }
@@ -48,7 +48,7 @@ die() {
     shift
 
     echo "ERROR: $@"
-    echo "Log file written to /var/log/fai/make-fai-nfsroot.log"
+    echo "Log file written to /var/log/fai/fai-make-nfsroot.log"
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -63,7 +63,7 @@ check_nfsroot() {
 
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
     [ -z "$files" ] && die 1 "No initrd installed."
-    egrep -q "^ERROR: |^E: Sub-process |^dpkg: error processing |^dpkg: dependency problems" /var/log/fai/make-fai-nfsroot.log && bad_exit
+    egrep -q "^ERROR: |^E: Sub-process |^dpkg: error processing |^dpkg: dependency problems" /var/log/fai/fai-make-nfsroot.log && bad_exit
     return 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -171,8 +171,8 @@ bad_exit() {
 
     merror="with errors"
     exitcode=1
-    echo "An error occured during make-fai-nfsroot."
-    echo "Please fix the error or try make-fai-nfsroot -v"
+    echo "An error occured during fai-make-nfsroot."
+    echo "Please fix the error or try fai-make-nfsroot -v"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_verbose() {
@@ -255,14 +255,14 @@ call_debootstrap() {
 	echo "ERROR: debootstrap did not complete successfully."
 	echo "This is mostly caused by a broken mirror."
 	echo "Please check your mirror or use an official mirror."
-	[ "$verbose" ] || echo "Call make-fai-nfsroot -v for better debugging."
+	[ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
 	exit 10
     fi
 
     if [ ! -f $NFSROOT/usr/bin/apt-get ]; then
 	echo "No apt-get executable available inside the NFSROOT."
 	echo "Maybe debootstrap did not finish successfully. Aborting."
-	[ "$verbose" ] || echo "Call make-fai-nfsroot -v for better debugging."
+	[ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
 	exit 11
     fi
 }
@@ -289,7 +289,7 @@ add_etc_hosts_entries() {
 
     if [ -f /etc/resolv.conf ]; then
 	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
-	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during make-fai-nfsroot
+	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during fai-make-nfsroot
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -521,12 +521,12 @@ trap "bad_exit" ERR
     run_hooks
     umount_dirs
     trap "true" EXIT
-    echo "make-fai-nfsroot finished $merror."
+    echo "fai-make-nfsroot finished $merror."
     exit $exitcode
 }
 
 # repeat message, so it will appear in the log file
-[ "$verbose" ] && echo "Using configuration files from $cfdir" > /var/log/fai/make-fai-nfsroot.log
+[ "$verbose" ] && echo "Using configuration files from $cfdir" > /var/log/fai/fai-make-nfsroot.log
 
 {
 if [ -d $NFSROOT ] && [ "$force" -ne 1 ] ; then
@@ -584,11 +584,11 @@ if [ -n "$xzpid" ]; then
     ps -p $xzpid >/dev/null 2>&1
     [ $? -eq 0 ] &&  echo "xz compression of $NFSROOT/var/tmp/base.tar is still running in the background."
 fi
-echo "make-fai-nfsroot finished $merror."
+echo "fai-make-nfsroot finished $merror."
 exit $exitcode
-} 2>&1 | tee -a /var/log/fai/make-fai-nfsroot.log
+} 2>&1 | tee -a /var/log/fai/fai-make-nfsroot.log
 RC=${PIPESTATUS[0]}
 umount_dirs
 trap "true" EXIT
-echo "Log file written to /var/log/fai/make-fai-nfsroot.log"
+echo "Log file written to /var/log/fai/fai-make-nfsroot.log"
 exit ${RC}
