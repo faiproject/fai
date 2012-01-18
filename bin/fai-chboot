@@ -6,7 +6,7 @@
 # fai-chboot -- manage configuration for network boot
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2003-2011 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2003-2012 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -440,9 +440,11 @@ if ($opt_I) {
   $action="FAI_ACTION=install";
 }
 
-$kernelsuffix = (glob "$tftproot/vmlinuz*$opt_s")[-1];
-$kernelsuffix=~ s/.+vmlinuz-//;
-die "No kernel found matching $tftproot/vmlinuz*$opt_s\n" unless $kernelsuffix;
+unless ($opt_o) {
+  $kernelsuffix = (glob "$tftproot/vmlinuz*$opt_s")[-1];
+  $kernelsuffix=~ s/.+vmlinuz-//;
+  die "No kernel found matching $tftproot/vmlinuz*$opt_s\n" unless $kernelsuffix;
+}
 
 if ($opt_i) {
   # create config so host will boot the install kernel
