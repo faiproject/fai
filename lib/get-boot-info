@@ -40,7 +40,7 @@ bootlog=$LOGDIR/boot.log
 netdevice_info() {
 
     # devices that are running
-    netdevices_up=$(ip link show up | grep "^[1-9$].*LOWER_UP" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -v "^lo" | sort | uniq)
+    netdevices_up=$(ip link show up | grep "^[1-9$].*LOWER_UP" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -v "^lo" | sort | uniq| tr '\n' ' ')
     # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
@@ -49,7 +49,7 @@ netdevice_info() {
     netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/')
     tmp=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep "^eth")
     netdevices_all="$netdevices_all $tmp"
-    netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq)
+    netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq| tr '\n' ' ')
 
     cat > $bootlog <<-EOF
 	netdevices_all="$netdevices_all"
