@@ -1,10 +1,203 @@
-fai (4.0~beta3) unstable; urgency=low
+fai (4.0~beta4) unstable; urgency=low
 
-  * Temporary changelog to raise version number.
-  * The changelog with all the glory details is currently available at
-    https://github.com/faiproject/fai/blob/master/doc/dev-changelog
+  [ Thomas Lange ]
+  * rename scripts:
+    - faimond -> fai-monitor
+    - faimond-gui -> fai-monitor-gui
+    - make-fai-nfsroot -> fai-make-nfsroot
+  * fetch-basefile: new script for fetching basefile via ftp and http,
+    uses variable FAI_BASEFILEURL
+  * fai-nfsroot2image, fai-nfsroot2image.8: add new script, make a
+    compressed squashfs from the nfsroot
+  * faimond-gui: add option -s
+  * ftar, ftar.8: add option -i.  Ignore "no matching class" and exit with 0
+  * fai-kvm: add utility for starting kvm hosts for testing FAI software
+  * remove setup_harddisks and variable USE_SETUP_STORAGE
+  * fai-chboot, fai-chboot.8: support for MAC address
+    (Thanks Torge Gipp for the initial patch)
+  * remove kernel-img.conf: not needed any more
+  * fai-mirror: replace apt-move by reprepro
+  * sources.list: enable fai-project.org repository by default
+  * fai: add NFS v4 support and rpcbind
+  * fai, fai-setup, fai.conf: use default value for FAI_LOGPROTO
+  * fai, fai-mirror, make-fai-nfsroot, fai.conf: remove $MNTPOINT from
+    fai.conf, set default value where needed
+  * fai.conf: do not set LOGUSER by default, move detailed info about variables
+    to man page fai.conf.5
+  * make-fai-nfsroot: remove variable $FAI_BOOT
+    - die() subroutine now takes exit code
+    - mdadm.conf should not contain info from the install server
+    - use xz compression for creating the base.tar file if available
+    - remove old nfsroot with background process
+    - use ramdisk for speeding up package installation
+    - remove recover function and option -r
+    - remove option -U
+    - add options -a and -g
+    - do not copy fai files into the nfsroot
+    - code restructuring for getting generic nfsroot easier
+    - use pxelinux.0 from inside the nfsroot
+    - copy pxelinux.0 to TFTPROOT only if it's not already existing
+    - make-fai-nfsroot: kernel-img.conf is not needed any more
+  * subroutines: rename task prepareapt to repository, add warnings for
+    hooks using the old name, new code for prepareapt(). First, try to
+    copy important files (hosts, resolv.conf, sources.list, preferences)
+    from the config space, if not found use version from the nfsroot, also
+    try whole directory tree /etc/apt from config space, improve matching
+    of cmdline (Closes: #607285, #632350), new options -a -o for ifclass()
+    check multiple classes (logical AND, OR), use ftar for extracting base
+    file, use bash regex matching instead of associative array, move code
+    for loading apt keys into task_repository, make $disklist space
+    separated
+  * get-boot-info: do only list NICs which also have a link (means cable
+    connected), copy live.log to LOGDIR, make list of netdevices blank
+    separated (instead of newline), fix wrong variable name Closes: #612805
+    drop BOOTP support
+  * fai-start-stop-daemon: remove it, policy-rc.d is sufficient
+  * ftar: die() subroutine now takes exit code
+  * updatebase, subroutines: move code for loading apt keys to updatebase
+  * mkdebmirror: use cdn.debian.net
+  * install_packages: add cupt support, if -l is given, do not write
+    install_packages.list
+  * fai-cd: call genisoimage with -R instead of -r
+  * updatebase: load apt keys by class names, print a warning if some
+    *.asc file are not used
+  * simple example:
+    - move all Debian specific parts into class DEBIAN (Thanks Michael
+      Goetze for the patch
+    - add CENTOS and Scientific Linux Cern example, both for 5 and 6
+    - do not use fcopy for /etc/modules
+    - install grub into all raid devices
+    - new code for trap ERR, it now saves the maximum value of all errors
+    - use pcimodules command to load kernel driver
+    - remove option -s -k from modprobe, they do not exist
+    - replace console-common by console-setup and kbd
+    - use ext4 in Debian examples
+    - DEBIAN: use same linux-image package names as in NFSROOT,
+      add initramfs-tools, remove non-existing debconf data
+    - new class XFCE
+    - grub.cfg: grub2 (for fai-cd) now asks for user and password
+    - grub.cfg,menu.lst: do not use ip= parameter, dhcp is now the default
+    - prepareapt.CENTOS: add a hint how to disable the fastestmirror
+      plugin
+    - FAIBASE/10-misc: add -c to chmod, chown
+    - mk-basefile: replace Makefile with shell script
+    - fai-project.asc: add gpg key from fai-project.org repository
+    - LAST/50-misc: hwclock should not be called with ROOTCMD
+    - remove lilo support
+    - 99-discover-bug: remove unused script
+    - 30-demo: replace script with shell code in 10-misc
+    - 40-misc: replace cfengine script with shell script
+    - savelog.LAST: add ignore pattern
+    - FAISERVER: use 192.168.33.0/24 subnet, replace apt-proxy by approx
+    - 10-conffiles, 50-host-classes: add support for hosts named client01,..
+  * task_sysinfo:
+    - start software raid
+    - print disk devices and their mapping to device names
+    - print info about audio device
+  * NFSROOT: remove unneeded aufs packages, remove unused classes, add
+    firmware packages to the nfsroot
+  * fai-chboot: check if any hosts are specified
+  * fai-do-scripts: add python support Closes: #635880
+  * setup-storage: the disklist can now also be space separated
+  * setup-storage.8: remove migration from old tool section
+  * fai-do-scripts.1: more precise description of matching file names
+  * get-config-dir-*,subroutines: raise error values from 70x to 88x.
+  * all_hosts,prtnetgr,rshall: remove obsolete utils which are not closely
+    connected to fai. Closes: #618521
+  * fai-guide.txt: adjust to new task name, improve explanation of flag
+    reboot
+  * FAQ: remove very old FAQ
+  * THANKS: add Torge, Michael Goetze
+  * control:
+    - change Uploaders: remove Holger, add Mika
+    - remove Replaces and Conflicts to fai and fai-kernels
+    - remove build dependencies that were only needed for lenny
+  * copyright, control, README.build-sources: move to git repository
 
- -- Michael Prokop <mika@debian.org>  Fri, 04 Nov 2011 15:26:06 +0100
+  [ Michael Goetze ]
+  * simple examples:
+    - Initial checkin of CentOS support for simple examples
+    - Add some CentOS-related ignore patterns to savelog.LAST.source
+    - Deduplicate scripts/{DEBIAN,FAIBASE}/40-misc in simple-examples
+    - Copy fai.conf, so that fai softupdate runs without error
+      on a fresh installation with simple-examples
+    - Install redhat-lsb on CentOS, thanks to Stephan Adig for the idea
+    - Move some things from FAIBASE/10-misc to DEBIAN/40-misc
+  * NFSROOT: Remove cfengine2 from default NFSROOT
+  * get-config-dir-git: Add support for git+ssh config dir
+  * get-config-dir-{svn,git}: check whether source is correct before update
+  * get-boot-info: Assume localdomain if no domain name received by DHCP
+
+  [ Michael Prokop ]
+  * fai-quickstart.postinst: warn if FAI_CONFIGDIR is not set
+  * make-fai-nfsroot: Make sure we exit with actual return code of subshell,
+    divert /sbin/initctl if the executable is present, do not overwrite
+    existing nfsroot by default, use option -f to force overwriting,
+    provide proper return code in fdivert()
+  * fai: send error message to stderr
+  * fai-do-scripts: support ruby and zsh scripts
+  * subroutines: add variable checks so ifclass works under set -u
+  * etc/sources.list: remove deprecated examples/etc/sources.list config file
+  * conf/NFSROOT: add xz-utils, firmware-bnx2, provide commented package
+    selection examples for Ubuntu
+  * DEMO: drop rusers + rusersd packages
+  * FAIBASE: drop jove, nscd, tcsh packages, replace exim4 with nullmailer
+  * NFSROOT, DEBIAN: use linux-image-686 for I386
+  * NFSROOT: drop jove, discover, liblinux-lvm-perl, libapt-pkg-perl, git
+  * Makefile: Add syntax checks (perl/bashism/bash), make perlcheck work
+    without perl-tk and liblinux-lvm-perl, Closes: #610509
+  * control: drop cfengine2 from recommends of fai-client, use syslinux as
+    alternative for syslinux-common in depends
+  * developer-policy.txt: Add initial developer policy instructions (WIP)
+  * release-management.txt: Add document regarding release management
+
+  [ Michael Tautschnig ]
+  * setup-storage:
+    - Add support for using raw disk devices, without partitioning. Thanks
+      Jordi Funollet. Closes: #589649
+    - Generate conditional definitions for disk_var.sh such that variables
+      will only be set if not previously defined by users
+    - Partition pseudo-type luks:"<pass>" for LUKS device with user-defined
+      passphrase. Thanks Patrick Schoenfeld for suggesting this and testing
+    - If $disklist or $LOGDIR are not provided, find sane default values
+    - Added "all" as valid value for preserve*, resize, always_format. Thanks
+      Toomas Tamm for suggesting this
+    - Man page: additional RAID example. Added Holger's example for SW
+	RAID+LVM. Thanks Holger Levsen. Closes: #645167
+    - Distinct treatment of MiB vs. MB and friends
+    - preserve_* now supported for each partition in place. Thanks Edgar Fuß
+    - Better error message for invalid string X in disklabel:X
+    - Start first partition at 1M
+    - Support for /dev/loop*, parse floating point output of parted
+    - Added new option -s to perform syntax check only. Closes: #627913
+    - Stop RAID arrays before re-assembling. Thanks David Dreezer
+    - Properly handle alignment and preserving first partition
+    - Fix 100%-on-gpt configuration issue. Closes: #619136
+    - Use wipefs to purge (RAID) signatures
+    - Retain partition flags of preserved partitions
+    - Added options -D <disks>, -L <logdir>
+    - Test mdadm-startall for existence before running it
+    - Try to write disklabel in -X mode, regardless of exact error message
+    - Initialize boot_mnt_point
+    - Add gpt-bios partition with size 1MB initially
+    - Set bootable flag on gpt-bios disk
+  * subroutines: Using shopt -s extglob won't work because bash fails with
+    syntax error before
+  * get-config-dir-hg: Added pattern for hg+https. Closes: #631495
+  * GNOME: Remove packages gnome-apt, ice*-gnome-support that don't
+    exist in squeeze (thanks Karl Wallner for reporting)
+  * examples/more-tests: Tests moved to test-suite
+  * fai-vol_id: merged Jan's/Limux changes
+  * fai.conf.5: Added man page for fai.conf
+  * fcopy.8: describe behaviour if preinst has nonzero exit code
+  * dev-utils: New directory for scripts which are helpful for development
+  * control: Remove recommends of fai-setup-storage. Closes: #644516
+
+  [ Waldemar Brodkorb ]
+  * fai-setup: Give $LOGUSER a real shell for calling fai-chboot on the
+    install server
+
+ -- Thomas Lange <lange@debian.org>  Tue, 24 Jan 2012 17:45:17 +0100
 
 fai (3.4.8) unstable; urgency=low
 
