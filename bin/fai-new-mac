@@ -1,0 +1,92 @@
+#! /usr/bin/perl
+
+# print only new MAC addresses, which are not yet known
+# (c) Thomas Lange, 2007-2012
+
+# fai-new-mac -tad
+# tcpdump -pnlqte udp and src port bootpc and broadcast | fai-new-mac
+
+# -a add arp entries to list of known MAC addresses
+# -d add dhcpd entries to list of known MAC addresses
+# -t read from tcpdump. If not given, read from stdin
+# -p <pattern> only print MACs matching the pattern
+
+$filename="/var/lib/fai/known-mac-addresses";
+$dhcpdconf="/etc/dhcp/dhcpd.conf";
+$|=1;
+
+use Getopt::Std;
+our($opt_a,$opt_d,$opt_p,$opt_t);
+
+sub read_known_macs {
+
+  -f $filename || return;
+  open (IN,"$filename") or die "Can't read file with known MAC addresses\n";
+  while (<IN>) {
+    chomp;
+    $mac{$_}=1;
+  }
+  close IN;
+}
+
+sub read_arp {
+
+  open (ARP,"arp -an|") || die "Can't read arp list. $!\n";
+  while (<ARP>) {
+    append_new_mac($1,"MAC found in ARP list") if /at (([0-9a-f]{1,2}:){5}[0-9a-f]{1,2}) \[ether\] on /i
+  }
+  close ARP;
+}
+
+sub read_dhcpd {
+
+  -f $dhcpdconf || return;
+  open(DHCP,"$dhcpdconf") || die "Can't read $dhcpdconf. $!\n";
+  while (<DHCP>) {
+     append_new_mac($1,"mac found in dhcpd.conf") if /hardware ethernet\s+(([0-9a-f]{1,2}:){5}[0-9a-f]{1,2})/i;
+  }
+  close DHCP;
+}
+
+sub append_new_mac {
+
+  my ($newmac,$msg) = @_;
+
+  return if defined $mac{$newmac};
+  $mac{$newmac}=1;
+  if ($opt_p) {
+    print "$msg $newmac\n" if $newmac =~ /$opt_p/i;
+  } else {
+    print "$msg $newmac\n";
+  }
+  open (OUT,">>$filename") or die "Can't append to file with old MAC addresses\n";
+  print OUT "$newmac\n";
+  close OUT;
+}
+
+sub read_from_tcpdump {
+
+  if ($opt_t) {
+    open (TCPDUMP,"tcpdump $opt_i -pnlqte udp and src port bootpc and broadcast|") || die "Can't read from tcpdump. $!\n";
+  } else {
+    open (TCPDUMP,"-") || die "$!\n";
+  }
+
+  while (<TCPDUMP>) {
+    next if /^tcpdump:/;
+    next if /^listening /;
+    $newmac=(split)[0];
+    append_new_mac($newmac,"NEW");
+  }
+  close TCPDUMP;
+}
+
+sub usage {exit;}
+
+getopts('atdp:i:') || usage();
+
+$opt_i and $opt_i="-i $opt_i";
+read_known_macs();
+$opt_d && read_dhcpd();
+$opt_a && read_arp();
+read_from_tcpdump();
