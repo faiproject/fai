@@ -701,10 +701,14 @@ eval_cmdline() {
 
     echo -n "Kernel currently running: "
     uname -rsmo
-    echo -n "Kernel parameters: "; cat /proc/cmdline
-    for word in $(cat /proc/cmdline) ; do
+    eval "cmdline=($(</proc/cmdline))"
+    echo "Kernel parameters: ${cmdline[*]}"
+    for word in "${cmdline[@]}"; do
       if echo "$word" | egrep -q '^[a-zA-Z0-9_]+=' ; then
-		eval "export $word"
+	  varname=${word%%=*}
+	  word=${word#*=}
+	  eval $varname=\$word
+	  eval export $varname
       fi
     done
 
