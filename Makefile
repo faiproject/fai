@@ -11,7 +11,7 @@ USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub pol
 
 # for syntax checks
 BASH_SCRIPTS = lib/fai-divert lib/fai-mount-disk lib/fai-savelog lib/fai-vol_id lib/get-boot-info lib/get-config-dir lib/get-config-dir-cvs lib/get-config-dir-file lib/get-config-dir-git lib/get-config-dir-hg lib/get-config-dir-nfs lib/get-config-dir-svn lib/mkramdisk lib/mount2dir lib/prcopyleft lib/subroutines lib/task_sysinfo lib/updatebase lib/fetch-basefile
-SHELL_SCRIPTS = lib/check_status lib/create_resolv_conf lib/updatebase lib/fai-abort lib/fai-divert lib/load_keymap_consolechars lib/disk-info lib/list_disks utils/mkdebmirror bin/policy-rc.d.fai bin/dhclient-fai-script
+SHELL_SCRIPTS = lib/check_status lib/create_resolv_conf lib/updatebase lib/fai-abort lib/fai-divert lib/load_keymap_consolechars lib/fai-disk-info lib/list_disks utils/mkdebmirror bin/policy-rc.d.fai bin/dhclient-fai-script
 PERL_SCRIPTS = lib/setup-storage/*.pm bin/ainsl bin/device2grub bin/dhcp-edit bin/fai-chboot bin/fai-monitor bin/fai-monitor-gui bin/fcopy bin/install_packages bin/setup-storage examples/simple/tests/Faitest.pm lib/dhclient-perl lib/fai-savelog-ftp bin/fai-new-mac
 
 # do not include .svn dir and setup-storage subdir
