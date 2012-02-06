@@ -75,6 +75,7 @@ sub copy_one {
   my ($tmpfh,$tmpfile);
   my ($ps,$tpath,$bpath,$backupfile);
   my $preserve = 0;
+  my $preinst  = 0; # remember if a tmpfile was used, needed later for unlink
   my $logcomment = "";
 
   # 'normalize' source filenames: very important for updating !
@@ -152,6 +153,7 @@ sub copy_one {
       warn "preinst script found, switching to literal change detection" if
         ($opt_P and $debug);
       ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
+      $preinst = 1; # a tmpfile is used because of preinst script
       warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
       ewarn("copying $sourcefile for preinst processing failed !") unless
         _copy($sourcefile,$tmpfh);
@@ -189,7 +191,7 @@ sub copy_one {
   print LOGFILE "$source\t$class$logcomment\n" if $logfile;
   if ($preserve) {
     warn "preserving $source \n";
-    _unlink($tmpfile) unless ($tmpfile eq $sourcefile);
+    _unlink($tmpfile) if $preinst;
     set_mode($ps,$destfile,$class); # set mode even no file was copied
     return;
   }
@@ -197,7 +199,7 @@ sub copy_one {
   # if destination is a symlink and -l is given, complain about it
   if ($opt_l && -l $destfile) {
     ewarn("Destination $destfile is a symlink");
-    _unlink($tmpfile) unless ($tmpfile eq $sourcefile);
+    _unlink($tmpfile) if $preinst;
     return;
   }
 
@@ -208,6 +210,8 @@ sub copy_one {
   # what should I do if $destfile is a symlink?
   $nobackup or (-f $destfile and
     (-d $bpath or _mkpath($bpath,$debug,0755)) and _move($destfile,$backupfile));
+
+  # handle symlink
   if (defined($sourcelink)) {
     # remove destination if either a regular file or a symlink
     # complain if existst but neither of these
@@ -227,6 +231,7 @@ sub copy_one {
       ewarn("copy symlink $sourcefile -> $sourcelink to $destfile failed. $!") ;
     }
   } else {
+    # handle ordinary file
     if (_copy($tmpfile,$destfile)) {
       print "fcopy: copied $sourcefile to $destfile\n" ;
       set_mode($ps,$destfile,$class);
@@ -235,7 +240,7 @@ sub copy_one {
       ewarn("copy $sourcefile to $destfile failed. $!") ;
     }
   }
-  _unlink($tmpfile) unless ($tmpfile eq $sourcefile);
+  _unlink($tmpfile) if $preinst;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _mkpath {
