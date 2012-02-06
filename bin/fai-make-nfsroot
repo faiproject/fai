@@ -131,17 +131,17 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 : ${MNTPOINT:=/media/mirror}  # default value
 
 # read config file for this tool
-[ -f "$cfdir/make-fai-nfsroot.conf" ] || die 8 "Can't read $cfdir/make-fai-nfsroot.conf"
-. $cfdir/make-fai-nfsroot.conf
+[ -f "$cfdir/nfsroot.conf" ] || die 8 "Can't read $cfdir/nfsroot.conf"
+. $cfdir/nfsroot.conf
 
 # IMO this may be removed, since all information should be included into sources.list
 [ -n "$FAI_LOCAL_REPOSITORY" ] && die "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list." 
-[ -n "$packages" ] && badupdateto32 "The use of \$packages in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
-[ -n "$NFSROOT_PACKAGES" ] && die 1 "The use of \$NFSROOT_PACKAGES in make-fai-nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$packages" ] && badupdateto32 "The use of \$packages in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
+[ -n "$NFSROOT_PACKAGES" ] && die 1 "The use of \$NFSROOT_PACKAGES in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$FAI_SOURCES_LIST" ] && die 1 "The use of \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
 
-[ -z "$NFSROOT" ] && die 1 "\$NFSROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
-[ -z "$TFTPROOT" ] && badupdateto32 "\$TFTPROOT is not set. Please check your settings in $cfdir/make-fai-nfsroot.conf."
+[ -z "$NFSROOT" ] && die 1 "\$NFSROOT is not set. Please check your settings in $cfdir/nfsroot.conf."
+[ -z "$TFTPROOT" ] && badupdateto32 "\$TFTPROOT is not set. Please check your settings in $cfdir/nfsroot.conf."
 [ -n "$KERNELPACKAGE" ] && badupdateto32 "The use of \$KERNELPACKAGE is deprecated. Please use $cfdir/NFSROOT now."
 [ ! -d "$cfdir/apt" ] && die 1 "$cfdir/apt/ does not exists. Can't continue."
 [ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment." 
@@ -233,7 +233,7 @@ copy_fai_files() {
     [ -z "$FAI_CONFIG_SRC" ] && echo "FAI_CONFIG_SRC=nfs://`hostname`$FAI_CONFIGDIR" >> $NFSROOT/etc/fai/fai.conf
 
     # remove some files that should not be copied
-    rm -f $NFSROOT/etc/fai/make-fai-nfsroot.conf
+    rm -f $NFSROOT/etc/fai/nfsroot.conf
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
