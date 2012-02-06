@@ -14,8 +14,8 @@
 
 if [ -z "$FAI_CONFIG_SRC" ]; then
 	sendmon "TASKERROR get_fai_dir 21"
-	echo "ERROR: No URL defined for the config space."
-	echo "ERROR: Set \$FAI_CONFIG_SRC or use option -s."
+	echo "ERROR: No URL defined for the config space." >&2
+	echo "ERROR: Set \$FAI_CONFIG_SRC or use option -s." >&2
 	exit 21
 fi
 
@@ -31,7 +31,7 @@ method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
 
 if [ -z "$method" ]; then
 	sendmon "TASKERROR get_fai_dir 22"
-	echo "Error in get-config-dir: scheme undefined."
+	echo "Error in get-config-dir: scheme undefined."  >&2
 	exit 24
     echo
 fi
@@ -43,7 +43,7 @@ if which get-config-dir-$method &>/dev/null ; then
 	get-config-dir-$method
 else
 	sendmon "TASKERROR get_fai_dir 22"
-	echo "Error: get-config-dir-"$method "not found"
+	echo "Error: get-config-dir-"$method "not found"  >&2
 	exit 22
 fi
 
@@ -54,7 +54,7 @@ fi
 
 ln -sf $FAI /var/run/fai/current_config
 if [ ! -d $FAI/class ]; then
-	echo "WARNING: directory $FAI/class not found."
+	echo "WARNING: directory $FAI/class not found."  >&2
 	sendmon "TASKERROR get_fai_dir 23"
 	exit 23
 fi
