@@ -72,29 +72,33 @@ sub copy_one {
 
   # copy file $prefix/$source/$class to $target/$source
   my ($prefix,$source,$target) = @_;
+
   my ($class,$sourcefile,$destfile,$sourcelink);
+  my ($tmpfh,$tmpfile);
+  my ($ps,$tpath,$bpath,$backupfile);
+  my $preserve = 0;
+  my $logcomment = "";
+
   # 'normalize' source filenames: very important for updating !
   $source =~ s/^(\.\/|\/)*//;
 
-  my $ps = "$prefix/$source";
+  $ps = "$prefix/$source";
   $ps =~ s#//#/#;
-  my $tpath = "$target/" . dirname $source;
-  my $preserve = 0;
-  my $logcomment = "";
-  my ($tmpfh,$tmpfile);
+  $tpath = "$target/" . dirname $source;
+  $destfile = "$target/$source";
+  $backupfile = $backupdir ? "$backupdir/$source" : "$destfile.pre_fcopy";
+  $bpath = dirname $backupfile;
 
   warn "copy_one: source: $source: ps: $ps tpath: $tpath\n" if $debug;
 
   # $prefix/$source must be a directory
   if (-f $ps) { ewarn("$ps is a file, but must be a directory containing templates.");return };
   unless (-d $ps) { ewarn("Nonexisting directory $ps. No files copied.");return }
+
   # use the last class for which a file exists
   foreach (@classes) { $class = $_,last if -f "$ps/$_" || ($opt_H && -l "$ps/$_"); }
-  $destfile = "$target/$source";
 
-  my $backupfile = $backupdir ? "$backupdir/$source" : "$destfile.pre_fcopy";
-  my $bpath = dirname $backupfile;
-
+  # if no class matches, remove destination or move it to the backup file
   unless (defined $class) {
     ewarn("no matching file for any class for $source defined.");
     # do not copy
@@ -109,17 +113,18 @@ sub copy_one {
     }
     return;
   }
+
+  # a class matches
   warn "using class: $class\n" if $debug;
   $tmpfile = $sourcefile = "$ps/$class";
 
+  # read symlink
   if ($opt_H and -l $sourcefile) {
-    $sourcelink=readlink($sourcefile);
+    $sourcelink = readlink($sourcefile);
     if (!defined($sourcelink)) {
       ewarn("reading symlink $sourcefile failed. $!") ;
       return;
     }
-  } else {
-     undef $sourcelink;
   }
 
   # do nothing if source and destination files are equal
@@ -278,7 +283,7 @@ sub runscript {
   my $rc = $?>>8;
   if ($rc) {
     warn "ERROR: $scriptname returned code $rc\n";
-    $error=1;
+    $error = 1;
     return 1;
   }
   return 0;
@@ -358,10 +363,8 @@ sub read_file_mode {
   warn "reading $modefile\n" if $verbose;
   open (MODEFILE,"<$modefile") || die "fcopy: can't open $modefile\n";
   while (<MODEFILE>) {
-    # skip empty lines
-    next if /^\s*$/;
-    # skip comment lines
-    next if /^#/;
+    next if /^\s*$/;     # skip empty lines
+    next if /^#/;        # skip comment lines
     ($owner,$group,$mode,$fclass) = split;
     $mode = oct($mode);
     # class found
