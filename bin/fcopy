@@ -268,10 +268,9 @@ sub _copy {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _symlink {
-  my($from,$to) = @_;
 
   return 1 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
-  symlink($from,$to);
+  symlink(@_);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub runscript {
@@ -298,13 +297,10 @@ sub name2num {
   my ($user, $group) = @_;
   my ($uid, $gid);
 
-  if( !defined( $ENV{ROOTCMD} ) || $ENV{ROOTCMD} =~ /^\s*$/ )
-  {
+  if ( !defined( $ENV{ROOTCMD} ) || $ENV{ROOTCMD} =~ /^\s*$/ ) {
     $uid = ($user  =~ /^\d+$/) ? $user  : getpwnam $user;
     $gid = ($group =~ /^\d+$/) ? $group : getgrnam $group;
-  }
-  else
-  {
+  } else {
     $uid = ($user  =~ /^\d+$/) ? $user  : `$ENV{ROOTCMD} perl -e '\$uid = getpwnam "$user"; print \$uid'`;
     $gid = ($group =~ /^\d+$/) ? $group : `$ENV{ROOTCMD} perl -e '\$gid = getgrnam "$group"; print \$gid'`;
   }
