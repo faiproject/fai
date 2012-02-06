@@ -78,6 +78,7 @@ install:
 	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps/small,setup-storage}
 	install man/* $(DESTDIR)/man
 	pod2man -c '' -r '' -s8 bin/dhcp-edit > $(DESTDIR)/man/dhcp-edit.8
+	pod2man -c '' -r '' -s8 bin/fai-deps > $(DESTDIR)/man/fai-deps.8
 	$(MAKE) -C doc install
 	-install $(libfiles) $(LIBDIR)
 	install lib/setup-storage/* $(SHAREDIR)/setup-storage
