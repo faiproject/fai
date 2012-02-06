@@ -226,11 +226,11 @@ call_hook() {
     for cl in $classes; do
 	hfile=$FAI/hooks/$hook.$cl
 	if [ -f $hfile -a ! -x $hfile ]; then
-	    echo "WARNING: Skipping $hfile because it's not executable."
+	    echo "WARNING: Skipping $hfile because it's not executable." >&2
 	    continue
 	fi
 	if [ -f $hfile.source -a ! -x $hfile.source ]; then
-	    echo "WARNING: Skipping $hfile.source because it's not executable."
+	    echo "WARNING: Skipping $hfile.source because it's not executable." >&2
 	    continue
 	fi
 	if [ -x $hfile ]; then
@@ -360,7 +360,7 @@ task_action() {
 		echo "Calling user defined action: $FAI_ACTION"
 		$FAI/hooks/$FAI_ACTION
 	    else
-		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found."
+		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found." >&2
 		sendmon "TASKERROR action 22"
 		task_faiend
 	    fi
@@ -480,7 +480,7 @@ task_tests() {
 	    fi
 	fi
     else
-	echo "WARNING: Subdirectory tests/ not found. No tests run."
+	echo "WARNING: Subdirectory tests/ not found. No tests run." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -533,7 +533,7 @@ EOF
 	cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
 	chroot $target /tmp/rebootCD $cdromdevice
 	# never reached, because chroot will reboot the machine
-	die "Internal error when calling /tmp/rebootCD."
+	die "Internal error when calling /tmp/rebootCD." >&2
     fi
     umount $FAI_ROOT/proc
     umount -ar
@@ -564,11 +564,11 @@ task_install() {
     task savelog
 
     if [ -f $stamp ]; then
-	echo "Error while executing commands in subshell."
+	echo "Error while executing commands in subshell." >&2
 	echo -n "$stamp was not removed. PID of running process: "
 	cat $stamp
 	sendmon "TASKERROR install 21"
-	die "Please look at the log files in $LOGDIR for errors."
+	die "Please look at the log files in $LOGDIR for errors." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -631,11 +631,11 @@ task_dirinstall() {
     task savelog
 
     if [ -f $stamp ]; then
-	echo "Error while executing commands in subshell."
+	echo "Error while executing commands in subshell." >&2
 	echo -n "$stamp was not removed. PID of running process: "
 	cat $stamp
 	sendmon "TASKERROR install 21"
-	die "Please look at the log files in $LOGDIR for errors."
+	die "Please look at the log files in $LOGDIR for errors." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -673,11 +673,11 @@ task_softupdate() {
     umount_csspace
 
     if [ -f $stamp ]; then
-	echo "Error while executing commands in subshell."
+	echo "Error while executing commands in subshell." >&2
 	echo -n "$stamp was not removed. PID of running process: "
 	cat $stamp
 	sendmon "TASKERROR softupdate 21"
-	die "Please look at the log files in $LOGDIR for errors."
+	die "Please look at the log files in $LOGDIR for errors." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -784,7 +784,7 @@ task_confdir() {
 task_partition() {
 
     if [ X$USE_SETUP_STORAGE = X1 ]; then
-	echo "WARNING: The variable USE_SETUP_STORAGE is not needed any more."
+	echo "WARNING: The variable USE_SETUP_STORAGE is not needed any more." >&2
 	echo "setup-storage is now the default tool for partitioning."
     fi
 
@@ -901,11 +901,11 @@ task_repository () {
     for cl in ${classes:-}; do
 	hfile=$FAI/hooks/$hook.$cl
 	if [ -f $hfile ]; then
-	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile to repository.$cl."
+	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile to repository.$cl." >&2
 	    continue
 	fi
 	if [ -f $hfile.source ]; then
-	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile.source to repository.$cl.source."
+	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile.source to repository.$cl.source." >&2
 	    continue
 	fi
     done
@@ -1041,7 +1041,7 @@ task_chboot() {
 	$frsh true >/dev/null 2>&1
 	if [ $? -ne 0 ]; then
 	    task_error 3
-	    echo "WARNING: $frsh failed. Can't call fai-chboot on the install server."
+	    echo "WARNING: $frsh failed. Can't call fai-chboot on the install server." >&2
 	else
 	    if [ -n "$nexttest" ]; then
 		# for test sequences, we want the system to reinstall immediately with

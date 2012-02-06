@@ -44,7 +44,7 @@ die() {
     local e=$1   # first parameter is the exit code
     shift
 
-    echo "$@"    # print error message
+    echo "$@" >&2 # print error message
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -154,8 +154,8 @@ add_base_packages() {
 	plist=$(< $NFSROOT/var/tmp/packages.nfsroot)
 	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
     else
-	echo "WARNING: $NFSROOT/var/tmp/packages.nfsroot does not exists."
-	echo "Can't add those packages. Maybe the nfsroot is not yet created."
+	echo "WARNING: $NFSROOT/var/tmp/packages.nfsroot does not exists." >&2
+	echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
     fi
 
     # now use sources.list for debootstrap packages
@@ -166,8 +166,8 @@ add_base_packages() {
 	apt-get $qflag $aptoptions update >/dev/null
 	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
     else
-	echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists."
-	echo "Can't add those packages. Maybe the nfsroot is not yet created."
+	echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists." >&2
+	echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
