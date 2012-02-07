@@ -1,6 +1,5 @@
 #! /bin/bash
 
-# $Id$
 #*********************************************************************
 #
 # fai-class - determine all classes a host belongs to
@@ -47,13 +46,13 @@ addclass() {
 
     # append classes to a file
     while read line ; do
-	case $line in
-	\#*) ;; # strip comments
-	  *) debugmsg "Adding class $line"
-	     for class in $line ; do
-		 echo $class >> $filename
-	     done
-	esac
+        case $line in
+        \#*) ;; # strip comments
+          *) debugmsg "Adding class $line"
+             for class in $line ; do
+                 echo $class >> $filename
+             done
+        esac
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -63,9 +62,9 @@ fc_check_status() {
     st=$2
 
     if [ $st -eq 0 ]; then
-	res="OK."
+        res="OK."
     else
-	res="FAILED with exit code $st."
+        res="FAILED with exit code $st."
     fi
     # put result in the log file and write to stdout
     printf "%-20s $res\n" $cmd | tee -a $LOGDIR/status.log
@@ -75,14 +74,14 @@ usage() {
 
     ex=$1
     cat <<-EOF
-	fai-class  Copyright (C) 2002-2009 Thomas Lange
+        fai-class  Copyright (C) 2002-2009 Thomas Lange
 
-	Usage: fai-class [OPTION] DIRECTORY CLASSFILE
-	Define classes using files and scripts in DIRECTORY
+        Usage: fai-class [OPTION] DIRECTORY CLASSFILE
+        Define classes using files and scripts in DIRECTORY
 
-	Executes scripts in DIRECTORY starting with two digits.
-	The standard output of these scripts are names of classes which
-	are written to CLASSFILE.
+        Executes scripts in DIRECTORY starting with two digits.
+        The standard output of these scripts are names of classes which
+        are written to CLASSFILE.
 EOF
     exit $ex
 }
@@ -92,8 +91,8 @@ testclass() {
     # test if some classes are define multiple times
     duplicate=$(sort $filename | uniq -dc)
     if [ -n "$duplicate" ]; then
-	echo "$0: WARNING. Following classes are defined multiple times: $duplicate"
-	exit 2
+        echo "$0: WARNING. Following classes are defined multiple times: $duplicate"
+        exit 2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -109,7 +108,7 @@ setup() {
         T) ctest=1 ;;
         t) LOGDIR=$OPTARG; export LOGDIR ;;
         *) usage 1 ;;
-	esac
+        esac
     done
     shift $(($OPTIND - 1))
     [ -z "$2" ] || [ -n "$3" ] && usage 1
@@ -117,16 +116,16 @@ setup() {
     classdir=$1
     filename=$2
     cd $classdir || {
-	echo "$0: Can't change dir to $classdir."
-	exit 99
+        echo "$0: Can't change dir to $classdir."
+        exit 99
     }
     if [ -s $filename ]; then
-	verbosemsg "$filename exists. Renaming to $filename.bak"
-	mv $filename $filename.bak
+        verbosemsg "$filename exists. Renaming to $filename.bak"
+        mv $filename $filename.bak
     fi
     if [ -z "$LOGDIR" ]; then
-	verbosemsg "Setting LOGDIR to default value /tmp/fai"
-	LOGDIR=/tmp/fai; export LOGDIR
+        verbosemsg "Setting LOGDIR to default value /tmp/fai"
+        LOGDIR=/tmp/fai; export LOGDIR
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -153,26 +152,26 @@ for f in $scripts ; do
     [ -f $f ] || continue # skip sockets, pipes, symlinks
     debugmsg "File $f found."
     if [ ! -x $f ]; then
-	echo "Warning: File $f is not executable, so it's not used for defining classes."
-	continue
+        echo "Warning: File $f is not executable, so it's not used for defining classes."
+        continue
     fi
     classes=$(cat $filename)
     export classes
     case $f in
-	*~|*.bak) debugmsg "Skipping backup file $f" ;;
-	*.source)
-	    verbosemsg "Executing $classdir/$f."
-	    # this script can define $newclasses
-	    newclasses=
-	    . $f
-	    fc_check_status $f $?
-	    echo $newclasses | addclass ;; 
-	*)
-	    verbosemsg "Executing $classdir/$f."
-	    classes=$($f </dev/null)
-	    fc_check_status $f $?
-	    echo $classes | addclass
-	    ;;
+        *~|*.bak) debugmsg "Skipping backup file $f" ;;
+        *.source)
+            verbosemsg "Executing $classdir/$f."
+            # this script can define $newclasses
+            newclasses=
+            . $f
+            fc_check_status $f $?
+            echo $newclasses | addclass ;; 
+        *)
+            verbosemsg "Executing $classdir/$f."
+            classes=$($f </dev/null)
+            fc_check_status $f $?
+            echo $classes | addclass
+            ;;
     esac
 done
 
@@ -183,17 +182,17 @@ done
 if [ -f $LOGDIR/additional-classes ]; then
     cat $LOGDIR/additional-classes | addclass
     if [ "$debug" ]; then
-	mv $LOGDIR/additional-classes $LOGDIR/additional-classes.used
+        mv $LOGDIR/additional-classes $LOGDIR/additional-classes.used
     else
         # remove the file after it was used. Do not use the same file more than once.
-	rm -f $LOGDIR/additional-classes
+        rm -f $LOGDIR/additional-classes
     fi
 fi
 
 # add all classes which are listed in a file with the hostname
 if [ -f "$HOSTNAME" ]; then
-	verbosemsg "Using classes from file $classdir/$HOSTNAME"
-	grep -v "^#" $HOSTNAME | addclass
+        verbosemsg "Using classes from file $classdir/$HOSTNAME"
+        grep -v "^#" $HOSTNAME | addclass
 fi
 
 echo ${ADDCLASSES//,/ } | addclass

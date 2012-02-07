@@ -37,9 +37,9 @@ die() {
     task_savelog
     echo "$@"
     if [ X$FAI_ACTION = Xinstall ]; then
-	exec bash -i
+        exec bash -i
     else
-	exit 99
+        exit 99
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -63,13 +63,13 @@ defnop() {
 ifclass() {
 
     if [ $# -eq 1 ]; then
-	_ifclass $1
-	return $?
+        _ifclass $1
+        return $?
     fi
 
     case $1 in
-	-a) shift ; _ifclass_and $* ; return $? ;;
-	-o) shift ; _ifclass_or $*  ; return $? ;;
+        -a) shift ; _ifclass_and $* ; return $? ;;
+        -o) shift ; _ifclass_or $*  ; return $? ;;
     esac
 }
 
@@ -81,9 +81,9 @@ _ifclass() {
     local ret
 
     if [[ "${classes:-}" =~ (^|[[:space:]]+)$1($|[[:space:]]+) ]]; then
-	ret=0
+        ret=0
     else
-    	ret=1
+        ret=1
     fi
     [ "${debug:-}" ] && echo "ifclass returns $ret" >&2
     return $ret
@@ -95,7 +95,7 @@ _ifclass_and() {
     local cl
 
     for cl in $*; do
-	ifclass $cl || return 1
+        ifclass $cl || return 1
     done
     return 0
 }
@@ -106,7 +106,7 @@ _ifclass_or() {
     local cl
 
     for cl in $*; do
-	ifclass $cl && return 0
+        ifclass $cl && return 0
     done
     return 1
 }
@@ -131,7 +131,7 @@ umount_csspace() {
     # umount config space if accessed via nfs
     echo $FAI_CONFIG_SRC | grep -q ^nfs://
     if [ $? -eq 0 ]; then
-	grep -q " $FAI nfs" /etc/mtab && umount $FAI
+        grep -q " $FAI nfs" /etc/mtab && umount $FAI
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -147,9 +147,9 @@ wait_for_jobs() {
     # wait for running (background) jobs to finish (e.g. update-auctex-elisp)
     local i=0
     while jobsrunning; do
-	[ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
-	(( i += 1 ))
-	sleep 10
+        [ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
+        (( i += 1 ))
+        sleep 10
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -194,16 +194,16 @@ task() {
 
     if [ -f $LOGDIR/skip.$taskname ]; then
         # skip task
-	rm $LOGDIR/skip.$taskname # TODO: remove skip files at the very end
-	[ "$verbose" ] && echo "Skiping task_$taskname"
-	sendmon "TASKSKIP $taskname"
+        rm $LOGDIR/skip.$taskname # TODO: remove skip files at the very end
+        [ "$verbose" ] && echo "Skiping task_$taskname"
+        sendmon "TASKSKIP $taskname"
     else
-	echo "Calling task_$taskname"
-	sendmon "TASKBEGIN $taskname"
-	task_error=0   # task can set this variable to indicate an error
-	task_error_func=''
-	task_$taskname
-	sendmon "TASKEND $taskname $task_error"
+        echo "Calling task_$taskname"
+        sendmon "TASKBEGIN $taskname"
+        task_error=0   # task can set this variable to indicate an error
+        task_error_func=''
+        task_$taskname
+        sendmon "TASKEND $taskname $task_error"
         if [ "$task_error" -ne 0 ] ; then
           echo "Exit code task_$taskname: $task_error"
         fi
@@ -223,29 +223,29 @@ call_hook() {
     [ "$debug" ] && dflag="-d"
 
     for cl in $classes; do
-	hfile=$FAI/hooks/$hook.$cl
-	if [ -f $hfile -a ! -x $hfile ]; then
-	    echo "WARNING: Skipping $hfile because it's not executable." >&2
-	    continue
-	fi
-	if [ -f $hfile.source -a ! -x $hfile.source ]; then
-	    echo "WARNING: Skipping $hfile.source because it's not executable." >&2
-	    continue
-	fi
-	if [ -x $hfile ]; then
-	    echo "Calling hook: $hook.$cl"
-	    sendmon "HOOK $hook.$cl"
-	    # execute the hook
-	    $hfile $dflag
-	    check_status $hook.$cl $?
-	fi
-	if [ -x $hfile.source ]; then
-	    echo "Source hook: $hook.$cl.source"
-	    sendmon "HOOK $hook.$cl.source"
+        hfile=$FAI/hooks/$hook.$cl
+        if [ -f $hfile -a ! -x $hfile ]; then
+            echo "WARNING: Skipping $hfile because it's not executable." >&2
+            continue
+        fi
+        if [ -f $hfile.source -a ! -x $hfile.source ]; then
+            echo "WARNING: Skipping $hfile.source because it's not executable." >&2
+            continue
+        fi
+        if [ -x $hfile ]; then
+            echo "Calling hook: $hook.$cl"
+            sendmon "HOOK $hook.$cl"
+            # execute the hook
+            $hfile $dflag
+            check_status $hook.$cl $?
+        fi
+        if [ -x $hfile.source ]; then
+            echo "Source hook: $hook.$cl.source"
+            sendmon "HOOK $hook.$cl.source"
             # source this hook
-	    . $hfile.source $dflag
-	    check_status $hook.$cl.source $?
-	fi
+            . $hfile.source $dflag
+            check_status $hook.$cl.source $?
+        fi
      done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -255,7 +255,7 @@ skiptask() {
     local task
 
     for task in "$@"; do
-	echo > $LOGDIR/skip.$task # create file with size != 0
+        echo > $LOGDIR/skip.$task # create file with size != 0
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -266,8 +266,8 @@ define_fai_flags() {
     FAI_FLAGS=${FAI_FLAGS//,/ }
     echo "FAI_FLAGS: $FAI_FLAGS"
     for flag in $FAI_FLAGS; do
-	# define this flag as 1
-	eval "flag_$flag=1"
+        # define this flag as 1
+        eval "flag_$flag=1"
     done
     [ "$flag_verbose" ] && verbose=1 # for backward compability
     [ "$flag_debug" ]   && debug=1   # for backward compability
@@ -293,15 +293,15 @@ task_setup() {
         [ "$TIMESRVS_1" ] && rdate $TIMESRVS_1
         [ "$NTPSRVS_1" ]  && ntpdate -b $NTPSRVS
         [ "$flag_createvt" ] && {
-	    # create two virtual terminals; acces via alt-F2 and alt-F3
-	    echo "Press ctrl-c to interrupt FAI and to get a shell"
-	    openvt -c2 /bin/bash ; openvt -c3 /bin/bash
-	    trap 'echo "You can reboot with faireboot";bash' INT QUIT
+            # create two virtual terminals; acces via alt-F2 and alt-F3
+            echo "Press ctrl-c to interrupt FAI and to get a shell"
+            openvt -c2 /bin/bash ; openvt -c3 /bin/bash
+            trap 'echo "You can reboot with faireboot";bash' INT QUIT
         }
 
         # start secure shell daemon for remote access
         mkdir -p /var/run/sshd # ubuntu fix for 9.10
-	[ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+        [ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
     fi
     unset flag_createvt flag_sshd
 
@@ -321,50 +321,50 @@ task_setup() {
 task_action() {
 
     if [ -z "$FAI_ACTION" ]; then
-	echo "No action in \$FAI_ACTION defined."
-	sendmon "TASKERROR action 21"
-	task_faiend
-	exit
+        echo "No action in \$FAI_ACTION defined."
+        sendmon "TASKERROR action 21"
+        task_faiend
+        exit
     fi
 
     echo "FAI_ACTION: $FAI_ACTION"
     case $FAI_ACTION in
-	install)
-	    if [ $do_init_tasks -eq 0 ]; then
-		echo "Cowardly refusing to run a FAI installation on a running system."
-		return
-	    fi
-	    echo Performing FAI installation. All data may be overwritten!
-	    echo -ne "\a"; sleep 1
-	    echo -ne "\a"; sleep 1
-	    echo  -e "\a"; sleep 5
-	    task install
-	    task faiend
-	    ;;
-	dirinstall)
-	    task dirinstall
-	    ;;
-	softupdate)
-	    echo Performing FAI system update. All data may be overwritten!
-	    task softupdate
-	    ;;
-	sysinfo)
-	    echo Showing system information.
-	    task sysinfo
-	    task_faiend
-	    die Now you have a shell.
-	    ;;
-	*)
-	    if [ -f $FAI/hooks/$FAI_ACTION ]; then
-		echo "Calling user defined action: $FAI_ACTION"
-		$FAI/hooks/$FAI_ACTION
-	    else
-		echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found." >&2
-		sendmon "TASKERROR action 22"
-		task_faiend
-	    fi
-	    ;;
-	esac
+        install)
+            if [ $do_init_tasks -eq 0 ]; then
+                echo "Cowardly refusing to run a FAI installation on a running system."
+                return
+            fi
+            echo Performing FAI installation. All data may be overwritten!
+            echo -ne "\a"; sleep 1
+            echo -ne "\a"; sleep 1
+            echo  -e "\a"; sleep 5
+            task install
+            task faiend
+            ;;
+        dirinstall)
+            task dirinstall
+            ;;
+        softupdate)
+            echo Performing FAI system update. All data may be overwritten!
+            task softupdate
+            ;;
+        sysinfo)
+            echo Showing system information.
+            task sysinfo
+            task_faiend
+            die Now you have a shell.
+            ;;
+        *)
+            if [ -f $FAI/hooks/$FAI_ACTION ]; then
+                echo "Calling user defined action: $FAI_ACTION"
+                $FAI/hooks/$FAI_ACTION
+            else
+                echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found." >&2
+                sendmon "TASKERROR action 22"
+                task_faiend
+            fi
+            ;;
+        esac
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -377,24 +377,24 @@ task_action() {
 task_defclass() {
 
     if [ ! -d $FAI/class ]; then
-	sendmon "TASKERROR defclass 21"
-	echo "Subdirectory $FAI/class missing in config space. Following subdirectories are found:"
-	find $FAI -maxdepth 1 -type d -printf "%p\n"
-	die "Aborting."
+        sendmon "TASKERROR defclass 21"
+        echo "Subdirectory $FAI/class missing in config space. Following subdirectories are found:"
+        find $FAI -maxdepth 1 -type d -printf "%p\n"
+        die "Aborting."
     fi
 
     # new script for defining classes; variables imported: $LOGDIR, $verbose, $debug
     if [ $renewclass -eq 1 ]; then
-	# reevaluate new list of classes
-	fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
-	classes=$(< $LOGDIR/FAI_CLASSES)
+        # reevaluate new list of classes
+        fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
+        classes=$(< $LOGDIR/FAI_CLASSES)
     elif [ -n "$cmdlineclasses" ]; then
-	classes=$cmdlineclasses
+        classes=$cmdlineclasses
     elif [ ! -f /var/lib/fai/FAI_CLASSES ]; then
-	# use classes defined at installation time
-	die "Try to read classes from /var/lib/fai/FAI_CLASSES. Failed. Aborting."
+        # use classes defined at installation time
+        die "Try to read classes from /var/lib/fai/FAI_CLASSES. Failed. Aborting."
     else
-	classes=$(< /var/lib/fai/FAI_CLASSES)
+        classes=$(< /var/lib/fai/FAI_CLASSES)
     fi
     echo "List of all classes: " ${classes:-}
 
@@ -420,22 +420,22 @@ task_defvar() {
     local odir=$(pwd)
     cd $FAI/class
     for class in ${classes:-} ; do
-	if [ -f $class.var -a -r $class.var ]; then
-	    [ "$verbose" ] && echo "Executing $class.var"
-	    # show only lines with ++, we cannot use a pipe, since it would call
-	    # _devfar in a subprocess. Then, variables are not defined
-	    _defvar $class.var > $svar 2>&1
-	    grep ^++ $svar
-	    rm $svar
-	fi
+        if [ -f $class.var -a -r $class.var ]; then
+            [ "$verbose" ] && echo "Executing $class.var"
+            # show only lines with ++, we cannot use a pipe, since it would call
+            # _devfar in a subprocess. Then, variables are not defined
+            _defvar $class.var > $svar 2>&1
+            grep ^++ $svar
+            rm $svar
+        fi
     done
 
     # /fai/class/* scripts or hooks can write variable definitions
     # to additonal.var. now source these definitions
     if [ -f $LOGDIR/additional.var -a -r $LOGDIR/additional.var ]; then
-	_defvar $LOGDIR/additional.var > $svar 2>&1
-	grep ^++ $svar
-	rm $svar
+        _defvar $LOGDIR/additional.var > $svar 2>&1
+        grep ^++ $svar
+        rm $svar
     fi
     unset class svar
     # now all variables are defined. Dump them to variables.log, so we can sources them if needed
@@ -451,12 +451,12 @@ task_mountdisks() {
     # mount swap space
     local sd
     for sd in $SWAPLIST; do
-	swapon -p1 $sd && [ "$verbose" ] && echo "Enable swap device $sd"
+        swapon -p1 $sd && [ "$verbose" ] && echo "Enable swap device $sd"
     done
     mount2dir $FAI_ROOT $LOGDIR/fstab
     if [ "$?" -ne 0 ]; then
-	sendmon "TASKERROR mountdisks 885"
-	task_error 885
+        sendmon "TASKERROR mountdisks 885"
+        task_error 885
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -469,17 +469,17 @@ task_configure() {
 task_tests() {
 
     if [ -d $FAI/tests ]; then
-	fai-do-scripts $FAI/tests  # always returns 0 atm
-	# check if any test failed
-	if [ -f $LOGDIR/test.log ]; then
-	    if grep -q "FAILED with " $LOGDIR/test.log; then
-		sendmon "TASKERROR tests 312"
-		task_error 312
-		return 1
-	    fi
-	fi
+        fai-do-scripts $FAI/tests  # always returns 0 atm
+        # check if any test failed
+        if [ -f $LOGDIR/test.log ]; then
+            if grep -q "FAILED with " $LOGDIR/test.log; then
+                sendmon "TASKERROR tests 312"
+                task_error 312
+                return 1
+            fi
+        fi
     else
-	echo "WARNING: Subdirectory tests/ not found. No tests run." >&2
+        echo "WARNING: Subdirectory tests/ not found. No tests run." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -502,10 +502,10 @@ task_faiend() {
 
     # Always reboot if error.log is empty or if flag reboot is set
     if [ $flag_reboot -eq 0 ]; then
-	echo "Press <RETURN> to reboot."
-	read
+        echo "Press <RETURN> to reboot."
+        read
     else
-	sleep 10
+        sleep 10
     fi
     sendmon "TASKEND faiend 0"
     echo "Rebooting $HOSTNAME now"
@@ -515,7 +515,7 @@ task_faiend() {
 
     killall -q sshd udevd
     if [ -f /etc/RUNNING_FROM_FAICD ]; then
-	cat > $target/tmp/rebootCD <<'EOF'
+        cat > $target/tmp/rebootCD <<'EOF'
 #! /bin/bash
  device=$1
 eject -m /dev/$device 2>/dev/null >/dev/null
@@ -524,15 +524,15 @@ read
 eject -t /dev/$device 2>/dev/null >/dev/null
 exec reboot -df
 EOF
-	chmod +x $target/tmp/rebootCD
-	sync
-	for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
-	    mount -o remount,ro $dir
-	done
-	cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
-	chroot $target /tmp/rebootCD $cdromdevice
-	# never reached, because chroot will reboot the machine
-	die "Internal error when calling /tmp/rebootCD." >&2
+        chmod +x $target/tmp/rebootCD
+        sync
+        for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
+            mount -o remount,ro $dir
+        done
+        cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
+        chroot $target /tmp/rebootCD $cdromdevice
+        # never reached, because chroot will reboot the machine
+        die "Internal error when calling /tmp/rebootCD." >&2
     fi
     umount $FAI_ROOT/proc
     umount -ar
@@ -562,11 +562,11 @@ task_install() {
     task savelog
 
     if [ -f $stamp ]; then
-	echo "Error while executing commands in subshell." >&2
-	echo -n "$stamp was not removed. PID of running process: "
-	cat $stamp
-	sendmon "TASKERROR install 21"
-	die "Please look at the log files in $LOGDIR for errors." >&2
+        echo "Error while executing commands in subshell." >&2
+        echo -n "$stamp was not removed. PID of running process: "
+        cat $stamp
+        sendmon "TASKERROR install 21"
+        die "Please look at the log files in $LOGDIR for errors." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -578,27 +578,27 @@ task_dirinstall() {
     stamp=/var/run/fai/dirinstall-$xstamp
     unset xstamp
     clean_exit() {
-	rm -f $stamp
-	[ -z "$FAI_ROOT" ] && return
-	[ -d $FAI_ROOT/proc/self ] && umount $FAI_ROOT/proc
-	[ -d $FAI_ROOT/sys/class ] && umount $FAI_ROOT/sys
-	# /proc + /sys might be empty because they were unmounted inside
-	# $FAI_ROOT but are still registered in /etc/mtab outside $FAI_ROOT,
-	# so let's get rid of them outside the chroot as well
-	if grep -q "${FAI_ROOT}/sys " /etc/mtab ; then
-	   umount $FAI_ROOT/sys 2>/dev/null || true
-	fi
-	if grep -q "${FAI_ROOT}/proc " /etc/mtab ; then
-	   umount $FAI_ROOT/proc 2>/dev/null || true
-	fi
-	umount $FAI_ROOT/dev/pts 2>/dev/null || true
-	# sometimes umount $FAI_ROOT/dev fails, because a process is
-	# still running in the background and accesses /dev 
-	# this occured sometimes when using dirinst and a long package
-	# list if dhelp.postinst is starting an index process in the
-	# bg which did not finished until the installation was finished. 
-	[ -f /etc/init.d/udev ] && umount $FAI_ROOT/dev
-	mkramdisk -au 2>/dev/null
+        rm -f $stamp
+        [ -z "$FAI_ROOT" ] && return
+        [ -d $FAI_ROOT/proc/self ] && umount $FAI_ROOT/proc
+        [ -d $FAI_ROOT/sys/class ] && umount $FAI_ROOT/sys
+        # /proc + /sys might be empty because they were unmounted inside
+        # $FAI_ROOT but are still registered in /etc/mtab outside $FAI_ROOT,
+        # so let's get rid of them outside the chroot as well
+        if grep -q "${FAI_ROOT}/sys " /etc/mtab ; then
+           umount $FAI_ROOT/sys 2>/dev/null || true
+        fi
+        if grep -q "${FAI_ROOT}/proc " /etc/mtab ; then
+           umount $FAI_ROOT/proc 2>/dev/null || true
+        fi
+        umount $FAI_ROOT/dev/pts 2>/dev/null || true
+        # sometimes umount $FAI_ROOT/dev fails, because a process is
+        # still running in the background and accesses /dev 
+        # this occured sometimes when using dirinst and a long package
+        # list if dhelp.postinst is starting an index process in the
+        # bg which did not finished until the installation was finished. 
+        [ -f /etc/init.d/udev ] && umount $FAI_ROOT/dev
+        mkramdisk -au 2>/dev/null
     }
     trap 'clean_exit' INT QUIT EXIT
 
@@ -628,11 +628,11 @@ task_dirinstall() {
     task savelog
 
     if [ -f $stamp ]; then
-	echo "Error while executing commands in subshell." >&2
-	echo -n "$stamp was not removed. PID of running process: "
-	cat $stamp
-	sendmon "TASKERROR install 21"
-	die "Please look at the log files in $LOGDIR for errors." >&2
+        echo "Error while executing commands in subshell." >&2
+        echo -n "$stamp was not removed. PID of running process: "
+        cat $stamp
+        sendmon "TASKERROR install 21"
+        die "Please look at the log files in $LOGDIR for errors." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -670,11 +670,11 @@ task_softupdate() {
     umount_csspace
 
     if [ -f $stamp ]; then
-	echo "Error while executing commands in subshell." >&2
-	echo -n "$stamp was not removed. PID of running process: "
-	cat $stamp
-	sendmon "TASKERROR softupdate 21"
-	die "Please look at the log files in $LOGDIR for errors." >&2
+        echo "Error while executing commands in subshell." >&2
+        echo -n "$stamp was not removed. PID of running process: "
+        cat $stamp
+        sendmon "TASKERROR softupdate 21"
+        die "Please look at the log files in $LOGDIR for errors." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -707,10 +707,10 @@ eval_cmdline() {
     echo "Kernel parameters: ${cmdline[*]}"
     for word in "${cmdline[@]}"; do
       if echo "$word" | egrep -q '^[a-zA-Z0-9_]+=' ; then
-	  varname=${word%%=*}
-	  word=${word#*=}
-	  eval $varname=\$word
-	  eval export $varname
+          varname=${word%%=*}
+          word=${word#*=}
+          eval $varname=\$word
+          eval export $varname
       fi
     done
 
@@ -733,9 +733,9 @@ task_confdir() {
         . $LOGDIR/boot.log
         unset T170 T171 T172 ROOT_PATH BOOTFILE
 
-	printk=${printk:-6}
-	echo $printk > /proc/sys/kernel/printk
-	rsyslogd -c3
+        printk=${printk:-6}
+        echo $printk > /proc/sys/kernel/printk
+        rsyslogd -c3
 
         create_resolv_conf
     fi
@@ -744,31 +744,31 @@ task_confdir() {
     # check if monitor server is available
     : ${monserver:=$SERVER}
     if [ -z "$monserver" ]; then
-	echo "No monitor daemon defined."
-	faimond=0
+        echo "No monitor daemon defined."
+        faimond=0
     else
-	faimond=1
-	sendhostname=$HOSTNAME # save current hostname
-	if sendmon check; then
-	    echo "Monitoring to server $monserver enabled."
-	    sendmon "TASKBEGIN confdir"
-	else
-	    faimond=0
-	    echo "Can't connect to monserver on $monserver port 4711. Monitoring disabled."
-	fi
+        faimond=1
+        sendhostname=$HOSTNAME # save current hostname
+        if sendmon check; then
+            echo "Monitoring to server $monserver enabled."
+            sendmon "TASKBEGIN confdir"
+        else
+            faimond=0
+            echo "Can't connect to monserver on $monserver port 4711. Monitoring disabled."
+        fi
     fi
 
     get-config-dir || {
-	echo "Problems accessing the config space."
-	die ""
+        echo "Problems accessing the config space."
+        die ""
     }
 
     # now you have enough time to make changes to the config space
     # only for debugging
     if [ -n "$flag_wait" ]; then
-	echo "Sleeping. Now you may change the config space in $FAI."
-	echo "Continue after killall sleep."
-	sleep 50000
+        echo "Sleeping. Now you may change the config space in $FAI."
+        echo "Continue after killall sleep."
+        sleep 50000
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -781,18 +781,18 @@ task_confdir() {
 task_partition() {
 
     if [ X$USE_SETUP_STORAGE = X1 ]; then
-	echo "WARNING: The variable USE_SETUP_STORAGE is not needed any more." >&2
-	echo "setup-storage is now the default tool for partitioning."
+        echo "WARNING: The variable USE_SETUP_STORAGE is not needed any more." >&2
+        echo "setup-storage is now the default tool for partitioning."
     fi
 
     [ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X 2>&1 | tee $LOGDIR/format.log
 
     # partitioning tool must create $LOGDIR/disk_var.sh file
     if [ ! -s $LOGDIR/disk_var.sh ]; then
-	task_error 710
-	cat $LOGDIR/format.log
-	sendmon "TASKERROR partition 21"
-	die "Partitioning tool did not create $LOGDIR/disk_var.sh file."
+        task_error 710
+        cat $LOGDIR/format.log
+        sendmon "TASKERROR partition 21"
+        die "Partitioning tool did not create $LOGDIR/disk_var.sh file."
     fi
     # now define variable for root and boot partition and boot device
     . $LOGDIR/disk_var.sh
@@ -830,19 +830,19 @@ task_extrbase() {
     # copy the base file class based if it exists
     [ -d $FAI/basefiles ] && ftar -1v -s $FAI/basefiles /
     if [ $? -ne 0 ]; then
-	if [ $do_init_tasks -eq 1 ]; then
-	    ftar -1v -c base -s /var/tmp /
-	else
-	    ftar -1v -c base -s $NFSROOT/live/filesystem.dir/var/tmp /
-	fi
+        if [ $do_init_tasks -eq 1 ]; then
+            ftar -1v -c base -s /var/tmp /
+        else
+            ftar -1v -c base -s $NFSROOT/live/filesystem.dir/var/tmp /
+        fi
 
-	# if no base file was extracted, call debootstrap
-	if [ ! -d $FAI_ROOT/etc ]; then
-	    echo "No base file found. Calling debootstrap."
-	    [ -z "$FAI_DEBOOTSTRAP" ] && die "$FAI_DEBOOTSTRAP undefined. Aborting"
-	    call_debootstrap $FAI_DEBOOTSTRAP
-	    task_error 801 $?
-	fi
+        # if no base file was extracted, call debootstrap
+        if [ ! -d $FAI_ROOT/etc ]; then
+            echo "No base file found. Calling debootstrap."
+            [ -z "$FAI_DEBOOTSTRAP" ] && die "$FAI_DEBOOTSTRAP undefined. Aborting"
+            call_debootstrap $FAI_DEBOOTSTRAP
+            task_error 801 $?
+        fi
     fi
     # now we can copy fstab
     [ -f $fs ] && mv $fs $fs.old
@@ -876,9 +876,9 @@ mount_mirror() {
 task_debconf () {
 
     if [ ! -d $FAI/debconf ]; then
-	echo "Can't find debconf directory $FAI/debconf. Skipping preseeding."
-	task_error 2
-	return
+        echo "Can't find debconf directory $FAI/debconf. Skipping preseeding."
+        task_error 2
+        return
     fi
     fai-debconf $FAI/debconf
 }
@@ -896,15 +896,15 @@ task_repository () {
     local hook cl hfile
     hook=prepareapt
     for cl in ${classes:-}; do
-	hfile=$FAI/hooks/$hook.$cl
-	if [ -f $hfile ]; then
-	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile to repository.$cl." >&2
-	    continue
-	fi
-	if [ -f $hfile.source ]; then
-	    echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile.source to repository.$cl.source." >&2
-	    continue
-	fi
+        hfile=$FAI/hooks/$hook.$cl
+        if [ -f $hfile ]; then
+            echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile to repository.$cl." >&2
+            continue
+        fi
+        if [ -f $hfile.source ]; then
+            echo "WARNING: The task prepareapt is obsolete. It was renamed to task repository. Please rename your hook $hfile.source to repository.$cl.source." >&2
+            continue
+        fi
     done
 
     [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
@@ -918,12 +918,12 @@ task_repository () {
     # apt specific things
     fcopy -Bv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
     if fcopy -Bv /etc/apt/preferences; then
-	[ -f $FAI_ETC_DIR/apt/preferences ] && cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt 
+        [ -f $FAI_ETC_DIR/apt/preferences ] && cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt 
     fi
     fcopy -ir /etc/apt # copy all other apt config files from the config space
 
     if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
-	cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
+        cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
 APT::Get::AllowUnauthenticated "true";
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
@@ -934,24 +934,24 @@ EOF
     declare -A keys
     # remember all available *.asc files
     for f in `cd $FAI/package_config; ls *.asc 2>/dev/null`; do
-	keys["$f"]=1
+        keys["$f"]=1
     done
 
     # add apt keys for all classes
     for keyfile in ${classes:-}; do
-	[ ! -f $FAI/package_config/$keyfile.asc ] && continue
-	echo -n "Loading APT key from $keyfile.asc "
-	cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key add -
-	unset keys["$keyfile.asc"]
+        [ ! -f $FAI/package_config/$keyfile.asc ] && continue
+        echo -n "Loading APT key from $keyfile.asc "
+        cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key add -
+        unset keys["$keyfile.asc"]
     done
 
     # print which *.asc files were not loaded
     if [ ${#keys[@]} -ne 0 ]; then
-	echo "Following apt keys are not loaded:"
-	for i in "${!keys[@]}"; do
-	    echo "$i"
-	done
-	echo "You have to rename them to match a class name."
+        echo "Following apt keys are not loaded:"
+        for i in "${!keys[@]}"; do
+            echo "$i"
+        done
+        echo "You have to rename them to match a class name."
     fi
 
     # mount Debian mirror via NFS if needed
@@ -963,7 +963,7 @@ task_updatebase() {
     # maybe the base system is not up to date
 
     if [ "$verbose" ]; then
-	updatebase </dev/null 2>&1 | tee -a $LOGDIR/software.log
+        updatebase </dev/null 2>&1 | tee -a $LOGDIR/software.log
         task_error 474 ${PIPESTATUS[0]}
     else
         updatebase </dev/null >> $LOGDIR/software.log 2>&1
@@ -975,14 +975,14 @@ task_instsoft() {
 
     echo "Installing software may take a while"
     if [ "$debug" ]; then
-	install_packages | tee -a $LOGDIR/software.log
-	task_error 471 ${PIPESTATUS[0]}
+        install_packages | tee -a $LOGDIR/software.log
+        task_error 471 ${PIPESTATUS[0]}
     elif [ "$verbose" ]; then
-	install_packages </dev/null 2>&1 | tee -a $LOGDIR/software.log
-	task_error 471 ${PIPESTATUS[0]}
+        install_packages </dev/null 2>&1 | tee -a $LOGDIR/software.log
+        task_error 471 ${PIPESTATUS[0]}
     else
-	install_packages </dev/null >> $LOGDIR/software.log 2>&1
-	task_error 471 $?
+        install_packages </dev/null >> $LOGDIR/software.log 2>&1
+        task_error 471 $?
     fi
     # This almost indicates an error
     egrep "^E:" $LOGDIR/software.log && task_error 472
@@ -993,12 +993,12 @@ task_instsoft() {
 task_finish() {
 
     if [ $do_init_tasks -eq 1 ] ; then
-	# show some local information
-	df -T
-	ip addr show up
-	# show rx and tx bytes of network device
-	grep . /sys/class/net/*/statistics/*x_bytes | perl -ane 'm#/sys/class/net/(.+)/statistics/(.+):(\d+)# && ($3) && ($1 ne lo) && printf "%s %s %.2f Mbytes\n",$1,$2,$3/1000000 '
-	swapoff -a
+        # show some local information
+        df -T
+        ip addr show up
+        # show rx and tx bytes of network device
+        grep . /sys/class/net/*/statistics/*x_bytes | perl -ane 'm#/sys/class/net/(.+)/statistics/(.+):(\d+)# && ($3) && ($1 ne lo) && printf "%s %s %.2f Mbytes\n",$1,$2,$3/1000000 '
+        swapoff -a
     fi
 
     mkramdisk -au # umount ramdisk
@@ -1022,36 +1022,36 @@ task_chboot() {
     local nexttest=$(egrep -s ^NEXTTEST= $LOGDIR/test.log | cut -d= -f2)
 
     case "$FAI_LOGPROTO" in
-	ftp) remotesh=ssh ;;
-	ssh) remotesh=ssh ;;
-	rsh) remotesh=rsh ;;
+        ftp) remotesh=ssh ;;
+        ssh) remotesh=ssh ;;
+        rsh) remotesh=rsh ;;
     esac
     frsh="$remotesh -l $LOGUSER ${SERVER}"
 
     if [ -z "$SERVER" ] ; then
-	echo "SERVER not defined. Can't change network boot configuration"
-	task_error 2
-	doexit=1
+        echo "SERVER not defined. Can't change network boot configuration"
+        task_error 2
+        doexit=1
     fi
     [ $doexit -eq 1 ] && return
 
 # fix indentation here
         # change boot device (local disk or network) when using PXE
         # first test if rsh to server works
-	$frsh true >/dev/null 2>&1
-	if [ $? -ne 0 ]; then
-	    task_error 3
-	    echo "WARNING: $frsh failed. Can't call fai-chboot on the install server." >&2
-	else
-	    if [ -n "$nexttest" ]; then
-		# for test sequences, we want the system to reinstall immediately with
-		# with different class setup
-		$frsh /usr/sbin/fai-chboot -k ADDCLASSES=$nexttest -FIv $ipaddr
-	    else
-		# remove pxe config, so host will use default and boot from local disk
-		$frsh /usr/sbin/fai-chboot -vd $ipaddr
-	    fi
-	fi
+        $frsh true >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            task_error 3
+            echo "WARNING: $frsh failed. Can't call fai-chboot on the install server." >&2
+        else
+            if [ -n "$nexttest" ]; then
+                # for test sequences, we want the system to reinstall immediately with
+                # with different class setup
+                $frsh /usr/sbin/fai-chboot -k ADDCLASSES=$nexttest -FIv $ipaddr
+            else
+                # remove pxe config, so host will use default and boot from local disk
+                $frsh /usr/sbin/fai-chboot -vd $ipaddr
+            fi
+        fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sendmon() {

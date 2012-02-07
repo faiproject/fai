@@ -16,8 +16,8 @@ mount_ramdisk() {
     # put ramdisk on config space and download file
     mount -t tmpfs tmpfs $FAI/basefiles # this makes files from NFS invisible
     if [ $? -eq 1]; then
-	echo "mount ramdisk onto $FAI/basefiles failed." >&2
-	exit 3
+        echo "mount ramdisk onto $FAI/basefiles failed." >&2
+        exit 3
     fi
 }
 
@@ -58,20 +58,20 @@ for c in $revclasses; do
     id="found_$c"  # prepare for indirect variable name
     if [ X${!id} != X ]; then
       # hash lookup succeeded
-	found=1
-	[ $mount = 1 ] && mount_ramdisk
-	cd $FAI/basefiles || exit 3
-	if [ -f ${!id} ]; then
-	    echo "${!id} already exists" >&2
-	    error=1
-	    break
-	fi
+        found=1
+        [ $mount = 1 ] && mount_ramdisk
+        cd $FAI/basefiles || exit 3
+        if [ -f ${!id} ]; then
+            echo "${!id} already exists" >&2
+            error=1
+            break
+        fi
 
-	echo "Downloading $url/${!id}"
+        echo "Downloading $url/${!id}"
       #  wget -nv $url/${!id}    # creates a new file with suffix .1, .2,.. if file already exists. Bad.
-	lftp -e "get $url/${!id};exit" # fails if file already exists. this is nice.
-	error=$?
-	break
+        lftp -e "get $url/${!id};exit" # fails if file already exists. this is nice.
+        error=$?
+        break
     fi
 done
 

@@ -1,6 +1,5 @@
 #! /bin/bash
 
-# $Id$
 #*********************************************************************
 #
 # fai-debconf - set debconf values using classes
@@ -36,12 +35,12 @@ call_conf() {
     local class f
     cd $debconfdir
     for class in $classes ; do
-	[ -f $class ] && add_data $class
-	if [ -d $class ]; then
-	   for f in $(ls $class/* | egrep '^[[:alnum:]_.-]+$') ; do
-	       [ -f $f ] && add_data $f
-	   done
-	fi
+        [ -f $class ] && add_data $class
+        if [ -d $class ]; then
+           for f in $(ls $class/* | egrep '^[[:alnum:]_.-]+$') ; do
+               [ -f $f ] && add_data $f
+           done
+        fi
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -71,15 +70,15 @@ reconfigure_packages() {
      tmpdb=$($ROOTCMD mktemp -t fai-debconf.XXXXXXXXXX) || exit 10
      $ROOTCMD debconf-copydb configdb faidb --config=Name:faidb --config=Driver:File --config=Filename:$tmpdb
      for p in $packages; do
-	 # test if package is installed
-	 if [ -f $target/var/lib/dpkg/info/$p.list ]; then
-	     echo "Reconfiguring package $p"
+         # test if package is installed
+         if [ -f $target/var/lib/dpkg/info/$p.list ]; then
+             echo "Reconfiguring package $p"
        DEBCONF_DB_OVERRIDE="File{$tmpdb readonly:true}" DEBIAN_FRONTEND=noninteractive $ROOTCMD /usr/sbin/dpkg-reconfigure $p
-	 else
-	     :
-	     # for debugging only
-	     # echo "Package $p is not yet installed. Skipping reconfiguration."
-	 fi
+         else
+             :
+             # for debugging only
+             # echo "Package $p is not yet installed. Skipping reconfiguration."
+         fi
      done
      rm -f $target/$tmpdb $target/$tmpdb-old
 }
@@ -101,10 +100,10 @@ reconf=1 # call dpkg-reconfigure by default
 forcereconf=0 # don't call dpkg-reconfigure for unchanged packages
 while getopts "hvsf" opt ; do
     case "$opt" in
-	h) usage 0 ;;
-	s) reconf=0 ;;
-	v) verbose=1 ;;
-	f) forcereconf=1 ;;
+        h) usage 0 ;;
+        s) reconf=0 ;;
+        v) verbose=1 ;;
+        f) forcereconf=1 ;;
     esac
 done
 shift $(($OPTIND - 1))

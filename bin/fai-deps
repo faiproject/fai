@@ -102,7 +102,7 @@ my $class_dir = "$ENV{FAI}/class";
     print STDERR $digraph->stringify(), $/;
     print STDERR 'is strongly connected', $/
       if $digraph->is_strongly_connected;
-    #	create_graphviz_output($digraph->edges);
+    #   create_graphviz_output($digraph->edges);
 
     print STDERR 'unique list of classes, orderd by appearence', $/;
     print STDERR join('-', @uniq_classes), $/;
@@ -137,7 +137,7 @@ my $class_dir = "$ENV{FAI}/class";
   print FAI_CLASSES join($/, @sorted_classes), $/;
   close FAI_CLASSES;
 }
-exit;				# end main
+exit;                           # end main
 
 # sort_classes:
 # topological sort classes, retaining order as much as possible
@@ -151,12 +151,12 @@ sub sort_classes {
     next if exists $class_finished_for{$class};
     my %unfinished_successor_for =
       map { $_, 1 }
-	grep { not exists $class_finished_for{$_} }
-	  successors($digraph, $class);
+        grep { not exists $class_finished_for{$_} }
+          successors($digraph, $class);
     # retain order for successors
     my @unfinished_successors =
       grep { $unfinished_successor_for{$_} }
-	@order;
+        @order;
     push @sorted_classes, sort_classes( $digraph, @unfinished_successors );
     push @sorted_classes, $class;
     $class_finished_for{$class}++;
@@ -173,15 +173,15 @@ sub successors {
   my $component = $digraph->strongly_connected_component_by_vertex($class);
   # strongly connected components to all successors, except own component
   my %successor_components =
-    map { $_, undef }		# turn list into hash for uniqueness
+    map { $_, undef }           # turn list into hash for uniqueness
       grep { $_ ne $component }
-	map { $digraph->strongly_connected_component_by_vertex($_) }
-	  $digraph->successors($class);
+        map { $digraph->strongly_connected_component_by_vertex($_) }
+          $digraph->successors($class);
   # classes for these components
   my %successors =
-    map { $_, undef }		# turn list into hash for uniqueness
+    map { $_, undef }           # turn list into hash for uniqueness
       map { $digraph->strongly_connected_component_by_index($_) }
-	keys %successor_components;
+        keys %successor_components;
   return keys %successors;
 }
 
@@ -228,9 +228,9 @@ sub read_dependencies {
       # allow multiple classes per line
       my @deps = split m/\s+/;
       for my $dep ( @deps ) {
-	push @new_classes, $dep
-	  if not $digraph->has_vertex( $dep );
-	$digraph->add_edge($class, $dep);
+        push @new_classes, $dep
+          if not $digraph->has_vertex( $dep );
+        $digraph->add_edge($class, $dep);
       }
     }
     close DEPSFILE;
@@ -240,12 +240,12 @@ sub read_dependencies {
 }
 
 #sub create_graphviz_output {
-#	my @edges = @_;
-#	my $g = GraphViz->new();
-#	for ( @edges ) {
-#		$g->add_edge( @$_ );
-#	}
-#	return $g->as_png('graph-test.png');
+#       my @edges = @_;
+#       my $g = GraphViz->new();
+#       for ( @edges ) {
+#               $g->add_edge( @$_ );
+#       }
+#       return $g->as_png('graph-test.png');
 #}
 
 =head1 SEE ALSO

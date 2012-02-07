@@ -154,13 +154,13 @@ Simple configuration of /dev/hda
 .ta 10n 20n 30n 40n 50n
 disk_config hda preserve_always:6,7 disklabel:msdos bootable:3
 
-primary	/boot	20-100	ext3	rw
-primary	swap	1000	swap	sw
-primary	/	12000	ext3	rw	createopts="\-b 2048"
-logical	/tmp	1000	ext3	rw,nosuid
-logical	/usr	5000	ext3	rw
-logical	/var	10%-	ext3	rw
-logical	/nobackup	0-	xfs	rw
+primary /boot   20-100  ext3    rw
+primary swap    1000    swap    sw
+primary /       12000   ext3    rw      createopts="\-b 2048"
+logical /tmp    1000    ext3    rw,nosuid
+logical /usr    5000    ext3    rw
+logical /var    10%-    ext3    rw
+logical /nobackup       0-      xfs     rw
 .sp
 .fi
 .PP
@@ -252,13 +252,13 @@ Simple LVM example
 .nf
 .ta 15n 22n 30n 40n
 disk_config sda bootable:1
-primary	/boot	500	ext3	rw
-primary	-	4096-	-	-
+primary /boot   500     ext3    rw
+primary -       4096-   -       -
 
 disk_config lvm
-vg	my_pv	sda2
-my_pv-_swap	swap	2048	swap	sw
-my_pv-_root	/	2048	ext3	rw
+vg      my_pv   sda2
+my_pv-_swap     swap    2048    swap    sw
+my_pv-_root     /       2048    ext3    rw
 .sp
 .fi
 .PP
@@ -275,26 +275,26 @@ LVM on software RAID
 .nf
 .ta 18n 28n 38n 45n 55n
 disk_config sda
-primary	-	256	-	-
-primary	swap	8G	swap	sw
-primary	-	0-	-	-
+primary -       256     -       -
+primary swap    8G      swap    sw
+primary -       0-      -       -
 
 disk_config sdb
-primary	-	256	-	-
-primary	swap	8G	swap	sw
-primary	-	0-	-	-
+primary -       256     -       -
+primary swap    8G      swap    sw
+primary -       0-      -       -
 
 disk_config raid fstabkey:uuid
-raid1	/	sda1,sdb1	ext4	rw,noatime,errors=remount-ro
-raid1	-	sda3,sdb3	ext4	default
+raid1   /       sda1,sdb1       ext4    rw,noatime,errors=remount-ro
+raid1   -       sda3,sdb3       ext4    default
 
 disk_config lvm fstabkey:uuid
-vg	vg_system	md1
-vg_system-usr	/usr	8G	ext4	rw,noatime
-vg_system-var	/var	16G	ext4	rw,noatime
-vg_system-varlog	/var/log	8G	ext4	rw,noatime
-vg_system-srv	/srv	32G	ext4	rw,noatime
-vg_system-tmp	/tmp	32G	ext4	rw,noatime
+vg      vg_system       md1
+vg_system-usr   /usr    8G      ext4    rw,noatime
+vg_system-var   /var    16G     ext4    rw,noatime
+vg_system-varlog        /var/log        8G      ext4    rw,noatime
+vg_system-srv   /srv    32G     ext4    rw,noatime
+vg_system-tmp   /tmp    32G     ext4    rw,noatime
 .sp
 .fi
 .PP
@@ -314,16 +314,16 @@ Crypt example
 .nf
 .ta 10n 20n 30n 40n 50n
 disk_config /dev/sdb
-primary	/	21750	ext3	defaults,errors=remount-ro
-primary	/boot	250	ext3	defaults
-logical	-	4000	-	-
-logical	-	2000	-	-
-logical	-	10-	-	-
+primary /       21750   ext3    defaults,errors=remount-ro
+primary /boot   250     ext3    defaults
+logical -       4000    -       -
+logical -       2000    -       -
+logical -       10-     -       -
 
 disk_config cryptsetup
-swap	swap	/dev/sdb5	swap	defaults
-tmp	/tmp	/dev/sdb6	ext2	defaults
-luks	/local00	/dev/sdb7	ext3	defaults,errors=remount-ro  createopts="\-m	0"
+swap    swap    /dev/sdb5       swap    defaults
+tmp     /tmp    /dev/sdb6       ext2    defaults
+luks    /local00        /dev/sdb7       ext3    defaults,errors=remount-ro  createopts="\-m     0"
 .sp
 .fi
 .PP
@@ -340,8 +340,8 @@ tmpfs example
 .nf
 .ta 10n 20n 30n 40n 50n
 disk_config tmpfs
-tmpfs	/tmp	RAM:20%	defaults
-tmpfs	/scratch	3GiB	defaults
+tmpfs   /tmp    RAM:20% defaults
+tmpfs   /scratch        3GiB    defaults
 .sp
 .fi
 .PP
@@ -358,17 +358,17 @@ External log device example
 .nf
 .ta 10n 20n 30n 40n 60n
 disk_config /dev/sda fstabkey:uuid bootable:2
-primary	/	20GiB	ext3		defaults
-primary	/boot	250	ext2		defaults
-primary	swap	4GiB	swap		defaults
-logical	-	256	ext3_journal	-
-logical	-	256	ext4_journal	-
-logical	-	256	xfs_journal	-
+primary /       20GiB   ext3            defaults
+primary /boot   250     ext2            defaults
+primary swap    4GiB    swap            defaults
+logical -       256     ext3_journal    -
+logical -       256     ext4_journal    -
+logical -       256     xfs_journal     -
 
 disk_config /dev/sdb fstabkey:uuid
-primary	/mnt/ext3	33%	ext3:journal=/dev/sda5		defaults
-primary	/mnt/ext4	33%	ext4:journal=/dev/sda6		defaults
-primary	/mnt/xfs	33%	xfs:journal=/dev/sda7		defaults
+primary /mnt/ext3       33%     ext3:journal=/dev/sda5          defaults
+primary /mnt/ext4       33%     ext4:journal=/dev/sda6          defaults
+primary /mnt/xfs        33%     xfs:journal=/dev/sda7           defaults
 .sp
 .fi
 .PP

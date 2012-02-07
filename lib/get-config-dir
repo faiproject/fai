@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# $Id$
 #
 # (c) 2006 Henning Glawe <glaweh@debian.org>
 # (c) 2009-2011 Thomas Lange  <lange@debian.org>
@@ -13,10 +12,10 @@
 ### END SUBROUTINE INFO
 
 if [ -z "$FAI_CONFIG_SRC" ]; then
-	sendmon "TASKERROR get_fai_dir 21"
-	echo "ERROR: No URL defined for the config space." >&2
-	echo "ERROR: Set \$FAI_CONFIG_SRC or use option -s." >&2
-	exit 21
+        sendmon "TASKERROR get_fai_dir 21"
+        echo "ERROR: No URL defined for the config space." >&2
+        echo "ERROR: Set \$FAI_CONFIG_SRC or use option -s." >&2
+        exit 21
 fi
 
 echo "FAI_CONFIG_SRC is set to $FAI_CONFIG_SRC"
@@ -30,9 +29,9 @@ echo "FAI_CONFIG_SRC is set to $FAI_CONFIG_SRC"
 method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
 
 if [ -z "$method" ]; then
-	sendmon "TASKERROR get_fai_dir 22"
-	echo "Error in get-config-dir: scheme undefined."  >&2
-	exit 24
+        sendmon "TASKERROR get_fai_dir 22"
+        echo "Error in get-config-dir: scheme undefined."  >&2
+        exit 24
     echo
 fi
 
@@ -40,11 +39,11 @@ fi
 
 # run get-config-dir-$method script if it exists
 if which get-config-dir-$method &>/dev/null ; then
-	get-config-dir-$method
+        get-config-dir-$method
 else
-	sendmon "TASKERROR get_fai_dir 22"
-	echo "Error: get-config-dir-"$method "not found"  >&2
-	exit 22
+        sendmon "TASKERROR get_fai_dir 22"
+        echo "Error: get-config-dir-"$method "not found"  >&2
+        exit 22
 fi
 
 if [ $method = "file" ]; then
@@ -54,8 +53,8 @@ fi
 
 ln -sf $FAI /var/run/fai/current_config
 if [ ! -d $FAI/class ]; then
-	echo "WARNING: directory $FAI/class not found."  >&2
-	sendmon "TASKERROR get_fai_dir 23"
-	exit 23
+        echo "WARNING: directory $FAI/class not found."  >&2
+        sendmon "TASKERROR get_fai_dir 23"
+        exit 23
 fi
 exit 0

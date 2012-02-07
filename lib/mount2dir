@@ -1,6 +1,5 @@
 #! /bin/bash
 
-# $Id$
 #*********************************************************************
 #
 # mount2dir -- mount partitions to a directory using a fstab file
@@ -59,7 +58,7 @@ moptions=$4 # if set, use only this mount option (mostly -r)
 while read device mountpoint fstype mopt dummy; do
 
     case $mopt in
-	*noauto*) continue ;;
+        *noauto*) continue ;;
     esac
 
     [ "$mountpoint" == "none" ]  && continue
@@ -71,25 +70,25 @@ while read device mountpoint fstype mopt dummy; do
     [ "$fstype" == "devpts" ]  && continue
 
     case $device in
-	""|\#*) continue ;;
+        ""|\#*) continue ;;
 
-	/dev/*|LABEL=*|UUID=*)
+        /dev/*|LABEL=*|UUID=*)
 
-	    # overwrite mount options
-	    mopt="-o $mopt"
-	    [ "$moptions" ] && mopt="-o $moptions"
-	    mkdir -p $target$mountpoint
-	    if [ $debug ]; then
-		echo "Mounting $device to $target$mountpoint type: $fstype opt: $mopt"
-	    else
-		[ $verbose ] && echo "Mounting $device to $target$mountpoint"
-	    fi
-	    # should we fsck the partition first?
-	    [ "$fscheck" = 1 ] && fsck -nt $fstype $device
-	    mount -t $fstype -o noatime $mopt $device $target$mountpoint || exit 4
-	    if [ "$mountpoint" = "/" ] ; then
-	      mkdir -p $target/var/lock $target/var/run 2>/dev/null
-	    fi
+            # overwrite mount options
+            mopt="-o $mopt"
+            [ "$moptions" ] && mopt="-o $moptions"
+            mkdir -p $target$mountpoint
+            if [ $debug ]; then
+                echo "Mounting $device to $target$mountpoint type: $fstype opt: $mopt"
+            else
+                [ $verbose ] && echo "Mounting $device to $target$mountpoint"
+            fi
+            # should we fsck the partition first?
+            [ "$fscheck" = 1 ] && fsck -nt $fstype $device
+            mount -t $fstype -o noatime $mopt $device $target$mountpoint || exit 4
+            if [ "$mountpoint" = "/" ] ; then
+              mkdir -p $target/var/lock $target/var/run 2>/dev/null
+            fi
     esac
 done
 

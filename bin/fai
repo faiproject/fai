@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Id$
+
 #*********************************************************************
 #
 # fai -- main installation script executed after booting
@@ -55,11 +55,11 @@ fai_init() {
     unset cspace
 
     if [ -f /etc/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
-	umount /initrd
-	romountopt=
-	FAI_DEBMIRROR="--bind /media/mirror"
-	MNTPOINT=/media/mirror
-	FAI_CONFIG_SRC="file://$FAI"   # on a fai-cd the config space is already available
+        umount /initrd
+        romountopt=
+        FAI_DEBMIRROR="--bind /media/mirror"
+        MNTPOINT=/media/mirror
+        FAI_CONFIG_SRC="file://$FAI"   # on a fai-cd the config space is already available
     fi
 
     # read subroutine definitions
@@ -90,26 +90,26 @@ fai_init() {
     fi
 
     if [ $do_init_tasks -eq 1 ]; then
-	eval_cmdline
-	[ -d /sys/kernel ] || mount -t sysfs sysfs /sys
-	# we really need to start udev
-	[ -x /etc/init.d/udev ] && [ X$UPSTART_JOB != Xfai ] && /etc/init.d/udev start
-	mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
-	ifup lo
-	[ -x /sbin/portmap ] && /sbin/portmap
-	[ -x /sbin/rpcbind ] && /sbin/rpcbind
+        eval_cmdline
+        [ -d /sys/kernel ] || mount -t sysfs sysfs /sys
+        # we really need to start udev
+        [ -x /etc/init.d/udev ] && [ X$UPSTART_JOB != Xfai ] && /etc/init.d/udev start
+        mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
+        ifup lo
+        [ -x /sbin/portmap ] && /sbin/portmap
+        [ -x /sbin/rpcbind ] && /sbin/rpcbind
 
-	# NFS v4 support
-	sed -i -e '/Nobody-/d' /etc/idmapd.conf
-	ainsl -v /etc/idmapd.conf 'Nobody-User = root'
-	ainsl -v /etc/idmapd.conf 'Nobody-Group = root'
-	rpc.statd # idmapd needs this
-	rpc.idmapd -C # idmapd needs option -v or rpc.statd must be running. Otherwise the next command (like mount, ls -l) hangs.
+        # NFS v4 support
+        sed -i -e '/Nobody-/d' /etc/idmapd.conf
+        ainsl -v /etc/idmapd.conf 'Nobody-User = root'
+        ainsl -v /etc/idmapd.conf 'Nobody-Group = root'
+        rpc.statd # idmapd needs this
+        rpc.idmapd -C # idmapd needs option -v or rpc.statd must be running. Otherwise the next command (like mount, ls -l) hangs.
 
-	if grep -wq devpts /proc/mounts; then
-	    mount -t devpts devpts /dev/pts
-	fi
-	cat /proc/kmsg >/dev/tty4 &
+        if grep -wq devpts /proc/mounts; then
+            mount -t devpts devpts /dev/pts
+        fi
+        cat /proc/kmsg >/dev/tty4 &
     fi
 
     # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
@@ -122,17 +122,17 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
     cat <<-EOF
-	fai $FAI_VERSION. Copyright (C) 1999-2011 Thomas Lange
-	Usage: $0 [options] [action]
+        fai $FAI_VERSION. Copyright (C) 1999-2011 Thomas Lange
+        Usage: $0 [options] [action]
 
-	Options:
-	   -v|--verbose         display more information during the update
-	   -h|--help            display this help message
-	   -N|--new             renew list of classes
-	   -c|--class           comma separated list of classes
-	   -C|--cfdir CFDIR     Use CFDIR for  reading the config files
-	   -s|--cspace CSDIR    URI of the configuration space
-	   -u|--hostname HNAME  set hostname to be used
+        Options:
+           -v|--verbose         display more information during the update
+           -h|--help            display this help message
+           -N|--new             renew list of classes
+           -c|--class           comma separated list of classes
+           -C|--cfdir CFDIR     Use CFDIR for  reading the config files
+           -s|--cspace CSDIR    URI of the configuration space
+           -u|--hostname HNAME  set hostname to be used
 
 EOF
     exit 0
@@ -149,8 +149,8 @@ fstart() {
     # if the config space is a local directory, reset $FAI
     local method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
     if [ $method = "file" ]; then
-	local localpath=$(expr match "$FAI_CONFIG_SRC" '.*://\(/.*\)')
-	export FAI=$localpath
+        local localpath=$(expr match "$FAI_CONFIG_SRC" '.*://\(/.*\)')
+        export FAI=$localpath
     fi
     task setup
     task defclass
@@ -172,30 +172,30 @@ unset TEMP
 while true ; do
     case "$1" in
         -h|--help)
-	    usage ;;
-	-v|--verbose)
-	    export verbose=1
-	    shift ;;
-	-N|--new)
-	    renewclass=1
-	    shift ;;
-	-C|--cfdir)
-	    cfdir=$2
-	    shift 2 ;;
-	-c|--class)
-	    if [ $renewclass -eq 1 ]; then
-		echo "You can't use -c|--classes and -N|--new at the same time." >&2
-		exit 9
-	    fi
-	    export cmdlineclasses=$2
-	    cmdlineclasses=${cmdlineclasses//,/ }
-	    shift 2 ;;
-	-s|--cspace)
-	    cspace=$2
-	    shift 2 ;;
-	-u|--hostname)
-	    export newhostname=$2
-	    shift 2 ;;
+            usage ;;
+        -v|--verbose)
+            export verbose=1
+            shift ;;
+        -N|--new)
+            renewclass=1
+            shift ;;
+        -C|--cfdir)
+            cfdir=$2
+            shift 2 ;;
+        -c|--class)
+            if [ $renewclass -eq 1 ]; then
+                echo "You can't use -c|--classes and -N|--new at the same time." >&2
+                exit 9
+            fi
+            export cmdlineclasses=$2
+            cmdlineclasses=${cmdlineclasses//,/ }
+            shift 2 ;;
+        -s|--cspace)
+            cspace=$2
+            shift 2 ;;
+        -u|--hostname)
+            export newhostname=$2
+            shift 2 ;;
         --) 
             shift
             break ;;
@@ -222,12 +222,12 @@ export FAI_ETC_DIR
 
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
-	echo "Please specify a target directory. Aborted" >&2
-	exit 3
+        echo "Please specify a target directory. Aborted" >&2
+        exit 3
     fi
     if [ $renewclass -eq 0 -a -z "$cmdlineclasses" ]; then
-	echo "Please use -c or -N. Aborted" >&2
-	exit 4
+        echo "Please use -c or -N. Aborted" >&2
+        exit 4
     fi
 
     # two lines taken from task_dirinstall
@@ -237,15 +237,15 @@ if [ X$action = Xdirinstall ]; then
     # check if target directory is mounted with bad options
     fs=$(df -P $FAI_ROOT | tail -1 | awk '{print $6}')
     if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
-	echo "Target directory is mounted using nosuid or nodev. Aborting" >&2
-	exit 5
+        echo "Target directory is mounted using nosuid or nodev. Aborting" >&2
+        exit 5
     fi
     unset fs
 
     if [ ! -e $FAI_ETC_DIR/nfsroot.conf ]; then
-	echo "$FAI_ETC_DIR/nfsroot.conf not found." >&2
-	echo "You may want to install the package fai-server" >&2
-	exit 7
+        echo "$FAI_ETC_DIR/nfsroot.conf not found." >&2
+        echo "You may want to install the package fai-server" >&2
+        exit 7
     fi
     export NFSROOT=$(source $FAI_ETC_DIR/nfsroot.conf; echo $NFSROOT)
     export FAI_DEBOOTSTRAP=$(source $FAI_ETC_DIR/nfsroot.conf; echo $FAI_DEBOOTSTRAP)
@@ -273,8 +273,8 @@ if [ $do_init_tasks -eq 1 ]; then
     for word in $(cat /proc/cmdline) ; do
         case $word in
             hostname=*)
-	    HOSTNAME=${word#*hostname=}
-	    ;;
+            HOSTNAME=${word#*hostname=}
+            ;;
         esac
     done
     unset word

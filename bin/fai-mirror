@@ -1,6 +1,5 @@
 #! /bin/bash
 
-# $Id$
 #*********************************************************************
 #
 # fai-mirror -- create and manage a partial mirror for FAI
@@ -110,7 +109,7 @@ initialize() {
       -o Dir::State::Lists=$aptcache/var/lib/apt/lists/"
 
     if [ -n "$arch" ]; then
-	aptoptions="$aptoptions -o APT::Architecture=$arch" # add architecture
+        aptoptions="$aptoptions -o APT::Architecture=$arch" # add architecture
     fi
 
     # not needed
@@ -130,16 +129,16 @@ delete_base_packages() {
     local p
 
     if [ ! -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
-	echo "$NFSROOT/var/tmp/base-pkgs.lis not available."
-	echo "Can't remove wasteful packages that are already in base.tgz."
-	return
+        echo "$NFSROOT/var/tmp/base-pkgs.lis not available."
+        echo "Can't remove wasteful packages that are already in base.tgz."
+        return
     fi
     echo "Removing packages that are already included in base.tgz"
     for p in $(cat $NFSROOT/var/tmp/base-pkgs.lis); do
-	if [ -f $archivedir/${p}_*.deb ]; then
-	    [ $verbose -eq 1 ] && echo "deleting package $p"
-	    rm $archivedir/${p}_*.deb
-	fi
+        if [ -f $archivedir/${p}_*.deb ]; then
+            [ $verbose -eq 1 ] && echo "deleting package $p"
+            rm $archivedir/${p}_*.deb
+        fi
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -151,23 +150,23 @@ add_base_packages() {
     # arch dependent packages defined in make-fai-nfsroot
     echo "Adding packages of $cfdir/NFSROOT."
     if [ -f $NFSROOT/var/tmp/packages.nfsroot ]; then
-	plist=$(< $NFSROOT/var/tmp/packages.nfsroot)
-	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+        plist=$(< $NFSROOT/var/tmp/packages.nfsroot)
+        apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
     else
-	echo "WARNING: $NFSROOT/var/tmp/packages.nfsroot does not exists." >&2
-	echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
+        echo "WARNING: $NFSROOT/var/tmp/packages.nfsroot does not exists." >&2
+        echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
     fi
 
     # now use sources.list for debootstrap packages
     echo "$FAI_DEBOOTSTRAP" | awk '{printf "deb %s %s main\n",$2,$1}' | perl -p -e 's/file:/copy:/' > $aptcache/etc/apt/sources.list
     echo "Adding packages from $NFSROOT/var/tmp/base-pkgs.lis"
     if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
-	plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
-	apt-get $qflag $aptoptions update >/dev/null
-	apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+        plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
+        apt-get $qflag $aptoptions update >/dev/null
+        apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
     else
-	echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists." >&2
-	echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
+        echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists." >&2
+        echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -175,8 +174,8 @@ set-classes() {
 
     # if -c is given, ignore -x
     if [ -n "$cclasses" ]; then
-	export classes=${cclasses//,/ }
-	return
+        export classes=${cclasses//,/ }
+        return
     fi
 
     set +e
@@ -195,16 +194,16 @@ add=1
 qflag=-qq
 while getopts "a:Bvhx:pc:C:m:" opt ; do
     case "$opt" in
-	a) arch=$OPTARG ;;
-	B) add=0 ;;
-	C) cfdir=$OPTARG ;;
-	h) usage ;;
-	x) exclasses="$OPTARG";;
-	c) cclasses="$OPTARG";;
-	m) MAXPACKAGES="$OPTARG";;
-	p) preserve=1;;
-	v) verbose=1; vflag=-v; qflag='';;
-	?) die 1 "Unknown option";;
+        a) arch=$OPTARG ;;
+        B) add=0 ;;
+        C) cfdir=$OPTARG ;;
+        h) usage ;;
+        x) exclasses="$OPTARG";;
+        c) cclasses="$OPTARG";;
+        m) MAXPACKAGES="$OPTARG";;
+        p) preserve=1;;
+        v) verbose=1; vflag=-v; qflag='';;
+        ?) die 1 "Unknown option";;
     esac
 done
 shift $(($OPTIND - 1))

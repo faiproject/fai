@@ -1,6 +1,5 @@
 #! /bin/sh
 
-# $Id$
 #
 # prerm script for fai
 #
@@ -21,12 +20,12 @@ set -e
 # nothing to do during upgrade
 case "$1" in
     upgrade)
-	if egrep -q ^FAI_CONFIGDIR= /etc/fai/fai.conf; then
-	    echo "WARNING: The variable \$FAI_CONFIGDIR is still defined in /etc/fai/fai.conf."
-	    echo "Please move it to /etc/fai/nfsroot.conf."
-	fi
-	exit 0
-	;;
+        if egrep -q ^FAI_CONFIGDIR= /etc/fai/fai.conf; then
+            echo "WARNING: The variable \$FAI_CONFIGDIR is still defined in /etc/fai/fai.conf."
+            echo "Please move it to /etc/fai/nfsroot.conf."
+        fi
+        exit 0
+        ;;
 esac
 
 . /etc/fai/fai.conf
@@ -40,17 +39,17 @@ case "$1" in
 
     remove|deconfigure)
 
-	if [ -z "$NFSROOT" ]; then
-	    echo "\$NFSROOT is not set. Please check your settings in fai.conf."
-	    exit 4
-	fi
+        if [ -z "$NFSROOT" ]; then
+            echo "\$NFSROOT is not set. Please check your settings in fai.conf."
+            exit 4
+        fi
 
-	perl -ni.bak -e "print unless m#^$FAI_CONFIGDIR\s|^$NFSROOT\s#" /etc/exports
-	[ -n "$nfsserver" ] && /etc/init.d/$nfsserver reload || true
+        perl -ni.bak -e "print unless m#^$FAI_CONFIGDIR\s|^$NFSROOT\s#" /etc/exports
+        [ -n "$nfsserver" ] && /etc/init.d/$nfsserver reload || true
 
-	rmdir $FAI_CONFIGDIR || true
+        rmdir $FAI_CONFIGDIR || true
 
-	[ -f /home/$LOGUSER/.account_created_by_fai_package ] && userdel -r $LOGUSER
+        [ -f /home/$LOGUSER/.account_created_by_fai_package ] && userdel -r $LOGUSER
 
         ;;
     failed-upgrade)

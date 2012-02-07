@@ -50,12 +50,12 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/shar
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2012 Thomas Lange
+        fai-cd Copyright (C) 2004-2012 Thomas Lange
 
-	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
-	Usage: fai-cd [OPTIONS] -B ISONAME
-	Create a FAI CD, a bootable CD that performs the FAI.
-	Read the man pages pages fai-cd(8).
+        Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
+        Usage: fai-cd [OPTIONS] -B ISONAME
+        Create a FAI CD, a bootable CD that performs the FAI.
+        Read the man pages pages fai-cd(8).
 EOF
 exit 0
 }
@@ -73,35 +73,35 @@ create_grub1_image() {
 
     mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
     if [ -f $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito ]; then
-	echo "preparing grub1 eltorito boot loader using NFSROOT"
-	[ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
-	[ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
+        echo "preparing grub1 eltorito boot loader using NFSROOT"
+        [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
+        [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
     else
-	# if grub1 is not available in NFSROOT, we download the package based on the current
-	# sources.list, unpack and use these files for further processing
-	# this does not work if file: URI's are used in sources.lst
-	apt-get -d install --reinstall grub >/dev/null
-	grubPackage=`ls -rt /var/cache/apt/archives/grub_*|tail -1`
-	if [ -z "$grubPackage" ]; then
-	    die 21 "Downloading grub failed."
-	fi
+        # if grub1 is not available in NFSROOT, we download the package based on the current
+        # sources.list, unpack and use these files for further processing
+        # this does not work if file: URI's are used in sources.lst
+        apt-get -d install --reinstall grub >/dev/null
+        grubPackage=`ls -rt /var/cache/apt/archives/grub_*|tail -1`
+        if [ -z "$grubPackage" ]; then
+            die 21 "Downloading grub failed."
+        fi
 
-	GRUBDIR=$tmp/grubPackage
-	echo "no grub1 installation found in NFSROOT, using downloaded $grubPackage"
-	mkdir -p $GRUBDIR
-	dpkg -x $grubPackage $GRUBDIR
-	cp -p $GRUBDIR/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
-	cp -p $GRUBDIR/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
-	rm -rf $GRUBDIR
+        GRUBDIR=$tmp/grubPackage
+        echo "no grub1 installation found in NFSROOT, using downloaded $grubPackage"
+        mkdir -p $GRUBDIR
+        dpkg -x $grubPackage $GRUBDIR
+        cp -p $GRUBDIR/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
+        cp -p $GRUBDIR/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
+        rm -rf $GRUBDIR
     fi
     cp $grub_config $tmp/boot/grub/menu.lst
     # insert date into grub menu
     if [ $bootonly -eq 1 ]; then
-	echo "Using kernel version $kernelversion"
-	perl -pi -e "s/_VERSIONSTRING_/Kernel : $kernelversion/" $tmp/boot/grub/menu.lst
-	perl -pi -e "s#_NFSROOT_#nfsroot=$servernfsroot#"        $tmp/boot/grub/menu.lst
+        echo "Using kernel version $kernelversion"
+        perl -pi -e "s/_VERSIONSTRING_/Kernel : $kernelversion/" $tmp/boot/grub/menu.lst
+        perl -pi -e "s#_NFSROOT_#nfsroot=$servernfsroot#"        $tmp/boot/grub/menu.lst
     else
-	perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
+        perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
     fi
     cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
@@ -113,35 +113,35 @@ create_grub2_image() {
 
     mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir $NFSROOT/boot/grub
     if [ -f $NFSROOT/boot/grub/core.img ]; then
-	echo "preparing grub2 eltorito.img using existing core.img from NFSROOT"
-	cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-	MODULEBASE=$NFSROOT/usr/lib/grub/
+        echo "preparing grub2 eltorito.img using existing core.img from NFSROOT"
+        cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
+        MODULEBASE=$NFSROOT/usr/lib/grub/
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
-	echo "preparing grub2 eltorito.img creating core.img in NFSROOT"
+        echo "preparing grub2 eltorito.img creating core.img in NFSROOT"
         if chroot $NFSROOT /usr/bin/grub-mkimage --help | grep -q -- --format ; then
-	    chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
+            chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
         else
-	    chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660
+            chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660
         fi
-	cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-	MODULEBASE=$NFSROOT/usr/lib/grub/
+        cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
+        MODULEBASE=$NFSROOT/usr/lib/grub/
     else
-	echo "no grub2 installation found in NFSROOT, using downloaded $grubPackage"
-	apt-get -y -d install --reinstall grub-pc >/dev/null
-	grubPackage=`ls -rt /var/cache/apt/archives/grub-pc*|tail -1`
-	if [ -z "$grubPackage" ]; then
-	    die 22 "Downloading grub2 failed."
-	fi
-	GRUBDIR=$tmp/grubPackage
-	mkdir -p $GRUBDIR
-	dpkg -x $grubPackage $GRUBDIR
-	cd $GRUBDIR
-	if ./usr/bin/grub-mkimage --help | grep -q -- --format ; then
-	    ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
-	else
-	    ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660
-	fi
-	MODULEBASE=$GRUBDIR/usr/lib/grub/
+        echo "no grub2 installation found in NFSROOT, using downloaded $grubPackage"
+        apt-get -y -d install --reinstall grub-pc >/dev/null
+        grubPackage=`ls -rt /var/cache/apt/archives/grub-pc*|tail -1`
+        if [ -z "$grubPackage" ]; then
+            die 22 "Downloading grub2 failed."
+        fi
+        GRUBDIR=$tmp/grubPackage
+        mkdir -p $GRUBDIR
+        dpkg -x $grubPackage $GRUBDIR
+        cd $GRUBDIR
+        if ./usr/bin/grub-mkimage --help | grep -q -- --format ; then
+            ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
+        else
+            ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660
+        fi
+        MODULEBASE=$GRUBDIR/usr/lib/grub/
     fi
     for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
         [[ -e $a ]] && cp $a $tmp/boot/grub
@@ -160,19 +160,19 @@ create_grub2_image() {
 provide_memtest_boot_option() {
 
     if [ -f $NFSROOT/boot/memtest86+.bin ]; then
-	cp $NFSROOT/boot/memtest86+.bin $tmp/boot
+        cp $NFSROOT/boot/memtest86+.bin $tmp/boot
     elif [ -f /boot/memtest86+.bin ]; then
-	cp /boot/memtest86+.bin $tmp/boot
+        cp /boot/memtest86+.bin $tmp/boot
     else
-	echo "no memtest86+.bin found, omit memtest boot option"
-	return
+        echo "no memtest86+.bin found, omit memtest boot option"
+        return
     fi
     
     if [ "$grub_version" -eq 1 ]; then
         cat >> $tmp/boot/grub/menu.lst <<EOF
 
 title           memtest86+
-root		(cd)
+root            (cd)
 kernel          /boot/memtest86+.bin
 quiet
 EOF
@@ -193,10 +193,10 @@ customize_nfsroot() {
 
     mkdir $tmp/empty
     for d in $hidedirs; do
-	if [ -d $nfsrootdir/$d ]; then
-	    [ "$debug" ] && echo "hiding $d"
-	    mount --bind $tmp/empty $nfsrootdir/$d
-	fi
+        if [ -d $nfsrootdir/$d ]; then
+            [ "$debug" ] && echo "hiding $d"
+            mount --bind $tmp/empty $nfsrootdir/$d
+        fi
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -204,10 +204,10 @@ unhide_dirs() {
 
     set +e
     for d in $hidedirs; do
-	if [ -d $nfsrootdir/$d ]; then
-	    [ "$debug" ] && echo "disclosing $d"
-	    umount $nfsrootdir/$d 2>/dev/null
-	fi
+        if [ -d $nfsrootdir/$d ]; then
+            [ "$debug" ] && echo "disclosing $d"
+            umount $nfsrootdir/$d 2>/dev/null
+        fi
     done
     set -e
 }
@@ -218,7 +218,7 @@ umount_dirs() {
     local d
     local dirs="boot $FAI media/mirror etc/apt/sources.list"
     for d in $dirs; do
-	umount $nfsrootdir/$d 2>/dev/null
+        umount $nfsrootdir/$d 2>/dev/null
     done
     rm -f $nfsrootdir/etc/RUNNING_FROM_FAICD
     [ -d $nfsrootdir ] && umount $nfsrootdir
@@ -227,7 +227,7 @@ umount_dirs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 sleep_now() {
 
-	sleep 6666 || true
+        sleep 6666 || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkiso() {
@@ -248,13 +248,13 @@ mkusb(){
     # TODO: If usbdir is a device (matches /dev/) mount it
     [ -d $usbdir ] || die 17 "$usbdir does not exist."
     if [ $rsync -eq 1 ]; then
-	echo "Syncing FAI data to USB device $usbdir"
-	rsync --delete -avW $tmp/boot $usbdir || true
-	[ -d $tmp/live ] && rsync --delete -avW $tmp/live $usbdir || true
+        echo "Syncing FAI data to USB device $usbdir"
+        rsync --delete -avW $tmp/boot $usbdir || true
+        [ -d $tmp/live ] && rsync --delete -avW $tmp/live $usbdir || true
     else
-	echo "Writing FAI data to USB device $usbdir"
-	cp -a $tmp/boot $usbdir 2>/dev/null || true
-	[ -d $tmp/live ] && cp -a $tmp/live $usbdir 2>/dev/null || true
+        echo "Writing FAI data to USB device $usbdir"
+        cp -a $tmp/boot $usbdir 2>/dev/null || true
+        [ -d $tmp/live ] && cp -a $tmp/live $usbdir 2>/dev/null || true
     fi
     echo $isoversion > $usbdir/.FAI-CD-VERSION
 
@@ -266,10 +266,10 @@ mkusb(){
     usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
     echo "Root partition is $rootpartition, device is: $usbdev"
     if [ -n "$rootpartition" -a -n "$usbdev" ]; then
-	echo "Installing grub."
-	echo -e "root $rootpartition\n setup $usbdev" | grub --batch >/dev/null
+        echo "Installing grub."
+        echo -e "root $rootpartition\n setup $usbdev" | grub --batch >/dev/null
     else
-	echo "Device could not be detemined. Installing grub will be skipped."
+        echo "Device could not be detemined. Installing grub will be skipped."
     fi
 
     elif [ "$grub_version" -eq 2 ]; then
@@ -309,19 +309,19 @@ EOF
     [ -z "$dists" ] && die 19 "No suitable Packages file found in mirror."
 
     for i in $dists ; do
-	comp=$(find $mirrordir/dists/$i -maxdepth 2 -type d -name "binary-*" | \
+        comp=$(find $mirrordir/dists/$i -maxdepth 2 -type d -name "binary-*" | \
         sed -e "s#$mirrordir/*dists/$i/##" -e 's#/binary-.*##' | tr '\n' " ")
-	echo "deb file:/media/mirror $i $comp" >> $tmp1
+        echo "deb file:/media/mirror $i $comp" >> $tmp1
     done
 
     mount --bind $tmp1 $nfsrootdir/etc/apt/sources.list
     customize_nfsroot
 
     if [ $keep -eq 1 ]; then
-	echo "fai-cd script stopped for 6666 seconds. The filesystem is now available in $tmp."
-	echo "To continue the script and call the cleanup call: pkill -f 'sleep 6666'"
-	sleep_now 2>/dev/null || true
-	echo "Continue cleanup."
+        echo "fai-cd script stopped for 6666 seconds. The filesystem is now available in $tmp."
+        echo "To continue the script and call the cleanup call: pkill -f 'sleep 6666'"
+        sleep_now 2>/dev/null || true
+        echo "Continue cleanup."
     fi
 
     mkiso
@@ -351,22 +351,22 @@ if [ -x "$(which rsync)" ] ; then rsync=1 ; fi
 while getopts "nkfhHg:bBG:m:C:u:" opt ; do
     case "$opt" in
         C)  cdir=$OPTARG ;;
-	f)  forceremoval=1 ;;
-	h)  usage ;;
-	H)  hidedirs="" ;;
-	g)  grub_config="$OPTARG" ;;
-	k)  keep=1 ;;
-	m)  mirrordir="$OPTARG" ;;
-	n)  makeiso=0 ;;
-	b)  burn=1 ;;
-	B)  bootonly=1 ;;
-	G)  grub_version="$OPTARG" ;;
-	u)  usbdir="$OPTARG"
-	    makeusb=1
-	    makeiso=0
-	    [ $rsync -eq 0 -a -e $usbdir/live ] && die 11 "Please remove $usbdir/live. Aborting."
-	    ;;
-	?)  usage ;;
+        f)  forceremoval=1 ;;
+        h)  usage ;;
+        H)  hidedirs="" ;;
+        g)  grub_config="$OPTARG" ;;
+        k)  keep=1 ;;
+        m)  mirrordir="$OPTARG" ;;
+        n)  makeiso=0 ;;
+        b)  burn=1 ;;
+        B)  bootonly=1 ;;
+        G)  grub_version="$OPTARG" ;;
+        u)  usbdir="$OPTARG"
+            makeusb=1
+            makeiso=0
+            [ $rsync -eq 0 -a -e $usbdir/live ] && die 11 "Please remove $usbdir/live. Aborting."
+            ;;
+        ?)  usage ;;
     esac
 done
 shift $(($OPTIND - 1))
@@ -415,13 +415,13 @@ NFSROOT="$NFSROOT/live/filesystem.dir"
 
 if [ -z "$grub_config" ]; then
     if [ $bootonly -eq 1 ]; then
-	grub_config="/usr/share/fai/menu.lst" # default for boot-only CD
+        grub_config="/usr/share/fai/menu.lst" # default for boot-only CD
     else
-	grub_config="$cfdir/menu.lst" # set default if undefined
+        grub_config="$cfdir/menu.lst" # set default if undefined
     fi
 
     if [ "$grub_version" -eq 2 ]; then
-	grub_config="$cfdir/grub.cfg" # set default if undefined
+        grub_config="$cfdir/grub.cfg" # set default if undefined
     fi
 fi
 

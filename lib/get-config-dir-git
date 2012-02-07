@@ -16,28 +16,28 @@ protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
 gitpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^[:space:]]\+\)')
 
 case $protocol in
-	git)
-		giturl="git://$gitpath"
-		;;
-	git+http)
-		giturl="http://$gitpath"
-		;;
-	git+ssh)
-		giturl="ssh://$gitpath"
+        git)
+                giturl="git://$gitpath"
+                ;;
+        git+http)
+                giturl="http://$gitpath"
+                ;;
+        git+ssh)
+                giturl="ssh://$gitpath"
     ;;
-	*)
-		echo "get-config-dir-git: protocol $protocol not implemented"
-		exit 1
-		;;
+        *)
+                echo "get-config-dir-git: protocol $protocol not implemented"
+                exit 1
+                ;;
 esac
 
 export GIT_DIR="$FAI/.git"
-		
+                
 if [ -d "$FAI/.git" ] ; then
     if [ `git remote show -n origin | egrep -m1 -o '[^[:space:]]+://.+'` == "$giturl" ]; then
         echo "Updating git copy in $FAI"
         git pull
-    	task_error 881 $?
+        task_error 881 $?
     else
         echo "$FAI already contains a git repository, but it is not from $giturl!" >&2
         echo "Please delete $FAI manually. Aborting..." >&2

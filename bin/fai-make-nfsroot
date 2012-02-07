@@ -1,6 +1,5 @@
 #! /bin/bash
 
-# $Id$
 #*********************************************************************
 #
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
@@ -33,11 +32,11 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2012 Thomas Lange
+        Copyright (C) 1999-2012 Thomas Lange
 
-	Usage: fai-make-nfsroot [OPTIONS]
+        Usage: fai-make-nfsroot [OPTIONS]
   Create an NFSROOT for FAI.
-	Read the man pages pages fai-make-nfsroot(8).
+        Read the man pages pages fai-make-nfsroot(8).
 EOF
     exit 0
 }
@@ -179,10 +178,10 @@ call_verbose() {
 
     if [ "$verbose" ]; then
         "$@"
-	return $?
+        return $?
     else
-	"$@" > /dev/null
-	return $?
+        "$@" > /dev/null
+        return $?
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -191,9 +190,9 @@ setup_ssh() {
     # nothing to do if no ssh is available in nfsroot
     [ -f $NFSROOT/usr/bin/ssh ] || return 0
     if [ $sshpreserve = 1 ]; then
-	tar -C $NFSROOT -xf $tmptar
-	rm $tmptar
-	return 0
+        tar -C $NFSROOT -xf $tmptar
+        rm $tmptar
+        return 0
     fi
 
     mkdir -p -m 700 $NFSROOT/root/.ssh
@@ -201,11 +200,11 @@ setup_ssh() {
         loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
         [ -f $loguserhome/.ssh/known_hosts ] && cp $loguserhome/.ssh/known_hosts $NFSROOT/root/.ssh/known_hosts
         [ -d $loguserhome/.ssh ] && {
-	    [ -f $loguserhome/.ssh/id_dsa ] &&
-	       cp -p $loguserhome/.ssh/id_dsa* $NFSROOT/root/.ssh/
-	    [ -f $loguserhome/.ssh/id_rsa ] &&
-	       cp -p $loguserhome/.ssh/id_rsa* $NFSROOT/root/.ssh/
-	}
+            [ -f $loguserhome/.ssh/id_dsa ] &&
+               cp -p $loguserhome/.ssh/id_dsa* $NFSROOT/root/.ssh/
+            [ -f $loguserhome/.ssh/id_rsa ] &&
+               cp -p $loguserhome/.ssh/id_rsa* $NFSROOT/root/.ssh/
+        }
     fi
 
     # enable root login
@@ -250,18 +249,18 @@ call_debootstrap() {
     echo "Calling debootstrap $1 $NFSROOT $2"
     LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
     if [ $? -ne 0 ]; then
-	echo "ERROR: debootstrap did not complete successfully."
-	echo "This is mostly caused by a broken mirror."
-	echo "Please check your mirror or use an official mirror."
-	[ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
-	exit 10
+        echo "ERROR: debootstrap did not complete successfully."
+        echo "This is mostly caused by a broken mirror."
+        echo "Please check your mirror or use an official mirror."
+        [ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
+        exit 10
     fi
 
     if [ ! -f $NFSROOT/usr/bin/apt-get ]; then
-	echo "No apt-get executable available inside the NFSROOT."
-	echo "Maybe debootstrap did not finish successfully. Aborting."
-	[ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
-	exit 11
+        echo "No apt-get executable available inside the NFSROOT."
+        echo "Maybe debootstrap did not finish successfully. Aborting."
+        [ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
+        exit 11
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -277,17 +276,17 @@ add_etc_hosts_entries() {
 
     local line
     for eth in $ips; do
-	line=$(getent hosts $eth || true)
-	if [ -n "$line" ] ; then
-	  ainsl -v $NFSROOT/etc/hosts "$line"
+        line=$(getent hosts $eth || true)
+        if [ -n "$line" ] ; then
+          ainsl -v $NFSROOT/etc/hosts "$line"
         else
-	  echo "Warning: no hostname for $eth found, not adding to /etc/hosts."
+          echo "Warning: no hostname for $eth found, not adding to /etc/hosts."
         fi
     done
 
     if [ -f /etc/resolv.conf ]; then
-	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
-	cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during fai-make-nfsroot
+        cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf-installserver
+        cp -Lp $v /etc/resolv.conf $NFSROOT/etc/resolv.conf # this is needed during fai-make-nfsroot
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -298,13 +297,13 @@ create_base() {
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
     if [ $usexz -eq 0 ]; then
-	echo "Creating base.tgz"
-	tar --one-file-system -C $NFSROOT -cf - --exclude var/tmp/base.tgz --exclude 'var/lib/apt/lists/*_*' . | gzip > $NFSROOT/var/tmp/base.tgz
+        echo "Creating base.tgz"
+        tar --one-file-system -C $NFSROOT -cf - --exclude var/tmp/base.tgz --exclude 'var/lib/apt/lists/*_*' . | gzip > $NFSROOT/var/tmp/base.tgz
     else
-	echo "Creating base.tar.xz"
-	tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
-	nice xz $NFSROOT/var/tmp/base.tar >/dev/null 2>&1 &
-	xzpid=$!
+        echo "Creating base.tar.xz"
+        tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+        nice xz $NFSROOT/var/tmp/base.tar >/dev/null 2>&1 &
+        xzpid=$!
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -320,16 +319,16 @@ extract_base() {
       printf "Extracting $basetgz: "
 
       case $basetgz in
-	  *tar.gz|*.tgz)
-	      tar -C $NFSROOT -zxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
-	      cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.gz
-	      ;;
+          *tar.gz|*.tgz)
+              tar -C $NFSROOT -zxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
+              cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.gz
+              ;;
 
-	    *tar.xz|*.txz)
-	      tar -C $NFSROOT -Jxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
-	      cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.xz
-	      ;;
-	  esac
+            *tar.xz|*.txz)
+              tar -C $NFSROOT -Jxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
+              cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.xz
+              ;;
+          esac
 
       echo done
     fi
@@ -350,7 +349,7 @@ create_nfsroot() {
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
     if [ -n "$FAI_DEBMIRROR" ]; then
-	[ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
+        [ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
         mount -o ro,noatime $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || \
                 die 1 "Can't mount $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
@@ -397,7 +396,7 @@ EOF
 
     [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
     if [ -d etc/init ]; then   # if upstart is available
-	find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
+        find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
     fi
 
     rm -f etc/mdadm/mdadm.conf # remove file which may contain info of the install server
@@ -412,8 +411,8 @@ EOF
     cat >> root/.profile <<-EOF
         PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/bin:/sbin:/usr/bin:/usr/sbin:
         export PATH
-	. /usr/lib/fai/subroutines
-	set -a
+        . /usr/lib/fai/subroutines
+        set -a
         . /tmp/fai/variables.log 2>/dev/null
 EOF
 
@@ -430,7 +429,7 @@ upgrade_nfsroot() {
     # add any 3rd party repository keys that you may need installed into the NFSROOT
     local f
     for f in `find $cfdir/apt/keys -type f -name *.asc`; do
-	cat $f | $ROOTCMD apt-key add -
+        cat $f | $ROOTCMD apt-key add -
     done
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
@@ -485,7 +484,7 @@ fdivert() {
 
     local item
     for item in "$@"; do
-	LC_ALL=C $ROOTCMD dpkg-divert --quiet --add --rename $item
+        LC_ALL=C $ROOTCMD dpkg-divert --quiet --add --rename $item
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -497,7 +496,7 @@ run_hooks() {
 
     echo "Running hooks..."
     for file in $(cd $NFSROOT_HOOKS ;ls 2>/dev/null | egrep '^[[:alnum:]_.-]+$'); do
-	. $NFSROOT_HOOKS/$file
+        . $NFSROOT_HOOKS/$file
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
