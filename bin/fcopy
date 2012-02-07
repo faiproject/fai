@@ -1,12 +1,11 @@
 #! /usr/bin/perl
 
-# $Id$
 #*********************************************************************
 #
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2010 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2012 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -74,7 +73,7 @@ sub copy_one {
   my ($class,$sourcefile,$destfile,$sourcelink);
   my ($tmpfh,$tmpfile);
   my ($ps,$tpath,$bpath,$backupfile);
-  my $preserve = 0;
+  my $preserve = 0; # if 1, the destination remains unchanged
   my $preinst  = 0; # remember if a tmpfile was used, needed later for unlink
   my $logcomment = "";
 
@@ -133,19 +132,19 @@ sub copy_one {
       # $source has already been copied last time
 
       if ($lastclass{$source} ne $class) {
-        $logcomment = "\t# changed class" if $logfile;
+        $logcomment = "changed class";
       } else {
         if ($changed{"$source/$class"} or
             $changed{"$source/postinst"} or
             $changed{"$source/file-modes"}) {
-          $logcomment = "\t# changed file" if $logfile;
+          $logcomment = "changed file";
         } else {
-          $logcomment = "\t# preserved (logical)" if $logfile;
+          $logcomment = "preserved (logical)";
           $preserve = 1;
         }
       }
     } else {
-      $logcomment = "\t# new (logical)" if $logfile;
+      $logcomment = "new (logical)";
     }
   } else {
     # compare literally
@@ -164,19 +163,20 @@ sub copy_one {
       }
     }
 
+    # compare symlinks or real files
     if (defined($sourcelink)) {
       # it doesn't harm if the readlink failes
       if ((-l $destfile) and (readlink($destfile) eq $sourcelink)) {
-        $logcomment="\t# preserved (symlink literal)" if $logfile;
+        $logcomment="preserved (symlink literal)";
         $preserve = 1;
       } else {
-        $logcomment="\t# new (symlink literal)";
+        $logcomment="new (symlink literal)";
       }
     } else {
       if ( compare($tmpfile,$destfile)) {
-        $logcomment="\t# new (literal)";
+        $logcomment="new (literal)";
       } else {
-        $logcomment="\t# preserved (literal)" if $logfile;
+        $logcomment="preserved (literal)";
         $preserve = 1;
       }
     }
@@ -184,11 +184,12 @@ sub copy_one {
   #if a package is being purged, our information about its config files is
   #wrong, so first check if they exist. if not, don't preserve, but copy
   if ($preserve && ! -e $destfile) {
-    $logcomment="\t# magically disappeared (maybe purged or dangling symlink)";
+    $logcomment="magically disappeared (maybe purged or dangling symlink)";
     $preserve=0;
   }
 
-  print LOGFILE "$source\t$class$logcomment\n" if $logfile;
+  print LOGFILE "$source\t$class\t# $logcomment\n" if $logfile;
+  # the destination remains unchanged
   if ($preserve) {
     warn "preserving $source \n";
     _unlink($tmpfile) if $preinst;
@@ -270,7 +271,8 @@ sub _copy {
 sub _symlink {
 
   return 1 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
-  symlink(@_);
+  my($from,$to) = @_;
+  symlink($from,$to); # make perl -wc happy
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub runscript {
@@ -444,7 +446,7 @@ sub usage {
   print << "EOF";
 fcopy, copy files using classes.
 
-   Copyright (C) 2001-2010 by Thomas Lange
+   Copyright (C) 2001-2012 by Thomas Lange
 
 Usage: fcopy [OPTION] ... SOURCE ...
 
