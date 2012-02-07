@@ -863,7 +863,7 @@ task_extrbase() {
 # Short-Description: mount Debian mirror via NFS
 ### END SUBROUTINE INFO
 
-task_mirror() {
+mount_mirror() {
 
     # mount debian mirror directory
     [ "$FAI_DEBMIRROR" ] || return   # nothing to do
@@ -871,7 +871,7 @@ task_mirror() {
     if mount $romountopt $FAI_DEBMIRROR ${FAI_ROOT}${MNTPOINT}; then
       [ "$debug" ] && echo "Mirror mounted from $FAI_DEBMIRROR to ${FAI_ROOT}${MNTPOINT}"
     else
-      sendmon "TASKERROR mirror $?"
+      sendmon "TASKERROR mirror $?
       die "Can't mount $FAI_DEBMIRROR"
     fi
 }
@@ -890,7 +890,7 @@ task_debconf () {
 # Provides-Var:    none
 # Requires-Var:    $classes $FAI $FAI_ROOT $FAI_ETC_DIR $FAI_ALLOW_UNSIGNED
 # Suggests-Var:
-# Short-Description: prepare package repository access
+# Short-Description: prepare access to package repository
 ### END SUBROUTINE INFO
 
 task_repository () {
@@ -956,6 +956,9 @@ EOF
 	done
 	echo "You have to rename them to match a class name."
     fi
+
+    # mount Debian mirror via NFS if needed
+    mount_mirror
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_updatebase() {
