@@ -51,11 +51,8 @@ my $dryrun;
 
 my @opt_modes;
 my @rlist;
-my %changed;
-my %lastclass;
 my $modeset;
 my $nobackup;
-my $opt_update;
 my $backupdir;
 my @ignoredirs = qw'CVS .svn .arch-ids {arch} .git';
 
@@ -125,62 +122,39 @@ sub copy_one {
     }
   }
 
-  # do nothing if source and destination files are equal
-  if ($opt_update and not -x "$ps/preinst") {
-    # compare logically
-    if ($lastclass{$source}) {
-      # $source has already been copied last time
-
-      if ($lastclass{$source} ne $class) {
-        $logcomment = "changed class";
-      } else {
-        if ($changed{"$source/$class"} or
-            $changed{"$source/postinst"} or
-            $changed{"$source/file-modes"}) {
-          $logcomment = "changed file";
-        } else {
-          $logcomment = "preserved (logical)";
-          $preserve = 1;
-        }
-      }
-    } else {
-      $logcomment = "new (logical)";
-    }
-  } else {
-    # compare literally
-    if ( -x "$ps/preinst" ) {
-      warn "preinst script found, switching to literal change detection" if
-        ($opt_P and $debug);
-      ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
-      $preinst = 1; # a tmpfile is used because of preinst script
-      warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
-      ewarn("copying $sourcefile for preinst processing failed !") unless
-        _copy($sourcefile,$tmpfh);
-      if (runscript("preinst",$ps,$tmpfile,$class)) {
-	ewarn("preinst for $sourcefile failed; not proceeding");
-	_unlink($tmpfile);
-	return 0;
-      }
-    }
-
-    # compare symlinks or real files
-    if (defined($sourcelink)) {
-      # it doesn't harm if the readlink failes
-      if ((-l $destfile) and (readlink($destfile) eq $sourcelink)) {
-        $logcomment="preserved (symlink literal)";
-        $preserve = 1;
-      } else {
-        $logcomment="new (symlink literal)";
-      }
-    } else {
-      if ( compare($tmpfile,$destfile)) {
-        $logcomment="new (literal)";
-      } else {
-        $logcomment="preserved (literal)";
-        $preserve = 1;
-      }
+  # execute preinst script
+  if ( -x "$ps/preinst" ) {
+    $preinst = 1;	 # a tmpfile is used because of preinst script
+    ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
+    warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
+    ewarn("copying $sourcefile for preinst processing failed !") unless
+      _copy($sourcefile,$tmpfh);
+    if (runscript("preinst",$ps,$tmpfile,$class)) {
+      ewarn("preinst for $sourcefile failed; not proceeding");
+      _unlink($tmpfile);
+      return 0;
     }
   }
+
+  # compare symlinks or real files
+  if (defined($sourcelink)) {
+    # it doesn't harm if the readlink failes
+    if ((-l $destfile) and (readlink($destfile) eq $sourcelink)) {
+      $logcomment="preserved symlink";
+      $preserve = 1;
+    } else {
+      $logcomment="new symlink";
+    }
+  } else {
+    if ( compare($tmpfile,$destfile)) {
+      $logcomment="new file";
+    } else {
+      $logcomment="preserved file";
+      $preserve = 1;
+    }
+  }
+
+
   #if a package is being purged, our information about its config files is
   #wrong, so first check if they exist. if not, don't preserve, but copy
   if ($preserve && ! -e $destfile) {
@@ -400,31 +374,6 @@ sub ewarn {
   warn "fcopy: @_\n";
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub read_status {
-  my $n = my @status_files=split(/,/,$opt_update);
-  ($n != 2) && die "fcopy: need both log and changes file\n";
-
-  open(LASTLOG,$status_files[0]) || die "Can't open status file $status_files[0]\n";
-  while (<LASTLOG>) {
-    s/\#.*//g;
-    chomp;
-    my ($source,$class) = split(/\s/,$_,2);
-    $class=~s/\s*//g;
-    $lastclass{$source} = $class;
-  }
-  close(LASTLOG);
-
-  $_=$source; /([^\/]+)$/;
-  my $source_base = $1;
-  open(CHANGES,$status_files[1]) || die "Can't open status file $status_files[1]\n";
-  while (<CHANGES>) {
-    s/\#.*//g;
-    chomp;
-    m#$source_base/(\S+)$# and $changed{$1} = 1;
-  }
-  close(CHANGES);
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub read_files {
 
   # read list of files
@@ -465,8 +414,6 @@ Usage: fcopy [OPTION] ... SOURCE ...
    -m user,group,mode   Set user, group and mode for copied files.
    -M                   Same as -m root,root,0644
    -n                   Print the commands, but do not execute them.
-   -P log,changes       Copy if class or source for class has changed since
-                        previous run
    -r                   Copy recursivly but skip ignored directories.
    -s source_dir        Look for source files relative to source_dir.
    -t target_dir        Copy files relativ to target_dir.
@@ -482,6 +429,7 @@ EOF
 $|=1;
 getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:UnH') || usage;
 $opt_h && usage;
+$opt_P and die "Option -P not supported any more. You may want to use -F\n";
 $dryrun = $ENV{FCOPY_DRYRUN} || $opt_n || 0; # is true if in dry-run mode
 $dryrun and warn "Dry-run only! Nothing is really executed.\n";
 $opt_M and $opt_m = "root,root,0644";  # set default modes
@@ -501,12 +449,6 @@ if ($opt_U && -f "/var/run/fai/fai_softupdate_is_running" ) {
   print "Skipping this fcopy command during softupdate." if $verbose;
   exit 0;
 }
-
-if ($ENV{FCOPY_LASTLOG} and $ENV{FCOPY_UPDATELOG}) {
-	$opt_update = "$ENV{FCOPY_LASTLOG},$ENV{FCOPY_UPDATELOG}";
-}
-$opt_P and $opt_update=$opt_P;
-$opt_update and read_status();
 
 #for postinst scripts
 $ENV{'FAI_ROOT'} = $ENV{'target'} = $target;
