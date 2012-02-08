@@ -7,7 +7,7 @@ LIBDIR = $(DESTDIR)/usr/lib/fai
 SHAREDIR = $(DESTDIR)/usr/share/fai
 USRSBIN_SCRIPTS = fai-make-nfsroot fai-setup fcopy ftar install_packages fai-chboot fai-monitor fai-cd fai faireboot fai-statoverride setup-storage dhcp-edit fai-nfsroot2image fai-new-mac
 
-USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl fai-monitor-gui
+USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub policy-rc.d.fai ainsl fai-monitor-gui fai-deps
 
 # for syntax checks
 BASH_SCRIPTS = lib/fai-divert lib/fai-mount-disk lib/fai-savelog lib/fai-vol_id lib/get-boot-info lib/get-config-dir lib/get-config-dir-cvs lib/get-config-dir-file lib/get-config-dir-git lib/get-config-dir-hg lib/get-config-dir-nfs lib/get-config-dir-svn lib/mkramdisk lib/mount2dir lib/prcopyleft lib/subroutines lib/task_sysinfo lib/updatebase lib/fetch-basefile
