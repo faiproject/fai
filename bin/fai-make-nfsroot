@@ -427,10 +427,12 @@ upgrade_nfsroot() {
     mkdir $NFSROOT/etc/mdadm; touch $NFSROOT/etc/mdadm/mdadm.conf # stop mdadm from calling mkconf
 
     # add any 3rd party repository keys that you may need installed into the NFSROOT
-    local f
-    for f in `find $cfdir/apt/keys -type f -name *.asc`; do
-        cat $f | $ROOTCMD apt-key add -
-    done
+    if [ -d $cfdir/apt/keys ]; then
+        local f
+        for f in `find $cfdir/apt/keys -type f -name *.asc`; do
+            cat $f | $ROOTCMD apt-key add -
+        done
+    fi
     $ROOTCMD apt-get update
     $ROOTCMD aptitude -Rfy install fai-nfsroot
     $ROOTCMD apt-get -y dist-upgrade
