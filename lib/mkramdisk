@@ -5,7 +5,7 @@
 # mkramdisk -- mount a ramdisk on top of a directory
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2010 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2012 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -30,7 +30,7 @@ mount_ramdisk() {
     local tmp1=$(mktemp) || exit 12
     tar -C $1 -cf $tmp1 .
     mount $2 $3 -t tmpfs tmpfs $1 || exit 13
-    echo "Ramdisk mounted onto $1"
+    [ X$verbose = X1 ]  && echo "Ramdisk mounted onto $1"
     tar -C $1 -xf $tmp1
     rm -f $tmp1
     set +e
@@ -56,7 +56,7 @@ umount_ramdisk() {
     rm -rf $disk/* $disk/.??* || true
     cp -a  $ram/. $disk/.   # copy ramdisk contents to disk
     umount $ram
-    echo "Ramdisk on $disk umounted"
+    [ X$verbose = X1 ]  && echo "Ramdisk on $disk umounted"
     rmdir  $ram
     set +e
 }
