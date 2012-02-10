@@ -91,7 +91,6 @@ install:
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
-	install -m644 conf/fai_modules_off $(DESTDIR)/etc/modutils
 	install -m644 conf/menu.lst.boot-only $(DESTDIR)/usr/share/fai/menu.lst
 	install -m644 conf/upstart-fai.conf $(DESTDIR)/etc/init/fai.conf
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
