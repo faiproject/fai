@@ -1,0 +1,102 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH nfsroot.conf 5 "9 February" "FAI 4.0"
+.\" Please adjust this date whenever revising the manpage.
+
+.SH NAME
+nfsroot.conf \- nfsroot configuration for FAI
+.SH SYNOPSIS
+.B /etc/fai/nfsroot.conf
+.SH DESCRIPTION
+FAI - Fully Automatic Installation - allows for non-interactive
+initial installation and online maintenance ("softupdates") of operating systems
+according to a user-defined configuration.
+See
+.BR fai (8)
+for the possible operation modes of FAI.
+.LP
+The nfsroot is the file system which is used during installation by
+the install client. It is mounted by the install kernel via NFS.
+It's also used on the FAI CD.
+
+.SH VARIABLES
+.BR nfsroot.conf
+is sourced by
+.BR fai-make-nfsroot (8)
+and other scripts and thus must be valid
+.BR bash (1)
+code.
+
+.TP
+.B FAI_DEBOOTSTRAP
+Two parameters for debootstrap(8), space separated. Debootstrap is
+called as the firt part of fai-make-nfsroot. This variable defines
+SUITE and MIRROR for debootstrap. Example:
+
+FAI_DEBOOTSTRAP="squeeze http://cdn.debian.net/debian"
+
+.TP
+.B NFSROOT_ETC_HOSTS
+This multiline variable is added to /etc/hosts inside the nfsroot.
+You can use this when DNS is not available on the clients. Example:
+
+NFSROOT_ETC_HOSTS="192.168.1.250 faiserver"
+
+.TP
+.B FAI_ROOTPW
+The encrypted (with md5 or crypt) root password on all install
+clients during the installation process. Used when log in via ssh.
+This is not the password for the new installed system. Example:
+
+FAI_ROOTPW='$1$kBnWcO.E$djxB128U7dMkrltJHPf6d1'  # pw is fai
+
+Use mkpasswd for generating the password hash.
+
+echo "yoursecrectpassword" | mkpasswd -Hmd5 -s
+
+.TP
+.B NFSROOT
+Directory on the install server where the nfsroot is created.
+
+.TP
+.B TFTPROOT
+Directory on the install server for the tftp data, used by
+PXE network boot.
+
+.TP
+.B FAI_CONFIGDIR
+Location of the configuration space on the install server. Used by
+fai-cd(8), fai-mirror(1) and fai-setup(8).
+
+.TP
+.B SSH_IDENTITY
+Location of a identity.pub file. This user can log into the install
+clients in as root without a password. Only useful with
+FAI_FLAGS="sshd". Example:
+
+SSH_IDENTITY=/home/admin/.ssh/identity.pub
+
+.TP
+.B NFSROOT_HOOKS
+Directory of hooks to be sourced at the end of fai-make-nfsroot,
+i.e. they have to be shell scripts.
+
+.TP
+.B FAI_DEBOOTSTRAP_OPTS
+Options that will be passed to debootstrap(8). Used for excluding
+packages and for specifying a different architecture.
+
+FAI_DEBOOTSTRAP_OPTS="--exclude=info"
+
+
+.SH SEE ALSO
+
+.BR fai\-make-nfsroot (8),
+.BR fai\-setup (8),
+.BR fai (8)
+
+.br
+This file is part of FAI (Fully Automatic Installation). The FAI
+homepage is http://fai-project.org.
+
+.SH AUTHOR
+This man page was written by Thomas Lange <lange@informatik.uni-koeln.de>.
