@@ -5,7 +5,7 @@
 # fai-nfsroot2image
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2011 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2011-2012 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -68,7 +68,12 @@ done
 shift $(($OPTIND - 1))
 [ -z "$2" ] && usage
 
-NFSROOT=$1/live/filesystem.dir
+if [ -d $1/live/filesystem.dir ]; then
+    NFSROOT=$1/live/filesystem.dir
+else
+    NFSROOT=$1
+fi
+
 isoname=$2
 
 [ $base -eq 0 ]    && excludeopt="$excludeopt -e var/tmp/base*"  # also exclude base.tar.xz file
@@ -80,7 +85,7 @@ isoname=$2
 
 if [ -f $isoname ]; then
     echo "$isoname already exists." 1>&2
-    die 2 "You can use -R to force the removal of this file." 
+    die 2 "You can use -R to force the removal of this file."
 fi
 
 mksquashfs $NFSROOT $isoname $excludeopt

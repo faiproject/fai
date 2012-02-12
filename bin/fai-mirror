@@ -5,7 +5,7 @@
 # fai-mirror -- create and manage a partial mirror for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2011, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2012, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -218,7 +218,11 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 . $cfdir/fai.conf
 . $cfdir/nfsroot.conf
 : ${MNTPOINT:=/media/mirror}  # default value
-export NFSROOT="$NFSROOT/live/filesystem.dir"
+
+if [ -d $NFSROOT/live/filesystem.dir ]; then
+    NFSROOT=$NFSROOT/live/filesystem.dir
+fi
+export NFSROOT
 
 [ -n "$packages" ] && die "WARNING: The use of \$packages in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$NFSROOT_PACKAGES" ] && die "WARNING: The use of \$packages in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
