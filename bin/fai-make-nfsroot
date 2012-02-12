@@ -55,7 +55,9 @@ check_nfsroot() {
 
     set +e
     # simple test, to see if important thing are available inside the nfsroot
-    [ -x $NFSROOT/usr/share/initramfs-tools/scripts/live ] || die 1 "live-boot was not installed inside the nfsroot."
+    if [ ! -x $NFSROOT/usr/share/initramfs-tools/scripts/live  -a ! $NFSROOT/usr/sbin/dracut ]; then
+        die 1 "Neither live-boot nor dracut was installed into the nfsroot."
+    fi
 
     echo "FAI packages inside the nfsroot:"
     $ROOTCMD dpkg -l fai-client  fai-nfsroot fai-setup-storage | awk '/fai/ {print "   "$2"\t"$3}'
@@ -85,6 +87,7 @@ sshpreserve=0
 adjust=0
 generic=0
 force=0
+live=0   # default is to generate nfsroot for dracut
 
 callname=${0##*/}
 if [ $callname = make-fai-nfsroot ]; then
@@ -93,7 +96,7 @@ if [ $callname = make-fai-nfsroot ]; then
 fi
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpU opt ; do
+while getopts aghervC:B:fkKlpU opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
@@ -105,6 +108,7 @@ while getopts aghervC:B:fkKpU opt ; do
         f) force=1 ;;
         k) kinstall=1 ;;
         K) kremove=1;;
+        l) live=1 ;;
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
@@ -146,7 +150,18 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 [ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment." 
 
 oldnfsroot=$NFSROOT
-NFSROOT="$NFSROOT/live/filesystem.dir"
+
+if [ $live -eq 1 ]; then
+    # live-boot
+    nfsdir=$NFSROOT/live
+    deletedir=$NFSROOT/.will-now-be-deleted
+    NFSROOT="$NFSROOT/live/filesystem.dir"
+else
+    # dracut
+    nfsdir=$NFSROOT
+    deletedir=$NFSROOT/../.will-now-be-deleted
+fi
+
 ROOTCMD="chroot $NFSROOT"
 export DEBIAN_FRONTEND=noninteractive
 
@@ -557,8 +572,8 @@ if [ -d $NFSROOT/proc ]; then
     [ -L $NFSROOT/proc/self ] && die 1 "/proc is still mounted inside the nfsroot."
     umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount 
     # remove old nfsroot using a background process
-    mv $oldnfsroot/live $oldnfsroot/.will-now-be-deleted
-    nice rm -rf $oldnfsroot/.will-now-be-deleted & 
+    mv $nfsdir $deletedir
+    nice rm -rf $deletedir &
 fi
 
 create_nfsroot
