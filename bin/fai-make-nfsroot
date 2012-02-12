@@ -20,7 +20,7 @@
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-# 
+#
 # A copy of the GNU General Public License is available as
 # `/usr/share/common-licences/GPL' in the Debian GNU/Linux distribution
 # or on the World Wide Web at http://www.gnu.org/copyleft/gpl.html.  You
@@ -138,7 +138,7 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 . $cfdir/nfsroot.conf
 
 # IMO this may be removed, since all information should be included into sources.list
-[ -n "$FAI_LOCAL_REPOSITORY" ] && die "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list." 
+[ -n "$FAI_LOCAL_REPOSITORY" ] && die "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list."
 [ -n "$packages" ] && badupdateto32 "The use of \$packages in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$NFSROOT_PACKAGES" ] && die 1 "The use of \$NFSROOT_PACKAGES in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$FAI_SOURCES_LIST" ] && die 1 "The use of \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
@@ -147,7 +147,7 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 [ -z "$TFTPROOT" ] && badupdateto32 "\$TFTPROOT is not set. Please check your settings in $cfdir/nfsroot.conf."
 [ -n "$KERNELPACKAGE" ] && badupdateto32 "The use of \$KERNELPACKAGE is deprecated. Please use $cfdir/NFSROOT now."
 [ ! -d "$cfdir/apt" ] && die 1 "$cfdir/apt/ does not exists. Can't continue."
-[ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment." 
+[ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment."
 
 oldnfsroot=$NFSROOT
 
@@ -241,7 +241,6 @@ copy_fai_files() {
     $ROOTCMD usermod -p "$FAI_ROOTPW" root
     return # do not copy fai files at all
 
- 
     cp -RLpv $cfdir/* $NFSROOT/etc/fai
     # append additional variables to fai.conf for the install clients
     [ -z "$FAI_CONFIG_SRC" ] && echo "FAI_CONFIG_SRC=nfs://`hostname`$FAI_CONFIGDIR" >> $NFSROOT/etc/fai/fai.conf
@@ -251,7 +250,7 @@ copy_fai_files() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
-    
+
     [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
 
     # check if NFSROOT directory is mounted with bad options
@@ -391,7 +390,7 @@ EOF
     add_etc_hosts_entries
 
     [ "$verbose" ] && echo "Upgrading $NFSROOT"
-    LC_ALL=C call_verbose upgrade_nfsroot  
+    LC_ALL=C call_verbose upgrade_nfsroot
 
     # overwrite default live.conf
     [ -f $cfdir/live.conf ] || die 1 "$cfdir/live.conf not found."
@@ -401,7 +400,7 @@ EOF
     copy_fai_files
 
     # set timezone in nfsroot
-    cp -H /etc/timezone  etc/timezone 
+    cp -H /etc/timezone  etc/timezone
     cp -H /etc/localtime etc/localtime
     ln -sf /proc/mounts etc/mtab
 
@@ -412,7 +411,7 @@ EOF
 
     rm -f etc/mdadm/mdadm.conf # remove file which may contain info of the install server
     # this second rm of the same file is needed!
-    rm -f etc/udev/rules.d/70-persistent-net.rules 
+    rm -f etc/udev/rules.d/70-persistent-net.rules
     # remove Ubuntu-specific rules to auto-start volume groups, which confuses
     # setup-storage
     rm -f lib/udev/rules.d/85-lvm2.rules
@@ -466,7 +465,7 @@ add_packages_nfsroot() {
 umount_dirs() {
 
     cd /
-    [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc 
+    [ -d $NFSROOT/proc/self ] && umount $NFSROOT/proc
     [ -d $NFSROOT/sys/class ] && umount $NFSROOT/sys
     [ -d $NFSROOT/proc/self ] && die 1 "/proc still mounted inside the nfsroot."
     umount $NFSROOT/dev/pts 2> /dev/null || true
@@ -570,7 +569,7 @@ if [ -d $NFSROOT/proc ]; then
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
     [ -L $NFSROOT/proc/self ] && umount $NFSROOT/proc || true
     [ -L $NFSROOT/proc/self ] && die 1 "/proc is still mounted inside the nfsroot."
-    umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount 
+    umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount
     # remove old nfsroot using a background process
     mv $nfsdir $deletedir
     nice rm -rf $deletedir &
