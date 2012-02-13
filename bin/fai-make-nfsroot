@@ -62,7 +62,7 @@ check_nfsroot() {
     echo "FAI packages inside the nfsroot:"
     $ROOTCMD dpkg -l fai-client  fai-nfsroot fai-setup-storage | awk '/fai/ {print "   "$2"\t"$3}'
 
-    local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
+    local files=$(ls $NFSROOT/boot/initrd* $NFSROOT/boot/initramfs* 2>/dev/null)
     [ -z "$files" ] && die 1 "No initrd installed."
     egrep -q "^ERROR: |^E: Sub-process |^dpkg: error processing |^dpkg: dependency problems" /var/log/fai/fai-make-nfsroot.log && bad_exit
     return 0
