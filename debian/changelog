@@ -5,10 +5,14 @@ fai (4.0~beta4) unstable; urgency=low
     - faimond -> fai-monitor
     - faimond-gui -> fai-monitor-gui
     - make-fai-nfsroot -> fai-make-nfsroot
+    - disk-info -> fai-disk-info
+    - make-fai-nfsroot.conf -> nfsroot.conf
   * fetch-basefile: new script for fetching basefile via ftp and http,
     uses variable FAI_BASEFILEURL Closes: #494386
   * fai-nfsroot2image, fai-nfsroot2image.8: add new script, make a
     compressed squashfs from the nfsroot
+  * fai-new-mac: cmd that prints only MAC addresses, which are not yet known
+  * fai-deps: new script for using class dependencies Closes: #498412
   * faimond-gui: add option -s
   * ftar, ftar.8: add option -i.  Ignore "no matching class" and exit with 0
   * fai-kvm: add utility for starting kvm hosts for testing FAI software
@@ -24,6 +28,7 @@ fai (4.0~beta4) unstable; urgency=low
     fai.conf, set default value where needed
   * fai.conf: do not set LOGUSER by default, move detailed info about variables
     to man page fai.conf.5
+  * new man page nfsroot.conf.5
   * make-fai-nfsroot: remove variable $FAI_BOOT
     - die() subroutine now takes exit code
     - mdadm.conf should not contain info from the install server
@@ -32,12 +37,14 @@ fai (4.0~beta4) unstable; urgency=low
     - use ramdisk for speeding up package installation
     - remove recover function and option -r
     - remove option -U
-    - add options -a and -g
+    - add options -a, -g, -l
     - do not copy fai files into the nfsroot
     - code restructuring for getting generic nfsroot easier
     - use pxelinux.0 from inside the nfsroot
     - copy pxelinux.0 to TFTPROOT only if it's not already existing
-    - make-fai-nfsroot: kernel-img.conf is not needed any more
+    - kernel-img.conf is not needed any more
+    - divert update-grub, do not executed it Closes: #602402
+    - add apt keys from /etc/fai/apt/keys/*.asc into nfsroot
   * subroutines: rename task prepareapt to repository, add warnings for
     hooks using the old name, new code for prepareapt(). First, try to
     copy important files (hosts, resolv.conf, sources.list, preferences)
@@ -47,18 +54,23 @@ fai (4.0~beta4) unstable; urgency=low
     check multiple classes (logical AND, OR), use ftar for extracting base
     file, use bash regex matching instead of associative array, move code
     for loading apt keys into task_repository, make $disklist space
-    separated
+    separated, use logtail for kern.log and dmesg.log
+  * task_mirror is now a subroutine and part of task_repository
+  * softupdates now calls task repository
   * get-boot-info: do only list NICs which also have a link (means cable
     connected), copy live.log to LOGDIR, make list of netdevices blank
     separated (instead of newline), fix wrong variable name Closes: #612805
     drop BOOTP support
   * fai-start-stop-daemon: remove it, policy-rc.d is sufficient
-  * ftar: die() subroutine now takes exit code
+  * ftar: die() subroutine now takes exit code, delete files only if a
+    class matches, check cd execution before removing directory
+  * fcopy: remove -P from fcopy Closes: #356379, #360056, add -H to copy
+    symlinks, ignore .git dirs
   * updatebase, subroutines: move code for loading apt keys to updatebase
   * mkdebmirror: use cdn.debian.net
   * install_packages: add cupt support, if -l is given, do not write
     install_packages.list
-  * fai-cd: call genisoimage with -R instead of -r
+  * fai-cd: call genisoimage with -R instead of -r, do bind mounts ro
   * updatebase: load apt keys by class names, print a warning if some
     *.asc file are not used
   * simple example:
@@ -90,6 +102,7 @@ fai (4.0~beta4) unstable; urgency=low
     - savelog.LAST: add ignore pattern
     - FAISERVER: use 192.168.33.0/24 subnet, replace apt-proxy by approx
     - 10-conffiles, 50-host-classes: add support for hosts named client01,..
+    - XORG: replace non-existing debconf options Closes: #578094
   * task_sysinfo:
     - start software raid
     - print disk devices and their mapping to device names
@@ -104,14 +117,16 @@ fai (4.0~beta4) unstable; urgency=low
   * get-config-dir-*,subroutines: raise error values from 70x to 88x.
   * all_hosts,prtnetgr,rshall: remove obsolete utils which are not closely
     connected to fai. Closes: #618521
+  * remove unused fai_modules_off
   * fai-guide.txt: adjust to new task name, improve explanation of flag
     reboot
   * FAQ: remove very old FAQ
-  * THANKS: add Torge, Michael Goetze
+  * THANKS: add Torge, Michael Goetze, Jan, Edgar
   * control:
     - change Uploaders: remove Holger, add Mika
     - remove Replaces and Conflicts to fai and fai-kernels
     - remove build dependencies that were only needed for lenny
+  * fai-server.preinst: rename make-fai-nfsroot.conf on upgrade
   * copyright, control, README.build-sources: move to git repository
 
   [ Michael Goetze ]
@@ -163,7 +178,7 @@ fai (4.0~beta4) unstable; urgency=low
     - Added "all" as valid value for preserve*, resize, always_format. Thanks
       Toomas Tamm for suggesting this
     - Man page: additional RAID example. Added Holger's example for SW
-	RAID+LVM. Thanks Holger Levsen. Closes: #645167
+      RAID+LVM. Thanks Holger Levsen. Closes: #645167
     - Distinct treatment of MiB vs. MB and friends
     - preserve_* now supported for each partition in place. Thanks Edgar Fuß
     - Better error message for invalid string X in disklabel:X
@@ -197,7 +212,7 @@ fai (4.0~beta4) unstable; urgency=low
   * fai-setup: Give $LOGUSER a real shell for calling fai-chboot on the
     install server
 
- -- Thomas Lange <lange@debian.org>  Tue, 24 Jan 2012 17:45:17 +0100
+ -- Thomas Lange <lange@debian.org>  Mon, 13 Feb 2012 14:27:46 +0100
 
 fai (3.4.8) unstable; urgency=low
 
