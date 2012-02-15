@@ -5,7 +5,7 @@
 # (c) 2011 Michael Goetze <mgoetze@mgoetze.net>
 
 ### BEGIN SUBROUTINE INFO
-# Provides-Var:
+# Provides-Var:    $GIT_WORK_TREE $GIT_DIR
 # Requires-Var:    $FAI_CONFIG_SRC $FAI $LOGDIR
 # Suggests-Var:
 # Short-Description: get $FAI from a git repository.
@@ -15,34 +15,37 @@
 protocol=$(expr match "$FAI_CONFIG_SRC" '\([^:]*\)://')
 gitpath=$(expr match "$FAI_CONFIG_SRC" '[^:]*://\([^[:space:]#]\+\)')
 gitbranch=$(expr match "$FAI_CONFIG_SRC" '[^#]*#\([^[:space:]]\+\)')
+[ -n "$gitbranch" ] || gitbranch=master
 
 case $protocol in
         git)
                 giturl="git://$gitpath"
                 ;;
-        git+http)
-                giturl="http://$gitpath"
+        git+*)
+                giturl="${protocol:4}://$gitpath"
                 ;;
-        git+ssh)
-                giturl="ssh://$gitpath"
-    ;;
         *)
-                echo "get-config-dir-git: protocol $protocol not implemented"
+                echo "get-config-dir-git: protocol should be git or start with git+"
                 exit 1
                 ;;
 esac
 
+export GIT_WORK_TREE="$FAI"
 export GIT_DIR="$FAI/.git"
-                
-if [ -d "$FAI/.git" ] ; then
+
+_git_checkout() {
+    git checkout -f "origin/$gitbranch"
+    task_error 882 $?
+    git clean -df
+    task_error 882 $?
+}
+
+if [ -d "$GIT_DIR" ]; then
     if [ `git remote show -n origin | egrep -m1 -o '[^[:space:]]+://.+'` == "$giturl" ]; then
         echo "Updating git copy in $FAI"
-        git pull
+        git fetch
         task_error 881 $?
-        if [ -n "$gitbranch" ] ; then
-            git checkout "$gitbranch"
-            task-error 882 $?
-        fi
+        _git_checkout
     else
         echo "$FAI already contains a git repository, but it is not from $giturl!" >&2
         echo "Please delete $FAI manually. Aborting..." >&2
@@ -51,12 +54,8 @@ if [ -d "$FAI/.git" ] ; then
 else 
    echo "Checking out from git"
    # cloning into an existing directory is not allowed
-   if [ -d $FAI ]; then rmdir $FAI; fi
-   git clone $giturl $FAI 
+   [ -d $FAI ] && rm -rf $FAI
+   git clone --branch "$gitbranch" "$giturl" $FAI
    task_error 882 $?
-
-   if [ -n "$gitbranch" ] ; then
-       git checkout "$gitbranch"
-       task-error 882 $?
-   fi
+    _git_checkout
 fi
