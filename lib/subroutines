@@ -189,8 +189,9 @@ task() {
     # a hook can set the flag, so the accociated task is skipped
 
     local taskname=$1
+    shift
 
-    [ -f $LOGDIR/skip.$taskname ] || call_hook $taskname
+    [ -f $LOGDIR/skip.$taskname ] || call_hook $taskname "$@"
 
     if [ -f $LOGDIR/skip.$taskname ]; then
         # skip task
@@ -202,7 +203,7 @@ task() {
         sendmon "TASKBEGIN $taskname"
         task_error=0   # task can set this variable to indicate an error
         task_error_func=''
-        task_$taskname
+        task_$taskname "$@"
         sendmon "TASKEND $taskname $task_error"
         if [ "$task_error" -ne 0 ] ; then
           echo "Exit code task_$taskname: $task_error" >&2
@@ -219,6 +220,8 @@ task() {
 call_hook() {
 
     local hook=$1
+    shift
+
     local cl dflag hfile
     [ "$debug" ] && dflag="-d"
 
@@ -236,17 +239,17 @@ call_hook() {
             echo "Calling hook: $hook.$cl"
             sendmon "HOOK $hook.$cl"
             # execute the hook
-            $hfile $dflag
+            $hfile $dflag "$@"
             check_status $hook.$cl $?
         fi
         if [ -x $hfile.source ]; then
             echo "Source hook: $hook.$cl.source"
             sendmon "HOOK $hook.$cl.source"
             # source this hook
-            . $hfile.source $dflag
+            . $hfile.source $dflag "$@"
             check_status $hook.$cl.source $?
         fi
-     done
+    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 skiptask() {
