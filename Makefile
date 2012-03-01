@@ -100,6 +100,6 @@ install:
 	cp -a examples $(DOCDIR)
 	chmod -R a+x $(DOCDIR)/examples/simple/scripts/
 	cp -a utils $(DOCDIR)/examples
-	find $(DOCDIR) -name .svn | xargs rm -rf
+	find $(DOCDIR) -name .svn | xargs -r rm -rf
 
 .PHONY: clean veryclean
