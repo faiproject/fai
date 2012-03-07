@@ -499,14 +499,17 @@ task_faiend() {
     [ $do_init_tasks -eq 0 ] && exit 0
     wait_for_jobs
     : ${flag_reboot:=0}
+    : ${flag_halt:=0}
 
-    # Always reboot if error.log is empty or if flag reboot is set
-    if [ $flag_reboot -eq 0 ]; then
+    # reboot/halt without prompting if FAI_FLAG reboot or halt is set and errors are found
+    # wait for keypress if error is found and neither flag reboot nor halt is set
+    if [ -s $LOGDIR/error.log -a "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
         echo "Press <RETURN> to reboot."
         read
     else
         sleep 10
     fi
+
     sendmon "TASKEND faiend 0"
     echo "Rebooting $HOSTNAME now"
     sendmon "TASKEND reboot 0"
@@ -522,8 +525,16 @@ eject -m /dev/$device 2>/dev/null >/dev/null
 echo "Remove CDROM and press <RETURN> to continue reboot"
 read
 eject -t /dev/$device 2>/dev/null >/dev/null
-exec reboot -df
 EOF
+
+        #reboot or halt?
+        if [ "$flag_halt" -gt "0" ]; then
+            echo "exec halt -dfp" >> $target/tmp/rebootCD
+        else
+            echo "exec reboot -df" >> $target/tmp/rebootCD
+        fi
+
+
         chmod +x $target/tmp/rebootCD
         sync
         for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
@@ -536,7 +547,14 @@ EOF
     fi
     umount $FAI_ROOT/proc
     umount -ar
-    exec reboot -dfi
+  
+    # reboot or halt?
+    if [ "$flag_halt" -gt "0" ]; then
+        exec halt -dfip;
+    else
+        exec reboot -dfi;
+    fi
+
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_install() {
