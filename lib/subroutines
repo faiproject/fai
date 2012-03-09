@@ -1054,23 +1054,22 @@ task_chboot() {
     fi
     [ $doexit -eq 1 ] && return
 
-# fix indentation here
-        # change boot device (local disk or network) when using PXE
-        # first test if rsh to server works
-        $frsh true >/dev/null 2>&1
-        if [ $? -ne 0 ]; then
-            task_error 3
-            echo "WARNING: $frsh failed. Can't call fai-chboot on the install server." >&2
-        else
-            if [ -n "$nexttest" ]; then
+    # change boot device (local disk or network) when using PXE
+    # first test if rsh to server works
+    $frsh true >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        task_error 3
+        echo "WARNING: $frsh failed. Can't call fai-chboot on the install server." >&2
+    else
+        if [ -n "$nexttest" ]; then
                 # for test sequences, we want the system to reinstall immediately with
                 # with different class setup
-                $frsh /usr/sbin/fai-chboot -k ADDCLASSES=$nexttest -FIv $ipaddr
-            else
+            $frsh /usr/sbin/fai-chboot -k ADDCLASSES=$nexttest -FIv $ipaddr
+        else
                 # remove pxe config, so host will use default and boot from local disk
-                $frsh /usr/sbin/fai-chboot -vd $ipaddr
-            fi
+            $frsh /usr/sbin/fai-chboot -vd $ipaddr
         fi
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sendmon() {
