@@ -1,4 +1,4 @@
-fai (4.0~beta5) unstable; urgency=low
+fai (4.0~beta6) unstable; urgency=low
 
   [ Thomas Lange ]
   * rename scripts:
@@ -19,6 +19,8 @@ fai (4.0~beta5) unstable; urgency=low
   * remove setup_harddisks and variable USE_SETUP_STORAGE
   * fai-chboot, fai-chboot.8: support for MAC address
     (Thanks Torge Gipp for the initial patch)
+    add option -E Closes: #614914, fix error if no kernel is available but
+    not needed
   * remove kernel-img.conf: not needed any more
   * fai-mirror: replace apt-move by reprepro
   * fai-mirror: append mirror from FAI_DEBOOTSTRAP to
@@ -31,6 +33,8 @@ fai (4.0~beta5) unstable; urgency=low
   * fai.conf: do not set LOGUSER by default, move detailed info about variables
     to man page fai.conf.5
   * new man page nfsroot.conf.5
+  * ainsl.1: specify type of pattern Closes: #622776
+  * ainsl: add variable AINSL_TARGET
   * make-fai-nfsroot: remove variable $FAI_BOOT
     - die() subroutine now takes exit code
     - mdadm.conf should not contain info from the install server
@@ -57,7 +61,10 @@ fai (4.0~beta5) unstable; urgency=low
     check multiple classes (logical AND, OR), use ftar for extracting base
     file, use bash regex matching instead of associative array, move code
     for loading apt keys into task_repository, make $disklist space
-    separated, use logtail for kern.log and dmesg.log
+    separated, use logtail for kern.log and dmesg.log, add task tests to
+    action dirinstall and softupdate Closes: #658006
+  * add flag halt, halt machine instead of reboot it, Thanks to Martin
+    Strbačka <m.strbacka@gmail.com> for the patch
   * task_mirror is now a subroutine and part of task_repository
   * softupdates now calls task repository
   * get-boot-info: do only list NICs which also have a link (means cable
@@ -107,6 +114,7 @@ fai (4.0~beta5) unstable; urgency=low
     - FAISERVER: use 192.168.33.0/24 subnet, replace apt-proxy by approx
     - 10-conffiles, 50-host-classes: add support for hosts named client01,..
     - XORG: replace non-existing debconf options Closes: #578094
+    - remove $target from ainsl calls, since AINSL_TARGET is now used
   * task_sysinfo:
     - start software raid
     - print disk devices and their mapping to device names
@@ -130,6 +138,7 @@ fai (4.0~beta5) unstable; urgency=low
   * THANKS: add Torge, Michael Goetze, Jan, Edgar
   * control:
     - change Uploaders: remove Holger, add Mika
+    - Bump Standards-Version to 3.9.3, no changes needed
     - remove Replaces and Conflicts to fai and fai-kernels
     - remove build dependencies that were only needed for lenny
   * fai-server.preinst: rename make-fai-nfsroot.conf on upgrade
@@ -218,7 +227,7 @@ fai (4.0~beta5) unstable; urgency=low
   * fai-setup: Give $LOGUSER a real shell for calling fai-chboot on the
     install server
 
- -- Thomas Lange <lange@debian.org>  Sat, 18 Feb 2012 20:11:01 +0100
+ -- Thomas Lange <lange@debian.org>  Fri, 09 Mar 2012 13:51:11 +0100
 
 fai (3.4.8) unstable; urgency=low
 
