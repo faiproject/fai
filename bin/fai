@@ -94,7 +94,13 @@ fai_init() {
         eval_cmdline
         [ -d /sys/kernel ] || mount -t sysfs sysfs /sys
         # we really need to start udev
-        [ -x /etc/init.d/udev ] && [ X$UPSTART_JOB != Xfai ] && /etc/init.d/udev start
+        if [ -x /etc/init.d/udev ]; then
+            if [ X$UPSTART_JOB != Xfai ]; then
+                /etc/init.d/udev start
+            else
+                test -f /etc/init/udevtrigger.conf && start udevtrigger
+            fi
+        fi
         mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
         ifup lo
         [ -x /sbin/portmap ] && /sbin/portmap
