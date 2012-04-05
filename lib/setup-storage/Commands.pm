@@ -1125,6 +1125,7 @@ sub setup_partitions {
   &FAI::push_command( "parted -s $disk mklabel $label",
     "cleared1_$disk$pre_all_resize", "cleared2_$disk" );
 
+  my $boot_disk;
   my $prev_id = -1;
   # generate the commands for creating all partitions
   foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
@@ -1136,6 +1137,11 @@ sub setup_partitions {
     # get the new starts and ends
     my $start = $part->{start_byte};
     my $end = $part->{end_byte};
+
+    # if /boot exists, set $boot_disk
+    if ($part->{mountpoint} eq "/boot") {
+      $boot_disk=$disk;
+    }
 
     # the type of the partition defaults to primary
     my $part_type = "primary";
@@ -1187,9 +1193,9 @@ sub setup_partitions {
     $prev_id = $part_id;
   }
 
-  &FAI::push_command("echo ,,,* | sfdisk --force $disk -N1",
+  &FAI::push_command("echo ,,,* | sfdisk --force $boot_disk -N1",
     "pt_complete_$disk", "gpt_bios_fake_bootable")
-    if($FAI::configs{$config}{disklabel} eq "gpt-bios");
+    if($FAI::configs{$config}{disklabel} eq "gpt-bios" and $boot_disk);
 
   ($prev_id > -1) or &FAI::internal_error("No partitions created");
   $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
