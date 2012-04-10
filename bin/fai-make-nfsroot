@@ -147,7 +147,7 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 [ -z "$TFTPROOT" ] && badupdateto32 "\$TFTPROOT is not set. Please check your settings in $cfdir/nfsroot.conf."
 [ -n "$KERNELPACKAGE" ] && badupdateto32 "The use of \$KERNELPACKAGE is deprecated. Please use $cfdir/NFSROOT now."
 [ ! -d "$cfdir/apt" ] && die 1 "$cfdir/apt/ does not exists. Can't continue."
-[ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up DHCP environment."
+[ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up TFTP environment."
 
 oldnfsroot=$NFSROOT
 
@@ -481,15 +481,15 @@ umount_dirs() {
     mount | grep " on $NFSROOT " || true
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-setup_dhcp(){
+setup_tftp(){
 
-    # pxe and dhcp environment
+    # tftp environment
     local pxebin=$NFSROOT/usr/lib/syslinux/pxelinux.0
     rm -f $NFSROOT/boot/*.bak
     mkdir -p $TFTPROOT/pxelinux.cfg
     cp -pv $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $NFSROOT/boot/initramfs-*.img $TFTPROOT
     [ -f $TFTPROOT/pxelinux.0 ] || cp $pxebin $TFTPROOT
-    echo "DHCP environment prepared. If you want to use it, you have to enable the dhcpd and the tftp-hpa daemon."
+    echo "TFTP environment prepared. To use it, enable the dhcpd and start a TFTP daemon on root $TFTPROOT."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fdivert() {
@@ -533,7 +533,7 @@ trap "bad_exit" ERR
     $ROOTCMD apt-get update
     $ROOTCMD apt-get -y dist-upgrade
     LC_ALL=C add_packages_nfsroot
-    setup_dhcp
+    setup_tftp
     run_hooks
     umount_dirs
     trap "true" EXIT
@@ -577,7 +577,7 @@ if [ -d $NFSROOT/proc ]; then
 fi
 
 create_nfsroot
-setup_dhcp
+setup_tftp
 call_verbose setup_ssh
 run_hooks
 check_nfsroot
