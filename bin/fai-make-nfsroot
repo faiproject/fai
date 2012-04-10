@@ -311,13 +311,15 @@ create_base() {
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
     if [ $usexz -eq 0 ]; then
-        echo "Creating base.tgz"
-        tar --one-file-system -C $NFSROOT -cf - --exclude var/tmp/base.tgz --exclude 'var/lib/apt/lists/*_*' . | gzip > $NFSROOT/var/tmp/base.tgz
+        echo "Creating base.tar.gz"
     else
         echo "Creating base.tar.xz"
-        tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+    fi
+    tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+    if [ $usexz -eq 1 ]; then
         nice xz $NFSROOT/var/tmp/base.tar >/dev/null 2>&1 &
-        xzpid=$!
+    else
+        nice gzip $NFSROOT/var/tmp/base.tar &
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -355,7 +357,7 @@ create_nfsroot() {
       create_base
     fi
     touch .THIS_IS_THE_FAI_NFSROOT
-    # save the list of all packages in the base.tgz
+    # save the list of all packages in the base.tar.gz
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
     if [ -n "$FAI_DEBMIRROR" ]; then
@@ -596,10 +598,16 @@ fi
 
 umount_dirs
 
-if [ -n "$xzpid" ]; then
-    ps -p $xzpid >/dev/null 2>&1
-    [ $? -eq 0 ] &&  echo "xz compression of $NFSROOT/var/tmp/base.tar is still running in the background.  Pid $xzpid"
+# Wait for background jobs to finish
+BGJOBS=$(jobs -p)
+if [ -n "$BGJOBS" ]; then
+    echo "Waiting for background jobs to finish"
+    jobs
+    for job in $BGJOBS; do
+        wait $job
+    done
 fi
+
 echo "fai-make-nfsroot finished $merror."
 exit $exitcode
 } 2>&1 | tee -a /var/log/fai/fai-make-nfsroot.log
