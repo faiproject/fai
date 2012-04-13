@@ -2,7 +2,7 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011
+# Author:    Thomas Lange, Uni Koeln, 2011-2012
 # License:   GPL v2 or any later version
 
 fix="-vga std -k en-us"  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
@@ -24,7 +24,7 @@ boot_pxe() {
   kvm $gopt -boot order=nc $net $disk
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
-boot_faicd() {
+boot_cd() {
 
   [ -n "$1" ] && cdimage=$1
   # boot fai-cd
@@ -43,7 +43,7 @@ usage() {
   cat <<EOF
 
  fai-kvm [options] pxe   # start a host booting with PXE from NIC
- fai-kvm [options] faicd [imagename] # start a host booting from a ISO image
+ fai-kvm [options] cd [imagename] # start a host booting from a ISO image
 
  -n          create a new empty disk image, which is used as a local disk
  -s <size>   size of the local disk (GB, defaults to 5GB)
@@ -93,7 +93,7 @@ fi
 
 case "$1" in
     pxe) boot_pxe ;;
-    faicd) boot_faicd $2 ;;
+    cd) boot_cd $2 ;;
     *)
         echo "Missing argument." >&2
         usage
