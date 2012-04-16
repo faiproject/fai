@@ -71,6 +71,7 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub1_image() {
 
+    echo "Using grub1"
     mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
     if [ -f $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito ]; then
         echo "preparing grub1 eltorito boot loader using NFSROOT"
@@ -111,6 +112,7 @@ create_grub1_image() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image() {
 
+    echo "Using grub2"
     mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir $NFSROOT/boot/grub
     if [ -f $NFSROOT/boot/grub/core.img ]; then
         echo "preparing grub2 eltorito.img using existing core.img from NFSROOT"
@@ -288,12 +290,12 @@ create_iso() {
 
     echo "Bind mounting all required parts"
 
-    mount --bind $NFSROOT $nfsrootdir && echo "NFSROOT $NFSROOT mounted"
+    mount --bind $NFSROOT $nfsrootdir && echo "NFSROOT      $NFSROOT   mounted"
     mkdir -p $nfsrootdir/media/mirror || true
 
     > $nfsrootdir/etc/RUNNING_FROM_FAICD
-    mount --bind $FAI_CONFIGDIR $nfsrootdir/$FAI && echo "Config space $FAI_CONFIGDIR mounted"
-    mount --bind $mirrordir $nfsrootdir/media/mirror && echo "Mirror $mirrordir mounted"
+    mount --bind $FAI_CONFIGDIR $nfsrootdir/$FAI && echo "Config space $FAI_CONFIGDIR   mounted"
+    mount --bind $mirrordir $nfsrootdir/media/mirror && echo "Mirror       $mirrordir   mounted"
     mount -o remount,ro $nfsrootdir/$FAI
     mount -o remount,ro $nfsrootdir/media/mirror
 # TODO: customize /etc/apt, copy apt preferences etc.
