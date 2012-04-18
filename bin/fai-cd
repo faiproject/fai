@@ -34,7 +34,6 @@ set -e
 
 # last die exit code 22
 
-grub_version=2
 boot_image="boot/grub/eltorito.img"
 forceremoval=0
 burn=0
@@ -67,47 +66,6 @@ die() {
 
     echo "ERROR: $@" >&2   # print error message
     exit $e
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_grub1_image() {
-
-    echo "Using grub1"
-    mkdir -p $tmp/boot/grub $nfsrootdir/live/filesystem.dir
-    if [ -f $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito ]; then
-        echo "preparing grub1 eltorito boot loader using NFSROOT"
-        [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
-        [ -d $NFSROOT/usr/lib/grub ] && cp -p $NFSROOT/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
-    else
-        # if grub1 is not available in NFSROOT, we download the package based on the current
-        # sources.list, unpack and use these files for further processing
-        # this does not work if file: URI's are used in sources.lst
-        apt-get -d install --reinstall grub >/dev/null
-        grubPackage=`ls -rt /var/cache/apt/archives/grub_*|tail -1`
-        if [ -z "$grubPackage" ]; then
-            die 21 "Downloading grub failed."
-        fi
-
-        GRUBDIR=$tmp/grubPackage
-        echo "no grub1 installation found in NFSROOT, using downloaded $grubPackage"
-        mkdir -p $GRUBDIR
-        dpkg -x $grubPackage $GRUBDIR
-        cp -p $GRUBDIR/usr/lib/grub/*-pc/stage2_eltorito $tmp/boot/grub/
-        cp -p $GRUBDIR/usr/lib/grub/*-pc/stage{1,2} $tmp/boot/grub/
-        rm -rf $GRUBDIR
-    fi
-    cp $grub_config $tmp/boot/grub/menu.lst
-    # insert date into grub menu
-    if [ $bootonly -eq 1 ]; then
-        echo "Using kernel version $kernelversion"
-        perl -pi -e "s/_VERSIONSTRING_/Kernel : $kernelversion/" $tmp/boot/grub/menu.lst
-        perl -pi -e "s#_NFSROOT_#nfsroot=$servernfsroot#"        $tmp/boot/grub/menu.lst
-    else
-        perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/menu.lst
-    fi
-    cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
-    cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
-    cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
-    boot_image="boot/grub/stage2_eltorito"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image() {
@@ -170,15 +128,6 @@ provide_memtest_boot_option() {
         return
     fi
     
-    if [ "$grub_version" -eq 1 ]; then
-        cat >> $tmp/boot/grub/menu.lst <<EOF
-
-title           memtest86+
-root            (cd)
-kernel          /boot/memtest86+.bin
-quiet
-EOF
-    elif [ "$grub_version" -eq 2 ]; then
         cat >> $tmp/boot/grub/grub.cfg <<EOF
 
 menuentry "Memory test (memtest86+)" {
@@ -260,27 +209,11 @@ mkusb(){
     fi
     echo $isoversion > $usbdir/.FAI-CD-VERSION
 
-
-    if [ "$grub_version" -eq 1 ]; then
-
-    # now make the USB device bootable (grub1)
-    rootpartition=$(find_fai_data)
-    usbdev=$(echo $rootpartition | sed -e 's/,[[:digit:]]//')
-    echo "Root partition is $rootpartition, device is: $usbdev"
-    if [ -n "$rootpartition" -a -n "$usbdev" ]; then
-        echo "Installing grub."
-        echo -e "root $rootpartition\n setup $usbdev" | grub --batch >/dev/null
-    else
-        echo "Device could not be detemined. Installing grub will be skipped."
-    fi
-
-    elif [ "$grub_version" -eq 2 ]; then
     # detect device of mounted usb stick, grub2
     device=$(grub-probe -tdrive $usbdir | perl -ane 'm#(/dev/\w+),# && print "$1\n"')
     echo "Installing grub2 to $device."
     # this call seems to remove file and copies them again onto the stick
     grub-install --no-floppy --root-directory=$usbdir $device
-    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_iso() {
@@ -333,12 +266,6 @@ EOF
     umount_dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-find_fai_data() {
-
-    # you must run this as root (otherwise you may get wrong device names
-    echo "find /.FAI-CD-VERSION" | grub --batch 2>/dev/null | grep '(hd'
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 burniso() {
 
     wodim -v -eject $isoname
@@ -350,7 +277,7 @@ rsync=0
 if [ -x "$(which rsync)" ] ; then rsync=1 ; fi
 
 # Parse commandline options
-while getopts "nkfhHg:bBG:m:C:u:" opt ; do
+while getopts "nkfhHg:bBm:C:u:" opt ; do
     case "$opt" in
         C)  cdir=$OPTARG ;;
         f)  forceremoval=1 ;;
@@ -362,7 +289,6 @@ while getopts "nkfhHg:bBG:m:C:u:" opt ; do
         n)  makeiso=0 ;;
         b)  burn=1 ;;
         B)  bootonly=1 ;;
-        G)  grub_version="$OPTARG" ;;
         u)  usbdir="$OPTARG"
             makeusb=1
             makeiso=0
@@ -386,7 +312,6 @@ fi
 if [ $bootonly -eq 0 -o $makeusb -eq 1 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
-[ "$grub_version" -eq 1 ] || [ "$grub_version" -eq 2 ] || die 20 "grub version -G must be either 1 or 2."
 
 if [ $makeiso -eq 1 ]; then
     [ -x "$(which genisoimage)" ] || die 8 "genisoimage not found. Please install package."
@@ -422,9 +347,9 @@ if [ -z "$grub_config" ]; then
         grub_config="$cfdir/menu.lst" # set default if undefined
     fi
 
-    if [ "$grub_version" -eq 2 ]; then
+#    if [ "$grub_version" -eq 2 ]; then
         grub_config="$cfdir/grub.cfg" # set default if undefined
-    fi
+#    fi
 fi
 
 # if grub_config contains / do not change it, else add prefix $cfdir
@@ -446,11 +371,7 @@ isoversion="FAI $faiversion -- build $(date '+%c')"
 vname="Fully Automatic Installation CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
-if [ "$grub_version" -eq 1 ]; then
-    create_grub1_image
-elif [ "$grub_version" -eq 2 ]; then
-    create_grub2_image
-fi
+create_grub2_image
 
 provide_memtest_boot_option
 

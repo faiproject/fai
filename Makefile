@@ -87,11 +87,10 @@ install:
 	install bin/dhclient-fai-script  $(DESTDIR)/usr/share/fai
 	install -m644 conf/dhclient-fai.conf $(DESTDIR)/usr/share/fai
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
-	cd conf ; install -m644 fai.conf menu.lst grub.cfg live.conf $(DESTDIR)/etc/fai/
+	cd conf ; install -m644 fai.conf grub.cfg live.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
-	install -m644 conf/menu.lst.boot-only $(DESTDIR)/usr/share/fai/menu.lst
 	install -m644 conf/upstart-fai.conf $(DESTDIR)/etc/init/fai.conf
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
 	cp -a pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
