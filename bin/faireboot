@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # $Id$
-# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000-2009
+# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000-2012
 
 faimond=0
 . /usr/lib/fai/subroutines
@@ -22,8 +22,9 @@ killall -q apt-get dpkg tar gzip yes cat syslogd
 
 fai-divert -R
 
-umount $FAI_ROOT/proc $FAI_ROOT/dev/pts
-umount -ar
+mountpoint -q $FAI_ROOT/proc && umount $FAI_ROOT/proc
+mountpoint -q $FAI_ROOT/dev/pts && umount $FAI_ROOT/dev/pts
+umount -arf 2>/dev/null
 killall udevd
 
 sendmon "TASKEND reboot 0"
