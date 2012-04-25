@@ -66,7 +66,7 @@ check_nfsroot() {
     echo "FAI packages inside the nfsroot:"
     $ROOTCMD dpkg -l fai-client  fai-nfsroot fai-setup-storage | awk '/fai/ {printf " %-18s "$3"\n",$2}'
 
-    local files=$(ls $NFSROOT/boot/initrd* $NFSROOT/boot/initramfs* 2>/dev/null)
+    local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
     [ -z "$files" ] && die 1 "No initrd installed."
     egrep -q "^ERROR: |^E: Sub-process |^dpkg: error processing |^dpkg: dependency problems" /var/log/fai/fai-make-nfsroot.log && bad_exit
     return 0
@@ -492,7 +492,7 @@ setup_tftp(){
     local pxebin=$NFSROOT/usr/lib/syslinux/pxelinux.0
     rm -f $NFSROOT/boot/*.bak
     mkdir -p $TFTPROOT/pxelinux.cfg
-    cp -pv $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $NFSROOT/boot/initramfs-*.img $TFTPROOT
+    cp -pv $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
     [ -f $TFTPROOT/pxelinux.0 ] || cp $pxebin $TFTPROOT
     echo "TFTP environment prepared. To use it, enable the dhcpd and start a TFTP daemon on root $TFTPROOT."
 }
