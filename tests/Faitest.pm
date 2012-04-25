@@ -20,11 +20,11 @@ sub setup_test {
   $verbose = $ENV{'debug'} if $ENV{'debug'};
 
   my $result = GetOptions (
-	"verbose=i" => \$verbose,
-	"help" => \$help,
-	"man" => \$man,
+        "verbose=i" => \$verbose,
+        "help" => \$help,
+        "man" => \$man,
 
-	);
+        );
 
   pod2usage(1) if $help;
   pod2usage(-exitstatus => 0, -verbose => 2) if $man;
