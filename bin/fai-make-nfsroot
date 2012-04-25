@@ -59,6 +59,10 @@ check_nfsroot() {
         die 1 "Neither live-boot nor dracut was installed into the nfsroot."
     fi
 
+    if [ -f $oldnfsroot/usr/share/initramfs-tools/scripts/live ]; then
+        echo "When using live-boot instead of dracut inside the nfsroot, please use fai-make-nfsroot -l." >&2
+    fi
+
     echo "FAI packages inside the nfsroot:"
     $ROOTCMD dpkg -l fai-client  fai-nfsroot fai-setup-storage | awk '/fai/ {printf " %-18s "$3"\n",$2}'
 
