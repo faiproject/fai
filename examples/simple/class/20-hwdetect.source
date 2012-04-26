@@ -9,21 +9,20 @@
 
 echo 0 > /proc/sys/kernel/printk
 
-depmod
-for module in $(pcimodules) ; do
-    [ "$verbose" ] && echo loading kernel module $module
-    modprobe "$module"
-done
-
-# Booting from CD does not always enable DMA.
-for d in $( echo /proc/ide/hd[a-z] 2>/dev/null); do
-    [ -d $d ] && echo "using_dma:1" > $d/settings
-done
+# wheezy does not have -m and modules.pcimap
+depmod -m 2>/dev/null
+if [ -f "/lib/modules/`uname -r`/modules.pcimap" ]; then
+    for module in $(pcimodules) ; do
+        [ "$verbose" ] && echo loading kernel module $module
+        modprobe "$module"
+    done
+fi
 
 # load additional kernel modules
-kernelmodules="ide-disk"
+kernelmodules="ide-disk sd_mod sr_mod"
 case $(uname -r) in
     2.6*) kernelmodules="$kernelmodules mptspi dm-mod md-mod aes dm-crypt" ;;
+      3*) kernelmodules="$kernelmodules mptspi dm-mod md-mod aes dm-crypt" ;;
 esac
 
 for mod in $kernelmodules; do
@@ -31,13 +30,8 @@ for mod in $kernelmodules; do
     modprobe -a $mod 1>/dev/null 2>&1
 done
 
-# let discover do most of the job
-#[ -x /sbin/discover-modprobe ] && /sbin/discover-modprobe
-
 # now we can mount the USB filesystem
 mount -t usbfs  usbfs /proc/bus/usb
-
-modprobe -a sd_mod sr_mod
 
 echo $printk > /proc/sys/kernel/printk
 
