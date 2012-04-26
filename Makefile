@@ -65,7 +65,6 @@ perlcheck:
 	echo "-> perl check done."; \
 
 clean:
-	find -name svn-commit\*.tmp -o -name svn-commit.tmp~ | xargs -r rm
 	rm -rf perl-dummy
 	$(MAKE) -C doc clean
 
@@ -97,8 +96,6 @@ install:
 	cp -a pixmaps/small/*.gif $(DESTDIR)/usr/share/fai/pixmaps/small
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
-	chmod -R a+x $(DOCDIR)/examples/simple/scripts/
 	cp -a utils $(DOCDIR)/examples
-	find $(DOCDIR) -name .svn | xargs -r rm -rf
 
 .PHONY: clean veryclean
