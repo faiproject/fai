@@ -2,7 +2,10 @@
 
 # setup script that is only run once at boot time
 
-echo "Creating the nfsroot for FAI."
+echo ""
+echo "Setting up the FAI install server"
+echo ""
+sleep 5
 
 . /etc/fai/fai.conf
 . /etc/fai/nfsroot.conf
@@ -13,9 +16,9 @@ if [ ! -d "$FAI_CONFIGDIR/class" ]; then
 fi
 
 # setup network
+ip addr add 192.168.33.250/24 dev eth0 # (fixed address of faiserver)
 dhclient eth0  # connection to the outside world (hopefully)
-ip addr add 192.168.33.250 dev eth0 # (fixed address of faiserver)
-/etc/init.d/nscd restart
+[ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
 /etc/init.d/apache2 restart
 
 # do not call fai-setup currently
