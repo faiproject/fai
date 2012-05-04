@@ -1,65 +1,72 @@
 #! /bin/bash
 
-# $Id$
-
 # display some information about the system and save it to the logserver
 
 
-echo The defined classes are:
-echo $classes
-echo The classes are also saved in $LOGDIR/FAI_CLASSES
+# first show some hardware info
+echo
 
-# now show hardware info
-
+# too much details [ -x "$(which dmidecode)" ] && dmidecode
 cd /sys/class/dmi/id
-grep . board_* bios_* product_uuid | sed -e 's/:/: /'
-cd -
+grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv '123456789|To Be Filled|Not Applicable|N/A|:[[:blank:]]+$'
+cd - >/dev/null
 
-[ -x "$(which dmidecode)" ] && dmidecode
-[ -x "$(which lshw)" ] && lshw -short
+if [ -x "$(which lshw)" ]; then
+    lshwtmp=$(mktemp)
+    lshw -short -quiet -C system,memory,processor,display,storage,disk | tee $lshwtmp
+    echo
+    grep processor $lshwtmp| sed -e 's/[^ ]*//' | uniq -c | perl -pe 's/\s+(\d+)\s+(.+)/$1 $2/;'
+    rm $lshwtmp
+fi
 
-[ -x "$(which discover)" ] && {
-    discover
-    discover-modprobe -v
-    discover --data-path=xfree86/server/device/driver display
-    discover --data-path=linux/module/name network
-}
+echo -n "Counting all CPU cores: "
+grep "model name" /proc/cpuinfo | sort | uniq -c | sed -e 's/model name.*://' -e 's/(R)//g' -e 's/(TM)//g' -e 's/^[[:blank:]]\+//'
 
+echo
+if [ -x "$(which hwinfo)" ]; then
+    hwinfo --short --cpu --sys
+    hwinfo --short --smp
+    hwinfo --short --bios
+    hwinfo --short --storage-ctrl --netcard --framebuffer --gfxcard
+    hwinfo --short --disk --cdrom --network
+    hwinfo --short --sound --wlan
+fi
 
+echo
 # print info about audio device
 lspci | grep -i audio
-[ -f /proc/asound/card0/codec#0 ] && grep Codec /proc/asound/card0/codec#0
+[ -f /proc/asound/card0/codec#0 ] && grep Codec /proc/asound/card*/codec#*
 
-[ -x "$(which hwinfo)" ] && hwinfo --short
+echo
+# show network device parameters of devies which are UP
+devices=$(ip link show up | grep "^[1-9$].*LOWER_UP" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -v "^lo" | sort | uniq| tr '\n' ' ')
+for dev in $devices; do
+    [ $dev = lo ] && continue
+    ip addr show up $dev
+done
 
-echo "Modules needed for PCI devices:"
-depmod -m
-pcimodules
+echo '=================================================='
+echo "Now more detailed information"
+echo '=================================================='
+
 lspci
-lsdev
-lsusb
-echo "Ethernet cards found: $netdevices_all"
-echo "Ethernet cards running: $netdevices_up"
-ip addr show up
-
 [ -x "$(which sfdisk)" ] && sfdisk -d
 
-# show ide disk geometry
-grep . /proc/ide/ide?/hd?/geometry /dev/null | sed -e 's#/proc/ide/ide./##' 2>/dev/null
-
-[ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
+#[ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
 
 # start software raid
 /usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf 
 /etc/init.d/mdadm-raid start
 
 # pretty print disks by id and device names
-find /dev/disk/by-id ! -type d -printf "%-40f\t->  %l\n" | grep -v part | sort -k3
-echo ""
+find /dev/disk/by-id ! -type d -printf "%-40f\t->  %l\n" | grep -v part | sort -k3 | awk -F'->' '{print $2 ":  " $1}' | sed -e 's#../##g'
+
+echo
 cat /proc/partitions
 
 [ -x "$(which blkid)" ] && blkid
 
+# very detailed
 for disk in $disklist; do
     smartctl -i /dev/$disk 
     hdparm -iv /dev/$disk
@@ -70,7 +77,7 @@ done
 
 fdisk -lu
 fai-mount-disk -f
-lsmod
+df -PTh | egrep ':|^/|^Filesystem'
 # - - - - - - - - - - -
 save_dmesg
 fai-savelog -r
