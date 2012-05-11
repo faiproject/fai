@@ -58,6 +58,11 @@ lspci
 /usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf 
 /etc/init.d/mdadm-raid start
 
+for device in `ls /dev/sd?`; do
+    [ `stat -c %G $device` = "disk" ] || continue
+    hdparm -I $device | egrep -v '^$' | head -5 | sed -e 's/^[[:blank:]]*//'
+done
+
 # pretty print disks by id and device names
 find /dev/disk/by-id ! -type d -printf "%-40f\t->  %l\n" | grep -v part | sort -k3 | awk -F'->' '{print $2 ":  " $1}' | sed -e 's#../##g'
 
