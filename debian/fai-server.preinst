@@ -13,15 +13,15 @@ set -e
 #
 # For details see /usr/share/doc/packaging-manual/
 
+if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
+    dpkg-maintscript-helper mv_conffile /etc/fai/make-fai-nfsroot.conf /etc/fai/nfsroot.conf 3.4.8 -- "$@"
+fi
+
 case "$1" in
     upgrade)
         if egrep -q ^FAI_CONFIGDIR= /etc/fai/fai.conf; then
             echo "WARNING: The variable \$FAI_CONFIGDIR is still defined in /etc/fai/fai.conf."
             echo "Please move it to /etc/fai/nfsroot.conf."
-        fi
-        if [ -f /etc/fai/make-fai-nfsroot.conf ]; then
-            echo "Renaming make-fai-nfsroot.conf to nfsroot.conf"
-            mv /etc/fai/make-fai-nfsroot.conf /etc/fai/nfsroot.conf
         fi
    ;;
 
