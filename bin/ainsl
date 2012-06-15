@@ -124,8 +124,10 @@ print "ainsl: newline: $line\n" if $debug;
 # check if pattern already included in file
 -f $filename || die "ainsl: target file $filename does not exist.\n";
 open (INFILE, "<$filename") or die "ainsl: Can't open $filename $!\n";
+my $lastline;
 while (<INFILE>) {
-  if (/$pattern/o) {
+  $lastline = $_;
+  if ($lastline =~ /$pattern/o) {
     print "aisnl: Pattern found. Nothing to append.\n" if $debug;
     $found=1;
     last;
@@ -138,5 +140,8 @@ exit 0 if $found; # nothing to append
 print "ainsl: appending to $filename: $line\n" if $verbose;
 exit 0 if $opt_n;
 open (INFILE, ">>$filename") or die "ainsl: can't open $filename for writing. $!";
+if (defined $lastline && ($lastline !~ /\n$/) && (0 != -s "$filename")) {
+  print INFILE "\n" || die "ainsl: cannot print to file $filename: $!";
+}
 print INFILE $line,"\n" || die "ainsl: cannot print to file $filename: $!";
 close(INFILE) or die "ainsl: error saving file $filename: $!";
