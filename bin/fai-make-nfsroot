@@ -65,6 +65,8 @@ check_nfsroot() {
 
     echo "FAI packages inside the nfsroot:"
     $ROOTCMD dpkg -l fai-client  fai-nfsroot fai-setup-storage | awk '/fai/ {printf " %-18s "$3"\n",$2}'
+    echo "FAI related packages inside the nfsroot:"
+    $ROOTCMD dpkg -l live-boot dracut-network dracut 2>&1 | grep -v 'No packages found matching' | awk '/^ii / {printf " %-18s "$3"\n",$2}'
 
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
     [ -z "$files" ] && die 1 "No initrd installed."
