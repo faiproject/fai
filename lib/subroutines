@@ -736,7 +736,7 @@ eval_cmdline() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
-# Provides-Var:    $faimond $sendhostname
+# Provides-Var:    $faimond $sendhostname $SERVER $monserver
 # Requires-Var:    $LOGDIR $FAI
 # Suggests-Var:    $monserver
 # Short-Description: <task desc.>
@@ -760,8 +760,16 @@ task_confdir() {
     fi
     define_fai_flags
 
+    if [ -z "$SERVER" ]; then
+        # since SERVER is not set (by DHCP) we extract it from FAI_CONFIG_SRC
+        # extract server name from FAI_CONFIG_SRC and delete user@ from string
+        SERVER=$(expr match "$FAI_CONFIG_SRC" '.*://\([^/]*\)/.*' | sed -e 's/.*@//')
+        echo "Set \$SERVER=$SERVER. Value extracted from FAI_CONFIG_SRC"
+    fi
+
     # check if monitor server is available
     : ${monserver:=$SERVER}
+
     if [ -z "$monserver" ]; then
         echo "No monitor daemon defined."
         faimond=0
