@@ -80,11 +80,9 @@ _ifclass() {
     # test if a class is defined
     local ret
 
-    if [[ "${classes:-}" =~ (^|[[:space:]]+)$1($|[[:space:]]+) ]]; then
-        ret=0
-    else
-        ret=1
-    fi
+    echo "${classes:-}" | grep -q "\(|\|^\|[[:space:]]\+\)$1\($\||\|[[:space:]]\+\)"
+    ret=$?
+
     [ "${debug:-}" ] && echo "ifclass returns $ret" >&2
     return $ret
 }
