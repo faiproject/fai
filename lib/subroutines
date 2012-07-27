@@ -80,11 +80,9 @@ _ifclass() {
     # test if a class is defined
     local ret
 
-    if [[ "${classes:-}" =~ (^|[[:space:]]+)$1($|[[:space:]]+) ]]; then
-        ret=0
-    else
-        ret=1
-    fi
+    echo "${classes:-}" | grep -q "\(|\|^\|[[:space:]]\+\)$1\($\||\|[[:space:]]\+\)"
+    ret=$?
+
     [ "${debug:-}" ] && echo "ifclass returns $ret" >&2
     return $ret
 }
@@ -392,6 +390,7 @@ task_defclass() {
     if [ $renewclass -eq 1 ]; then
         # reevaluate new list of classes
         fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
+        fai-deps
         classes=$(< $LOGDIR/FAI_CLASSES)
     elif [ -n "$cmdlineclasses" ]; then
         classes=$cmdlineclasses
@@ -511,7 +510,7 @@ task_faiend() {
 
     # reboot/halt without prompting if FAI_FLAG reboot or halt is set and errors are found
     # wait for keypress if error is found and neither flag reboot nor halt is set
-    if [ -s $LOGDIR/error.log -a "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
+    if [ "$flag_noreboot" -eq 1 -o -s $LOGDIR/error.log -a "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 -o "$flag_noreboot" -eq 1 ]; then
         echo "Press <RETURN> to reboot."
         read
     else
