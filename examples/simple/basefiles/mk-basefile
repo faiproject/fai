@@ -2,7 +2,7 @@
 
 # mk-basefile, create basefiles for some distributions
 #
-# Thomas Lange, Uni Koeln, 2011
+# Thomas Lange, Uni Koeln, 2011-2012
 # based on the Makefile implementation of Michael Goetze
 #
 # Usage example:  fai-mk-basefile -J SQUEEZE64
@@ -28,6 +28,7 @@ MIRROR_CENTOS=http://mirror.netcologne.de/
 #MIRROR_SLC=http://localmirror
 
 EXCLUDE_SQUEEZE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
+EXCLUDE_WHEEZY=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_LUCID=dhcp3-client,dhcp3-common
 
 
@@ -164,6 +165,16 @@ squeeze() {
     tarit
 }
 
+wheezy() {
+
+    local arch=$1
+
+    check
+    debootstrap --arch $arch --exclude=${EXCLUDE_WHEEZY} wheezy $xtmp ${MIRROR_DEBIAN}
+    cleanup-deb
+    tarit
+}
+
 lucid() {
 
     local arch=$1
@@ -186,6 +197,7 @@ unknown() {
     SLC6_32      SLC6_64
     LUCID32      LUCID64
     SQUEEZE32    SQUEEZE64
+    WHEEZY32     WHEEZY64
 "
     exit 99
 }
@@ -227,6 +239,8 @@ case "$target" in
     LUCID64) lucid amd64 ;;
     SQUEEZE32) squeeze i386 ;;
     SQUEEZE64) squeeze amd64 ;;
+    WHEEZY32) wheezy i386 ;;
+    WHEEZY64) wheezy amd64 ;;
     *) unknown ;;
 esac
 
