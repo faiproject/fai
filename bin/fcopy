@@ -290,8 +290,16 @@ sub set_mode {
   # use the values from the source file
   my ($sourcefile,$destfile,$class) = @_;
   my ($uid,$gid,$owner,$group,$mode);
-  # get mtime,uid,gid,mode from source file
-  my ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+  my ($stime,@defmodes);
+
+  # get mtime,uid,gid,mode from source file or from -m
+  if ($modeset) { # use -m values
+    @defmodes = @opt_modes;
+    $stime = (stat("$sourcefile/$class"))[9];
+  } else {
+    # get mtime,uid,gid,mode from source file
+    ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+  }
 
   # get mtime,uid,gid,mode from destination file
   my ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
