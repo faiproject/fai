@@ -942,7 +942,7 @@ task_repository () {
     # some generale network files are needed on the client
     # resolv.conf is needed, /etc/hosts is useful in /target
     # use a file from the config space or from /etc inside the nfsroot
-    if ! fcopy -Bv /etc/resolv.conf ; then
+    if ! fcopy -BMv /etc/resolv.conf ; then
         if test -L $FAI_ROOT/etc/resolv.conf && \
             [ $(readlink -f /etc/resolv.conf) = $(readlink -f $FAI_ROOT/etc/resolv.conf) ] ; then
             echo "/etc/resolv.conf + $FAI_ROOT/etc/resolv.conf are already pointing to the same file."
@@ -950,14 +950,14 @@ task_repository () {
             cp -v /etc/resolv.conf $FAI_ROOT/etc
         fi
     fi
-    fcopy -Bv /etc/hosts || cp -v /etc/hosts $FAI_ROOT/etc
+    fcopy -BMv /etc/hosts || cp -v /etc/hosts $FAI_ROOT/etc
 
     # apt specific things
-    fcopy -Bv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
-    if fcopy -Bv /etc/apt/preferences; then
+    fcopy -BMv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
+    if fcopy -BMv /etc/apt/preferences; then
         [ -f $FAI_ETC_DIR/apt/preferences ] && cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
     fi
-    fcopy -ir /etc/apt # copy all other apt config files from the config space
+    fcopy -Mir /etc/apt # copy all other apt config files from the config space
 
     if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
         cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
