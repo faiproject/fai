@@ -10,7 +10,7 @@ for module in $MODULESLIST; do
     ainsl -a /etc/modules "^$module$"
 done
 
-fcopy -v /etc/hostname || echo $HOSTNAME > $target/etc/hostname
+fcopy -Mv /etc/hostname || echo $HOSTNAME > $target/etc/hostname
 ainsl -av /etc/mailname ${HOSTNAME}
 sed -i -e "s/^UTC.*/UTC=${UTC}/" $target/etc/default/rcS
 sed -i -e 's#/sbin/getty 38400#/sbin/getty -f /etc/issue.linuxlogo 38400#' ${target}/etc/inittab
@@ -18,6 +18,6 @@ sed -i -e 's#/sbin/getty 38400#/sbin/getty -f /etc/issue.linuxlogo 38400#' ${tar
 [ $FAI_ACTION = "softupdate" ] || cp /etc/fai/fai.conf $target/etc/fai/fai.conf
 ainsl -av /etc/fai/fai.conf "FAI_CONFIG_SRC=$FAI_CONFIG_SRC"
 
-fcopy -iv /etc/fai/fai.conf
+fcopy -Miv /etc/fai/fai.conf
 
 exit $error
