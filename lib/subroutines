@@ -435,6 +435,7 @@ task_defvar() {
         fi
     done
 
+    echo "Defining variables from additional.var"
     # /fai/class/* scripts or hooks can write variable definitions
     # to additonal.var. now source these definitions
     if [ -f $LOGDIR/additional.var -a -r $LOGDIR/additional.var ]; then
@@ -509,9 +510,9 @@ task_faiend() {
     : ${flag_reboot:=0}
     : ${flag_halt:=0}
 
-    # reboot/halt without prompting if FAI_FLAG reboot or halt is set and errors are found
-    # wait for keypress if error is found and neither flag reboot nor halt is set
-    if [ -s $LOGDIR/error.log -a "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
+    # reboot/halt without prompting if FAI_FLAG reboot or halt is set
+    # wait for keypress if neither flag reboot nor halt is set
+    if [ "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
         echo "Press <RETURN> to reboot."
         read
     else
