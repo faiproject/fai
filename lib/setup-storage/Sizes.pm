@@ -381,7 +381,7 @@ sub do_partition_preserve {
 ################################################################################
 sub do_partition_extended {
 
-  my ($part_id, $config, $current_disk) = @_;
+  my ($part_id, $config, $current_disk, $block_size) = @_;
 
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
@@ -400,8 +400,12 @@ sub do_partition_extended {
   foreach my $p (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
     next if ($p < 5);
 
-    $part->{start_byte} = $FAI::configs{$config}{partitions}{$p}{start_byte} -
-      (2 * $current_disk->{sector_size}) if (-1 == $part->{start_byte});
+    if (-1 == $part->{start_byte}) {
+      my $align_offset = 2 * $current_disk->{sector_size};
+      $align_offset = $block_size if ($block_size > $align_offset);
+      $part->{start_byte} = $FAI::configs{$config}{partitions}{$p}{start_byte}
+        - $align_offset;
+    }
 
     $part->{size}->{eff_size} +=
       $FAI::configs{$config}{partitions}{$p}{size}{eff_size} + (2 *
@@ -501,11 +505,13 @@ sub do_partition_real {
           $FAI::configs{$config}{partitions}{$p}{size}{range}, $max_avail);
 
         # logical partitions require the space for the EPBR to be left
-        # out; in fact, even alignment constraints would have to be considered
+        # out; in fact, even alignment constraints have to be considered
         if (($FAI::configs{$config}{disklabel} eq "msdos")
           && ($p != $part_id) && ($p > 4)) {
-          $min_size += 2 * $current_disk->{sector_size};
-          $max_size += 2 * $current_disk->{sector_size};
+          my $align_offset = 2 * $current_disk->{sector_size};
+          $align_offset = $block_size if ($block_size > $align_offset);
+          $min_size += $align_offset;
+          $max_size += $align_offset;
         }
 
         $min_req_space += $min_size;
@@ -713,7 +719,8 @@ sub compute_partition_sizes
         $extended = $part_id;
 
         # determine the size of the extended partition
-        &FAI::do_partition_extended($part_id, $config, $current_disk);
+        &FAI::do_partition_extended($part_id, $config, $current_disk, 
+          $block_size);
 
         # partition done
         shift @worklist;
