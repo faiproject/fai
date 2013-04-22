@@ -62,6 +62,7 @@ lspci
 /etc/init.d/mdadm-raid start
 
 for device in /dev/sd?; do
+    [ -b "$device" ] || continue # make sure device exists and is valid block device
     [ `stat -c %G $device` = "disk" ] || continue
     hdparm -I $device | egrep -v '^$' | head -5 | sed -e 's/^[[:blank:]]*//'
 done
