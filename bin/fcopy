@@ -5,7 +5,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2012 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2013 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -321,7 +321,9 @@ sub set_mode {
   return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   chown ($uid,$gid,     $destfile) || ewarn("chown $owner $group $destfile failed. $!");
   chmod ($mode,         $destfile) || ewarn("chmod $mode $destfile failed. $!");
-  utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
+  unless ($preinst) {
+      utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
+  }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub check_mopt {
