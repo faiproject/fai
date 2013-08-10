@@ -104,7 +104,9 @@ fai_init() {
         mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
         ifup lo
         [ -x /sbin/portmap ] && /sbin/portmap
-        [ -x /sbin/rpcbind ] && /sbin/rpcbind
+	if [ -x /sbin/rpcbind ]; then
+	    pgrep rpcbind >/dev/null || /sbin/rpcbind
+	fi
 
         # NFS v4 support
         sed -i -e '/Nobody-/d' /etc/idmapd.conf
