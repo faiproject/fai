@@ -112,7 +112,7 @@ fai_init() {
         sed -i -e '/Nobody-/d' /etc/idmapd.conf
         echo 'Nobody-User = root'   >> /etc/idmapd.conf
         echo 'Nobody-Group = root'  >> /etc/idmapd.conf
-        rpc.statd # idmapd needs this
+        pgrep rpc.statd > /dev/null || rpc.statd # idmapd needs this
         rpc.idmapd -C # idmapd needs option -v or rpc.statd must be running. Otherwise the next command (like mount, ls -l) hangs.
 
         if grep -wq devpts /proc/mounts; then
