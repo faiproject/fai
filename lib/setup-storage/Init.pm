@@ -236,7 +236,7 @@ sub phys_dev {
     return (1, "/dev/$1", $2);
   }
   elsif ($dev =~
-    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)(p(\d+))?$})
+    m{^/dev/(cciss/c\d+d\d+|ida/c\d+d\d+|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+)(p(\d+))?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $3);
@@ -320,7 +320,7 @@ sub mark_encrypted {
 sub make_device_name {
   my ($dev, $p) = @_;
   $dev .= "p" if ($dev =~
-    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)$});
+    m{^/dev/(cciss/c\d+d\d+|ida/c\d+d\d+|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+)$});
   if ((&FAI::loopback_dev($dev))[0])
   {
     $p += (&FAI::loopback_dev($dev))[1];
