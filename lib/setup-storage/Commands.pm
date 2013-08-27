@@ -1091,7 +1091,7 @@ sub setup_partitions {
       # check, whether ntfsresize is available
       &FAI::in_path("ntfsresize") or die "ntfsresize not found in PATH\n";
 
-      &FAI::push_command( "yes | ntfsresize -s " . $part->{size}->{eff_size} .
+      &FAI::push_command( "yes | ntfsresize -s " . $part->{size}->{eff_size} . " " .
         &FAI::make_device_name($disk, $p), "rebuilt_" .
         &FAI::make_device_name($disk, $p) . $deps, "ntfs_ready_for_rm_" .
         &FAI::make_device_name($disk, $p) );
