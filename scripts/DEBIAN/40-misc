@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2001-2011, lange@debian.org
+# (c) Thomas Lange, 2001-2013, lange@debian.org
 # (c) Michael Goetze, 2010-2011, mgoetze@mgoetze.net
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
@@ -12,7 +12,11 @@ done
 
 fcopy -Mv /etc/hostname || echo $HOSTNAME > $target/etc/hostname
 ainsl -av /etc/mailname ${HOSTNAME}
-sed -i -e "s/^UTC.*/UTC=${UTC}/" $target/etc/default/rcS
+if [ "$UTC" = "yes" ]; then
+    sed -i -e 's:^LOCAL$:UTC:' $target/etc/adjtime
+else
+    sed -i -e 's:^UTC$:LOCAL:' $target/etc/adjtime
+fi
 sed -i -e 's#/sbin/getty 38400#/sbin/getty -f /etc/issue.linuxlogo 38400#' ${target}/etc/inittab
 
 [ $FAI_ACTION = "softupdate" ] || cp /etc/fai/fai.conf $target/etc/fai/fai.conf
