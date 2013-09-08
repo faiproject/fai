@@ -1,5 +1,5 @@
 #! /bin/bash
-# support for GRUB version 2 (1.98-1)
+# support for GRUB version 2
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
@@ -12,9 +12,6 @@ set -a
 
 $ROOTCMD grub-mkdevicemap --no-floppy
 GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
-# see http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=606035
-GROOT=$(echo $GROOT | sed 's:md/:md:g')
-
 $ROOTCMD grub-install --no-floppy "$GROOT"
 echo "Grub installed on $BOOT_DEVICE = $GROOT"
 
