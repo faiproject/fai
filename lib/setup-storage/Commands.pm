@@ -238,7 +238,7 @@ sub build_cryptsetup_commands {
 
         # generate a key for encryption
         &FAI::push_command(
-          "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
+          "head -c 2048 /dev/urandom | od | tee $keyfile",
           "", "keyfile_$real_dev" );
         # encrypt
         &FAI::push_command(
