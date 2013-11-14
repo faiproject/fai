@@ -5,7 +5,7 @@
 # bootinfo -- get boot information via DHCP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2013 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -28,8 +28,6 @@
 
 # TODO
 # -t timeout
-# a list of devices
-#
 
 # this script writes received information to $LOGDIR/boot.log
 
@@ -45,21 +43,20 @@ netdevice_info() {
     [ -n "$netdevices" ] || netdevices=$netdevices_up
 
     # some network driver do not echo eth0,..; they are not detected
-    netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/')
+    netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]+\b/')
     tmp=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep "^eth")
     netdevices_all="$netdevices_all $tmp"
     netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq| tr '\n' ' ')
-
-    cat > $bootlog <<-EOF
-	netdevices_all="$netdevices_all"
-	netdevices_up="$netdevices_up"
-	netdevices="$netdevices"
-EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_dhcp_info() {
 
     boot=1
+    cat > $bootlog <<-EOF
+	netdevices_all="$netdevices_all"
+	netdevices_up="$netdevices_up"
+	netdevices="$netdevices"
+EOF
     dhclient -lf /dev/null -cf /usr/share/fai/dhclient-fai.conf -sf /usr/share/fai/dhclient-fai-script $netdevices >>$bootlog 2> $LOGDIR/dhclient.log
     killall dhclient
 }
@@ -77,6 +74,9 @@ setnet() {
     BROADCAST=${IPADDR%\.*}.255
 
     cat >> $bootlog <<-EOF
+	netdevices_all="$netdevices_all"
+	netdevices_up="$netdevices_up"
+	netdevices="$netdevices"
 	IPADDR=$IPADDR
 	SERVER=$SERVER
 	NETMASK=$NETMASK
@@ -93,6 +93,31 @@ get_fixed_info() {
     setnet $ip
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+nic_list_from_cmdline() {
+
+
+# parse nic(s) that are specified on the kernel command line like this:  ip=etX:dhcp
+
+    niclist=
+    line=$(cat /proc/cmdline)
+
+    for item in $line; do
+	case $item in
+
+	    ip=*:dhcp)
+            nic=
+	    # count the : char in the argument of ip=
+	    n="${item//[^:]}"
+	    # if there are more than 5 :, it's an static IP configuration, do not use this nic
+	    if [ ${#n} -lt 5 ]; then
+		nic=$(expr match "$item" 'ip=\(.*\):dhcp')
+		niclist+=" $nic"
+	    fi
+	    ;;
+	esac
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 netdevice_info
 boot=0
@@ -103,7 +128,14 @@ if [ -f /var/log/live.log ]; then
     grep IP-Config /var/log/live.log | grep -q "DHCP" && get_dhcp_info
 else
     dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
-    [ $boot -eq 0 -a "$ip" = "dhcp" ] && get_dhcp_info
+    [ $boot -eq 0 -a "$ip" = "dhcp" ] && get_dhcp_info # use all nic
+fi
+
+# if devices are specified on the kernel command line, only use those devices for DHCP
+nic_list_from_cmdline
+if [ -n "$niclist" ]; then
+    netdevices=$niclist
+    get_dhcp_info
 fi
 
 if [ $boot -eq 0 ]; then
