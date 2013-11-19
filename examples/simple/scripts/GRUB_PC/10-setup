@@ -13,7 +13,25 @@ set -a
 $ROOTCMD grub-mkdevicemap --no-floppy
 GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
 $ROOTCMD grub-install --no-floppy "$GROOT"
-echo "Grub installed on $BOOT_DEVICE = $GROOT"
+if [ $? -eq 0 ]; then
+    echo "Grub installed on $BOOT_DEVICE = $GROOT"
+fi
+
+# check if mdadm has been forgotten
+grep -q active /proc/mdstat 2>/dev/null
+if [  $? -eq 0 -a ! -d $target/etc/mdadm ]; then
+    echo WARNING: Found Software RAID, but mdadm was not installed
+fi
+
+# Check if RAID is used for the boot device
+if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
+    raiddev=${BOOT_DEVICE#/dev/}
+    # install grub on all members of RAID
+    for device in `perl -ne 'if(/^'$raiddev'\s.+raid\d+\s(.+)/){ $_=$1; s/\d+\[\d+\]//g; print }' /proc/mdstat`; do
+	echo Install grub on /dev/$device
+	$ROOTCMD grub-install --no-floppy "/dev/$device"
+    done
+fi
 
 $ROOTCMD update-grub
 
