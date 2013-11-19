@@ -1139,7 +1139,7 @@ sub setup_partitions {
     my $end = $part->{end_byte};
 
     # if /boot exists, set $boot_disk
-    if ($part->{mountpoint} eq "/boot") {
+    if (defined $part->{mountpoint} && $part->{mountpoint} eq "/boot") {
       $boot_disk=$disk;
     }
 
