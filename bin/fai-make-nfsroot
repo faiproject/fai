@@ -288,7 +288,7 @@ add_etc_hosts_entries() {
     # some default entries
     ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
     ainsl     $NFSROOT/etc/hosts "# Following entries are specific to your environment"
-    ainsl     $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
+    ainsl $v  $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
 
     # add entries for all network devices
     local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
@@ -297,9 +297,9 @@ add_etc_hosts_entries() {
     for eth in $ips; do
         line=$(getent hosts $eth || true)
         if [ -n "$line" ] ; then
-          ainsl -v $NFSROOT/etc/hosts "$line"
+            ainsl $v $NFSROOT/etc/hosts "$line"
         else
-          echo "Warning: no hostname for $eth found, not adding to /etc/hosts."
+            echo "Warning: no hostname for $eth found, not adding to /etc/hosts."
         fi
     done
 
@@ -386,7 +386,7 @@ create_nfsroot() {
 
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
-    cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
+    cat >$NFSROOT/etc/apt/apt.conf.d/10fai <<EOF
 APT::Get::AllowUnauthenticated true;
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 Acquire::Languages none;
@@ -516,10 +516,8 @@ run_hooks() {
     [ -d "$NFSROOT_HOOKS" ] || return 0
 
     echo "Running hooks..."
-    for file in $(cd $NFSROOT_HOOKS ;ls 2>/dev/null | egrep '^[[:alnum:]_.-]+$'); do
-        if [ -f $NFSROOT_HOOKS/$file ]; then
-            . $NFSROOT_HOOKS/$file
-        fi
+    for file in $(run-parts --lsbsysinit --list "$NFSROOT_HOOKS"); do
+        . $file $v
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
