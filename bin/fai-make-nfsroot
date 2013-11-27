@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2013 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2012 Thomas Lange
+	Copyright (C) 1999-2013 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -441,7 +441,7 @@ upgrade_nfsroot() {
     mount -t proc   /proc  $NFSROOT/proc
     mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
-    /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg
+    /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg $NFSROOT/var/cache
     mkdir $NFSROOT/etc/mdadm; touch $NFSROOT/etc/mdadm/mdadm.conf # stop mdadm from calling mkconf
 
     # add any 3rd party repository keys that you may need installed into the NFSROOT
@@ -479,7 +479,7 @@ umount_dirs() {
     umount $NFSROOT/dev/pts 2> /dev/null || true
 
     if mount | grep -q "on $NFSROOT/var/lib/dpkg type tmpfs" ; then
-        /usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg
+        /usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg $NFSROOT/var/cache
     fi
 
     if [ -n "$FAI_DEBMIRROR" ]; then
