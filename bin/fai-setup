@@ -5,7 +5,7 @@
 # fai-setup -- set up FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2010 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2013 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -179,7 +179,7 @@ if [ -z "$expert" ]; then
     : ${SERVERINTERFACE:=eth0}  # set to eth0 if not already set
     addr=$(ip addr show dev $SERVERINTERFACE | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | head -1)
 
-    if expr match "$FAI_CONFIG_SRC" 'nfs:\/\/' > /dev/null; then
+    if [[ "$FAI_CONFIG_SRC" =~ ^nfs:// ]]; then
         add_export_line $FAI_CONFIGDIR  "$addr(async,ro,no_subtree_check)"
     fi
     add_export_line $NFSROOT  "$addr(async,ro,no_subtree_check,no_root_squash)"
