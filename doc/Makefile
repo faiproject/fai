@@ -29,7 +29,7 @@ text:
 
 # for openoffice
 doc:	html
-	unoconv --show >/dev/null 2>&1 || exit "Please install the unoconv package." 
+	unoconv --show >/dev/null 2>&1 || exit "Please install the unoconv package."
 	unoconv -f doc $(DOC).html
 
 all:	free
@@ -38,12 +38,12 @@ install:
 	cp -dRp $(DOC)* $(DOCDIR)
 	cp -p $(MISC_DOC) $(DOCDIR)
 
-clean: 
+clean:
 	rm -rf .a2x-icons fai-guide.chunked
 	rm -f $(DOC).text $(DOC).html $(DOC).doc $(DOC).pdf $(DOC).xml $(DOC).ps docbook-xsl.css
 
 test:
-	asciidoc --version > /dev/null 2>&1 || exit "Please install the asciidoc package." 
+	asciidoc --version > /dev/null 2>&1 || exit "Please install the asciidoc package."
 
 
 .PHONY: all test clean

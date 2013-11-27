@@ -182,7 +182,7 @@ $FAI::n_c_i = 1;
 # @param post Postconditions
 #
 ################################################################################
-sub push_command { 
+sub push_command {
   my ($cmd, $pre, $post) = @_;
 
   $FAI::commands{$FAI::n_c_i} = {

@@ -819,7 +819,7 @@ sub get_preserved_partitions {
         (defined ($FAI::configs{$config}{partitions}{$extended}{size}{extended})
           && defined ($FAI::current_config{$disk}{partitions}{$extended}{is_extended})
           && $FAI::configs{$config}{partitions}{$extended}{size}{extended}
-          && $FAI::current_config{$disk}{partitions}{$extended}{is_extended}) 
+          && $FAI::current_config{$disk}{partitions}{$extended}{is_extended})
           or die "ID of extended partition changes\n";
 
         # make sure resize is set
@@ -874,7 +874,7 @@ sub get_preserved_partitions {
 
     # a sanity check: if there are logical partitions, the extended must
     # have been added
-    (0 == $has_logical || -1 != $extended) 
+    (0 == $has_logical || -1 != $extended)
       or &FAI::internal_error("Required extended partition not detected for preserve");
   }
 

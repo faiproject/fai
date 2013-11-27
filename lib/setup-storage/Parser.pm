@@ -180,7 +180,7 @@ sub init_part_config {
   # check that a physical device is being configured; logical partitions are
   # only supported on msdos disk labels.
   ($FAI::device =~ /^PHY_(.+)$/ && ($type ne "logical"
-      || $FAI::configs{$FAI::device}{disklabel} eq "msdos")) or 
+      || $FAI::configs{$FAI::device}{disklabel} eq "msdos")) or
     die "Syntax error: invalid partition type";
 
   # the disk
@@ -221,7 +221,7 @@ sub init_part_config {
     $part_number++;
 
     # msdos disk labels don't allow for more than 4 primary partitions
-    ($part_number < 5 || $FAI::configs{$FAI::device}{virtual} || 
+    ($part_number < 5 || $FAI::configs{$FAI::device}{virtual} ||
       $FAI::configs{$FAI::device}{disklabel} ne "msdos")
       or die "$part_number are too many primary partitions\n";
   } elsif ($type eq "raw") {
@@ -667,7 +667,7 @@ $FAI::Parser = Parse::RecDescent->new(
           my $dl = $1;
           ($dl =~ /^(msdos|gpt-bios|gpt)$/) or die
             "Invalid disk label $dl; use one of msdos|gpt-bios|gpt\n";
-          # set the disk label - actually not only the above, but all types 
+          # set the disk label - actually not only the above, but all types
           # supported by parted could be allowed, but others are not implemented
           # yet
           $FAI::configs{$FAI::device}{disklabel} = $dl;
@@ -842,7 +842,7 @@ $FAI::Parser = Parse::RecDescent->new(
           defined ($FAI::configs{$FAI::device}{devices}) or
             die "Volume group $1 has not been declared yet.\n";
           # make sure, $2 has not been defined already
-          defined ($FAI::configs{$FAI::device}{volumes}{$2}{size}{range}) and 
+          defined ($FAI::configs{$FAI::device}{volumes}{$2}{size}{range}) and
             die "Logical volume $2 has been defined already.\n";
           # add to ordered list
           push @{ $FAI::configs{$FAI::device}{ordered_lv_list} }, $2;
@@ -927,7 +927,7 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize|:preserve_(always|reinstall|lazy))?\s+/
         {
-          # complete the range by assuming 0 as the lower limit 
+          # complete the range by assuming 0 as the lower limit
           &FAI::set_volume_size("0$1", $3);
         }
         | <error: invalid partition size near "$text">
@@ -959,7 +959,7 @@ $FAI::Parser = Parse::RecDescent->new(
           foreach my $dev (split(",", $1))
           {
             # match the substrings
-            ($dev =~ /^([^\d,:\s\-][^,:\s]*)(:(spare|missing))*$/) or 
+            ($dev =~ /^([^\d,:\s\-][^,:\s]*)(:(spare|missing))*$/) or
               &FAI::internal_error("PARSER ERROR");
             # redefine the device string
             $dev = $1;
@@ -998,7 +998,7 @@ $FAI::Parser = Parse::RecDescent->new(
                 $dev = $candidates[0];
               }
               # each device may only appear once
-              defined ($FAI::partition_pointer->{devices}->{$dev}) and 
+              defined ($FAI::partition_pointer->{devices}->{$dev}) and
                 die "$dev is already part of the RAID volume\n";
               # set the options
               $FAI::partition_pointer->{devices}->{$dev} = {

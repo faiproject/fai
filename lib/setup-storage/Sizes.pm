@@ -250,7 +250,7 @@ sub compute_lv_sizes {
       $lv_size->{range} = "$start-$end";
 
       # the size is fixed
-      if ($start == $end) { 
+      if ($start == $end) {
         # write the size back to the configuration
         $lv_size->{eff_size} = $start * 1024.0 * 1024.0;
       } else {
@@ -347,7 +347,7 @@ sub do_partition_preserve {
     (0 == ($curr_part->{end_byte} + 1)
         % ($current_disk->{sector_size} *
           $current_disk->{bios_sectors_per_track} *
-          $current_disk->{bios_heads})) or 
+          $current_disk->{bios_heads})) or
       warn "Preserved partition $part_dev_name does not end at a cylinder boundary, parted may fail to restore the partition!\n";
 
     # make sure we don't change extended partitions to ordinary ones and
@@ -526,7 +526,7 @@ sub do_partition_real {
 
     # the new size
     my $scaled_size = $end;
-    $scaled_size = POSIX::floor(($end - $start) * 
+    $scaled_size = POSIX::floor(($end - $start) *
       (($available_space - $min_req_space) /
           ($max_space - $min_req_space))) + $start
       if ($max_space > $available_space);
