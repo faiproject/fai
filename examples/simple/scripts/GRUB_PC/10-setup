@@ -23,6 +23,13 @@ if [  $? -eq 0 -a ! -d $target/etc/mdadm ]; then
     echo WARNING: Found Software RAID, but mdadm was not installed
 fi
 
+$ROOTCMD update-grub
+
+# skip the rest, if not an initial installation
+if [ $FAI_ACTION != "install" ]; then
+    exit $error
+fi
+
 # Check if RAID is used for the boot device
 if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
     raiddev=${BOOT_DEVICE#/dev/}
@@ -32,8 +39,5 @@ if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
 	$ROOTCMD grub-install --no-floppy "/dev/$device"
     done
 fi
-
-$ROOTCMD update-grub
-
 
 exit $error
