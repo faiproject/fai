@@ -1,0 +1,52 @@
+#! /bin/bash
+
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (c) 2013 by Thomas Lange, Universitaet zu Koeln
+
+# Inventory function, print hardware inventory, without too much configuration information
+
+# The format is "key: value", both key and value may contain space, value may also contain :
+
+
+inventory() {
+
+    cd /sys/class/dmi/id
+    grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv 'bios_date|board_version|System Product Name|System Version|System Serial Number|123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
+
+    lscpu | grep 'Hypervisor vendor:'
+
+    # memory, RAM
+    mem=$(/usr/sbin/dmidecode -t memory | awk '( /Size:.*MB/ ) { x+=$2 } END { print x/1024 " GB"}')
+    echo "RAMSIZE: $mem"
+
+    ncpu=$(grep "model name" /proc/cpuinfo | sed -e 's/model name.*://' -e 's/(R)//g' -e 's/(TM)//g' -e 's/^[[:blank:]]\+//'|wc -l)
+    cpuname=$(grep "model name" /proc/cpuinfo | head -1 | sed -e 's/model name.*://' -e 's/(R)//g' -e 's/(TM)//g' -e 's/^[[:blank:]]\+//')
+    echo "CPU: $cpuname"
+    echo "Number of CPU/Cores: $ncpu"
+
+    nic1=$(ip route | awk '/^default/ {print $5}')
+    mac1=$(< /sys/class/net/$nic1/address)
+    echo "Network interface: $nic1"
+    echo "MAC address: $mac1"
+
+    # lshw does not find disk of virtual machines
+    n=1
+    while read path device class desc; do
+	[[ $device = 'path' ]] && continue
+	[[ $desc =~ 'STORAGE DEVICE' ]] && continue
+	[[ $desc =~ 'SCSI Disk' ]] && continue
+	[ -z "$desc" ] && continue
+	[[ $device =~ 'cdrom' ]] && continue
+	echo "Hard disk $n: $diskni $desc"
+	(( n++ ))
+    done < <(lshw -quiet -short -C disk 2>/dev/null) 
+
+    vga=$(lspci|grep ' VGA '| sed -e 's/.*VGA compatible controller://')
+    echo "VGA controller: $vga"
+}
+
+if [ "$verbose" ]; then
+    inventory > >( tee $LOGDIR/inventory.log )  2>&1
+else
+    inventory > $LOGDIR/inventory.log 2>&1
+fi

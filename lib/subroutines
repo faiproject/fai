@@ -5,7 +5,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2013 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -358,10 +358,17 @@ task_action() {
             task_faiend
             die Now you have a shell.
             ;;
+        inventory)
+            echo Saving inventory information.
+            task inventory
+            task_faiend
+            die Now you have a shell.
+            ;;
         *)
             if [ -f $FAI/hooks/$FAI_ACTION ]; then
                 echo "Calling user defined action: $FAI_ACTION"
                 $FAI/hooks/$FAI_ACTION
+		task_faiend
             else
                 echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found." >&2
                 sendmon "TASKERROR action 22"
