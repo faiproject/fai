@@ -1,6 +1,8 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2001-2010, lange@debian.org
+# (c) Thomas Lange, 2001-2013, lange@debian.org
+
+error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
 ifclass XORG && {
     fcopy -M /etc/X11/xorg.conf
@@ -11,6 +13,3 @@ if ! $ROOTCMD getent passwd demo ; then
     $ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
     $ROOTCMD usermod -p "$ROOTPW" demo
 fi
-
-chmod -c 666 ${target}/dev/fd*
-chmod -c 444 ${target}/dev/sr*
