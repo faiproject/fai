@@ -68,8 +68,7 @@ fai_init() {
     [ -f "$stamp" ] && {
        echo -n "$0 already running or was aborted before. PID: " >&2
        cat $stamp >&2
-       echo "You may remove $stamp and try again." >&2
-       exit 1
+       die 1 "You may remove $stamp and try again." >&2
     }
 
     DEBIAN_FRONTEND=noninteractive
@@ -173,7 +172,7 @@ fstart() {
 
 # Parse commandline options
 TEMP=$(getopt -o s:u:Nhvc:C: --long cspace:,hostname:,new,help,verbose,class:,cfdir: -n "$0" -- "$@")
-if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+if [ $? != 0 ] ; then die "Terminating..." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
 unset TEMP
@@ -193,8 +192,7 @@ while true ; do
             shift 2 ;;
         -c|--class)
             if [ $renewclass -eq 1 ]; then
-                echo "You can't use -c|--classes and -N|--new at the same time." >&2
-                exit 9
+                die 9 "You can't use -c|--classes and -N|--new at the same time." >&2
             fi
             export cmdlineclasses=$2
             cmdlineclasses=${cmdlineclasses//,/ }
@@ -209,8 +207,7 @@ while true ; do
             shift
             break ;;
          *)
-            echo "$0: command line parsing error ! $@" >&2
-            exit 1 ;;
+            die 1 "$0: command line parsing error ! $@" >&2 ;;
     esac
 done
 
@@ -231,12 +228,10 @@ export FAI_ETC_DIR
 
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
-        echo "Please specify a target directory. Aborted" >&2
-        exit 3
+        die 3 "Please specify a target directory. Aborted" >&2
     fi
     if [ $renewclass -eq 0 -a -z "$cmdlineclasses" ]; then
-        echo "Please use -c or -N. Aborted" >&2
-        exit 4
+        die 4 "Please use -c or -N. Aborted" >&2
     fi
 
     # two lines taken from task_dirinstall
@@ -246,15 +241,13 @@ if [ X$action = Xdirinstall ]; then
     # check if target directory is mounted with bad options
     fs=$(df -P $FAI_ROOT | tail -1 | awk '{print $6}')
     if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
-        echo "Target directory is mounted using nosuid or nodev. Aborting" >&2
-        exit 5
+        die 5 "Target directory is mounted using nosuid or nodev. Aborting" >&2
     fi
     unset fs
 
     if [ ! -e $FAI_ETC_DIR/nfsroot.conf ]; then
         echo "$FAI_ETC_DIR/nfsroot.conf not found." >&2
-        echo "You may want to install the package fai-server" >&2
-        exit 7
+        die 7 "You may want to install the package fai-server" >&2
     fi
     export NFSROOT=$(source $FAI_ETC_DIR/nfsroot.conf; echo $NFSROOT)
     export FAI_DEBOOTSTRAP=$(source $FAI_ETC_DIR/nfsroot.conf; echo $FAI_DEBOOTSTRAP)
@@ -263,14 +256,12 @@ if [ X$action = Xdirinstall ]; then
 fi
 
 if [ $(id -u) != "0" ]; then
-    echo "Run this program as root." >&2
-    exit 1
+    die 1 "Run this program as root." >&2
 fi
 
 # exit if we do not run from nfsroot and no parameter is given
 if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
-    echo "Please give more parameters if not run from the nfsroot." >&2
-    exit 2
+    die 2 "Please give more parameters if not run from the nfsroot." >&2
 fi
 
 # are we called as an init substitute ?
