@@ -1,8 +1,7 @@
 #! /bin/bash
 
-fcopy -Bv /etc/dhcp/dhcpd.conf
 fcopy -Bvr /etc/fai
-fcopy -v /etc/fai/apt/sources.list /etc/approx/approx.conf
+fcopy -Bv /etc/fai/apt/sources.list /etc/approx/approx.conf fcopy -Bv /etc/dhcp/dhcpd.conf
 
 if [ $FAI_ACTION = "install" ]; then
 
@@ -12,8 +11,9 @@ if [ $FAI_ACTION = "install" ]; then
     rm -f $target/etc/resolv.conf
 
     # create some host entries
+    ainsl /etc/hosts "192.168.33.250 faiserver"  # that's me
     ainsl /etc/hosts "192.168.33.101 demohost"
-    ainsl /etc/hosts "192.168.33.102 gnomehost"
-    # add entries for 10 hosts called client*
-    perl -e 'for (1..10) {printf "192.168.33.%s client%02s\n",$_,$_;}' >> $target/etc/hosts
+    ainsl /etc/hosts "192.168.33.102 xfcehost"
+    # add entries for 10 hosts called client 01 .. 10
+    perl -e 'for (1..10) {printf "192.168.33.%s client%02s\n",50+$_,$_;}' >> $target/etc/hosts
 fi
