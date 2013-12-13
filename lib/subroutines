@@ -961,14 +961,16 @@ task_repository () {
     # resolv.conf is needed, /etc/hosts is useful in /target
     # use a file from the config space or from /etc inside the nfsroot
     if ! fcopy -BMv /etc/resolv.conf ; then
-        if test -L $FAI_ROOT/etc/resolv.conf && \
-            [ "$(readlink -f /etc/resolv.conf)" = "$(readlink -f $FAI_ROOT/etc/resolv.conf)" ] ; then
-            echo "/etc/resolv.conf + $FAI_ROOT/etc/resolv.conf are already pointing to the same file."
+        if [ "$(readlink -f /etc/resolv.conf)" = "$(readlink -f $FAI_ROOT/etc/resolv.conf)" ] ; then
+            :
+	    # no need for copy since both are pointing to the same file
         else
             cp -v /etc/resolv.conf $FAI_ROOT/etc
         fi
     fi
-    fcopy -BMv /etc/hosts || cp -v /etc/hosts $FAI_ROOT/etc
+    if ! fcopy -BMv /etc/hosts ; then
+	[ X$FAI_ROOT = X/ ] || cp -v /etc/hosts $FAI_ROOT/etc
+    fi
 
     # apt specific things
     fcopy -BMv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
