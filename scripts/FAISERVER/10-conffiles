@@ -16,4 +16,8 @@ if [ $FAI_ACTION = "install" ]; then
     ainsl /etc/hosts "192.168.33.102 xfcehost"
     # add entries for 10 hosts called client 01 .. 10
     perl -e 'for (1..10) {printf "192.168.33.%s client%02s\n",50+$_,$_;}' >> $target/etc/hosts
+
+    # workaround for #676883, this disables NFS v4, so the nfsroot is exported via NFS v3
+    mkdir /srv/nfs4
+    ainsl /etc/exports '/srv/nfs4  192.168.33.0/24(fsid=0,async,ro,no_subtree_check,no_root_squash)'
 fi
