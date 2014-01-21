@@ -26,8 +26,6 @@ use strict;
 #
 # @brief functions to execute system commands
 #
-# $Id$
-#
 # @author Christian Kern, Michael Tautschnig
 # @date Sun Jul 23 16:09:36 CEST 2006
 #

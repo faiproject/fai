@@ -29,8 +29,6 @@ use strict;
 # The layout of the data structures is documented in the wiki:
 # http://wiki.fai-project.org/index.php/Setup-storage
 #
-# $Id$
-#
 # @author Christian Kern, Michael Tautschnig
 # @date Sun Jul 23 16:09:36 CEST 2006
 #

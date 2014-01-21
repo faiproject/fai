@@ -27,8 +27,6 @@ use strict;
 # @brief Build the required commands in @FAI::commands using the config stored
 # in %FAI::configs
 #
-# $Id$
-#
 # @author Christian Kern, Michael Tautschnig, Sebastian Hetze, Andreas Schuldei
 # @date Sun Jul 23 16:09:36 CEST 2006
 #
