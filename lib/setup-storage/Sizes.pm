@@ -717,7 +717,7 @@ sub compute_partition_sizes
         $extended = $part_id;
 
         # determine the size of the extended partition
-        &FAI::do_partition_extended($part_id, $config, $current_disk, 
+        &FAI::do_partition_extended($part_id, $config, $current_disk,
           $block_size);
 
         # partition done

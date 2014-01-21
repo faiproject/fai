@@ -242,7 +242,7 @@ sub get_error {
 # output of the bash command
 #
 # @reference stderr reference to a list, that should contain the standard
-# errer output of the bash command
+# error output of the bash command
 #
 # @return the identifier of the error
 #
