@@ -251,7 +251,7 @@ sub execute_command {
 
   my ($command, $stdout, $stderr) = @_;
 
-  my $err = &execute_command_internal($command, $stdout, $stderr);
+  my $err = &execute_command_internal($command, $stdout, $stderr,1);
 
   if ($err ne "") {
     my $response = &get_error($err, "response");
@@ -285,7 +285,7 @@ sub execute_ro_command {
   # set no_dry_run to perform read-only commands always
   $FAI::no_dry_run = 1;
 
-  my $err = &execute_command_internal($command, $stdout, $stderr);
+  my $err = &execute_command_internal($command, $stdout, $stderr,0);
 
   # reset no_dry_run
   $FAI::no_dry_run = $no_dry_run;
@@ -319,12 +319,14 @@ sub execute_ro_command {
 # @reference stderr_ref reference to a list, that should contain the standard
 # error output of the bash command
 #
+# @param print command or don't
+#
 # @return the identifier of the error
 #
 ################################################################################
 sub execute_command_internal {
 
-  my ($command, $stdout_ref, $stderr_ref) = @_;
+  my ($command, $stdout_ref, $stderr_ref,$prt) = @_;
 
   my @stderr      = ();
   my @stdout      = ();
@@ -336,6 +338,8 @@ sub execute_command_internal {
   my ($stderr_fh, $stderr_filename) = File::Temp::tempfile(UNLINK => 1);
   my ($stdout_fh, $stdout_filename) = File::Temp::tempfile(UNLINK => 1);
 
+  $FAI::debug and $prt=1; # always print if in debug mode
+
   # do only execute the given command, when in no_dry_mode
   if ($FAI::no_dry_run) {
 
@@ -343,7 +347,7 @@ sub execute_command_internal {
       and print "(CMD) $command 1> $stdout_filename 2> $stderr_filename\n";
 
     # execute the bash command, write stderr and stdout into the testfiles
-    print "Executing: $command\n";
+    print "Executing: $command\n" if $prt;
     `$command 1> $stdout_filename 2> $stderr_filename`;
     $exit_code = ($?>>8);
   } else {
