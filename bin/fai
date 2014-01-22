@@ -226,6 +226,10 @@ export FAI_ETC_DIR
 [ "$1" ] && export action=$1
 [ "$2" ] && export FAI_ROOT=$2 # only used for dirinstall
 
+if [ $(id -u) != "0" ]; then
+    fdie 1 "Run this program as root." >&2
+fi
+
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
         fdie 3 "Please specify a target directory. Aborted" >&2
@@ -253,10 +257,6 @@ if [ X$action = Xdirinstall ]; then
     export FAI_DEBOOTSTRAP=$(source $FAI_ETC_DIR/nfsroot.conf; echo $FAI_DEBOOTSTRAP)
     export FAI_DEBOOTSTRAP_OPTS=$(source $FAI_ETC_DIR/nfsroot.conf; echo $FAI_DEBOOTSTRAP_OPTS)
 
-fi
-
-if [ $(id -u) != "0" ]; then
-    fdie 1 "Run this program as root." >&2
 fi
 
 # exit if we do not run from nfsroot and no parameter is given
