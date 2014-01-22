@@ -4,7 +4,6 @@
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
 set -a
-
 # during softupdate use this file
 [ -r $LOGDIR/disk_var.sh ] && . $LOGDIR/disk_var.sh
 
@@ -18,9 +17,10 @@ if [ $? -eq 0 ]; then
 fi
 
 # check if mdadm has been forgotten
-grep -q active /proc/mdstat 2>/dev/null
-if [  $? -eq 0 -a ! -d $target/etc/mdadm ]; then
-    echo WARNING: Found Software RAID, but mdadm was not installed
+if grep -q active /proc/mdstat 2>/dev/null; then
+    if [ ! -d $target/etc/mdadm ]; then
+	echo WARNING: Found Software RAID, but mdadm was not installed
+    fi
 fi
 
 $ROOTCMD update-grub
