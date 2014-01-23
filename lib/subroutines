@@ -763,6 +763,14 @@ task_confdir() {
     fi
     define_fai_flags
 
+    # determine the name of the default network interface
+    NIC1=$(ip route | awk '/^default/ {print $5}')
+    if [ -z "$NIC1" ]; then
+	sleep 3 # if dhclient needs some more time
+	NIC1=$(ip route | awk '/^default/ {print $5}')
+    fi
+    export NIC1
+
     if [ -z "$SERVER" ]; then
         # since SERVER is not set (by DHCP) we extract it from FAI_CONFIG_SRC
         # extract server name from FAI_CONFIG_SRC and delete user@ from string
@@ -778,8 +786,6 @@ task_confdir() {
         faimond=0
     else
         faimond=1
-        # name of the default network interface
-        NIC1=$(ip route | awk '/^default/ {print $5}')
         MAC=$(< /sys/class/net/$NIC1/address)
         PXE="01-"${MAC//:/-}
 
