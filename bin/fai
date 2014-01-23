@@ -116,13 +116,7 @@ fai_init() {
 	if [ -x /sbin/rpcbind ]; then
 	    pgrep rpcbind >/dev/null || /sbin/rpcbind
 	fi
-
-        # NFS v4 support
-        sed -i -e '/Nobody-/d' /etc/idmapd.conf
-        echo 'Nobody-User = root'   >> /etc/idmapd.conf
-        echo 'Nobody-Group = root'  >> /etc/idmapd.conf
         pgrep rpc.statd > /dev/null || rpc.statd # idmapd needs this
-        rpc.idmapd -C # idmapd needs option -v or rpc.statd must be running. Otherwise the next command (like mount, ls -l) hangs.
 
         if grep -wq devpts /proc/mounts; then
             mount -t devpts devpts /dev/pts
