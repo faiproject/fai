@@ -2,6 +2,7 @@
 
 fcopy -Bvr /etc/fai
 fcopy -Bv /etc/fai/apt/sources.list /etc/dhcp/dhcpd.conf
+fcopy -v /etc/rc.local
 
 if [ $FAI_ACTION = "install" ]; then
 
@@ -23,4 +24,10 @@ if [ $FAI_ACTION = "install" ]; then
     # workaround for #676883, this disables NFS v4, so the nfsroot is exported via NFS v3
     mkdir $target/srv/nfs4
     ainsl /etc/exports '/srv/nfs4  192.168.33.0/24(fsid=0,async,ro,no_subtree_check,no_root_squash)'
+
+    # add access via apt-cacher-ng
+    sed -i -e 's#http://#&localhost:3142/#' $target/etc/fai/nfsroot.conf $target/etc/fai/apt/sources.list
+
+    # copy base file for faster building of nfsroot
+    cp -p /var/tmp/base.tar.xz $target/var/tmp
 fi

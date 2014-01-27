@@ -1,6 +1,7 @@
 #! /bin/bash
 
 # setup script that is only run once at boot time
+# set up an FAI install server
 
 echo ""
 echo "Setting up the FAI install server"
@@ -10,6 +11,7 @@ sleep 5
 . /etc/fai/fai.conf
 . /etc/fai/nfsroot.conf
 
+# copy the simple examples
 if [ ! -d "$FAI_CONFIGDIR/class" ]; then
     mkdir -p $FAI_CONFIGDIR
     cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR
@@ -21,15 +23,13 @@ dhclient eth0  # connection to the outside world (hopefully)
 [ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
 /etc/init.d/apache2 restart
 
-# do not call fai-setup currently
-echo 'Please call fai-setup -v 2>&1 | tee /var/log/fai-setup.log'
-
-fai-setup -v 2>&1 | tee /var/log/fai-setup.log
+fai-setup -B /var/tmp/base.tar.xz -v 2>&1 | tee /var/log/fai-setup.log
+rm /var/tmp/base.tar.xz
 
 # create default pxelinux boot configuration (boot from local disk)
 fai-chboot -o default
 
-#echo "Log files are saved to /var/log/fai-setup.log"
+echo "Log files are saved to /var/log/fai-setup.log"
 
 # remove me
 rm $0
