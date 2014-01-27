@@ -530,7 +530,7 @@ task_faiend() {
     killall -q sshd udevd
     if [ -f /etc/RUNNING_FROM_FAICD ]; then
         echo 1 > /proc/sys/dev/cdrom/autoeject
-        cat > $target/tmp/rebootCD <<'EOF'
+        cat > /tmp/rebootCD <<'EOF'
 #! /bin/bash
  device=$1
 eject -m /dev/$device 2>/dev/null >/dev/null
@@ -541,18 +541,22 @@ EOF
 
         #reboot or halt?
         if [ "$flag_halt" -gt "0" ]; then
-            echo "exec halt -dfp" >> $target/tmp/rebootCD
+            echo "exec halt -dfp" >> /tmp/rebootCD
         else
-            echo "exec reboot -df" >> $target/tmp/rebootCD
+            echo "exec reboot -df" >> /tmp/rebootCD
         fi
+        chmod +x /tmp/rebootCD
+	[ -f $target/tmp ] && mv /tmp/rebootCD $target/tmp/rebootCD
 
-
-        chmod +x $target/tmp/rebootCD
         sync
         for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
             mount -o remount,ro $dir
         done
         cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
+
+	if [ -f /etc/RUNNING_FROM_FAICD -a X$FAI_ACTION = Xsysinfo ]; then
+	    reboot -dfi
+	fi
         chroot $target /tmp/rebootCD $cdromdevice
         # never reached, because chroot will reboot the machine
         die "Internal error when calling /tmp/rebootCD." >&2
