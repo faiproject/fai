@@ -768,11 +768,13 @@ task_confdir() {
     define_fai_flags
 
     # determine the name of the default network interface
-    NIC1=$(ip route | awk '/^default/ {print $5}')
-    if [ -z "$NIC1" ]; then
-	sleep 3 # if dhclient needs some more time
+    # try several times if dhclient needs some more time
+    local i=0
+    while [ ! "$NIC1" -a $i -lt 8 ]; do
+        sleep 2
 	NIC1=$(ip route | awk '/^default/ {print $5}')
-    fi
+        (( i += 1 ))
+    done
     export NIC1
 
     if [ -z "$SERVER" ]; then
