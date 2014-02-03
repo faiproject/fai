@@ -3,6 +3,8 @@
 # setup script that is only run once at boot time
 # set up an FAI install server
 
+set -o pipefail
+
 echo ""
 echo "Setting up the FAI install server"
 echo ""
@@ -24,7 +26,7 @@ ip addr add 192.168.33.250/24 brd + dev eth0 # (fixed address of faiserver)
 [ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
 
 fai-setup -B /var/tmp/base.tar.xz -v 2>&1 | tee /var/log/fai-setup.log
-rm /var/tmp/base.tar.xz
+[ $? -eq 0 ] && rm /var/tmp/base.tar.xz
 
 # create default pxelinux boot configuration (boot from local disk)
 fai-chboot -o default
