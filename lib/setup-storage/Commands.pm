@@ -733,7 +733,7 @@ sub build_lvm_commands {
         if (defined($FAI::current_dev_children{$d}) &&
           scalar(@{ $FAI::current_dev_children{$d} }));
     }
-    $pre_deps_vgc =~ s/^,//; 
+    $pre_deps_vgc =~ s/^,//;
     &FAI::push_command("vgchange -a n $vg", "$pre_deps_vgc", $vg_pre);
     $vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
     my $pre_deps_cl = "";
