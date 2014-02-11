@@ -593,14 +593,14 @@ sub compute_partition_sizes
 
     # align to sector boundary by default
     my $block_size = $current_disk->{sector_size};
-    # align to cylinder boundary for msdos disklabels if at least one of the
-    # partitions has to be preserved, for backward compatibility
-    if ($FAI::configs{$config}{disklabel} eq "msdos" &&
-      $FAI::configs{$config}{preserveparts} == 1) {
-      $block_size = $current_disk->{sector_size} *
-        $current_disk->{bios_sectors_per_track} *
-        $current_disk->{bios_heads};
-    }
+    ## align to cylinder boundary for msdos disklabels if at least one of the
+    ## partitions has to be preserved, for backward compatibility
+    #if ($FAI::configs{$config}{disklabel} eq "msdos" &&
+    #  $FAI::configs{$config}{preserveparts} == 1) {
+    #  $block_size = $current_disk->{sector_size} *
+    #    $current_disk->{bios_sectors_per_track} *
+    #    $current_disk->{bios_heads};
+    #}
     # but user-specified alignment wins no matter what
     defined ($FAI::configs{$config}{align_at}) and
       $block_size = $FAI::configs{$config}{align_at};
