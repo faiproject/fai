@@ -34,7 +34,7 @@ fi
 if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
     raiddev=${BOOT_DEVICE#/dev/}
     # install grub on all members of RAID
-    for device in `perl -ne 'if(/^'$raiddev'\s.+raid\d+\s(.+)/){ $_=$1; s/\d+\[\d+\]//g; print }' /proc/mdstat`; do
+    for device in `LC_ALL=C perl -ne 'if(/^'$raiddev'\s.+raid\d+\s(.+)/){ $_=$1; s/\d+\[\d+\]//g; print }' /proc/mdstat`; do
 	echo Install grub on /dev/$device
 	$ROOTCMD grub-install --no-floppy "/dev/$device"
     done
