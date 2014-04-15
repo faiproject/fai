@@ -1,7 +1,7 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .if \n(zZ=1 .ig zZ
 .if \n(zY=1 .ig zY
-.TH fai-cd 8 "January 2014" "FAI 4"
+.TH fai-cd 8 "April 2014" "FAI 4"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -51,12 +51,13 @@ This command creates a bootable ISO CD-ROM image that performs the
 fully automatic installation from CD-ROM without an install server. The
 ISO image will be written to FILE. To create the image, the
 command needs the NFSROOT, the configuration space and a partial
-mirror, which is created by fai-mirror. The command can also copy all
-needed data to DIRECTORY on a mounted USB stick.
+mirror, which is created by fai-mirror. This hybrid CD image can also
+be written to an USB stick.
 
 \fBNote:\fR Currently, fai-cd is only working with the package
 live-boot inside the nfsroot, not with dracut. Therefore you have to
-use the option -l with fai-make-nfsroot(8).
+use the option -l with fai-make-nfsroot(8) and change the package
+list in /etc/fai/NFSROOT..
 
 .SH OPTIONS
 .TP
@@ -69,7 +70,7 @@ space.
 After creating the ISO image burn it by calling wodim(1) (a version of
 cdrecord).
 .TP
-.B \-C CFDIR
+.BI "\-C " CFDIR
 Use CFDIR as the configuration directory. Default is /etc/fai. You can
 also set the environment variable FAI_ETC_DIR.
 .TP
@@ -105,12 +106,6 @@ you use -M or -B.
 .BI \-n
 No ISO image. Do not call genisoimage to create the ISO image. This is for
 creating the filesystem only. Useful for writing it to a USB stick.
-.TP
-.BI "\-u " DIRECTORY
-Create a bootable USB stick. The USB stick must be mounted on
-DIRECTORY before you run fai-cd. Copies all FAI-CD data to DIRECTORY
-and try to install grub onto its device. Currently the file system
-on the USB stick must be ext2. USUALLY THIS WILL ERASE ALL DATA ON YOUR USB-STICK!
 
 .SH EXAMPLES
 .br
@@ -119,11 +114,10 @@ can create a CD using:
 
    # fai-cd \-m /media/mirror fai-cd.iso
 
-If you want to create a bootable USB stick, create an ext2 file system
-on your stick, mount it to /media/usbstick and call
+If you want to create a bootable USB stick (here /dev/sdf) , write the
+CD image to the stick via dd.
 
-   # fai-cd \-m /media/mirror \-u /media/usbstick
-   # umount /media/usbstick
+   # dd if=fai-cd.iso of=/dev/sdf bs=1M
 
 .SH SEE ALSO
 .br
