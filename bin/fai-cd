@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2013 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2014 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -40,7 +40,6 @@ burn=0
 bootonly=0
 keep=0
 makeiso=1
-makeusb=0
 nomirror=0
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
 
@@ -50,7 +49,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/shar
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2013 Thomas Lange
+	fai-cd Copyright (C) 2004-2014 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -73,11 +72,9 @@ create_grub2_image() {
 
     mkdir -p $tmp/boot/grub $NFSROOT/boot/grub
     if [ -f $NFSROOT/boot/grub/core.img ]; then
-        echo "preparing grub2 eltorito.img using existing core.img from NFSROOT"
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
         MODULEBASE=$NFSROOT/usr/lib/grub/
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
-        echo "preparing grub2 eltorito.img creating core.img in NFSROOT"
         if chroot $NFSROOT /usr/bin/grub-mkimage --help | grep -q -- --format ; then
             chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
         else
@@ -196,43 +193,14 @@ mkiso() {
     echo -n "ISO image size and filename: "; du -h $isoname
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-mkusb(){
-
-    local device
-
-    [ $makeusb -eq 0 ] && return
-
-    # TODO: If usbdir is a device (matches /dev/) mount it
-    [ -d $usbdir ] || die 17 "$usbdir does not exist."
-    if [ $rsync -eq 1 ]; then
-        echo "Syncing FAI data to USB device $usbdir"
-        rsync --delete -avW $tmp/boot $usbdir || true
-        [ -d $tmp/live ] && rsync --delete -avW $tmp/live $usbdir || true
-    else
-        echo "Writing FAI data to USB device $usbdir"
-        cp -a $tmp/boot $usbdir 2>/dev/null || true
-        [ -d $tmp/live ] && cp -a $tmp/live $usbdir 2>/dev/null || true
-    fi
-    echo $isoversion > $usbdir/.FAI-CD-VERSION
-
-    # detect device of mounted usb stick, grub2
-    device=$(grub-probe -tdrive $usbdir | perl -ane 'm#(/dev/\w+),# && print "$1\n"')
-    echo "Installing grub2 to $device."
-    # this call seems to remove file and copies them again onto the stick
-    grub-install --no-floppy --root-directory=$usbdir $device
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_iso() {
 
     # Create the El Torito bootable iso9660 cdrom image
-    # or copy all FAI data to directory (for USB)
-
-    echo "Bind mounting all required parts"
 
     mkdir -p $nfsrootdir/media/mirror || true
 
     > $nfsrootdir/etc/RUNNING_FROM_FAICD
-    mount --bind $FAI_CONFIGDIR $nfsrootdir/$FAI && echo "Config space $FAI_CONFIGDIR   mounted"
+    mount --bind $FAI_CONFIGDIR $nfsrootdir/$FAI && echo "Config space $FAI_CONFIGDIR mounted"
     mount -o remount,ro,bind $nfsrootdir/$FAI
     addmirror
 
@@ -246,7 +214,6 @@ create_iso() {
     fi
 
     mkiso
-    mkusb
     unhide_dirs
     umount_dirs
 }
@@ -255,7 +222,7 @@ addmirror() {
 
     [ $nomirror -eq 1 ] && return
     
-    mount --bind $mirrordir $nfsrootdir/media/mirror && echo "Mirror       $mirrordir   mounted"
+    mount --bind $mirrordir $nfsrootdir/media/mirror && echo "Mirror $mirrordir mounted"
     mount -o remount,ro,bind $nfsrootdir/media/mirror
 # TODO: customize /etc/apt, copy apt preferences etc.
 
@@ -287,7 +254,7 @@ rsync=0
 if [ -x "$(which rsync)" ] ; then rsync=1 ; fi
 
 # Parse commandline options
-while getopts "nkfhHg:bBMm:C:u:" opt ; do
+while getopts "nkfhHg:bBMm:C:" opt ; do
     case "$opt" in
         C)  cdir=$OPTARG ;;
         f)  forceremoval=1 ;;
@@ -300,11 +267,6 @@ while getopts "nkfhHg:bBMm:C:u:" opt ; do
         n)  makeiso=0 ;;
         b)  burn=1 ;;
         B)  bootonly=1 ;;
-        u)  usbdir="$OPTARG"
-            makeusb=1
-            makeiso=0
-            [ $rsync -eq 0 -a -e $usbdir/live ] && die 11 "Please remove $usbdir/live. Aborting."
-            ;;
         ?)  usage ;;
     esac
 done
@@ -321,12 +283,12 @@ fi
 [ -f "$isoname" ]     && [ $forceremoval -eq 1 ] && rm $isoname
 [ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it or use -f."
 
-if [ $bootonly -eq 0 -o $makeusb -eq 1 ]; then
+if [ $bootonly -eq 0 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
 
 if [ $makeiso -eq 1 ]; then
-    [ -x "$(which genisoimage)" ] || die 8 "genisoimage not found. Please install package."
+    [ -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
 fi
 
 # use FAI_ETC_DIR from environment variable
@@ -379,11 +341,11 @@ if [ -d $ONFSROOT/live ]; then
     hidedirs="$hidedirs /boot"
     mkdir -p $tmp/live/filesystem.dir
     nfsrootdir=$tmp/live/filesystem.dir
-    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT/live/filesystem.dir=rr aufs $nfsrootdir  && echo "NFSROOT      $NFSROOT   mounted"
+    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT/live/filesystem.dir=rr aufs $nfsrootdir  && echo "NFSROOT $NFSROOT mounted"
 else
     # things to do for dracut
     nfsrootdir=$tmp
-    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT=rr aufs $nfsrootdir  && echo "NFSROOT      $NFSROOT   mounted"
+    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT=rr aufs $nfsrootdir  && echo "NFSROOT $NFSROOT mounted"
     echo "Found dracut inside nfsroot, but booting a FAI CD with dracut inside the nfsrroot does not yet work." >&2
     echo "Recreate your nfsroot with the live-boot package instead of dracut. Use fai-make-nfsoot -l." >&2
     die 20 "Aborting"
@@ -402,7 +364,6 @@ provide_memtest_boot_option
 if [ $bootonly -eq 1 ]; then
     rm -rf $tmp/live
     mkiso
-    mkusb
 else
     trap "unhide_dirs;umount_dirs" EXIT ERR
     create_iso
