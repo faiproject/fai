@@ -103,7 +103,7 @@ create_grub2_image() {
         fi
         MODULEBASE=$GRUBDIR/usr/lib/grub/
     fi
-    for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
+    for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,boot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
         [[ -e $a ]] && cp $a $tmp/boot/grub
     done
     rm -rf $GRUBDIR
@@ -115,6 +115,9 @@ create_grub2_image() {
     cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
     cat $tmp/boot/grub/cdboot.img $tmp/boot/grub/core.img > $tmp/boot/grub/eltorito.img
     boot_image="boot/grub/eltorito.img"
+
+    cat $tmp/boot/grub/boot.img $tmp/boot/grub/core.img > $tmp/boot/grub/embed.img
+    embed_image="$tmp/boot/grub/embed.img"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 provide_memtest_boot_option() {
@@ -186,7 +189,10 @@ mkiso() {
     [ $makeiso -eq 0 ] && return
 
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    genisoimage --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -l -R -J -b "$boot_image" -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "genisoimage failed."
+    xorriso -report_about HINT -as mkisofs -graft-points -b $boot_image \
+        -V "$vname" -A "$aname" \
+        -no-emul-boot -boot-info-table --embedded-boot ${embed_image} --protective-msdos-label -o $isoname \
+        -r $tmp --sort-weight 0 / --sort-weight 1 /boot || die 12 "xorriso failed."
     echo -n "ISO image size and filename: "; du -h $isoname
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -386,7 +392,7 @@ fi
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|awk '/fai-client/ {print $3}')
 isoversion="FAI $faiversion -- build $(date '+%c')"
-vname="Fully Automatic Installation CD"
+vname="FAI_CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
 create_grub2_image
