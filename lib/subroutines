@@ -529,7 +529,19 @@ task_faiend() {
     sync
 
     killall -q sshd udevd
-    if [ -f /etc/RUNNING_FROM_FAICD ]; then
+
+    for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
+        mount -o remount,ro $dir
+    done
+
+    # if we run from CD or USB stick and did not any installation
+    if [ -d /lib/live/mount/medium -a X$FAI_ACTION = Xsysinfo ]; then
+	reboot -dfi
+    fi
+
+    # check if we are running from CD, live-boot
+    cddev=$(mount |grep /lib/live/mount/medium | awk '{print $1}')
+    if [[ $cddev =~ '/dev/sr' ]]; then
         echo 1 > /proc/sys/dev/cdrom/autoeject
         cat > /tmp/rebootCD <<'EOF'
 #! /bin/bash
@@ -550,14 +562,8 @@ EOF
 	[ -d $target/tmp ] && mv /tmp/rebootCD $target/tmp/rebootCD
 
         sync
-        for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
-            mount -o remount,ro $dir
-        done
         cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
 
-	if [ -f /etc/RUNNING_FROM_FAICD -a X$FAI_ACTION = Xsysinfo ]; then
-	    reboot -dfi
-	fi
         chroot $target /tmp/rebootCD $cdromdevice
         # never reached, because chroot will reboot the machine
         die "Internal error when calling /tmp/rebootCD." >&2
