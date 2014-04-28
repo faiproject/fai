@@ -29,7 +29,7 @@
 use strict;
 
 use Getopt::Std;
-our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q);
+our ($opt_a,$opt_h,$opt_D,$opt_n,$opt_s,$opt_v,$opt_q,$opt_Q,$opt_N);
 
 my $filename;
 my $verbose;
@@ -54,6 +54,7 @@ Usage: ainsl [OPTION] FILE LINE [PATTERN]
    -Q         Quote all metacharacters in pattern. Uses perl\'s \\Q function.
    -q         Quote * and + metacharacters in pattern.
    -s         Convert blanks in line to '\\s+' regexp.
+   -N         Don't prepend '\$AINSL_TARGET/' to filename
    -v         Create verbose output.
 
 EOF
@@ -80,7 +81,7 @@ sub autocreate {
   close (FILE);
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('aDhsvnQq') || usage(3);
+getopts('aDhsvnQqN') || usage(3);
 
 $opt_h && usage(0);
 $verbose = $opt_v || $ENV{verbose} || 0;
@@ -92,7 +93,9 @@ my $optpattern  = shift;
 my $found = 0;
 usage(3) unless defined $line;
 
-$ENV{AINSL_TARGET} and $filename = "$ENV{AINSL_TARGET}/$filename";
+if (! $opt_N) {
+  $ENV{AINSL_TARGET} and $filename = "$ENV{AINSL_TARGET}/$filename";
+}
 $filename =~ s#//+#/#g; # multiple slashes -> one slash
 
 print "FILE: $filename\nLINE: $line\nPATTERN: ", $optpattern || "[NO PATTERN SPECIFIED]", "\n" if $debug;
