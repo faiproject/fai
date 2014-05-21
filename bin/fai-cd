@@ -337,9 +337,11 @@ mount -n -t tmpfs tmpfs $cow
 # check if dracut or live-boot is used
 if [ -d $ONFSROOT/live ]; then
     hidedirs="$hidedirs /boot"
-    mkdir -p $tmp/live/filesystem.dir
-    nfsrootdir=$tmp/live/filesystem.dir
-    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT/live/filesystem.dir=rr aufs $nfsrootdir  && echo "NFSROOT $NFSROOT mounted"
+    if [ $bootonly -ne 1 ]; then
+	mkdir -p $tmp/live/filesystem.dir
+	nfsrootdir=$tmp/live/filesystem.dir
+	mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT/live/filesystem.dir=rr aufs $nfsrootdir && echo "NFSROOT $NFSROOT mounted"
+    fi
 else
     # things to do for dracut
     nfsrootdir=$tmp
@@ -360,8 +362,8 @@ create_grub2_image
 provide_memtest_boot_option
 
 if [ $bootonly -eq 1 ]; then
-    rm -rf $tmp/live
     mkiso
+    mountpoint -q $cow && umount $cow
 else
     trap "unhide_dirs;umount_dirs" EXIT ERR
     create_iso
