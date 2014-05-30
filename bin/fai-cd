@@ -78,11 +78,7 @@ create_grub2_image() {
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
         MODULEBASE=$NFSROOT/usr/lib/grub/
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
-        if chroot $NFSROOT /usr/bin/grub-mkimage --help | grep -q -- --format ; then
-            chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        else
-            chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660
-        fi
+        chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
         MODULEBASE=$NFSROOT/usr/lib/grub/
     else
@@ -96,11 +92,7 @@ create_grub2_image() {
         mkdir -p $GRUBDIR
         dpkg -x $grubPackage $GRUBDIR
         cd $GRUBDIR
-        if ./usr/bin/grub-mkimage --help | grep -q -- --format ; then
-            ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        else
-            ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660
-        fi
+        ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
         MODULEBASE=$GRUBDIR/usr/lib/grub/
     fi
 
@@ -189,6 +181,7 @@ umount_dirs() {
     mountpoint -q $nfsrootdir && umount $nfsrootdir
     mountpoint -q $cow && umount $cow
     set -e
+    rm -rf $tmp $cow
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 sleep_now() {
@@ -389,6 +382,5 @@ else
     create_iso
 fi
 
-rm -rf $tmp $cow
 [ "$burn" -eq 1 ] && burniso
 exit 0
