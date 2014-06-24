@@ -47,7 +47,8 @@ $FAI::device = "";
 
 ################################################################################
 #
-# @brief Test, whether @ref $cmd is available on the system using $PATH
+# @brief Test, whether @ref $cmd is available and executable on the system using
+#        $PATH
 #
 # @param $cmd Command that is to be found in $PATH
 #

@@ -54,7 +54,7 @@ defined ($ENV{LOGDIR}) and $FAI::DATADIR = $ENV{LOGDIR};
 
 ################################################################################
 #
-# @brief Write changes to disk only if set to 1
+# @brief Write changes to disk only if set to
 #
 ################################################################################
 $FAI::no_dry_run = 0;
@@ -68,7 +68,8 @@ $FAI::check_only = 0;
 
 ################################################################################
 #
-# @brief The command to tell udev to settle (udevsettle or udevadm settle)
+# @brief The command to tell udev to settle (udevsettle or udevadm settle).
+#        Will be set in bin/setup-storage according to installed tool.
 #
 ################################################################################
 $FAI::udev_settle = undef;
@@ -172,7 +173,9 @@ $FAI::n_c_i = 1;
 
 ################################################################################
 #
-# @brief Add command to hash
+# @brief Add command to hash. $pre and $post are never executed, they are just
+# debug information showing the state of the program before and after the
+# command has been executed.
 #
 # @param cmd Command
 # @param pre Preconditions

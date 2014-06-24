@@ -363,6 +363,8 @@ sub execute_command_internal {
   close ($stderr_fh);
   close ($stdout_fh);
 
+  #print stderr and stdout when -d is set
+  #perhaps always print stdout?
   $FAI::debug and print "(STDERR) $_" foreach (@stderr);
   $FAI::debug and print "(STDOUT) $_" foreach (@stdout);
 

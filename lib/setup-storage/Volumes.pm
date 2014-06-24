@@ -82,6 +82,7 @@ sub find_all_phys_devs {
 ################################################################################
 sub get_current_disks {
 
+  # following creates an array of full paths to disks
   my %referenced_devs = ();
   @referenced_devs{ @{ &FAI::find_all_phys_devs() } } = ();
 
