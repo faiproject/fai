@@ -612,6 +612,7 @@ sub cleanup_vg {
 
   my ($vg) = @_;
   my $clear_vg = 0;
+  my $vg_wipe_pre = "vgchange_a_y_VG_$vg";
 
   foreach my $dev (@{ $FAI::current_lvm_config{$vg}{"physical_volumes"} }) {
     my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
@@ -661,7 +662,7 @@ sub cleanup_vg {
           }
         }
 
-        &FAI::push_command( "wipefs -a $vg/$lv",
+        &FAI::push_command( "wipefs -a /dev/$vg/$lv",
           "vgchange_a_n_VG_$vg$pre_deps_cl",
           "wipefs_$vg/$lv");
         &FAI::push_command( "lvremove -f $vg/$lv",
@@ -686,8 +687,11 @@ sub cleanup_vg {
       join(",self_cleared_", @{ $FAI::current_dev_children{"/dev/$vg/$lv"} })
         if (defined($FAI::current_dev_children{"/dev/$vg/$lv"}) &&
           scalar(@{ $FAI::current_dev_children{"/dev/$vg/$lv"} }));
-    &FAI::push_command( "wipefs -a $vg/$lv",
-      "vgchange_a_n_VG_$vg$pre_deps_cl",
+    &FAI::push_command( "vgchange -a y $vg",
+      "",
+      "$vg_wipe_pre");
+    &FAI::push_command( "wipefs -a /dev/$vg/$lv",
+      "$vg_wipe_pre$pre_deps_cl",
       "wipefs_$vg/$lv");
     &FAI::push_command( "lvremove -f $vg/$lv",
       "wipefs_$vg/$lv",
