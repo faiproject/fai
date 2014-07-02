@@ -639,7 +639,7 @@ sub cleanup_vg {
     $clear_vg = 1;
     last;
   }
-
+  #following block responsible for lv/vg preservation
   if (0 == $clear_vg) {
     my $vg_setup_pre = "vgchange_a_n_VG_$vg";
     if (defined($FAI::configs{"VG_$vg"})) {
