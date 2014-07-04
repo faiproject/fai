@@ -86,6 +86,7 @@ sub in_path {
 ################################################################################
 sub resolve_disk_shortname {
   my ($disk) = @_;
+  $disk =~ s/^disk//;
 
   $disk = "sdx" . chr(ord('a') + $disk - 1)
     if ($FAI::check_only && $disk =~ /^\d+$/);
