@@ -661,9 +661,11 @@ sub cleanup_vg {
             next;
           }
         }
-
+        &FAI::push_command( "vgchange -a y $vg",
+          "",
+          "$vg_wipe_pre");
         &FAI::push_command( "wipefs -a /dev/$vg/$lv",
-          "vgchange_a_n_VG_$vg$pre_deps_cl",
+          "$vg_wipe_pre$pre_deps_cl",
           "wipefs_$vg/$lv");
         &FAI::push_command( "lvremove -f $vg/$lv",
           "wipefs_$vg/$lv",
