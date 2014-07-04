@@ -687,25 +687,6 @@ $FAI::Parser = Parse::RecDescent->new(
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
-	| /^sameas:disk(\d+)/
-	{
-	  my $ref_dev = &FAI::resolve_disk_shortname($1);
-	  defined($FAI::configs{"PHY_" . $ref_dev}) or die "Reference device $ref_dev not found in config\n";
-
-	  $FAI::configs{$FAI::device} = Storable::dclone($FAI::configs{"PHY_" . $ref_dev});
-    # add entries to device tree
-    defined($FAI::dev_children{$ref_dev}) or
-      &FAI::internal_error("dev_children missing reference entry");
-    ($FAI::device =~ /^PHY_(.+)$/) or
-      &FAI::internal_error("unexpected device name");
-    my $disk = $1;
-    foreach my $p (@{ $FAI::dev_children{$ref_dev} }) {
-      my ($i_p_d, $rd, $pd) = &FAI::phys_dev($p);
-      (1 == $i_p_d) or next;
-      ($rd eq $ref_dev) or &FAI::internal_error("dev_children is inconsistent");
-      push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $pd);
-    }
-	}
 	| /^sameas:(\S+)/
 	{
 	  my $ref_dev = &FAI::resolve_disk_shortname($1);
