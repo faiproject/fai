@@ -1,0 +1,72 @@
+july/2014
+
+Chronological order of subroutine calls and their respective library
+file (commands are listed only once, if they are called repeatedly):
+
+	  setup-storage
+		|
+		|
+┌---------------|
+|		|
+|	     in_path
+|	     run_parser
+Parser.pm    check_config
+|	     in_path
+|		|
+└---------------|
+		|	        
+┌---------------|
+|		|
+Volumes.pm   get_current_disks
+|	     get_current_lvm
+|	     get_current_raid
+|	     propagate_and_check_preserve
+|		|
+└---------------|
+		|	        
+┌---------------|
+|		|
+Sizes.pm   compute_partition_sizes
+|	   compute_lv_sizes
+|		|
+└---------------|
+		|	        
+┌---------------|
+|		|
+Commands.pm build_disk_commands
+|	    buiild_raid_commands
+|	    buiild_cryptsetup_commands
+|	    order_commands
+|		|
+└---------------|
+		|	        
+┌---------------|
+|		|
+Exec.pm   execute_command
+|		|
+└---------------|
+		|	        
+┌---------------|
+|		|
+Fstab.pm   generate_fstab
+|		|
+└---------------|
+		|
+		v
+
+
+
+important data structures:
+
+%FAI::commands : initialized in Init.pm
+    Holds all commands as well as their dependencies and
+    post-execution status. &FAI::order_commands is used on it to set
+    the correct order of commands and resolve the dependencies.
+
+    Commands are added to the structure by using the
+    FAI::push_command(COMMAND, PRE, POST) subroutine. 
+
+
+
+
+

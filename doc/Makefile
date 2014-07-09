@@ -2,6 +2,7 @@
 
 DOC = fai-guide
 MISC_DOC = classes_description.txt changelog.old
+DOC2DIR = $(shell pwd)/../debian/fai-setup-storage/usr/share/doc/fai-setup-storage
 
 free:	text html ps pdf
 #	echo "`grep -c FIXME $(DOC).txt` FIXMEs left to fix:"
@@ -40,6 +41,7 @@ all:	free
 install:
 	cp -dRp $(DOC)* $(DOCDIR)
 	cp -p $(MISC_DOC) $(DOCDIR)
+	cp -p setup-storage-call-graph.txt setup-storage-overview.txt $(DOC2DIR)
 
 clean:
 	rm -rf images .a2x-icons fai-guide.chunked
