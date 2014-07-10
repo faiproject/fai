@@ -666,9 +666,6 @@ sub cleanup_vg {
         &FAI::push_command( "lvremove -f /dev/$vg/$lv",
           "wipefs_$vg/$lv",
           "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv");
-        &FAI::push_command( "vgchange -a n $vg",
-          "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv",
-          "$vg_setup_pre");
         $vg_setup_pre .= ",lv_rm_$vg/$lv";
       }
     } else {
@@ -677,7 +674,9 @@ sub cleanup_vg {
         (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
     }
     &FAI::push_command("true", $vg_setup_pre, "vg_exists_$vg");
-
+    &FAI::push_command( "vgchange -a n $vg",
+      "",
+      "$vg_setup_pre");
     return 0;
   }
 
