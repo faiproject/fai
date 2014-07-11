@@ -9,6 +9,13 @@ set -a
 
 [ -z "$BOOT_DEVICE" ]    && exit 701
 
+$ROOTCMD update-grub
+
+# skip the rest, if not an initial installation
+if [ $FAI_ACTION != "install" ]; then
+    exit $error
+fi
+
 $ROOTCMD grub-mkdevicemap --no-floppy
 GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
 $ROOTCMD grub-install --no-floppy "$GROOT"
@@ -23,12 +30,6 @@ if grep -q active /proc/mdstat 2>/dev/null; then
     fi
 fi
 
-$ROOTCMD update-grub
-
-# skip the rest, if not an initial installation
-if [ $FAI_ACTION != "install" ]; then
-    exit $error
-fi
 
 # Check if RAID is used for the boot device
 if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
