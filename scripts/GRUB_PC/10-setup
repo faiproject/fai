@@ -16,13 +16,6 @@ if [ $FAI_ACTION != "install" ]; then
     exit $error
 fi
 
-$ROOTCMD grub-mkdevicemap --no-floppy
-GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
-$ROOTCMD grub-install --no-floppy "$GROOT"
-if [ $? -eq 0 ]; then
-    echo "Grub installed on $BOOT_DEVICE = $GROOT"
-fi
-
 # check if mdadm has been forgotten
 if grep -q active /proc/mdstat 2>/dev/null; then
     if [ ! -d $target/etc/mdadm ]; then
@@ -30,6 +23,8 @@ if grep -q active /proc/mdstat 2>/dev/null; then
     fi
 fi
 
+$ROOTCMD grub-mkdevicemap --no-floppy
+GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
 
 # Check if RAID is used for the boot device
 if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
@@ -39,6 +34,11 @@ if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
 	echo Install grub on /dev/$device
 	$ROOTCMD grub-install --no-floppy "/dev/$device"
     done
+else
+    $ROOTCMD grub-install --no-floppy "$GROOT"
+    if [ $? -eq 0 ]; then
+        echo "Grub installed on $BOOT_DEVICE = $GROOT"
+    fi
 fi
 
 exit $error
