@@ -304,7 +304,9 @@ task_setup() {
 
         # start secure shell daemon for remote access
         mkdir -p /var/run/sshd # ubuntu fix for 9.10
-        [ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+        if [ "$flag_sshd" -a -x /usr/sbin/sshd ]; then
+            pgrep -x sshd >/dev/null || /usr/sbin/sshd
+        fi
     fi
     unset flag_createvt flag_sshd
 
