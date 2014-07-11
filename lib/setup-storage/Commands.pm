@@ -660,8 +660,12 @@ sub cleanup_vg {
             next;
           }
         }
+
+        &FAI::push_command( "vgchange -a y $vg",
+          "",
+          "pre_wipe_$vg");
         &FAI::push_command( "wipefs -a /dev/$vg/$lv",
-          "$pre_deps_cl",
+          "pre_wipe_$vg,$pre_deps_cl",
           "wipefs_$vg/$lv");
         &FAI::push_command( "lvremove -f /dev/$vg/$lv",
           "wipefs_$vg/$lv",
@@ -687,8 +691,12 @@ sub cleanup_vg {
       join(",self_cleared_", @{ $FAI::current_dev_children{"/dev/$vg/$lv"} })
         if (defined($FAI::current_dev_children{"/dev/$vg/$lv"}) &&
           scalar(@{ $FAI::current_dev_children{"/dev/$vg/$lv"} }));
+
+    &FAI::push_command( "vgchange -a y $vg",
+      "",
+      "pre_wipe_$vg");
     &FAI::push_command( "wipefs -a /dev/$vg/$lv",
-      "$pre_deps_cl",
+      "pre_wipe_$vg,$pre_deps_cl",
       "wipefs_$vg/$lv");
     &FAI::push_command( "lvremove -f /dev/$vg/$lv",
       "wipefs_$vg/$lv",
