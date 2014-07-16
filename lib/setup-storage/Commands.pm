@@ -42,6 +42,9 @@ package FAI;
 # @param $partition Reference to partition in the config hash
 #
 ################################################################################
+
+my @preserved_raid = ();
+
 sub build_mkfs_commands {
 
   my ($device, $partition) = @_;
@@ -363,6 +366,7 @@ sub build_raid_commands {
         &FAI::push_command(
 	    "mdadm --assemble /dev/md$id " . join(" ", grep(!/^missing$/, @eff_devs)),
 	    "$pre_req", "exist_/dev/md$id");
+        push(@preserved_raid, "/dev/md$id");
 
         # create the filesystem on the volume, if requested
         &FAI::build_mkfs_commands("/dev/md$id",
@@ -736,13 +740,22 @@ sub build_lvm_commands {
     my $vg = $1;
     my $vg_pre = "vgchange_a_n_VG_$vg";
     my $pre_deps_vgc = "";
+    my $preserved = 0;
 
     $pre_deps_vgc = ",self_cleared_" .
      join(",self_cleared_", @{ $FAI::current_dev_children{$d} })
      if (defined($FAI::current_dev_children{$d}) &&
        scalar(@{ $FAI::current_dev_children{$d} }));
     $pre_deps_vgc =~ s/^,//;
-    &FAI::push_command("vgchange -a n $vg", "$pre_deps_vgc", $vg_pre);
+
+    foreach my $raid (@preserved_raid) {
+      my $tmp_vg = `pvdisplay $raid | grep "VG Name" | grep -o "vg[0-9]"`;
+      chomp $tmp_vg;
+      $preserved = 1 if ($tmp_vg eq $vg);
+    }
+    &FAI::push_command("vgchange -a n $vg", "$pre_deps_vgc", $vg_pre)
+      unless $preserved;
+
     $vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
     my $pre_deps_cl = "";
     $pre_deps_cl = ",self_cleared_" .
