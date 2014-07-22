@@ -24,6 +24,14 @@ fi
 mount -o bind /dev $target/dev
 
 
+
+if [ -f $target/usr/sbin/grub2-install ]; then
+
+    # CentOS 7
+    $ROOTCMD grub2-install --no-floppy "$BOOT_DEVICE"
+    $ROOTCMD grub2-mkconfig --output=/boot/grub2/grub.cfg
+else
+
 $ROOTCMD grub-install --just-copy
 
 $ROOTCMD grub --device-map=/dev/null --no-floppy --batch <<-EOF
@@ -33,8 +41,6 @@ $ROOTCMD grub --device-map=/dev/null --no-floppy --batch <<-EOF
 	quit
 	EOF
 
-umount $target/dev
-
 ln -s ./menu.lst $target/boot/grub/grub.conf
 
 if [ -f $target/boot/grub/splash.xpm.gz ]; then
@@ -43,7 +49,7 @@ else
 	pretty="color cyan/blue white/blue"
 fi
 
-if [ -f $target/sbin/dracut ]; then
+if [ -f $target/sbin/dracut -o -f $target/usr/sbin/dracut ]; then
     # CentOS 6
     iname=initramfs
 else
@@ -64,6 +70,9 @@ cat > $target/boot/grub/grub.conf <<-EOF
 	  initrd $bootdir/$iname-$version.img
 	EOF
 
+fi
+
+umount $target/dev
 
 echo ""
 echo "Grub installed on $BOOT_DEVICE = $bootdev"
