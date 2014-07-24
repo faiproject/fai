@@ -41,17 +41,14 @@ package FAI;
 # @brief Enable debugging by setting $debug to a value greater than 0
 #
 ################################################################################
-$FAI::debug = 0;
-defined ($ENV{debug}) and $FAI::debug = $ENV{debug};
+$FAI::debug = $ENV{debug} // 0;
 
 ################################################################################
 #
 # @brief Directory to store generated files such as fstab, crypttab
 #
 ################################################################################
-$FAI::DATADIR = "/tmp/fai";
-defined ($ENV{LOGDIR}) and $FAI::DATADIR = $ENV{LOGDIR};
-
+$FAI::DATADIR = $ENV{LOGDIR} // "/tmp/fai";
 ################################################################################
 #
 # @brief Write changes to disk only if set to
@@ -103,8 +100,7 @@ $FAI::disk_var{BOOT_DEVICE} = "";
 # first time
 #
 ################################################################################
-$FAI::reinstall = 1;
-defined( $ENV{flag_initial} ) and $FAI::reinstall = 0;
+$FAI::reinstall = $ENV{flag_initial} // 1;
 
 ################################################################################
 #
