@@ -124,10 +124,12 @@ sub get_fstab_key {
   if ($key_type eq "uuid") {
     chomp ($uuid[0]);
     return "UUID=$uuid[0]";
-  } elsif ($key_type eq "label" && scalar(@label) == 1) {
+  }
+  elsif ($key_type eq "label" && scalar(@label) == 1) {
     chomp($label[0]);
     return "LABEL=$label[0]";
-  } else {
+  }
+  else {
     # otherwise, use the usual device path
     return $device_name;
   }
@@ -155,7 +157,8 @@ sub find_boot_mnt_point {
         return $this_mp if ($this_mp eq "/boot");
         $mnt_point = $this_mp if ($this_mp eq "/");
       }
-    } elsif ($c =~ /^VG_(.+)$/) {
+    }
+    elsif ($c =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
       foreach my $l (keys %{ $FAI::configs{$c}{volumes} }) {
         my $this_mp = $FAI::configs{$c}{volumes}{$l}{mountpoint};
@@ -165,7 +168,8 @@ sub find_boot_mnt_point {
         return $this_mp if ($this_mp eq "/boot");
         $mnt_point = $this_mp if ($this_mp eq "/");
       }
-    } elsif ($c eq "RAID" || $c eq "CRYPT") {
+    }
+    elsif ($c eq "RAID" || $c eq "CRYPT") {
       foreach my $r (keys %{ $FAI::configs{$c}{volumes} }) {
         my $this_mp = $FAI::configs{$c}{volumes}{$r}{mountpoint};
 
@@ -174,10 +178,12 @@ sub find_boot_mnt_point {
         return $this_mp if ($this_mp eq "/boot");
         $mnt_point = $this_mp if ($this_mp eq "/");
       }
-    } elsif ($c eq "TMPFS") {
+    }
+    elsif ($c eq "TMPFS") {
       # not usable for /boot
       next;
-    } else {
+    }
+    else {
       &FAI::internal_error("Unexpected key $c");
     }
   }
@@ -242,7 +248,8 @@ sub generate_fstab {
           &FAI::get_fstab_key($device_name, $config->{$c}->{fstabkey}), $device_name);
 
       }
-    } elsif ($c =~ /^VG_(.+)$/) {
+    }
+    elsif ($c =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
 
       my $device = $1;
@@ -265,7 +272,8 @@ sub generate_fstab {
         push @fstab, &FAI::create_fstab_line($l_ref,
           &FAI::get_fstab_key($device_name, $config->{"VG_--ANY--"}->{fstabkey}), $device_name);
       }
-    } elsif ($c eq "RAID") {
+    }
+    elsif ($c eq "RAID") {
 
       # create a line in the output file for each device
       foreach my $r (sort keys %{ $config->{$c}->{volumes} }) {
@@ -285,7 +293,8 @@ sub generate_fstab {
         push @fstab, &FAI::create_fstab_line($r_ref,
           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
       }
-    } elsif ($c eq "CRYPT") {
+    }
+    elsif ($c eq "CRYPT") {
       foreach my $v (sort keys %{ $config->{$c}->{volumes} }) {
         my $c_ref = $config->{$c}->{volumes}->{$v};
 
@@ -298,7 +307,8 @@ sub generate_fstab {
 
         push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
       }
-    } elsif ($c eq "TMPFS") {
+    }
+    elsif ($c eq "TMPFS") {
       foreach my $v (sort keys %{ $config->{$c}->{volumes} }) {
         my $c_ref = $config->{$c}->{volumes}->{$v};
 
@@ -307,17 +317,19 @@ sub generate_fstab {
         ($c_ref->{mountpoint} eq $boot_mnt_point) and
           die "Boot partition cannot be a tmpfs\n";
 
-	if (($c_ref->{mount_options} =~ m/size=/) || ($c_ref->{mount_options} =~ m/nr_blocks=/)) {
+        if (($c_ref->{mount_options} =~ m/size=/) || ($c_ref->{mount_options} =~ m/nr_blocks=/)) {
           warn "Specified tmpfs size for $c_ref->{mountpoint} ignored as mount options contain size= or nr_blocks=\n";
-        } else {
-	  $c_ref->{mount_options} .= "," if ($c_ref->{mount_options} ne "");
+        }
+        else {
+          $c_ref->{mount_options} .= "," if ($c_ref->{mount_options} ne "");
           # Size will be in % or MiB
-	  $c_ref->{mount_options} .= "size=" . $c_ref->{size};
-	}
+          $c_ref->{mount_options} .= "size=" . $c_ref->{size};
+        }
 
         push @fstab, &FAI::create_fstab_line($c_ref, "tmpfs", "tmpfs");
       }
-    } else {
+    }
+    else {
       &FAI::internal_error("Unexpected key $c");
     }
   }
