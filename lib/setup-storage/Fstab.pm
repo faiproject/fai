@@ -205,33 +205,31 @@ sub find_boot_mnt_point {
 #
 ################################################################################
 sub generate_fstab {
-
-  # config structure is the only input
-  my ($config) = @_;
+  my %config = %{ +shift };
 
   # the file to be returned, a list of lines
   my @fstab = ();
 
   # mount point for /boot
-  my $boot_mnt_point = find_boot_mnt_point(%FAI::configs);
+  my $boot_mnt_point = find_boot_mnt_point(%config);
 
   # walk through all configured parts
   # the order of entries is most likely wrong, it is fixed at the end
-  foreach my $c (sort keys %$config) {
+  foreach my $c (sort keys %config) {
 
     # entry is a physical device
     if ($c =~ /^PHY_(.+)$/) {
       my $device = $1;
 
       # make sure the desired fstabkey is defined at all
-      defined ($config->{$c}->{fstabkey})
+      defined ($config{$c}->{fstabkey})
         or &FAI::internal_error("fstabkey undefined");
 
       # create a line in the output file for each partition
-      foreach my $p (sort keys %{ $config->{$c}->{partitions} }) {
+      foreach my $p (sort keys %{ $config{$c}->{partitions} }) {
 
         # keep a reference to save some typing
-        my $p_ref = $config->{$c}->{partitions}->{$p};
+        my $p_ref = $config{$c}->{partitions}->{$p};
 
         # skip extended partitions and entries without a mountpoint
         next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
@@ -247,7 +245,7 @@ sub generate_fstab {
         }
 
         push @fstab, create_fstab_line($p_ref,
-          get_fstab_key($device_name, $config->{$c}->{fstabkey}), $device_name);
+          get_fstab_key($device_name, $config{$c}->{fstabkey}), $device_name);
 
       }
     }
@@ -257,10 +255,10 @@ sub generate_fstab {
       my $device = $1;
 
       # create a line in the output file for each logical volume
-      foreach my $l (sort keys %{ $config->{$c}->{volumes} }) {
+      foreach my $l (sort keys %{ $config{$c}->{volumes} }) {
 
         # keep a reference to save some typing
-        my $l_ref = $config->{$c}->{volumes}->{$l};
+        my $l_ref = $config{$c}->{volumes}->{$l};
 
         # skip entries without a mountpoint
         next if ($l_ref->{mountpoint} eq "-");
@@ -272,16 +270,16 @@ sub generate_fstab {
           if ($l_ref->{mountpoint} eq $boot_mnt_point);
 
         push @fstab, create_fstab_line($l_ref,
-          get_fstab_key($device_name, $config->{"VG_--ANY--"}->{fstabkey}), $device_name);
+          get_fstab_key($device_name, $config{"VG_--ANY--"}->{fstabkey}), $device_name);
       }
     }
     elsif ($c eq "RAID") {
 
       # create a line in the output file for each device
-      foreach my $r (sort keys %{ $config->{$c}->{volumes} }) {
+      foreach my $r (sort keys %{ $config{$c}->{volumes} }) {
 
         # keep a reference to save some typing
-        my $r_ref = $config->{$c}->{volumes}->{$r};
+        my $r_ref = $config{$c}->{volumes}->{$r};
 
         # skip entries without a mountpoint
         next if ($r_ref->{mountpoint} eq "-");
@@ -293,12 +291,12 @@ sub generate_fstab {
           if ($r_ref->{mountpoint} eq $boot_mnt_point);
 
         push @fstab, create_fstab_line($r_ref,
-          get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
+          get_fstab_key($device_name, $config{RAID}->{fstabkey}), $device_name);
       }
     }
     elsif ($c eq "CRYPT") {
-      foreach my $v (sort keys %{ $config->{$c}->{volumes} }) {
-        my $c_ref = $config->{$c}->{volumes}->{$v};
+      foreach my $v (sort keys %{ $config{$c}->{volumes} }) {
+        my $c_ref = $config{$c}->{volumes}->{$v};
 
         next if ($c_ref->{mountpoint} eq "-");
 
@@ -311,8 +309,8 @@ sub generate_fstab {
       }
     }
     elsif ($c eq "TMPFS") {
-      foreach my $v (sort keys %{ $config->{$c}->{volumes} }) {
-        my $c_ref = $config->{$c}->{volumes}->{$v};
+      foreach my $v (sort keys %{ $config{$c}->{volumes} }) {
+        my $c_ref = $config{$c}->{volumes}->{$v};
 
         next if ($c_ref->{mountpoint} eq "-");
 
