@@ -209,7 +209,7 @@ sub generate_fstab {
 
   # walk through all configured parts
   # the order of entries is most likely wrong, it is fixed at the end
-  foreach my $c (keys %$config) {
+  foreach my $c (sort keys %$config) {
 
     # entry is a physical device
     if ($c =~ /^PHY_(.+)$/) {
@@ -220,7 +220,7 @@ sub generate_fstab {
         or &FAI::internal_error("fstabkey undefined");
 
       # create a line in the output file for each partition
-      foreach my $p (keys %{ $config->{$c}->{partitions} }) {
+      foreach my $p (sort keys %{ $config->{$c}->{partitions} }) {
 
         # keep a reference to save some typing
         my $p_ref = $config->{$c}->{partitions}->{$p};
@@ -248,7 +248,7 @@ sub generate_fstab {
       my $device = $1;
 
       # create a line in the output file for each logical volume
-      foreach my $l (keys %{ $config->{$c}->{volumes} }) {
+      foreach my $l (sort keys %{ $config->{$c}->{volumes} }) {
 
         # keep a reference to save some typing
         my $l_ref = $config->{$c}->{volumes}->{$l};
@@ -268,7 +268,7 @@ sub generate_fstab {
     } elsif ($c eq "RAID") {
 
       # create a line in the output file for each device
-      foreach my $r (keys %{ $config->{$c}->{volumes} }) {
+      foreach my $r (sort keys %{ $config->{$c}->{volumes} }) {
 
         # keep a reference to save some typing
         my $r_ref = $config->{$c}->{volumes}->{$r};
@@ -286,7 +286,7 @@ sub generate_fstab {
           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
       }
     } elsif ($c eq "CRYPT") {
-      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+      foreach my $v (sort keys %{ $config->{$c}->{volumes} }) {
         my $c_ref = $config->{$c}->{volumes}->{$v};
 
         next if ($c_ref->{mountpoint} eq "-");
@@ -299,7 +299,7 @@ sub generate_fstab {
         push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
       }
     } elsif ($c eq "TMPFS") {
-      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+      foreach my $v (sort keys %{ $config->{$c}->{volumes} }) {
         my $c_ref = $config->{$c}->{volumes}->{$v};
 
         next if ($c_ref->{mountpoint} eq "-");
