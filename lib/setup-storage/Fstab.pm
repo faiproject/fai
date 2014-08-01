@@ -143,14 +143,16 @@ sub get_fstab_key {
 #
 ################################################################################
 sub find_boot_mnt_point {
+  my %config = @_;
+
   my $mnt_point = ".NO_SUCH_MOUNTPOINT";
 
   # walk through all configured parts
-  foreach my $c (keys %FAI::configs) {
+  foreach my $c (keys %config) {
 
     if ($c =~ /^PHY_(.+)$/) {
-      foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
-        my $this_mp = $FAI::configs{$c}{partitions}{$p}{mountpoint};
+      foreach my $p (keys %{ $config{$c}->{partitions} }) {
+        my $this_mp = $config{$c}->{partitions}->{$p}->{mountpoint};
 
         next if (!defined($this_mp));
 
@@ -160,8 +162,8 @@ sub find_boot_mnt_point {
     }
     elsif ($c =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
-      foreach my $l (keys %{ $FAI::configs{$c}{volumes} }) {
-        my $this_mp = $FAI::configs{$c}{volumes}{$l}{mountpoint};
+      foreach my $l (keys %{ $config{$c}->{volumes} }) {
+        my $this_mp = $config{$c}->{volumes}->{$l}->{mountpoint};
 
         next if (!defined($this_mp));
 
@@ -170,8 +172,8 @@ sub find_boot_mnt_point {
       }
     }
     elsif ($c eq "RAID" || $c eq "CRYPT") {
-      foreach my $r (keys %{ $FAI::configs{$c}{volumes} }) {
-        my $this_mp = $FAI::configs{$c}{volumes}{$r}{mountpoint};
+      foreach my $r (keys %{ $config{$c}{volumes} }) {
+        my $this_mp = $config{$c}->{volumes}->{$r}->{mountpoint};
 
         next if (!defined($this_mp));
 
@@ -211,7 +213,7 @@ sub generate_fstab {
   my @fstab = ();
 
   # mount point for /boot
-  my $boot_mnt_point = find_boot_mnt_point();
+  my $boot_mnt_point = find_boot_mnt_point(%FAI::configs);
 
   # walk through all configured parts
   # the order of entries is most likely wrong, it is fixed at the end
