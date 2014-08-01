@@ -238,7 +238,9 @@ foreach (&numsort(keys %FAI::commands)) {
 # generate the proposed fstab contents
 # wait for udev to set up all devices
 `$FAI::udev_settle`;
-my @fstab = &FAI::generate_fstab(\%FAI::configs);
+my ($aref_fstab, $href_disk_var) = &FAI::generate_fstab(\%FAI::configs);
+my @fstab    = @{ $aref_fstab    };
+my %disk_var = %{ $href_disk_var };
 
 # print fstab
 $FAI::debug and print "$_\n" foreach (@fstab);
@@ -253,14 +255,13 @@ if ($FAI::no_dry_run) {
 
 # write variables to $FAI::DATADIR/disk_var.sh
 # debugging
-$FAI::debug and print "$_=\${$_:-$FAI::disk_var{$_}}\n"
-  foreach (keys %FAI::disk_var);
+$FAI::debug and print "$_=\${$_:-$disk_var{$_}}\n"
+  foreach (keys %disk_var);
 
-if ($FAI::no_dry_run)
-{
+if ($FAI::no_dry_run) {
   open(DISK_VAR, ">$FAI::DATADIR/disk_var.sh")
     or die "Unable to write to file $FAI::DATADIR/disk_var.sh\n";
-  print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
+  print DISK_VAR "$_=\${$_:-$disk_var{$_}}\n" foreach (keys %disk_var);
   close DISK_VAR;
 }
 

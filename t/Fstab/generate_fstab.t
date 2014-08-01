@@ -38,31 +38,22 @@ my $testdir = 't/Fstab/data';
 	);
 
 	for my $testcase (@testcases) {
-#		# reset global variables to initial state
-#		%FAI::disk_var = (
-#			'SWAPLIST'    => q{},
-#			'BOOT_DEVICE' => q{},
-#		);
-#		%FAI::configs  = ();
-
 		my $input  = slurp_file("$testdir/$testcase.input");
 		my $output = slurp_file("$testdir/$testcase.result");
 
 		my %configs;            eval $input;
 		my (@fstab, %disk_var); eval $output;
 
-		%FAI::configs = %configs;
-		my @computed = FAI::generate_fstab(\%FAI::configs);
-		my %computed = %FAI::disk_var;
-
+		#   @fstab %disk_vars
+		my ($aref, $href) = FAI::generate_fstab(\%configs);
 
 		my @expected = @fstab;
-		is_deeply(\@computed, \@expected, "$testcase: fstab")
-		  or diag(Data::Dumper->Dump([\@computed], ['computed']));
+		is_deeply($aref, \@expected, "$testcase: fstab")
+		  or diag(Data::Dumper->Dump([$aref], ['computed']));
 
 		my %expected = %disk_var;
-		is_deeply(\%computed, \%expected, "$testcase: disk_vars")
-		  or diag(Data::Dumper->Dump([\@computed], ['computed']));
+		is_deeply($href, \%expected, "$testcase: disk_vars")
+		  or diag(Data::Dumper->Dump([$href], ['computed']));
 	}
 }
 

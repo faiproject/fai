@@ -420,11 +420,8 @@ sub generate_fstab {
   unshift @fstab, "#";
   unshift @fstab, "# /etc/fstab: static file system information.";
 
-  # update global variable with new content
-  %FAI::disk_var = %disk_var;
-
-  # return the list of lines
-  return @fstab;
+  # return the generated fstab and disk_vars
+  return (\@fstab, \%disk_var);
 }
 
 1;
