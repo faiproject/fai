@@ -65,14 +65,6 @@ sub create_fstab_line {
   push @fstab_line, "# device at install: $dev_name"
     if ($name =~ /^(UUID|LABEL)=/);
 
-  # set the ROOT_PARTITION variable, if this is the mountpoint for /
-  $FAI::disk_var{ROOT_PARTITION} = $name
-    if ($d_ref->{mountpoint} eq "/");
-
-  # add to the swaplist, if the filesystem is swap
-  $FAI::disk_var{SWAPLIST} .= " " . $dev_name
-    if ($d_ref->{filesystem} eq "swap");
-
   # join the columns of one line with tabs
   return join ("\t", @fstab_line);
 }
@@ -244,8 +236,16 @@ sub generate_fstab {
           $FAI::disk_var{BOOT_DEVICE} = $device;
         }
 
-        push @fstab, create_fstab_line($p_ref,
-          get_fstab_key($device_name, $config{$c}->{fstabkey}), $device_name);
+        my $mountname = get_fstab_key($device_name, $config{$c}->{fstabkey});
+        push @fstab, create_fstab_line($p_ref, $mountname, $device_name);
+
+        # set the ROOT_PARTITION variable, if this is the mountpoint for /
+        $FAI::disk_var{ROOT_PARTITION} = $mountname
+          if ($p_ref->{mountpoint} eq "/");
+
+        # add to the swaplist, if the filesystem is swap
+        $FAI::disk_var{SWAPLIST} .= " " . $device_name
+          if ($p_ref->{filesystem} eq "swap");
 
       }
     }
@@ -269,8 +269,17 @@ sub generate_fstab {
         $FAI::disk_var{BOOT_DEVICE} = $device_name
           if ($l_ref->{mountpoint} eq $boot_mnt_point);
 
-        push @fstab, create_fstab_line($l_ref,
-          get_fstab_key($device_name, $config{"VG_--ANY--"}->{fstabkey}), $device_name);
+        my $mountname = get_fstab_key($device_name, $config{"VG_--ANY--"}->{fstabkey});
+        push @fstab, create_fstab_line($l_ref, $mountname, $device_name);
+
+        # set the ROOT_PARTITION variable, if this is the mountpoint for /
+        $FAI::disk_var{ROOT_PARTITION} = $mountname
+          if ($l_ref->{mountpoint} eq "/");
+
+        # add to the swaplist, if the filesystem is swap
+        $FAI::disk_var{SWAPLIST} .= " " . $device_name
+          if ($l_ref->{filesystem} eq "swap");
+
       }
     }
     elsif ($c eq "RAID") {
@@ -290,8 +299,17 @@ sub generate_fstab {
         $FAI::disk_var{BOOT_DEVICE} = $device_name
           if ($r_ref->{mountpoint} eq $boot_mnt_point);
 
-        push @fstab, create_fstab_line($r_ref,
-          get_fstab_key($device_name, $config{RAID}->{fstabkey}), $device_name);
+        my $mountname = get_fstab_key($device_name, $config{RAID}->{fstabkey});
+        push @fstab, create_fstab_line($r_ref, $mountname, $device_name);
+
+        # set the ROOT_PARTITION variable, if this is the mountpoint for /
+        $FAI::disk_var{ROOT_PARTITION} = $mountname
+          if ($r_ref->{mountpoint} eq "/");
+
+        # add to the swaplist, if the filesystem is swap
+        $FAI::disk_var{SWAPLIST} .= " " . $device_name
+          if ($r_ref->{filesystem} eq "swap");
+
       }
     }
     elsif ($c eq "CRYPT") {
@@ -306,6 +324,15 @@ sub generate_fstab {
           die "Boot partition cannot be encrypted\n";
 
         push @fstab, create_fstab_line($c_ref, $device_name, $device_name);
+
+        # set the ROOT_PARTITION variable, if this is the mountpoint for /
+        $FAI::disk_var{ROOT_PARTITION} = $device_name
+          if ($c_ref->{mountpoint} eq "/");
+
+        # add to the swaplist, if the filesystem is swap
+        $FAI::disk_var{SWAPLIST} .= " " . $device_name
+          if ($c_ref->{filesystem} eq "swap");
+
       }
     }
     elsif ($c eq "TMPFS") {
@@ -327,6 +354,15 @@ sub generate_fstab {
         }
 
         push @fstab, create_fstab_line($c_ref, "tmpfs", "tmpfs");
+
+        # set the ROOT_PARTITION variable, if this is the mountpoint for /
+        $FAI::disk_var{ROOT_PARTITION} = "tmpfs"
+          if ($c_ref->{mountpoint} eq "/");
+
+        # add to the swaplist, if the filesystem is swap
+        $FAI::disk_var{SWAPLIST} .= " " . "tmpfs"
+          if ($c_ref->{filesystem} eq "swap");
+
       }
     }
     else {
