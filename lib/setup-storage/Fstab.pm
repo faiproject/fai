@@ -240,12 +240,14 @@ sub generate_fstab {
         push @fstab, create_fstab_line($p_ref, $mountname, $device_name);
 
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        $FAI::disk_var{ROOT_PARTITION} = $mountname
-          if ($p_ref->{mountpoint} eq "/");
+        if ($p_ref->{mountpoint} eq "/") {
+          $FAI::disk_var{ROOT_PARTITION} = $mountname;
+        }
 
         # add to the swaplist, if the filesystem is swap
-        $FAI::disk_var{SWAPLIST} .= " " . $device_name
-          if ($p_ref->{filesystem} eq "swap");
+        if ($p_ref->{filesystem} eq "swap") {
+          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        }
 
       }
     }
@@ -266,19 +268,22 @@ sub generate_fstab {
         my $device_name = "/dev/$device/$l";
 
         # if the mount point the /boot mount point, variables must be set
-        $FAI::disk_var{BOOT_DEVICE} = $device_name
-          if ($l_ref->{mountpoint} eq $boot_mnt_point);
+        if ($l_ref->{mountpoint} eq $boot_mnt_point) {
+          $FAI::disk_var{BOOT_DEVICE} = $device_name;
+        }
 
         my $mountname = get_fstab_key($device_name, $config{"VG_--ANY--"}->{fstabkey});
         push @fstab, create_fstab_line($l_ref, $mountname, $device_name);
 
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        $FAI::disk_var{ROOT_PARTITION} = $mountname
-          if ($l_ref->{mountpoint} eq "/");
+        if ($l_ref->{mountpoint} eq "/") {
+          $FAI::disk_var{ROOT_PARTITION} = $mountname;
+        }
 
         # add to the swaplist, if the filesystem is swap
-        $FAI::disk_var{SWAPLIST} .= " " . $device_name
-          if ($l_ref->{filesystem} eq "swap");
+        if ($l_ref->{filesystem} eq "swap") {
+          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        }
 
       }
     }
@@ -296,19 +301,22 @@ sub generate_fstab {
         my $device_name = "/dev/md$r";
 
         # if the mount point the /boot mount point, variables must be set
-        $FAI::disk_var{BOOT_DEVICE} = $device_name
-          if ($r_ref->{mountpoint} eq $boot_mnt_point);
+        if ($r_ref->{mountpoint} eq $boot_mnt_point) {
+          $FAI::disk_var{BOOT_DEVICE} = $device_name
+        }
 
         my $mountname = get_fstab_key($device_name, $config{RAID}->{fstabkey});
         push @fstab, create_fstab_line($r_ref, $mountname, $device_name);
 
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        $FAI::disk_var{ROOT_PARTITION} = $mountname
-          if ($r_ref->{mountpoint} eq "/");
+        if ($r_ref->{mountpoint} eq "/") {
+          $FAI::disk_var{ROOT_PARTITION} = $mountname;
+        }
 
         # add to the swaplist, if the filesystem is swap
-        $FAI::disk_var{SWAPLIST} .= " " . $device_name
-          if ($r_ref->{filesystem} eq "swap");
+        if ($r_ref->{filesystem} eq "swap") {
+          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        }
 
       }
     }
@@ -326,12 +334,14 @@ sub generate_fstab {
         push @fstab, create_fstab_line($c_ref, $device_name, $device_name);
 
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        $FAI::disk_var{ROOT_PARTITION} = $device_name
-          if ($c_ref->{mountpoint} eq "/");
+        if ($c_ref->{mountpoint} eq "/") {
+          $FAI::disk_var{ROOT_PARTITION} = $device_name;
+        }
 
         # add to the swaplist, if the filesystem is swap
-        $FAI::disk_var{SWAPLIST} .= " " . $device_name
-          if ($c_ref->{filesystem} eq "swap");
+        if ($c_ref->{filesystem} eq "swap") {
+          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        }
 
       }
     }
@@ -356,12 +366,14 @@ sub generate_fstab {
         push @fstab, create_fstab_line($c_ref, "tmpfs", "tmpfs");
 
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        $FAI::disk_var{ROOT_PARTITION} = "tmpfs"
-          if ($c_ref->{mountpoint} eq "/");
+        if ($c_ref->{mountpoint} eq "/") {
+          $FAI::disk_var{ROOT_PARTITION} = "tmpfs";
+        }
 
         # add to the swaplist, if the filesystem is swap
-        $FAI::disk_var{SWAPLIST} .= " " . "tmpfs"
-          if ($c_ref->{filesystem} eq "swap");
+        if ($c_ref->{filesystem} eq "swap") {
+          $FAI::disk_var{SWAPLIST} .= " " . "tmpfs";
+        }
 
       }
     }
