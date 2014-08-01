@@ -205,6 +205,9 @@ sub generate_fstab {
   # mount point for /boot
   my $boot_mnt_point = find_boot_mnt_point(%config);
 
+  my ($root_partition, $boot_partition, @swaplist);
+  my $boot_device = q{};
+
   # walk through all configured parts
   # the order of entries is most likely wrong, it is fixed at the end
   foreach my $c (sort keys %config) {
@@ -213,109 +216,119 @@ sub generate_fstab {
     if ($c =~ /^PHY_(.+)$/) {
       my $device = $1;
 
+      my $fstabkey = $config{$c}->{'fstabkey'};
+
       # make sure the desired fstabkey is defined at all
-      defined ($config{$c}->{fstabkey})
+      defined $fstabkey
         or &FAI::internal_error("fstabkey undefined");
 
       # create a line in the output file for each partition
       foreach my $p (sort keys %{ $config{$c}->{partitions} }) {
-
-        # keep a reference to save some typing
         my $p_ref = $config{$c}->{partitions}->{$p};
 
+        my $is_extended = $p_ref->{'size'}->{'extended'};
+        my $mountpoint  = $p_ref->{'mountpoint'};
+        my $filesystem  = $p_ref->{'filesystem'};
+
         # skip extended partitions and entries without a mountpoint
-        next if ($p_ref->{size}->{extended} || $p_ref->{mountpoint} eq "-");
+        next if ($is_extended || $mountpoint eq "-");
 
         my $device_name = 0 == $p ? $device :
           &FAI::make_device_name($device, $p);
 
-        # if the mount point the /boot mount point, variables must be set
-        if ($p_ref->{mountpoint} eq $boot_mnt_point) {
-          # set the BOOT_DEVICE and BOOT_PARTITION variables
-          $FAI::disk_var{BOOT_PARTITION} = $device_name;
-          $FAI::disk_var{BOOT_DEVICE} = $device;
-        }
-
-        my $mountname = get_fstab_key($device_name, $config{$c}->{fstabkey});
+        my $mountname = get_fstab_key($device_name, $fstabkey);
         push @fstab, create_fstab_line($p_ref, $mountname, $device_name);
 
+        # if the mount point the /boot mount point, variables must be set
+        if ($mountpoint eq $boot_mnt_point) {
+          # set the BOOT_DEVICE and BOOT_PARTITION variables
+          $boot_partition = $device_name;
+          $boot_device    = $device;
+        }
+
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        if ($p_ref->{mountpoint} eq "/") {
-          $FAI::disk_var{ROOT_PARTITION} = $mountname;
+        if ($mountpoint eq "/") {
+          $root_partition = $mountname;
         }
 
         # add to the swaplist, if the filesystem is swap
-        if ($p_ref->{filesystem} eq "swap") {
-          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        if ($filesystem eq "swap") {
+          push @swaplist, $device_name;
         }
 
       }
     }
     elsif ($c =~ /^VG_(.+)$/) {
-      next if ($1 eq "--ANY--");
-
       my $device = $1;
+
+      next if ($device eq "--ANY--");
+
+      my $fstabkey = $config{"VG_--ANY--"}->{'fstabkey'};
 
       # create a line in the output file for each logical volume
       foreach my $l (sort keys %{ $config{$c}->{volumes} }) {
-
-        # keep a reference to save some typing
         my $l_ref = $config{$c}->{volumes}->{$l};
 
+        my $mountpoint  = $l_ref->{'mountpoint'};
+        my $filesystem  = $l_ref->{'filesystem'};
+
         # skip entries without a mountpoint
-        next if ($l_ref->{mountpoint} eq "-");
+        next if ($mountpoint eq "-");
 
         my $device_name = "/dev/$device/$l";
 
-        # if the mount point the /boot mount point, variables must be set
-        if ($l_ref->{mountpoint} eq $boot_mnt_point) {
-          $FAI::disk_var{BOOT_DEVICE} = $device_name;
-        }
-
-        my $mountname = get_fstab_key($device_name, $config{"VG_--ANY--"}->{fstabkey});
+        my $mountname = get_fstab_key($device_name, $fstabkey);
         push @fstab, create_fstab_line($l_ref, $mountname, $device_name);
 
+        # if the mount point the /boot mount point, variables must be set
+        if ($mountpoint eq $boot_mnt_point) {
+          $boot_device = $device_name;
+        }
+
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        if ($l_ref->{mountpoint} eq "/") {
-          $FAI::disk_var{ROOT_PARTITION} = $mountname;
+        if ($mountpoint eq "/") {
+          $root_partition = $mountname;
         }
 
         # add to the swaplist, if the filesystem is swap
-        if ($l_ref->{filesystem} eq "swap") {
-          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        if ($filesystem eq "swap") {
+          push @swaplist, $device_name;
         }
 
       }
     }
     elsif ($c eq "RAID") {
 
+      my $fstabkey = $config{'RAID'}->{'fstabkey'};
+
       # create a line in the output file for each device
       foreach my $r (sort keys %{ $config{$c}->{volumes} }) {
-
-        # keep a reference to save some typing
         my $r_ref = $config{$c}->{volumes}->{$r};
 
+        my $mountpoint  = $r_ref->{'mountpoint'};
+        my $filesystem  = $r_ref->{'filesystem'};
+
         # skip entries without a mountpoint
-        next if ($r_ref->{mountpoint} eq "-");
+        next if ($mountpoint eq "-");
 
         my $device_name = "/dev/md$r";
 
-        # if the mount point the /boot mount point, variables must be set
-        if ($r_ref->{mountpoint} eq $boot_mnt_point) {
-          $FAI::disk_var{BOOT_DEVICE} = $device_name
-        }
-
-        my $mountname = get_fstab_key($device_name, $config{RAID}->{fstabkey});
+        my $mountname = get_fstab_key($device_name, $fstabkey);
         push @fstab, create_fstab_line($r_ref, $mountname, $device_name);
 
+        # if the mount point the /boot mount point, variables must be set
+        if ($mountpoint eq $boot_mnt_point) {
+          $boot_device = $device_name
+        }
+
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        if ($r_ref->{mountpoint} eq "/") {
-          $FAI::disk_var{ROOT_PARTITION} = $mountname;
+        if ($mountpoint eq "/") {
+          $root_partition = $mountname;
         }
 
         # add to the swaplist, if the filesystem is swap
-        if ($r_ref->{filesystem} eq "swap") {
-          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        if ($filesystem eq "swap") {
+          push @swaplist, $device_name;
         }
 
       }
@@ -324,23 +337,27 @@ sub generate_fstab {
       foreach my $v (sort keys %{ $config{$c}->{volumes} }) {
         my $c_ref = $config{$c}->{volumes}->{$v};
 
-        next if ($c_ref->{mountpoint} eq "-");
+        my $mountpoint  = $c_ref->{'mountpoint'};
+        my $filesystem  = $c_ref->{'filesystem'};
+
+        next if ($mountpoint eq "-");
 
         my $device_name = &FAI::enc_name($c_ref->{device});
 
-        ($c_ref->{mountpoint} eq $boot_mnt_point) and
+        ($mountpoint eq $boot_mnt_point) and
           die "Boot partition cannot be encrypted\n";
 
         push @fstab, create_fstab_line($c_ref, $device_name, $device_name);
 
         # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        if ($c_ref->{mountpoint} eq "/") {
-          $FAI::disk_var{ROOT_PARTITION} = $device_name;
+        if ($mountpoint eq "/") {
+          $root_partition = $device_name;
         }
 
         # add to the swaplist, if the filesystem is swap
-        if ($c_ref->{filesystem} eq "swap") {
-          $FAI::disk_var{SWAPLIST} .= " " . $device_name;
+        # [is it actually possible to encrypt swap?]
+        if ($filesystem eq "swap") {
+          push @swaplist, $device_name;
         }
 
       }
@@ -349,31 +366,31 @@ sub generate_fstab {
       foreach my $v (sort keys %{ $config{$c}->{volumes} }) {
         my $c_ref = $config{$c}->{volumes}->{$v};
 
-        next if ($c_ref->{mountpoint} eq "-");
+        my $mountpoint = $c_ref->{'mountpoint'};
+        my $mountopts  = $c_ref->{'mount_options'};
+        my $size       = $c_ref->{'size'};
 
-        ($c_ref->{mountpoint} eq $boot_mnt_point) and
-          die "Boot partition cannot be a tmpfs\n";
+        next if ($mountpoint eq "-");
 
-        if (($c_ref->{mount_options} =~ m/size=/) || ($c_ref->{mount_options} =~ m/nr_blocks=/)) {
-          warn "Specified tmpfs size for $c_ref->{mountpoint} ignored as mount options contain size= or nr_blocks=\n";
+        ($mountpoint eq $boot_mnt_point)
+          and die "Boot partition cannot be a tmpfs\n";
+        ($mountpoint eq "/")
+          and die "Root partition on tmpfs is unsupported\n";
+
+        if (($mountopts =~ m/size=/) || ($mountopts =~ m/nr_blocks=/)) {
+          warn "Specified tmpfs size for $mountpoint ignored as mount options contain size= or nr_blocks=\n";
         }
         else {
-          $c_ref->{mount_options} .= "," if ($c_ref->{mount_options} ne "");
           # Size will be in % or MiB
-          $c_ref->{mount_options} .= "size=" . $c_ref->{size};
+          if ($mountopts eq q{}) {
+            $mountopts = "size=$size";
+          }
+          else {
+            $mountopts .= ",size=$size";
+          }
         }
 
         push @fstab, create_fstab_line($c_ref, "tmpfs", "tmpfs");
-
-        # set the ROOT_PARTITION variable, if this is the mountpoint for /
-        if ($c_ref->{mountpoint} eq "/") {
-          $FAI::disk_var{ROOT_PARTITION} = "tmpfs";
-        }
-
-        # add to the swaplist, if the filesystem is swap
-        if ($c_ref->{filesystem} eq "swap") {
-          $FAI::disk_var{SWAPLIST} .= " " . "tmpfs";
-        }
 
       }
     }
@@ -382,13 +399,17 @@ sub generate_fstab {
     }
   }
 
-  # cleanup the swaplist (remove leading space and add quotes)
-  $FAI::disk_var{SWAPLIST} =~ s/^\s*/"/;
-  $FAI::disk_var{SWAPLIST} =~ s/\s*$/"/;
-
-  # cleanup the list of boot devices (remove leading space and add quotes)
-  $FAI::disk_var{BOOT_DEVICE} =~ s/^\s*/"/;
-  $FAI::disk_var{BOOT_DEVICE} =~ s/\s*$/"/;
+  my $swaplist = join q{ }, @swaplist;
+  my %disk_var = (
+    'SWAPLIST'    => q{"} . $swaplist    . q{"},
+    'BOOT_DEVICE' => q{"} . $boot_device . q{"},
+  );
+  if (defined $root_partition) {
+    $disk_var{'ROOT_PARTITION'} = $root_partition;
+  }
+  if (defined $boot_partition) {
+    $disk_var{'BOOT_PARTITION'} = $boot_partition;
+  }
 
   # sort the lines in @fstab to enable all sub mounts
   @fstab = sort { [split("\t",$a)]->[1] cmp [split("\t",$b)]->[1] } @fstab;
@@ -398,6 +419,9 @@ sub generate_fstab {
     "# <file sys>\t<mount point>\t<type>\t<options>\t<dump>\t<pass>";
   unshift @fstab, "#";
   unshift @fstab, "# /etc/fstab: static file system information.";
+
+  # update global variable with new content
+  %FAI::disk_var = %disk_var;
 
   # return the list of lines
   return @fstab;

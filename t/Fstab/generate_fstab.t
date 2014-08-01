@@ -38,12 +38,12 @@ my $testdir = 't/Fstab/data';
 	);
 
 	for my $testcase (@testcases) {
-		# reset global variables to initial state
-		%FAI::disk_var = (
-			'SWAPLIST'    => q{},
-			'BOOT_DEVICE' => q{},
-		);
-		%FAI::configs  = ();
+#		# reset global variables to initial state
+#		%FAI::disk_var = (
+#			'SWAPLIST'    => q{},
+#			'BOOT_DEVICE' => q{},
+#		);
+#		%FAI::configs  = ();
 
 		my $input  = slurp_file("$testdir/$testcase.input");
 		my $output = slurp_file("$testdir/$testcase.result");
