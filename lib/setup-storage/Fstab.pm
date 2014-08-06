@@ -420,8 +420,17 @@ sub generate_fstab {
   unshift @fstab, "#";
   unshift @fstab, "# /etc/fstab: static file system information.";
 
+  my @disk_vars;
+  for my $varname (sort keys %disk_var) {
+    my $value = $disk_var{$varname};
+
+    # 'VAR=${VALUE1:-$VALUE2}': if the $VALUE1 is unset or empty use
+    # $VALUE2, otherwise use $VALUE1
+    push @disk_vars, "$varname=\${$varname:-$value}";
+  }
+
   # return the generated fstab and disk_vars
-  return (\@fstab, \%disk_var);
+  return (\@fstab, \@disk_vars);
 }
 
 1;
