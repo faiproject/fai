@@ -26,7 +26,6 @@ my $testdir = 't/Fstab/data';
 }
 
 {
-	my $testname = 'physical disk (no md/lvm/...)';
 	my @testcases = (
 		'TEST1_no-mountpoints',
 		'TEST2_just-root+swap',
@@ -42,18 +41,18 @@ my $testdir = 't/Fstab/data';
 		my $output = slurp_file("$testdir/$testcase.result");
 
 		my %configs;            eval $input;
-		my (@fstab, %disk_var); eval $output;
+		my (@fstab, @disk_var); eval $output;
 
-		#   @fstab %disk_vars
-		my ($aref, $href) = FAI::generate_fstab(\%configs);
+		#   @fstab @disk_vars
+		my ($aref1, $aref2) = FAI::generate_fstab(\%configs);
 
-		my @expected = @fstab;
-		is_deeply($aref, \@expected, "$testcase: fstab")
-		  or diag(Data::Dumper->Dump([$aref], ['computed']));
+		my @expected1 = @fstab;
+		is_deeply($aref1, \@expected1, "$testcase: fstab")
+		  or diag(Data::Dumper->Dump([$aref1], ['computed']));
 
-		my %expected = %disk_var;
-		is_deeply($href, \%expected, "$testcase: disk_vars")
-		  or diag(Data::Dumper->Dump([$href], ['computed']));
+		my @expected2 = @disk_var;
+		is_deeply($aref2, \@expected2, "$testcase: disk_vars")
+		  or diag(Data::Dumper->Dump([$aref2], ['computed']));
 	}
 }
 
