@@ -485,7 +485,15 @@ umount_dirs() {
 setup_tftp(){
 
     # tftp environment
-    local pxebin=$NFSROOT/usr/lib/syslinux/pxelinux.0
+    local pxebin
+
+    # wheezy/jessie pathes
+    if [ -f $NFSROOT/usr/lib/PXELINUX/pxelinux.0 ]; then
+        pxelinux=$NFSROOT/usr/lib/PXELINUX/pxelinux.0
+    else
+        pxelinux=$NFSROOT/usr/lib/syslinux/pxelinux.0
+    fi
+
     rm -f $NFSROOT/boot/*.bak
     mkdir -p $TFTPROOT/pxelinux.cfg
     chmod a+r $NFSROOT/boot/initrd.img-*
