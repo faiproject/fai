@@ -5,7 +5,7 @@
 # mkramdisk -- mount a ramdisk on top of a directory
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2014 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -50,6 +50,9 @@ umount_ramdisk() {
 
     set -e
     mkdir $ram
+    # get the partition for making mount --move work
+    local part=$(stat -c %m -- $disk/..)
+    mount --make-runbindable $part
     mount --move $disk $ram   # move current ramdisk to a new location
     rm -rf $disk/* $disk/.??* || true
     cp -a  $ram/. $disk/.   # copy ramdisk contents to disk
