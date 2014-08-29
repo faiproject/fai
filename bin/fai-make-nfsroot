@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2013 Thomas Lange
+	Copyright (C) 1999-2014 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -228,7 +228,8 @@ setup_ssh() {
     fi
 
     # enable root login
-    sed -i -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
+    sed -i -e '/PermitRootLogin/d' $NFSROOT/etc/ssh/sshd_config
+    ainsl $NFSROOT/etc/ssh/sshd_config 'PermitRootLogin yes'
     if [ -f "$SSH_IDENTITY" ]; then
         install -m0644 $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
         echo You can log into install clients without password using $SSH_IDENTITY
