@@ -50,10 +50,9 @@ umount_ramdisk() {
 
     set -e
     mkdir $ram
-    # get the partition for making mount --move work
-    local part=$(stat -c %m -- $disk/..)
-    mount --make-runbindable $part
-    mount --move $disk $ram   # move current ramdisk to a new location
+    # move current ramdisk to a new location
+    mount --bind $disk $ram
+    umount $disk
     rm -rf $disk/* $disk/.??* || true
     cp -a  $ram/. $disk/.   # copy ramdisk contents to disk
     umount $ram
