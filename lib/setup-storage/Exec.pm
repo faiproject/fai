@@ -84,6 +84,15 @@ $FAI::error_codes = [
     response     => "warn",
     exit_codes   => [1],
   },
+  {
+    error        => "parted_3_2",
+    message      => "Parted could not read a disk label (new disk?)\n",
+    stderr_regex => "Error: .* unrecognised disk label",
+    stdout_regex => "",
+    program      => "parted -s \\S+ unit TiB print",
+    response     => "warn",
+    exit_codes   => [1],
+  },
   ## {
   ##   error        => "parted_3",
   ##   message      => "Parted was unable to create the partition\n",
