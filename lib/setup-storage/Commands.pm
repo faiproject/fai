@@ -34,6 +34,8 @@ use strict;
 
 package FAI;
 
+my %partition_table_deps;
+
 ################################################################################
 #
 # @brief Build the mkfs commands for the partition pointed to by $partition
@@ -186,11 +188,11 @@ sub set_partition_flag_on_phys_dev {
   my $pre = "exist_$d";
   $pre .= ",cleared2_$disk" if (defined($FAI::configs{"PHY_$disk"}));
   &FAI::push_command( "parted -s $disk set $part_no $t on", $pre, "flag_${t}_$d" );
-  if (defined($FAI::partition_table_deps{$disk}) &&
-    $FAI::partition_table_deps{$disk} ne "") {
-    $FAI::partition_table_deps{$disk} .= ",flag_${t}_$d";
+  if (defined($partition_table_deps{$disk}) &&
+    $partition_table_deps{$disk} ne "") {
+    $partition_table_deps{$disk} .= ",flag_${t}_$d";
   } else {
-    $FAI::partition_table_deps{$disk} = "flag_${t}_$d";
+    $partition_table_deps{$disk} = "flag_${t}_$d";
   }
   return 1;
 }
@@ -1216,7 +1218,7 @@ sub setup_partitions {
     if($FAI::configs{$config}{disklabel} eq "gpt-bios" and $boot_disk);
 
   ($prev_id > -1) or &FAI::internal_error("No partitions created");
-  $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
+  $partition_table_deps{$disk} = "cleared2_$disk,exist_"
     . &FAI::make_device_name($disk, $prev_id);
 }
 
@@ -1242,21 +1244,21 @@ sub build_disk_commands {
         &FAI::push_command( "true", "",
           "exist_" . &FAI::make_device_name($disk, $part_id) );
         # no partition table operations
-        $FAI::partition_table_deps{$disk} = "";
+        $partition_table_deps{$disk} = "";
       }
     } elsif (defined($FAI::configs{$config}{partitions}{0})) {
       # no partition table operations
-      $FAI::partition_table_deps{$disk} = "";
+      $partition_table_deps{$disk} = "";
    } elsif (defined($FAI::configs{$config}{opts_all}{preserve})) {
      foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
        # all partitions exist
        &FAI::push_command( "true", "",
          "exist_" . &FAI::make_device_name($disk, $part_id) );
        # no partition table operations
-       $FAI::partition_table_deps{$disk} = "";
+       $partition_table_deps{$disk} = "";
      }
      # no changes on this disk
-     $FAI::partition_table_deps{$disk} = "";
+     $partition_table_deps{$disk} = "";
     } else {
       # create partitions on non-virtual configs
       &FAI::setup_partitions($config);
@@ -1336,8 +1338,8 @@ sub restore_partition_table {
 ################################################################################
 sub order_commands {
   # first add partition-table-is-complete
-  &FAI::push_command("true", $FAI::partition_table_deps{$_}, "pt_complete_$_")
-    foreach (keys %FAI::partition_table_deps);
+  &FAI::push_command("true", $partition_table_deps{$_}, "pt_complete_$_")
+    foreach (keys %partition_table_deps);
 
   my @pre_deps = ();
   my $i = 1;
