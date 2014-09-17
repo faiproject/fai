@@ -147,13 +147,6 @@ $FAI::n_c_i = 1;
 
 ################################################################################
 #
-# @brief Device alias names
-#
-################################################################################
-%FAI::dev_alias = ();
-
-################################################################################
-#
 # @brief Dependencies to be fulfilled before a disk is ready for use
 #
 ################################################################################
@@ -245,6 +238,9 @@ sub phys_dev {
   return (0, "", -2);
 }
 
+# used exclusively by enc_name() and mark_encrypted
+my %dev_alias;
+
 ################################################################################
 #
 # @brief Compute the name of $dev considering possible encryption
@@ -257,7 +253,7 @@ sub phys_dev {
 sub enc_name {
   my ($dev) = @_;
 
-  return $FAI::dev_alias{$dev} if defined($FAI::dev_alias{$dev});
+  return $dev_alias{$dev} if defined($dev_alias{$dev});
 
   # handle old-style encryption entries
   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
@@ -280,7 +276,7 @@ sub enc_name {
 
   &FAI::mark_encrypted($dev);
 
-  return $FAI::dev_alias{$dev};
+  return $dev_alias{$dev};
 }
 
 ################################################################################
@@ -299,7 +295,7 @@ sub mark_encrypted {
   my $enc_dev_short_name = "crypt$enc_dev_name";
   $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
 
-  $FAI::dev_alias{$dev} = $enc_dev_name;
+  $dev_alias{$dev} = $enc_dev_name;
 }
 
 ################################################################################
