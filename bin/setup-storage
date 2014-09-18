@@ -238,40 +238,41 @@ foreach (&numsort(keys %FAI::commands)) {
 # generate the proposed fstab contents
 # wait for udev to set up all devices
 `$FAI::udev_settle`;
-my @fstab = &FAI::generate_fstab(\%FAI::configs);
+my ($aref_fstab, $aref_disk_var) = &FAI::generate_fstab(\%FAI::configs);
+my @fstab    = @{ $aref_fstab    };
+my @disk_var = @{ $aref_disk_var };
 
-# print fstab
-$FAI::debug and print "$_\n" foreach (@fstab);
+# print all generated output before trying to write the files
+if ($FAI::debug) {
+  print "-- Proposed content for '/etc/fstab'    --\n";
+  print join "\n", @fstab,         q{};
+  print "-- Disk variables (disk_var.sh)         --\n";
+  print join "\n", @disk_var,      q{};
+  print "-- Proposed content for '/etc/crypttab' --\n";
+  print join "\n", @FAI::crypttab, q{};
+}
 
-# write the proposed contents of fstab to $FAI::DATADIR/fstab
+# write the proposed content
 if ($FAI::no_dry_run) {
-  open(FSTAB, ">$FAI::DATADIR/fstab")
-    or die "Failed to open $FAI::DATADIR/fstab for writing\n";
-  print FSTAB "$_\n" foreach (@fstab);
-  close FSTAB;
+  writefile("$FAI::DATADIR/fstab",       @fstab);
+  writefile("$FAI::DATADIR/disk_var.sh", @disk_var);
+  if (@FAI::crypttab) {
+    writefile("$FAI::DATADIR/crypttab",  @FAI::crypttab);
+  }
 }
 
-# write variables to $FAI::DATADIR/disk_var.sh
-# debugging
-$FAI::debug and print "$_=\${$_:-$FAI::disk_var{$_}}\n"
-  foreach (keys %FAI::disk_var);
+exit;
 
-if ($FAI::no_dry_run)
-{
-  open(DISK_VAR, ">$FAI::DATADIR/disk_var.sh")
-    or die "Unable to write to file $FAI::DATADIR/disk_var.sh\n";
-  print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
-  close DISK_VAR;
+sub writefile {
+  my ($filename, @content) = @_;
+
+  open my $fh, '>', $filename
+    or die "Unable to open '$filename' for writing: $!\n";
+  print {$fh} (join "\n", @content, q{})
+    or die "Unable to write to '$filename': $!\n";
+  close $fh
+    or die "Unable to close filehandle for '$filename': $!\n";
+
+  # return linecount (even in list context)
+  return scalar @content;
 }
-
-# print crypttab
-$FAI::debug and print "$_\n" foreach (@FAI::crypttab);
-
-# write the proposed contents of fstab to $FAI::DATADIR/fstab
-if ($FAI::no_dry_run && scalar(@FAI::crypttab)) {
-  open(CRYPTTAB, ">$FAI::DATADIR/crypttab")
-    or die "Failed to open $FAI::DATADIR/crypttab for writing\n";
-  print CRYPTTAB "$_\n" foreach (@FAI::crypttab);
-  close CRYPTTAB;
-}
-
