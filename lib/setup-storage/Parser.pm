@@ -451,6 +451,14 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{opts_all} = {};
         }
         raid_option(s?)
+        | 'btrfs'
+        {
+          #check whether btrfs tools are available
+          &FAI::in_path("mkfs.btrfs") or die "BTRFS tools not found in PATH.\n";
+          $FAI::device = "BTRFS";
+          $FAI::configs{$FAI::device}{fstabkey} = "device";
+          $FAI::configs{$FAI::device}{opts_all} = {};
+        }
         | 'cryptsetup'
         {
           &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
@@ -753,6 +761,24 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer_dev_name = "/dev/md$vol_id";
         }
         mountpoint devices filesystem mount_options mdcreateopts
+        | /^btrfs raid([0156]|10)\s+/
+        {
+          ($FAI::device eq "BTRFS") or die "BTRFS entry invalid in this context.\n";
+          defined $FAI::configs{BTRFS} or $FAI::configs{BTRFS}{volumes} = {};
+          my $btrfs_vol_id = 0;
+          foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{BTRFS}{volumes} })) {
+            defined ($FAI::configs{BTRFS}{volumes}{$ex_vol_id}{raidlevel}) or last;
+            $btrfs_vol_id++;
+          }
+          # set the RAID level of this volume
+          $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{raidlevel} = $1;
+          # initialise the hash of devices
+          $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{devices} = {};
+          # set the reference to the BTRFS volume
+          $FAI::partition_pointer = (\%FAI::configs)->{BTRFS}->{volumes}->{$btrfs_vol_id};
+          # $FAI::partition_pointer_dev_name = "";
+        }
+        mountpoint devices mount_options
         | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
         {
           ($FAI::device eq "CRYPT") or
@@ -1062,6 +1088,11 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer->{mdcreateopts} = $1;
         }
         | createtuneopt(s?)
+
+   btr_createops: /btr_createops:"([^"]*)"/ createtuneopt(s?)
+       {
+         $FAI::partition_pointer->{btr_createops} = $1;
+       }
 
     lv_or_fsopts: /lvcreateopts="([^"]*)"/ createtuneopt(s?)
         {
