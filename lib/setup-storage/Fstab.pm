@@ -284,6 +284,16 @@ sub generate_fstab {
         push @fstab, &FAI::create_fstab_line($r_ref,
           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
       }
+    } elsif ($c eq "BTRFS") {
+      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+        my $b_ref = $config->{$c}->{volumes}->{$v};
+
+        next if ($b_ref->{mountpoint} eq "-");
+
+        my @device_names = keys %{ $config->{$c}->{volumes}->{devices}};
+        push @fstab, &FAI::create_fstab_line($b_ref,
+          &FAI::get_fstab_key($device_names[0], $config->{"BTRFS"}->{fstabkey}), $device_names[0]);
+      }
     } elsif ($c eq "CRYPT") {
       foreach my $v (keys %{ $config->{$c}->{volumes} }) {
         my $c_ref = $config->{$c}->{volumes}->{$v};
