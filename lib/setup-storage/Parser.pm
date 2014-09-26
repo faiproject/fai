@@ -778,7 +778,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{BTRFS}->{volumes}->{$btrfs_vol_id};
           # $FAI::partition_pointer_dev_name = "";
         }
-        mountpoint devices mount_options btr_createops
+        mountpoint devices mount_options btrfscreateops
         | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
         {
           ($FAI::device eq "CRYPT") or
@@ -1092,7 +1092,7 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | createtuneopt(s?)
 
-   btr_createops: /btr_createops="([^"]*)"/ createtuneopt(s?)
+   btrfscreateops: /btr_createops="([^"]*)"/ createtuneopt(s?)
         {
           $FAI::partition_pointer->{btr_createops} = $1;
         }

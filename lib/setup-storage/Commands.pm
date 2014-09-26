@@ -294,7 +294,6 @@ sub build_cryptsetup_commands {
 sub build_btrfs_commands {
   foreach (my $config (keys %FAI::configs) { # loop through all configs
 
-    next if ($config eq "RAID" || ($config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
     ($config eq "BTRFS") or &FAI::internal_error("Invalid config $config");
 
     #create BTRFS RAIDs
@@ -308,7 +307,7 @@ sub build_btrfs_commands {
       my $mountpoint = $vol->{mountpoint};
       my $mountoptions = $vol->{mountoptions};
       ($mountoptions =~ m/subvol=([\d\w]+),/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
-      my $btr_createops = $vol->{btr_createops};
+      my $btrfscreateops = $vol->{btrfscreateops};
       my $pre_req = "";
 
       # creates the BTRFS volume/RAID
@@ -322,7 +321,7 @@ sub build_btrfs_commands {
                          "btrfs_$id_mounted"};
 
       # creating initial subvolume
-      &FAI::push_command("btrfs subvolume create /mnt/$initial_subvolume",
+      &FAI::push_command("btrfs subvolume create $btrfscreateops  /mnt/$initial_subvolume",
                          "btrfs_$id_mounted",
                          "btrfs_$initial_subvolume_created"};
 
@@ -331,10 +330,6 @@ sub build_btrfs_commands {
                          "btrfs_$initial_subvolume_created",
                          "btrfs_$initial_subvolume_created_and_btrfs_$id_umounted");
 
-      # mounting the subvolume to its mountpoint
-      &FAI::push_command("mount -o subvol=$initial_subvolume @devs[0] /target/$mountpoint $mountoptions",
-                         "btrfs_$initial_subvolume_created_and_btrfs_$id_umounted",
-                         "btrfs_$initial_sub_mounted_in_$mountpoint"}
     }
   }
 }
