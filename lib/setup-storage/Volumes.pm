@@ -60,6 +60,13 @@ sub find_all_phys_devs {
           push @phys_devs, $disk if (1 == $i_p_d);
         }
       }
+    } elsif ($config eq "BTRFS") {
+      foreach my $r (keys %{ $FAI::configs{$config}{volumes} }) {
+        foreach my $d (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} }) {
+          my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
+          push @phys_devs, $disk if (1 == $i_p_d);
+        }
+      }
     } elsif ($config eq "CRYPT") {
       # devices must be one of the above already
       next;

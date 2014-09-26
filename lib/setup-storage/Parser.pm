@@ -778,7 +778,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{BTRFS}->{volumes}->{$btrfs_vol_id};
           # $FAI::partition_pointer_dev_name = "";
         }
-        mountpoint devices mount_options
+        mountpoint devices mount_options btr_createops
         | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
         {
           ($FAI::device eq "CRYPT") or
@@ -1019,6 +1019,9 @@ $FAI::Parser = Parse::RecDescent->new(
               &FAI::mark_encrypted($candidates[0]);
               # add entry to device tree
               push @{ $FAI::dev_children{$candidates[0]} }, $FAI::partition_pointer_dev_name;
+            } elsif ($FAI::device eq "BTRFS") {
+              $dev = $candidates[0];
+              $FAI::partition_pointer->{devices}->{$dev} = {};
             } else {
               die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
               $dev = $candidates[0];
@@ -1089,10 +1092,11 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | createtuneopt(s?)
 
-   btr_createops: /btr_createops:"([^"]*)"/ createtuneopt(s?)
-       {
-         $FAI::partition_pointer->{btr_createops} = $1;
-       }
+   btr_createops: /btr_createops="([^"]*)"/ createtuneopt(s?)
+        {
+          $FAI::partition_pointer->{btr_createops} = $1;
+        }
+        | createtuneopt(s?)
 
     lv_or_fsopts: /lvcreateopts="([^"]*)"/ createtuneopt(s?)
         {
