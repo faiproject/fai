@@ -98,9 +98,8 @@ sub get_fstab_key {
   # or labels, use these if available
   my @uuid = ();
   `$FAI::udev_settle`;
-  &FAI::in_path("/usr/lib/fai/fai-vol_id") or die "/usr/lib/fai/fai-vol_id not found\n";
   &FAI::execute_ro_command(
-    "/usr/lib/fai/fai-vol_id -u $device_name", \@uuid, 0);
+    "/sbin/blkid -c /dev/null -s UUID -o value $device_name", \@uuid, 0);
 
   # every device must have a uuid, otherwise this is an error (unless we
   # are testing only)
@@ -114,7 +113,7 @@ sub get_fstab_key {
   my @label = ();
   `$FAI::udev_settle`;
   &FAI::execute_ro_command(
-    "/usr/lib/fai/fai-vol_id -l $device_name", \@label, 0);
+    "/sbin/blkid -c /dev/null -s LABEL -o value $device_name", \@label, 0);
 
   # print uuid and label to console
   warn "$device_name UUID=$uuid[0]" if @uuid;
