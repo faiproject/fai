@@ -640,6 +640,8 @@ sub propagate_and_check_preserve {
         &FAI::mark_preserve($_, $FAI::configs{$config}{volumes}{$r}{devices}{$_}{missing})
           foreach (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} });
       }
+    } elsif ($config eq "BTRFS") {
+      #no preserve, yet
     } elsif ($config eq "CRYPT") {
       # We don't do preserve for encrypted partitions
       next;
