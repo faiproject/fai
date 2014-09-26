@@ -311,7 +311,7 @@ sub build_btrfs_commands {
       my $pre_req = "";
 
       # creates the BTRFS volume/RAID
-      &FAI::push_command("mkfs.btrfs -d -f raid$raidlevel $btr_createops join(" ",@devs)",
+      &FAI::push_command("mkfs.btrfs -f -d raid$raidlevel $btr_createops join(" ",@devs)",
                          "",
                          "btrfs_raid_$id_built");
 
