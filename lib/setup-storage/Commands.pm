@@ -292,44 +292,44 @@ sub build_cryptsetup_commands {
 #
 ################################################################################
 sub build_btrfs_commands {
-  foreach (my $config (keys %FAI::configs) { # loop through all configs
+  foreach my $config (keys %FAI::configs) { # loop through all configs
 
     ($config eq "BTRFS") or &FAI::internal_error("Invalid config $config");
 
     #create BTRFS RAIDs
-             foreach (my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
-      #reference to current btrfs volume
-      my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
+    foreach my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
+    #reference to current btrfs volume
+    my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
 
-      #the list of BTRFS-RAID devices
-      my @devs = keys %{ $vol->{devices} };
-      my $raidlevel = $vol->{raidlevel};
-      my $mountpoint = $vol->{mountpoint};
-      my $mountoptions = $vol->{mountoptions};
-      ($mountoptions =~ m/subvol=([\d\w]+),/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
-      my $btrfscreateops = $vol->{btrfscreateops};
-      my $pre_req = "";
+    #the list of BTRFS-RAID devices
+    my @devs = keys %{ $vol->{devices} };
+    my $raidlevel = $vol->{raidlevel};
+    my $mountpoint = $vol->{mountpoint};
+    my $mountoptions = $vol->{mountoptions};
+    ($mountoptions =~ m/subvol=([\d\w]+),/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
+    my $btrfscreateops = $vol->{btrfscreateops};
+    my $createops = $vol->{createops};
+    my $pre_req = "";
 
-      # creates the BTRFS volume/RAID
-      &FAI::push_command("mkfs.btrfs -f -d raid$raidlevel $btr_createops join(" ",@devs)",
-                         "",
-                         "btrfs_raid_$id_built");
+    # creates the BTRFS volume/RAID
+    &FAI::push_command("mkfs.btrfs -f -d raid$raidlevel $createops ". join(" ",@devs),
+                       "$pre_req",
+                       "btrfs_built_raid_$id");
 
-      # initial mount, required to create the initial subvolume
-      &FAI::push_command("mount @devs[0] /mnt",
-                         "btrfs_raid_$id_built",
-                         "btrfs_$id_mounted"};
+    # initial mount, required to create the initial subvolume
+    &FAI::push_command("mount $devs[0] /mnt",
+                       "btrfs_built_raid_$id",
+                       "btrfs_mounted_$id");
 
-      # creating initial subvolume
-      &FAI::push_command("btrfs subvolume create $btrfscreateops  /mnt/$initial_subvolume",
-                         "btrfs_$id_mounted",
-                         "btrfs_$initial_subvolume_created"};
+    # creating initial subvolume
+    &FAI::push_command("btrfs subvolume create $btrfscreateops  /mnt/$initial_subvolume",
+                       "btrfs_mounted_$id",
+                       "btrfs_created_$initial_subvolume");
 
-      # unmounting the device itself
-      &FAI::push_command("umount @devs[0]",
-                         "btrfs_$initial_subvolume_created",
-                         "btrfs_$initial_subvolume_created_and_btrfs_$id_umounted");
-
+    # unmounting the device itself
+    &FAI::push_command("umount $devs[0]",
+                       "btrfs_created_$initial_subvolume",
+                       "");
     }
   }
 }
