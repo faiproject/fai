@@ -200,7 +200,7 @@ sub compute_lv_sizes {
   foreach my $config (keys %FAI::configs) {
 
     # for RAID, encrypted, tmpfs or physical disks there is nothing to be done here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^PHY_./);
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^PHY_./);
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group name
@@ -577,7 +577,7 @@ sub compute_partition_sizes
   foreach my $config (keys %FAI::configs) {
 
     # for RAID, encrypted, tmpfs or LVM, there is nothing to be done here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     # nothing to be done, if this is a configuration for a virtual disk or a
     # disk without partitions

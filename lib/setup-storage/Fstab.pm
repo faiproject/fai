@@ -164,6 +164,13 @@ sub find_boot_mnt_point {
         return $this_mp if ($this_mp eq "/boot");
         $mnt_point = $this_mp if ($this_mp eq "/");
       }
+    } elsif ($c eq "BTRFS") {
+      foreach my $b (keys %{ $FAI::configs{$c}{volumes}}) {
+        my $this_mp = $FAI::configs{$c}{volumes}{mountpoint};
+        next if (!defined($this_mp));
+        return $this_mp if ($this_mp eq "/boot");
+        $mnt_point = $this_mp if ($this_mp eq "/");
+      }
     } elsif ($c eq "RAID" || $c eq "CRYPT") {
       foreach my $r (keys %{ $FAI::configs{$c}{volumes} }) {
         my $this_mp = $FAI::configs{$c}{volumes}{$r}{mountpoint};
