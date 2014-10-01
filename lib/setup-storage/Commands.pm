@@ -293,8 +293,7 @@ sub build_cryptsetup_commands {
 ################################################################################
 sub build_btrfs_commands {
   foreach my $config (keys %FAI::configs) { # loop through all configs
-
-    ($config eq "BTRFS") or &FAI::internal_error("Invalid config $config");
+    next unless ($config eq "BTRFS");
 
     #create BTRFS RAIDs
     foreach my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
@@ -305,14 +304,16 @@ sub build_btrfs_commands {
     my @devs = keys %{ $vol->{devices} };
     my $raidlevel = $vol->{raidlevel};
     my $mountpoint = $vol->{mountpoint};
-    my $mountoptions = $vol->{mountoptions};
+    my $mountoptions = $vol->{mount_options};
     ($mountoptions =~ m/subvol=([\d\w]+),/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
-    my $btrfscreateops = $vol->{btrfscreateops};
-    my $createops = $vol->{createops};
-    my $pre_req = "";
+    my $btrfscreateopts =  $vol->{btrfscreateopts};
+    defined($btrfscreateopts) or $btrfscreateopts = "";
+    my $createopts = $vol->{createopts};
+    defined($createopts) or $createopts = "";
+    my $pre_req = "pt_complete_/dev/vdd";
 
     # creates the BTRFS volume/RAID
-    &FAI::push_command("mkfs.btrfs -f -d raid$raidlevel $createops ". join(" ",@devs),
+    &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ". join(" ",@devs),
                        "$pre_req",
                        "btrfs_built_raid_$id");
 
@@ -322,7 +323,7 @@ sub build_btrfs_commands {
                        "btrfs_mounted_$id");
 
     # creating initial subvolume
-    &FAI::push_command("btrfs subvolume create $btrfscreateops  /mnt/$initial_subvolume",
+    &FAI::push_command("btrfs subvolume create $btrfscreateopts  /mnt/$initial_subvolume",
                        "btrfs_mounted_$id",
                        "btrfs_created_$initial_subvolume");
 
