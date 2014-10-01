@@ -768,8 +768,9 @@ $FAI::Parser = Parse::RecDescent->new(
           my $btrfs_vol_id = 0;
           foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{BTRFS}{volumes} })) {
             defined ($FAI::configs{BTRFS}{volumes}{$ex_vol_id}{raidlevel}) or last;
-            $btrfs_vol_id++;
+           $btrfs_vol_id++;
           }
+          $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{filesystem} = "btrfs";
           # set the RAID level of this volume
           $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{raidlevel} = $1;
           # initialise the hash of devices
@@ -778,7 +779,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{BTRFS}->{volumes}->{$btrfs_vol_id};
           # $FAI::partition_pointer_dev_name = "";
         }
-        mountpoint devices mount_options btrfscreateops
+        mountpoint devices mount_options btrfscreateopts
         | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
         {
           ($FAI::device eq "CRYPT") or
@@ -1092,9 +1093,9 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | createtuneopt(s?)
 
-   btrfscreateops: /btr_createops="([^"]*)"/ createtuneopt(s?)
+   btrfscreateopts: /btrfscreateopts="([^"]*)"/ createtuneopt(s?)
         {
-          $FAI::partition_pointer->{btr_createops} = $1;
+          $FAI::partition_pointer->{btrfscreateopts} = $1;
         }
         | createtuneopt(s?)
 
@@ -1200,6 +1201,9 @@ sub check_config {
           "Mount point $this_mp is shadowed by stacked devices\n";
         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
       }
+    } elsif ($config eq "BTRFS") {
+      (scalar(keys %{ $FAI::configs{$config}{volumes} }) > 0) or
+        die "Empty BTRFS configuration\n";
     } elsif ($config eq "CRYPT") {
       foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
         my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
