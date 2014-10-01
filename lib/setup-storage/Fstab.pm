@@ -292,13 +292,17 @@ sub generate_fstab {
           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
       }
     } elsif ($c eq "BTRFS") {
+      # cycles through the volume IDs
       foreach my $v (keys %{ $config->{$c}->{volumes} }) {
-        my $b_ref = $config->{$c}->{volumes}->{$v};
 
-        next if ($b_ref->{mountpoint} eq "-");
+        # skip entries without a mountpoint
+        next if ( $config->{$c}->{volumes}->{$v}->{mountpoint} eq "-");
 
-        my @device_names = keys %{ $config->{$c}->{volumes}->{devices}};
-        push @fstab, &FAI::create_fstab_line($b_ref,
+        # get an array of devices that are part of the BTRFS RAID configuration
+        my @device_names = keys %{ $config->{$c}->{volumes}->{$v}->{devices}};
+
+        # Only one of the BTRFS RAID devices are necessary to get the fstab key
+        push @fstab, &FAI::create_fstab_line($config->{$c}->{volumes}->{$v},
           &FAI::get_fstab_key($device_names[0], $config->{"BTRFS"}->{fstabkey}), $device_names[0]);
       }
     } elsif ($c eq "CRYPT") {
