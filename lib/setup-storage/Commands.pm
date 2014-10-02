@@ -305,7 +305,7 @@ sub build_btrfs_commands {
     my $raidlevel = $vol->{raidlevel};
     my $mountpoint = $vol->{mountpoint};
     my $mountoptions = $vol->{mount_options};
-    ($mountoptions =~ m/subvol=([^,]+)/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
+    ($mountoptions =~ m/subvol=([^,\s]+)/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
     my $btrfscreateopts =  $vol->{btrfscreateopts};
     defined($btrfscreateopts) or $btrfscreateopts = "";
     my $createopts = $vol->{createopts};
