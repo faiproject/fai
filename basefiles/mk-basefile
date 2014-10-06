@@ -9,7 +9,7 @@
 # This will create a SQUEEZE64.tar.xz basefile.
 
 # Supported distributions (each i386/amd64):
-# Debian GNU/Linux 6.0
+# Debian GNU/Linux
 # Ubuntu 10.04
 # CentOS 5/6/7
 # Scientific Linux Cern 5/6
@@ -29,8 +29,10 @@ MIRROR_CENTOS=http://mirror.netcologne.de/
 
 EXCLUDE_SQUEEZE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_WHEEZY=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
+EXCLUDE_JESSIE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_LUCID=dhcp3-client,dhcp3-common
 
+INCLUDE_JESSIE=aptitude
 
 
 setarch() {
@@ -175,6 +177,16 @@ wheezy() {
     tarit
 }
 
+jessie() {
+
+    local arch=$1
+
+    check
+    debootstrap --arch $arch --exclude=${EXCLUDE_JESSIE} --include=${INCLUDE_JESSIE} jessie $xtmp ${MIRROR_DEBIAN}
+    cleanup-deb
+    tarit
+}
+
 lucid() {
 
     local arch=$1
@@ -199,6 +211,7 @@ unknown() {
     LUCID32      LUCID64
     SQUEEZE32    SQUEEZE64
     WHEEZY32     WHEEZY64
+    JESSIE32     JESSIE64
 "
     exit 99
 }
@@ -244,6 +257,8 @@ case "$target" in
     SQUEEZE64) squeeze amd64 ;;
     WHEEZY32) wheezy i386 ;;
     WHEEZY64) wheezy amd64 ;;
+    JESSIE32) jessie i386 ;;
+    JESSIE64) jessie amd64 ;;
     *) unknown ;;
 esac
 
