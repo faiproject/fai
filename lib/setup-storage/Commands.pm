@@ -802,8 +802,9 @@ sub build_lvm_commands {
     $pre_deps_vgc =~ s/^,//;
 
     foreach my $raid (@preserved_raid) {
-      my $tmp_vg = `pvdisplay $raid | grep "VG Name" | grep -o "vg[0-9]"`;
+      my $tmp_vg = `pvdisplay $raid | grep "VG Name"`;
       chomp $tmp_vg;
+      $tmp_vg = $1 if $tmp_vg =~ /(\S+)$/;
       $preserved = 1 if ($tmp_vg eq $vg);
     }
     &FAI::push_command("vgchange -a n $vg", "$pre_deps_vgc", $vg_pre)
