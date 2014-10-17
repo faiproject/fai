@@ -313,9 +313,16 @@ sub build_btrfs_commands {
     my $pre_req = "pt_complete_/dev/vdd";
 
     # creates the BTRFS volume/RAID
-    &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ". join(" ",@devs),
-                       "$pre_req",
-                       "btrfs_built_raid_$id");
+    if ($raidlevel eq 'single') {
+          &FAI::push_command("mkfs.btrfs -d single $createopts ". join(" ",@devs),
+                             "$pre_req",
+                             "btrfs_built_raid_$id");
+
+        } else {
+          &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ". join(" ",@devs),
+                             "$pre_req",
+                             "btrfs_built_raid_$id");
+        }
 
     # initial mount, required to create the initial subvolume
     &FAI::push_command("mount $devs[0] /mnt",

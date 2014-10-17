@@ -761,18 +761,22 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer_dev_name = "/dev/md$vol_id";
         }
         mountpoint devices filesystem mount_options mdcreateopts
-        | /^btrfs raid([0156]|10)\s+/
+        | /^btrfs (single|raid([0156]|10))\s+/
         {
           ($FAI::device eq "BTRFS") or die "BTRFS entry invalid in this context.\n";
           defined $FAI::configs{BTRFS} or $FAI::configs{BTRFS}{volumes} = {};
           my $btrfs_vol_id = 0;
           foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{BTRFS}{volumes} })) {
             defined ($FAI::configs{BTRFS}{volumes}{$ex_vol_id}{raidlevel}) or last;
-           $btrfs_vol_id++;
+            $btrfs_vol_id++;
           }
           $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{filesystem} = "btrfs";
           # set the RAID level of this volume
-          $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{raidlevel} = $1;
+          if (defined $2) {
+            $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{raidlevel} = $2;
+          } else {
+            $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{raidlevel} = 'single';
+          }
           # initialise the hash of devices
           $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{devices} = {};
           # set the reference to the BTRFS volume
