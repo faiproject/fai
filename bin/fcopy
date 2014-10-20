@@ -5,7 +5,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2013 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2014 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -254,7 +254,11 @@ sub runscript {
   # returns 0 on success, 1 if the script failed
 
   my ($scriptname,$sourcefile,$destfile,$class) = @_;
-  return 1 unless -x "$sourcefile/$scriptname";
+
+  unless ( -x "$sourcefile/$scriptname") {
+    warn "ERROR: $sourcefile/$scriptname is not executable\n" if $verbose;
+    return 1;
+  }
   warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
   return 0 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   system "$sourcefile/$scriptname $class $destfile";
