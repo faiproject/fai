@@ -34,7 +34,7 @@ use Net::hostent;
 use Getopt::Std;
 use File::Copy;
 
-our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u);
+our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u,$opt_U);
 our ($error,$pxedir,$nfsroot,$tftproot,$verbose,$append,$action,$kernelsuffix);
 our ($mac,$ipadr,$cfdir,$flags,$debug,$match,$bootprot);
 our (%hname,%hexname,%type,@allfiles,@templates,@enabled,@other,@patterns,@disabled);
@@ -381,7 +381,7 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:oP') || usage;
+getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:U:oP') || usage;
 $opt_h and usage;
 
 $opt_n and $opt_v = 1;
@@ -394,6 +394,10 @@ $opt_l or ( @ARGV ) or usage;
 ($opt_B and $opt_F) && die "ERROR: use only one option out of -B and -F\n";
 ($opt_S and $opt_I) && die "ERROR: use only one option out of -I and -S\n";
 #TODO: also -e, -r and -c can't be used together
+
+unless ($opt_U =~ m#/$#) {
+    die "URL $opt_U must end with a slash\n";
+}
 
 # read the nfsroot variable; a little bit ugly, but it works
 $nfsroot = `. $cfdir/nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
@@ -464,8 +468,8 @@ if ($opt_i) {
   }
 
   # create config so host will boot the install kernel
-  $kernelname = "kernel vmlinuz-$kernelsuffix";
-  $initrd     = "initrd=initrd.img-$kernelsuffix";
+  $kernelname = "kernel ${opt_U}vmlinuz-$kernelsuffix";
+  $initrd     = "initrd=${opt_U}initrd.img-$kernelsuffix";
   $rootfs     = "root=$nfsroot $bopt";
   $bootprot   = "ip=dhcp ";
 
