@@ -71,6 +71,14 @@ shift $(($OPTIND - 1))
 
 hex=$(echo $user 16o p | dc)
 diskfile=$diskdir/faitest-disk-$user
+
+# not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
+# If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
+# x2:xx:xx:xx:xx:xx
+# x6:xx:xx:xx:xx:xx
+# xA:xx:xx:xx:xx:xx
+# xE:xx:xx:xx:xx:xx
+
 mac=52:54:00:11:23:$hex
 
 net="-net nic,macaddr=$mac,model=virtio -net tap,ifname=tap$user,script=no,downscript=no"
