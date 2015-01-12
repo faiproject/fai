@@ -33,6 +33,7 @@ use strict;
 
 use Parse::RecDescent;
 use Storable qw(dclone);
+use Cwd 'abs_path';
 
 package FAI;
 
@@ -106,7 +107,7 @@ sub resolve_disk_shortname {
   ($disk =~ m{^/}) or $disk = "/dev/$disk";
   my @candidates = glob($disk);
   die "Failed to resolve $disk to a unique device name\n" if (scalar(@candidates) > 1);
-  $disk = $candidates[0] if (scalar(@candidates) == 1);
+  $disk = abs_path($candidates[0]) if (scalar(@candidates) == 1);
   die "Device name $disk could not be substituted\n" if ($disk =~ m{[\*\?\[\{\~]});
 
   return $disk;
