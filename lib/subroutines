@@ -5,7 +5,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2014 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -34,7 +34,8 @@
 die() {
 
     # echo comment and exit installation
-    task_savelog
+    [ -f $LOGDIR/skip.savelog ] || call_hook savelog
+    [ -f $LOGDIR/skip.savelog ] || task_savelog
     echo "$@"
     if [ X$FAI_ACTION = Xinstall ]; then
         exec bash -i
@@ -119,8 +120,8 @@ rwmount() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
 
-    if [ -r /var/run/fai/kern.log.offset ] ; then
-      logtail -t -f /var/log/kern.log -o /var/run/fai/kern.log.offset > $LOGDIR/dmesg.log
+    if [ -x /usr/sbin/logtail ] ; then
+      logtail -f /var/log/kern.log -o /var/lib/fai/kern.log.offset >> $LOGDIR/dmesg.log
     else
       dmesg > $LOGDIR/dmesg.log
     fi
@@ -129,8 +130,7 @@ save_dmesg() {
 umount_csspace() {
 
     # umount config space if accessed via nfs
-    echo $FAI_CONFIG_SRC | grep -q ^nfs://
-    if [ $? -eq 0 ]; then
+    if [[ $FAI_CONFIG_SRC =~ ^nfs:// ]]; then
         mountpoint -q $FAI && umount $FAI
     fi
 }
@@ -157,7 +157,8 @@ stop_fai_installation() {
 
     # this subroutine should directly stop the installation process
     sendmon "TASKEND $taskname $task_error"
-    echo "Error in task $taskname. Traceback: $task_error_func" >&2
+    echo "Error in task $taskname. Code: $task_error" >&2
+    echo "Traceback: $task_error_func" >&2
     die "FATAL ERROR. Installation stopped."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -304,7 +305,9 @@ task_setup() {
 
         # start secure shell daemon for remote access
         mkdir -p /var/run/sshd # ubuntu fix for 9.10
-        [ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+        if [ "$flag_sshd" -a -x /usr/sbin/sshd ]; then
+            pgrep -x sshd >/dev/null || /usr/sbin/sshd
+        fi
     fi
     unset flag_createvt flag_sshd
 
@@ -349,13 +352,16 @@ task_action() {
             task faiend
             ;;
         softupdate)
-            echo Performing FAI system update. All data may be overwritten!
             task softupdate
             task faiend
             ;;
         sysinfo)
-            echo Showing system information.
             task sysinfo
+            task_faiend
+            die Now you have a shell.
+            ;;
+        inventory)
+            task inventory
             task_faiend
             die Now you have a shell.
             ;;
@@ -363,6 +369,7 @@ task_action() {
             if [ -f $FAI/hooks/$FAI_ACTION ]; then
                 echo "Calling user defined action: $FAI_ACTION"
                 $FAI/hooks/$FAI_ACTION
+		task_faiend
             else
                 echo "ERROR: User defined action $FAI/hooks/$FAI_ACTION not found." >&2
                 sendmon "TASKERROR action 22"
@@ -435,6 +442,7 @@ task_defvar() {
         fi
     done
 
+    echo "Defining variables from additional.var"
     # /fai/class/* scripts or hooks can write variable definitions
     # to additonal.var. now source these definitions
     if [ -f $LOGDIR/additional.var -a -r $LOGDIR/additional.var ]; then
@@ -491,7 +499,6 @@ task_tests() {
 task_savelog() {
 
     mkdir -p $FAI_ROOT/var/{lib,log}/fai
-    rm -f /var/run/fai/kern.log.offset
     fai-savelog -l
     [ -f $LOGDIR/FAI_CLASSES ] && cp -pu $LOGDIR/FAI_CLASSES $FAI_ROOT/var/lib/fai
     [ -f $LOGDIR/disk_var.sh ] && cp -pu $LOGDIR/disk_var.sh $FAI_ROOT/var/lib/fai
@@ -509,10 +516,10 @@ task_faiend() {
     : ${flag_reboot:=0}
     : ${flag_halt:=0}
 
-    # reboot/halt without prompting if FAI_FLAG reboot or halt is set and errors are found
-    # wait for keypress if error is found and neither flag reboot nor halt is set
-    if [ -s $LOGDIR/error.log -a "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
-        echo "Press <RETURN> to reboot."
+    # reboot/halt without prompting if FAI_FLAG reboot or halt is set
+    # wait for keypress if neither flag reboot nor halt is set
+    if [ "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
+        echo "Press <RETURN> to reboot (do not remove your removable medium yet)."
         read
     else
         sleep 10
@@ -524,10 +531,22 @@ task_faiend() {
     cd /
     sync
 
-    killall -q sshd udevd
-    if [ -f /etc/RUNNING_FROM_FAICD ]; then
+    killall -q sshd udevd rsyslogd
+
+    for dir in $(mount | grep $target | egrep -v "$target/tmp|media/mirror|proc|tmpfs"| awk '{print $3}' | sort -r); do
+        mount -o remount,ro $dir
+    done
+
+    # if we run from CD or USB stick and did not any installation
+    if [ -d /lib/live/mount/medium -a X$FAI_ACTION = Xsysinfo ]; then
+	reboot -dfi
+    fi
+
+    # check if we are running from CD, live-boot
+    cddev=$(mount |grep /lib/live/mount/medium | awk '{print $1}')
+    if [[ $cddev =~ '/dev/sr' ]]; then
         echo 1 > /proc/sys/dev/cdrom/autoeject
-        cat > $target/tmp/rebootCD <<'EOF'
+        cat > /tmp/rebootCD <<'EOF'
 #! /bin/bash
  device=$1
 eject -m /dev/$device 2>/dev/null >/dev/null
@@ -538,18 +557,16 @@ EOF
 
         #reboot or halt?
         if [ "$flag_halt" -gt "0" ]; then
-            echo "exec halt -dfp" >> $target/tmp/rebootCD
+            echo "exec halt -dfp" >> /tmp/rebootCD
         else
-            echo "exec reboot -df" >> $target/tmp/rebootCD
+            echo "exec reboot -df" >> /tmp/rebootCD
         fi
+        chmod +x /tmp/rebootCD
+	[ -d $target/tmp ] && mv /tmp/rebootCD $target/tmp/rebootCD
 
-
-        chmod +x $target/tmp/rebootCD
         sync
-        for dir in $(mount | grep $target | awk '{print $3}' | sort -r); do
-            mount -o remount,ro $dir
-        done
         cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
+
         chroot $target /tmp/rebootCD $cdromdevice
         # never reached, because chroot will reboot the machine
         die "Internal error when calling /tmp/rebootCD." >&2
@@ -559,9 +576,9 @@ EOF
 
     # reboot or halt?
     if [ "$flag_halt" -gt "0" ]; then
-        exec halt -dfip;
+        exec halt -dfp
     else
-        exec reboot -dfi;
+        exec reboot -df
     fi
 
 }
@@ -660,6 +677,7 @@ task_dirinstall() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_softupdate() {
 
+    echo Performing FAI system update. All data may be overwritten!
     stamp=/var/run/fai/fai_softupdate_is_running
     [ -f "$stamp" ] && die "Lock file $stamp found. Another fai softupdate is already running. Aborting."
     echo $$ > $stamp
@@ -679,8 +697,7 @@ task_softupdate() {
     task instsoft
     task configure
     task tests
-    date
-    [ -f /proc/uptime ] && echo "The $FAI_ACTION took $[$(cut -d . -f 1 /proc/uptime)-$start_seconds] seconds."
+    task finish
 
     rm -f $stamp
     # save again, because new messages could be created
@@ -736,9 +753,9 @@ eval_cmdline() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
-# Provides-Var:    $faimond $sendhostname $SERVER $monserver
+# Provides-Var:    $faimond $sendid $SERVER $monserver
 # Requires-Var:    $LOGDIR $FAI
-# Suggests-Var:    $monserver
+# Suggests-Var:    $monserver $FAI_SENDID
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
 
@@ -754,17 +771,27 @@ task_confdir() {
 
         printk=${printk:-6}
         echo $printk > /proc/sys/kernel/printk
-        rsyslogd -c3
+        rsyslogd
 
         create_resolv_conf
     fi
     define_fai_flags
 
+    # determine the name of the default network interface
+    # try several times if dhclient needs some more time
+    local i=0
+    while [ ! "$NIC1" -a $i -lt 8 ]; do
+        sleep 2
+	NIC1=$(ip route | awk '/^default/ {print $5}')
+        (( i += 1 ))
+    done
+    export NIC1
+
     if [ -z "$SERVER" ]; then
         # since SERVER is not set (by DHCP) we extract it from FAI_CONFIG_SRC
         # extract server name from FAI_CONFIG_SRC and delete user@ from string
         SERVER=$(expr match "$FAI_CONFIG_SRC" '.*://\([^/]*\)/.*' | sed -e 's/.*@//')
-        echo "Set \$SERVER=$SERVER. Value extracted from FAI_CONFIG_SRC"
+        echo "Setting SERVER=$SERVER. Value extracted from FAI_CONFIG_SRC."
     fi
 
     # check if monitor server is available
@@ -775,7 +802,17 @@ task_confdir() {
         faimond=0
     else
         faimond=1
-        sendhostname=$HOSTNAME # save current hostname
+        MAC=$(< /sys/class/net/$NIC1/address)
+        PXE="01-"${MAC//:/-}
+
+        : ${FAI_SENDID:=host} # set default if undefined
+        case "$FAI_SENDID" in
+            host) sendid=$HOSTNAME ;;
+            mac)  sendid=$MAC ;;
+            pxe)  sendid=$PXE ;;
+            *)    sendid=$FAI_SENDID ;;
+        esac
+
         if sendmon check; then
             echo "Monitoring to server $monserver enabled."
             sendmon "TASKBEGIN confdir"
@@ -942,15 +979,24 @@ task_repository () {
     # some generale network files are needed on the client
     # resolv.conf is needed, /etc/hosts is useful in /target
     # use a file from the config space or from /etc inside the nfsroot
-    fcopy -Bv /etc/resolv.conf || cp -v /etc/resolv.conf $FAI_ROOT/etc
-    fcopy -Bv /etc/hosts || cp -v /etc/hosts $FAI_ROOT/etc
+    if ! fcopy -BMv /etc/resolv.conf ; then
+        if [ "$(readlink -f /etc/resolv.conf)" = "$(readlink -f $FAI_ROOT/etc/resolv.conf)" ] ; then
+            :
+	    # no need for copy since both are pointing to the same file
+        else
+            cp -v /etc/resolv.conf $FAI_ROOT/etc
+        fi
+    fi
+    if ! fcopy -BMv /etc/hosts ; then
+	[ X$FAI_ROOT = X/ ] || cp -v /etc/hosts $FAI_ROOT/etc
+    fi
 
     # apt specific things
-    fcopy -Bv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
-    if fcopy -Bv /etc/apt/preferences; then
+    fcopy -BMv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
+    if ! fcopy -BMv /etc/apt/preferences; then
         [ -f $FAI_ETC_DIR/apt/preferences ] && cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
     fi
-    fcopy -ir /etc/apt # copy all other apt config files from the config space
+    fcopy -BMir /etc/apt # copy all other apt config files from the config space
 
     if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
         cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
@@ -1054,6 +1100,7 @@ task_chboot() {
         ftp) remotesh=ssh ;;
         ssh) remotesh=ssh ;;
         rsh) remotesh=rsh ;;
+	*) echo "ERROR: Unknown value for \$FAI_LOGPROTO." ;;
     esac
     frsh="$remotesh -l $LOGUSER ${SERVER}"
 
@@ -1087,7 +1134,7 @@ sendmon() {
     # send message to monitor daemon
     echo "$*" >> $LOGDIR/fai-monitor.log
     [ "$faimond" -eq 0 ] && return 0
-    echo "$sendhostname $*" | nc -w 8 $monserver 4711 2>/dev/null
+    echo "$sendid $*" | nc -w 8 $monserver 4711 2>/dev/null
     return $?
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

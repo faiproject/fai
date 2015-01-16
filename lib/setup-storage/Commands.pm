@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,14 +27,14 @@ use strict;
 # @brief Build the required commands in @FAI::commands using the config stored
 # in %FAI::configs
 #
-# $Id$
-#
 # @author Christian Kern, Michael Tautschnig, Sebastian Hetze, Andreas Schuldei
 # @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 
 package FAI;
+
+my %partition_table_deps;
 
 ################################################################################
 #
@@ -45,6 +44,9 @@ package FAI;
 # @param $partition Reference to partition in the config hash
 #
 ################################################################################
+
+my @preserved_raid = ();
+
 sub build_mkfs_commands {
 
   my ($device, $partition) = @_;
@@ -186,11 +188,11 @@ sub set_partition_flag_on_phys_dev {
   my $pre = "exist_$d";
   $pre .= ",cleared2_$disk" if (defined($FAI::configs{"PHY_$disk"}));
   &FAI::push_command( "parted -s $disk set $part_no $t on", $pre, "flag_${t}_$d" );
-  if (defined($FAI::partition_table_deps{$disk}) &&
-    $FAI::partition_table_deps{$disk} ne "") {
-    $FAI::partition_table_deps{$disk} .= ",flag_${t}_$d";
+  if (defined($partition_table_deps{$disk}) &&
+    $partition_table_deps{$disk} ne "") {
+    $partition_table_deps{$disk} .= ",flag_${t}_$d";
   } else {
-    $FAI::partition_table_deps{$disk} = "flag_${t}_$d";
+    $partition_table_deps{$disk} = "flag_${t}_$d";
   }
   return 1;
 }
@@ -238,7 +240,7 @@ sub build_cryptsetup_commands {
 
         # generate a key for encryption
         &FAI::push_command(
-          "head -c 2048 /dev/urandom | head -n 47 | tail -n 46 | od | tee $keyfile",
+          "head -c 2048 /dev/urandom | od | tee $keyfile",
           "", "keyfile_$real_dev" );
         # encrypt
         &FAI::push_command(
@@ -286,6 +288,64 @@ sub build_cryptsetup_commands {
 ################################################################################
 #
 # @brief Using the configurations from %FAI::configs, a list of commands is
+# built to create all BTRFS volumes/raids
+#
+################################################################################
+sub build_btrfs_commands {
+  foreach my $config (keys %FAI::configs) { # loop through all configs
+    next unless ($config eq "BTRFS");
+
+    #create BTRFS RAIDs
+    foreach my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
+    #reference to current btrfs volume
+    my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
+
+    #the list of BTRFS-RAID devices
+    my @devs = keys %{ $vol->{devices} };
+    my $raidlevel = $vol->{raidlevel};
+    my $mountpoint = $vol->{mountpoint};
+    my $mountoptions = $vol->{mount_options};
+    ($mountoptions =~ m/subvol=([^,\s]+)/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
+    my $btrfscreateopts =  $vol->{btrfscreateopts};
+    defined($btrfscreateopts) or $btrfscreateopts = "";
+    my $createopts = $vol->{createopts};
+    defined($createopts) or $createopts = "";
+    my $pre_req = "pt_complete_/dev/vdd";
+
+    # creates the BTRFS volume/RAID
+    if ($raidlevel eq 'single') {
+          &FAI::push_command("mkfs.btrfs -d single $createopts ". join(" ",@devs),
+                             "$pre_req",
+                             "btrfs_built_raid_$id");
+
+        } else {
+          &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ". join(" ",@devs),
+                             "$pre_req",
+                             "btrfs_built_raid_$id");
+        }
+
+    # initial mount, required to create the initial subvolume
+    &FAI::push_command("mount $devs[0] /mnt",
+                       "btrfs_built_raid_$id",
+                       "btrfs_mounted_$id");
+
+    # creating initial subvolume
+    &FAI::push_command("btrfs subvolume create $btrfscreateopts  /mnt/$initial_subvolume",
+                       "btrfs_mounted_$id",
+                       "btrfs_created_$initial_subvolume");
+
+    # unmounting the device itself
+    &FAI::push_command("umount $devs[0]",
+                       "btrfs_created_$initial_subvolume",
+                       "");
+    }
+  }
+}
+
+
+################################################################################
+#
+# @brief Using the configurations from %FAI::configs, a list of commands is
 # built to create any RAID devices
 #
 ################################################################################
@@ -310,7 +370,7 @@ sub build_raid_commands {
 
   foreach my $config (keys %FAI::configs) { # loop through all configs
     # no encrypted, tmpfs, LVM or physical devices here
-    next if ($config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
+    next if ($config eq "BTRFS" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
     ($config eq "RAID") or &FAI::internal_error("Invalid config $config");
 
     # create all raid devices
@@ -366,6 +426,7 @@ sub build_raid_commands {
         &FAI::push_command(
 	    "mdadm --assemble /dev/md$id " . join(" ", grep(!/^missing$/, @eff_devs)),
 	    "$pre_req", "exist_/dev/md$id");
+        push(@preserved_raid, "/dev/md$id");
 
         # create the filesystem on the volume, if requested
         &FAI::build_mkfs_commands("/dev/md$id",
@@ -641,7 +702,7 @@ sub cleanup_vg {
     $clear_vg = 1;
     last;
   }
-
+  #following block responsible for lv/vg preservation
   if (0 == $clear_vg) {
     my $vg_setup_pre = "vgchange_a_n_VG_$vg";
     if (defined($FAI::configs{"VG_$vg"})) {
@@ -650,7 +711,7 @@ sub cleanup_vg {
       # remove all volumes that do not exist anymore or need not be preserved
       foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
         my $pre_deps_cl = "";
-        $pre_deps_cl = ",self_cleared_" .
+        $pre_deps_cl = "self_cleared_" .
           join(",self_cleared_", @{ $FAI::current_dev_children{"/dev/$vg/$lv"} })
             if (defined($FAI::current_dev_children{"/dev/$vg/$lv"}) &&
               scalar(@{ $FAI::current_dev_children{"/dev/$vg/$lv"} }));
@@ -658,16 +719,19 @@ sub cleanup_vg {
         if (defined ( $FAI::configs{"VG_$vg"}{volumes}{$lv})) {
           if ($FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{preserve} == 1 ||
             $FAI::configs{"VG_$vg"}{volumes}{$lv}{size}{resize} == 1) {
-            &FAI::push_command("true", "vgchange_a_n_VG_$vg$pre_deps_cl",
+            &FAI::push_command("true", "vgchange_a_n_VG_$vg,$pre_deps_cl",
               "exist_/dev/$vg/$lv,self_cleared_/dev/$vg/$lv");
             next;
           }
         }
 
-        &FAI::push_command( "wipefs -a $vg/$lv",
-          "vgchange_a_n_VG_$vg$pre_deps_cl",
+        &FAI::push_command( "vgchange -a y $vg",
+          "",
+          "pre_wipe_$vg");
+        &FAI::push_command( "wipefs -a /dev/$vg/$lv",
+          "pre_wipe_$vg,$pre_deps_cl",
           "wipefs_$vg/$lv");
-        &FAI::push_command( "lvremove -f $vg/$lv",
+        &FAI::push_command( "lvremove -f /dev/$vg/$lv",
           "wipefs_$vg/$lv",
           "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv");
         $vg_setup_pre .= ",lv_rm_$vg/$lv";
@@ -678,21 +742,27 @@ sub cleanup_vg {
         (keys %{ $FAI::current_lvm_config{$vg}{volumes} });
     }
     &FAI::push_command("true", $vg_setup_pre, "vg_exists_$vg");
-
+    &FAI::push_command( "vgchange -a n $vg",
+      "",
+      "$vg_setup_pre");
     return 0;
   }
 
   my $vg_destroy_pre = "vgchange_a_n_VG_$vg";
   foreach my $lv (keys %{ $FAI::current_lvm_config{$vg}{volumes} }) {
     my $pre_deps_cl = "";
-    $pre_deps_cl = ",self_cleared_" .
+    $pre_deps_cl = "self_cleared_" .
       join(",self_cleared_", @{ $FAI::current_dev_children{"/dev/$vg/$lv"} })
         if (defined($FAI::current_dev_children{"/dev/$vg/$lv"}) &&
           scalar(@{ $FAI::current_dev_children{"/dev/$vg/$lv"} }));
-    &FAI::push_command( "wipefs -a $vg/$lv",
-      "vgchange_a_n_VG_$vg$pre_deps_cl",
+
+    &FAI::push_command( "vgchange -a y $vg",
+      "",
+      "pre_wipe_$vg");
+    &FAI::push_command( "wipefs -a /dev/$vg/$lv",
+      "pre_wipe_$vg,$pre_deps_cl",
       "wipefs_$vg/$lv");
-    &FAI::push_command( "lvremove -f $vg/$lv",
+    &FAI::push_command( "lvremove -f /dev/$vg/$lv",
       "wipefs_$vg/$lv",
       "lv_rm_$vg/$lv,self_cleared_/dev/$vg/$lv");
     $vg_destroy_pre .= ",lv_rm_$vg/$lv";
@@ -730,14 +800,23 @@ sub build_lvm_commands {
     my $vg = $1;
     my $vg_pre = "vgchange_a_n_VG_$vg";
     my $pre_deps_vgc = "";
-    foreach my $c (@{ $FAI::current_dev_children{$d} }) {
-      $pre_deps_vgc = ",self_cleared_" .
-        join(",self_cleared_", @{ $FAI::current_dev_children{$c} })
-        if (defined($FAI::current_dev_children{$c}) &&
-          scalar(@{ $FAI::current_dev_children{$c} }));
-    }
+    my $preserved = 0;
+
+    $pre_deps_vgc = ",self_cleared_" .
+     join(",self_cleared_", @{ $FAI::current_dev_children{$d} })
+     if (defined($FAI::current_dev_children{$d}) &&
+       scalar(@{ $FAI::current_dev_children{$d} }));
     $pre_deps_vgc =~ s/^,//;
-    &FAI::push_command("vgchange -a n $1", "$pre_deps_vgc", $vg_pre);
+
+    foreach my $raid (@preserved_raid) {
+      my $tmp_vg = `pvdisplay $raid | grep "VG Name"`;
+      chomp $tmp_vg;
+      $tmp_vg = $1 if $tmp_vg =~ /(\S+)$/;
+      $preserved = 1 if ($tmp_vg eq $vg);
+    }
+    &FAI::push_command("vgchange -a n $vg", "$pre_deps_vgc", $vg_pre)
+      unless $preserved;
+
     $vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
     my $pre_deps_cl = "";
     $pre_deps_cl = ",self_cleared_" .
@@ -750,7 +829,7 @@ sub build_lvm_commands {
   foreach my $config (keys %FAI::configs) {
 
     # no physical devices, RAID, encrypted or tmpfs here
-    next if ($config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS");
+    next if ($config eq "BTRFS" || $config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS");
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group
@@ -819,7 +898,7 @@ sub get_preserved_partitions {
         (defined ($FAI::configs{$config}{partitions}{$extended}{size}{extended})
           && defined ($FAI::current_config{$disk}{partitions}{$extended}{is_extended})
           && $FAI::configs{$config}{partitions}{$extended}{size}{extended}
-          && $FAI::current_config{$disk}{partitions}{$extended}{is_extended}) 
+          && $FAI::current_config{$disk}{partitions}{$extended}{is_extended})
           or die "ID of extended partition changes\n";
 
         # make sure resize is set
@@ -874,7 +953,7 @@ sub get_preserved_partitions {
 
     # a sanity check: if there are logical partitions, the extended must
     # have been added
-    (0 == $has_logical || -1 != $extended) 
+    (0 == $has_logical || -1 != $extended)
       or &FAI::internal_error("Required extended partition not detected for preserve");
   }
 
@@ -1091,7 +1170,7 @@ sub setup_partitions {
       # check, whether ntfsresize is available
       &FAI::in_path("ntfsresize") or die "ntfsresize not found in PATH\n";
 
-      &FAI::push_command( "yes | ntfsresize -s " . $part->{size}->{eff_size} .
+      &FAI::push_command( "yes | ntfsresize -s " . $part->{size}->{eff_size} . " " .
         &FAI::make_device_name($disk, $p), "rebuilt_" .
         &FAI::make_device_name($disk, $p) . $deps, "ntfs_ready_for_rm_" .
         &FAI::make_device_name($disk, $p) );
@@ -1139,7 +1218,7 @@ sub setup_partitions {
     my $end = $part->{end_byte};
 
     # if /boot exists, set $boot_disk
-    if ($part->{mountpoint} eq "/boot") {
+    if (defined $part->{mountpoint} && $part->{mountpoint} eq "/boot") {
       $boot_disk=$disk;
     }
 
@@ -1198,7 +1277,7 @@ sub setup_partitions {
     if($FAI::configs{$config}{disklabel} eq "gpt-bios" and $boot_disk);
 
   ($prev_id > -1) or &FAI::internal_error("No partitions created");
-  $FAI::partition_table_deps{$disk} = "cleared2_$disk,exist_"
+  $partition_table_deps{$disk} = "cleared2_$disk,exist_"
     . &FAI::make_device_name($disk, $prev_id);
 }
 
@@ -1214,7 +1293,7 @@ sub build_disk_commands {
   # loop through all configs
   foreach my $config ( keys %FAI::configs ) {
     # no RAID, encrypted, tmpfs or LVM devices here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
     my $disk = $1; # the device to be configured
 
@@ -1224,21 +1303,21 @@ sub build_disk_commands {
         &FAI::push_command( "true", "",
           "exist_" . &FAI::make_device_name($disk, $part_id) );
         # no partition table operations
-        $FAI::partition_table_deps{$disk} = "";
+        $partition_table_deps{$disk} = "";
       }
     } elsif (defined($FAI::configs{$config}{partitions}{0})) {
       # no partition table operations
-      $FAI::partition_table_deps{$disk} = "";
+      $partition_table_deps{$disk} = "";
    } elsif (defined($FAI::configs{$config}{opts_all}{preserve})) {
      foreach my $part_id (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
        # all partitions exist
        &FAI::push_command( "true", "",
          "exist_" . &FAI::make_device_name($disk, $part_id) );
        # no partition table operations
-       $FAI::partition_table_deps{$disk} = "";
+       $partition_table_deps{$disk} = "";
      }
      # no changes on this disk
-     $FAI::partition_table_deps{$disk} = "";
+     $partition_table_deps{$disk} = "";
     } else {
       # create partitions on non-virtual configs
       &FAI::setup_partitions($config);
@@ -1318,8 +1397,8 @@ sub restore_partition_table {
 ################################################################################
 sub order_commands {
   # first add partition-table-is-complete
-  &FAI::push_command("true", $FAI::partition_table_deps{$_}, "pt_complete_$_")
-    foreach (keys %FAI::partition_table_deps);
+  &FAI::push_command("true", $partition_table_deps{$_}, "pt_complete_$_")
+    foreach (keys %partition_table_deps);
 
   my @pre_deps = ();
   my $i = 1;

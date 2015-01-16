@@ -7,8 +7,9 @@
 
 package FAITEST;
 
-$errors = 0;
+my $errors = 0;
 
+use strict;
 use Getopt::Long;
 use Pod::Usage;
 #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -

@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,14 +26,13 @@ use strict;
 #
 # @brief A parser for the disk_config files within FAI.
 #
-# $Id$
-#
 # @author Christian Kern, Michael Tautschnig, Sam Vilain, Andreas Schludei
 # @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 
 use Parse::RecDescent;
+use Storable qw(dclone);
 
 package FAI;
 
@@ -49,7 +47,8 @@ $FAI::device = "";
 
 ################################################################################
 #
-# @brief Test, whether @ref $cmd is available on the system using $PATH
+# @brief Test, whether @ref $cmd is available and executable on the system using
+#        $PATH
 #
 # @param $cmd Command that is to be found in $PATH
 #
@@ -87,6 +86,7 @@ sub in_path {
 ################################################################################
 sub resolve_disk_shortname {
   my ($disk) = @_;
+  $disk =~ s/^disk//;
 
   $disk = "sdx" . chr(ord('a') + $disk - 1)
     if ($FAI::check_only && $disk =~ /^\d+$/);
@@ -179,7 +179,7 @@ sub init_part_config {
   # check that a physical device is being configured; logical partitions are
   # only supported on msdos disk labels.
   ($FAI::device =~ /^PHY_(.+)$/ && ($type ne "logical"
-      || $FAI::configs{$FAI::device}{disklabel} eq "msdos")) or 
+      || $FAI::configs{$FAI::device}{disklabel} eq "msdos")) or
     die "Syntax error: invalid partition type";
 
   # the disk
@@ -220,7 +220,7 @@ sub init_part_config {
     $part_number++;
 
     # msdos disk labels don't allow for more than 4 primary partitions
-    ($part_number < 5 || $FAI::configs{$FAI::device}{virtual} || 
+    ($part_number < 5 || $FAI::configs{$FAI::device}{virtual} ||
       $FAI::configs{$FAI::device}{disklabel} ne "msdos")
       or die "$part_number are too many primary partitions\n";
   } elsif ($type eq "raw") {
@@ -451,6 +451,14 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{opts_all} = {};
         }
         raid_option(s?)
+        | 'btrfs'
+        {
+          #check whether btrfs tools are available
+          &FAI::in_path("mkfs.btrfs") or die "BTRFS tools not found in PATH.\n";
+          $FAI::device = "BTRFS";
+          $FAI::configs{$FAI::device}{fstabkey} = "device";
+          $FAI::configs{$FAI::device}{opts_all} = {};
+        }
         | 'cryptsetup'
         {
           &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
@@ -666,7 +674,7 @@ $FAI::Parser = Parse::RecDescent->new(
           my $dl = $1;
           ($dl =~ /^(msdos|gpt-bios|gpt)$/) or die
             "Invalid disk label $dl; use one of msdos|gpt-bios|gpt\n";
-          # set the disk label - actually not only the above, but all types 
+          # set the disk label - actually not only the above, but all types
           # supported by parted could be allowed, but others are not implemented
           # yet
           $FAI::configs{$FAI::device}{disklabel} = $dl;
@@ -688,35 +696,12 @@ $FAI::Parser = Parse::RecDescent->new(
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
-	| /^sameas:disk(\d+)/
-	{
-	  my $ref_dev = &FAI::resolve_disk_shortname($1);
-	  defined($FAI::configs{"PHY_" . $ref_dev}) or die "Reference device $ref_dev not found in config\n";
-
-	  use Storable qw(dclone);
-
-	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
-    # add entries to device tree
-    defined($FAI::dev_children{$ref_dev}) or
-      &FAI::internal_error("dev_children missing reference entry");
-    ($FAI::device =~ /^PHY_(.+)$/) or
-      &FAI::internal_error("unexpected device name");
-    my $disk = $1;
-    foreach my $p (@{ $FAI::dev_children{$ref_dev} }) {
-      my ($i_p_d, $rd, $pd) = &FAI::phys_dev($p);
-      (1 == $i_p_d) or next;
-      ($rd eq $ref_dev) or &FAI::internal_error("dev_children is inconsistent");
-      push @{ $FAI::dev_children{$disk} }, &FAI::make_device_name($disk, $pd);
-    }
-	}
 	| /^sameas:(\S+)/
 	{
 	  my $ref_dev = &FAI::resolve_disk_shortname($1);
 	  defined($FAI::configs{"PHY_" . $ref_dev}) or die "Reference device $ref_dev not found in config\n";
 
-	  use Storable qw(dclone);
-
-	  $FAI::configs{$FAI::device} = dclone($FAI::configs{"PHY_" . $ref_dev});
+	  $FAI::configs{$FAI::device} = Storable::dclone($FAI::configs{"PHY_" . $ref_dev});
     # add entries to device tree
     defined($FAI::dev_children{$ref_dev}) or
       &FAI::internal_error("dev_children missing reference entry");
@@ -776,6 +761,29 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer_dev_name = "/dev/md$vol_id";
         }
         mountpoint devices filesystem mount_options mdcreateopts
+        | /^btrfs (single|raid([0156]|10))\s+/
+        {
+          ($FAI::device eq "BTRFS") or die "BTRFS entry invalid in this context.\n";
+          defined $FAI::configs{BTRFS} or $FAI::configs{BTRFS}{volumes} = {};
+          my $btrfs_vol_id = 0;
+          foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{BTRFS}{volumes} })) {
+            defined ($FAI::configs{BTRFS}{volumes}{$ex_vol_id}{raidlevel}) or last;
+            $btrfs_vol_id++;
+          }
+          $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{filesystem} = "btrfs";
+          # set the RAID level of this volume
+          if (defined $2) {
+            $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{raidlevel} = $2;
+          } else {
+            $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{raidlevel} = 'single';
+          }
+          # initialise the hash of devices
+          $FAI::configs{BTRFS}{volumes}{$btrfs_vol_id}{devices} = {};
+          # set the reference to the BTRFS volume
+          $FAI::partition_pointer = (\%FAI::configs)->{BTRFS}->{volumes}->{$btrfs_vol_id};
+          # $FAI::partition_pointer_dev_name = "";
+        }
+        mountpoint devices mount_options btrfscreateopts
         | /^(luks|luks:"[^"]+"|tmp|swap)\s+/
         {
           ($FAI::device eq "CRYPT") or
@@ -845,7 +853,7 @@ $FAI::Parser = Parse::RecDescent->new(
           defined ($FAI::configs{$FAI::device}{devices}) or
             die "Volume group $1 has not been declared yet.\n";
           # make sure, $2 has not been defined already
-          defined ($FAI::configs{$FAI::device}{volumes}{$2}{size}{range}) and 
+          defined ($FAI::configs{$FAI::device}{volumes}{$2}{size}{range}) and
             die "Logical volume $2 has been defined already.\n";
           # add to ordered list
           push @{ $FAI::configs{$FAI::device}{ordered_lv_list} }, $2;
@@ -930,7 +938,7 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | /^(-(RAM:\d+%|\d+[kKMGTP%iB]*))(:resize|:preserve_(always|reinstall|lazy))?\s+/
         {
-          # complete the range by assuming 0 as the lower limit 
+          # complete the range by assuming 0 as the lower limit
           &FAI::set_volume_size("0$1", $3);
         }
         | <error: invalid partition size near "$text">
@@ -962,7 +970,7 @@ $FAI::Parser = Parse::RecDescent->new(
           foreach my $dev (split(",", $1))
           {
             # match the substrings
-            ($dev =~ /^([^\d,:\s\-][^,:\s]*)(:(spare|missing))*$/) or 
+            ($dev =~ /^([^\d,:\s\-][^,:\s]*)(:(spare|missing))*$/) or
               &FAI::internal_error("PARSER ERROR");
             # redefine the device string
             $dev = $1;
@@ -1001,7 +1009,7 @@ $FAI::Parser = Parse::RecDescent->new(
                 $dev = $candidates[0];
               }
               # each device may only appear once
-              defined ($FAI::partition_pointer->{devices}->{$dev}) and 
+              defined ($FAI::partition_pointer->{devices}->{$dev}) and
                 die "$dev is already part of the RAID volume\n";
               # set the options
               $FAI::partition_pointer->{devices}->{$dev} = {
@@ -1016,6 +1024,9 @@ $FAI::Parser = Parse::RecDescent->new(
               &FAI::mark_encrypted($candidates[0]);
               # add entry to device tree
               push @{ $FAI::dev_children{$candidates[0]} }, $FAI::partition_pointer_dev_name;
+            } elsif ($FAI::device eq "BTRFS") {
+              $dev = $candidates[0];
+              $FAI::partition_pointer->{devices}->{$dev} = {};
             } else {
               die "Failed to resolve $dev to a unique device name\n" if (scalar(@candidates) != 1);
               $dev = $candidates[0];
@@ -1083,6 +1094,12 @@ $FAI::Parser = Parse::RecDescent->new(
     mdcreateopts: /mdcreateopts="([^"]*)"/ createtuneopt(s?)
         {
           $FAI::partition_pointer->{mdcreateopts} = $1;
+        }
+        | createtuneopt(s?)
+
+   btrfscreateopts: /btrfscreateopts="([^"]*)"/ createtuneopt(s?)
+        {
+          $FAI::partition_pointer->{btrfscreateopts} = $1;
         }
         | createtuneopt(s?)
 
@@ -1188,6 +1205,9 @@ sub check_config {
           "Mount point $this_mp is shadowed by stacked devices\n";
         ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
       }
+    } elsif ($config eq "BTRFS") {
+      (scalar(keys %{ $FAI::configs{$config}{volumes} }) > 0) or
+        die "Empty BTRFS configuration\n";
     } elsif ($config eq "CRYPT") {
       foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
         my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};

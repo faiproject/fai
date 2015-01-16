@@ -5,7 +5,7 @@
 # fai -- main installation script executed after booting
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 1999-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 1999-2014 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -36,9 +36,19 @@ export FAI_VERSION=FAIVERSIONSTRING
 stamp=/var/run/fai/FAI_INSTALLATION_IN_PROGRESS
 export romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 
-export STOP_ON_ERROR=700
+[ -n "$STOP_ON_ERROR" ] || export STOP_ON_ERROR=700
 export faimond=0
 export renewclass=0
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+fdie() {
+
+    local e=$1   # first parameter is the exit code
+    shift
+
+    echo "$@" >&2 # print error message
+    exit $e
+}
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
@@ -54,12 +64,10 @@ fai_init() {
     [ -n "$cspace" ] && FAI_CONFIG_SRC=$cspace
     unset cspace
 
-    if [ -f /etc/RUNNING_FROM_FAICD ]; then   # we are booting from fai cd
-        umount /initrd
+    if [ -d /media/mirror ]; then   # we are booting from fai cd or USB stick
         romountopt=
         FAI_DEBMIRROR="--bind /media/mirror"
         MNTPOINT=/media/mirror
-        FAI_CONFIG_SRC="file://$FAI"   # on a fai-cd the config space is already available
     fi
 
     # read subroutine definitions
@@ -68,8 +76,7 @@ fai_init() {
     [ -f "$stamp" ] && {
        echo -n "$0 already running or was aborted before. PID: " >&2
        cat $stamp >&2
-       echo "You may remove $stamp and try again." >&2
-       exit 1
+       fdie 1 "You may remove $stamp and try again." >&2
     }
 
     DEBIAN_FRONTEND=noninteractive
@@ -104,19 +111,18 @@ fai_init() {
         mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
         ifup lo
         [ -x /sbin/portmap ] && /sbin/portmap
-        [ -x /sbin/rpcbind ] && /sbin/rpcbind
-
-        # NFS v4 support
-        sed -i -e '/Nobody-/d' /etc/idmapd.conf
-        ainsl -v /etc/idmapd.conf 'Nobody-User = root'
-        ainsl -v /etc/idmapd.conf 'Nobody-Group = root'
-        rpc.statd # idmapd needs this
-        rpc.idmapd -C # idmapd needs option -v or rpc.statd must be running. Otherwise the next command (like mount, ls -l) hangs.
+	if [ -x /sbin/rpcbind ]; then
+	    pgrep rpcbind >/dev/null || /sbin/rpcbind
+	fi
+        pgrep rpc.statd > /dev/null || rpc.statd # idmapd needs this
 
         if grep -wq devpts /proc/mounts; then
             mount -t devpts devpts /dev/pts
         fi
         cat /proc/kmsg >/dev/tty4 &
+
+        # start secure shell daemon for remote access
+        [ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
     fi
 
     # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
@@ -129,7 +135,7 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
     cat <<-EOF
-        fai $FAI_VERSION. Copyright (C) 1999-2012 Thomas Lange
+        fai $FAI_VERSION. Copyright (C) 1999-2014 Thomas Lange
         Usage: $0 [options] [action]
 
         Options:
@@ -171,7 +177,7 @@ fstart() {
 
 # Parse commandline options
 TEMP=$(getopt -o s:u:Nhvc:C: --long cspace:,hostname:,new,help,verbose,class:,cfdir: -n "$0" -- "$@")
-if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+if [ $? != 0 ] ; then fdie 6 "Wrong option. Terminating." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
 unset TEMP
@@ -191,8 +197,7 @@ while true ; do
             shift 2 ;;
         -c|--class)
             if [ $renewclass -eq 1 ]; then
-                echo "You can't use -c|--classes and -N|--new at the same time." >&2
-                exit 9
+                fdie 9 "You can't use -c|--classes and -N|--new at the same time." >&2
             fi
             export cmdlineclasses=$2
             cmdlineclasses=${cmdlineclasses//,/ }
@@ -207,8 +212,7 @@ while true ; do
             shift
             break ;;
          *)
-            echo "$0: command line parsing error ! $@" >&2
-            exit 1 ;;
+            fdie 1 "$0: command line parsing error ! $@" >&2 ;;
     esac
 done
 
@@ -227,14 +231,16 @@ export FAI_ETC_DIR
 [ "$1" ] && export action=$1
 [ "$2" ] && export FAI_ROOT=$2 # only used for dirinstall
 
+if [ $(id -u) != "0" ]; then
+    fdie 1 "Run this program as root." >&2
+fi
+
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
-        echo "Please specify a target directory. Aborted" >&2
-        exit 3
+        fdie 3 "Please specify a target directory. Aborted" >&2
     fi
     if [ $renewclass -eq 0 -a -z "$cmdlineclasses" ]; then
-        echo "Please use -c or -N. Aborted" >&2
-        exit 4
+        fdie 4 "Please use -c or -N. Aborted" >&2
     fi
 
     # two lines taken from task_dirinstall
@@ -244,15 +250,13 @@ if [ X$action = Xdirinstall ]; then
     # check if target directory is mounted with bad options
     fs=$(df -P $FAI_ROOT | tail -1 | awk '{print $6}')
     if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
-        echo "Target directory is mounted using nosuid or nodev. Aborting" >&2
-        exit 5
+        fdie 5 "Target directory is mounted using nosuid or nodev. Aborting" >&2
     fi
     unset fs
 
     if [ ! -e $FAI_ETC_DIR/nfsroot.conf ]; then
         echo "$FAI_ETC_DIR/nfsroot.conf not found." >&2
-        echo "You may want to install the package fai-server" >&2
-        exit 7
+        fdie 7 "You may want to install the package fai-server" >&2
     fi
     export NFSROOT=$(source $FAI_ETC_DIR/nfsroot.conf; echo $NFSROOT)
     export FAI_DEBOOTSTRAP=$(source $FAI_ETC_DIR/nfsroot.conf; echo $FAI_DEBOOTSTRAP)
@@ -260,15 +264,9 @@ if [ X$action = Xdirinstall ]; then
 
 fi
 
-if [ $(id -u) != "0" ]; then
-    echo "Run this program as root." >&2
-    exit 1
-fi
-
 # exit if we do not run from nfsroot and no parameter is given
 if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
-    echo "Please give more parameters if not run from the nfsroot." >&2
-    exit 2
+    fdie 2 "Please give more parameters if not run from the nfsroot." >&2
 fi
 
 # are we called as an init substitute ?
@@ -277,7 +275,7 @@ export do_init_tasks=0
 if [ $do_init_tasks -eq 1 ]; then
 
     # if hostname was set on the kernel command line (mostly when booting from CD)
-    for word in $(cat /proc/cmdline) ; do
+    for word in $(< /proc/cmdline) ; do
         case $word in
             hostname=*)
             HOSTNAME=${word#*hostname=}
@@ -308,9 +306,6 @@ else
     mkdir -p $LOGDIR
     ln -snf $action-$fai_rundate $LOGDIR/../last-$action
     ln -snf $action-$fai_rundate $LOGDIR/../last
-    if [ -x /usr/sbin/logtail ] ; then
-      logtail -f /var/log/kern.log -o /var/run/fai/kern.log.offset > /dev/null
-    fi
 fi
 chown root:adm $LOGDIR
 chmod 0750 $LOGDIR

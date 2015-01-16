@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fcopy 8 "15 September 2010" "FAI 4"
+.TH fcopy 8 "18 November 2014" "FAI 4"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -141,37 +141,42 @@ should be executed in the newly installed system.
 
 .SH EXAMPLES
 .br
-Suppose the source directory /files/etc/X11/XF86Config consists of the
+Suppose the source directory /files/etc/X11/xorg.conf consists of the
 following files:
 
-CAD DEFAULT LAB MACH64 server1 faifoo file-modes postinst
+CAD   DEFAULT   LAB   MACH64   server1   ant04   postinst
 
-Each file is an instance of a XF86Config file for a different
-xserver configuration except file-modes,
-which holds the file creation data.  The command
+Each file is an instance of a xorg.conf file for a different
+Xserver configuration.  The command
 
-    # fcopy \-s /files \-t /target /etc/X11/XF86Config
+    # fcopy \-s /files \-t /target /etc/X11/xorg.conf
 
-copies one of these files from the directory /files/etc/X11/XF86Config to
-the file /target/etc/XF86Config.  For all defined classes, fcopy looks if a
-corresponding file exists.  The class with the highest priority will be used
-for copying.  Here are examples of defined classes and the file which will be copied
-by fcopy.
+copies one of these files from the directory /files/etc/X11/xorg.conf to
+the file /target/etc/xorg.conf.  For all defined classes, fcopy looks if a
+corresponding file exists.  The class with the highest priority that
+matches an existing file name will be used
+for copying. Here are examples of defined classes for different hosts and the
+file which will be copied by fcopy.
 
-.sp
-.nf
-.ta 40n
-      Defined classes   File used for copy
+.IP "   Host belongs to the classes" 20v
+File used for copy
+.\"
 
-      DEFAULT,LAB,server3       LAB
-      DEFAULT,CAD,server1       server1
-      DEFAULT,MACH64,ant01      MACH64
-      DEFAULT,TFT,ant13 DEFAULT
-.sp
+.IP "   DEFAULT,LAB,server3" 20v
+LAB
+.IP "   DEFAULT,CAD,server1" 20v
+server1
+.IP "   DEFAULT,MACH64,ant01" 20v
+MACH64
+.IP "   DEFAULT,TFT,ant13" 20v
+DEFAULT
+server1
+
+
 .fi
 .PP
 
-In FAI (look at SEE ALSO) the list of defined classes starts with DEFAULT and the
+In FAI the list of defined classes starts with DEFAULT and the
 last class is the hostname.  So DEFAULT is only used when no file for
 another class exists.  If a file is equal to the hostname, this
 will be used, since hostname should always be the last class.

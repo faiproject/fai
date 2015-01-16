@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2014 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -30,17 +30,19 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-set -e 
+set -e
 
 # last die exit code 22
 
 boot_image="boot/grub/eltorito.img"
+config_space=""
+configset=0
 forceremoval=0
 burn=0
 bootonly=0
 keep=0
 makeiso=1
-makeusb=0
+nomirror=0
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
 
 # we need FAI_CONFIGDIR, NFSROOT
@@ -49,10 +51,11 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/shar
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2012 Thomas Lange
+	fai-cd Copyright (C) 2004-2014 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
+	Usage: fai-cd [OPTIONS] -d CONFIG_SRC
 	Create a FAI CD, a bootable CD that performs the FAI.
 	Read the man pages pages fai-cd(8).
 EOF
@@ -70,21 +73,14 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image() {
 
-    echo "Using grub2"
     mkdir -p $tmp/boot/grub $NFSROOT/boot/grub
     if [ -f $NFSROOT/boot/grub/core.img ]; then
-        echo "preparing grub2 eltorito.img using existing core.img from NFSROOT"
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub/
+        MODULEBASE=$NFSROOT/usr/lib/grub
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
-        echo "preparing grub2 eltorito.img creating core.img in NFSROOT"
-        if chroot $NFSROOT /usr/bin/grub-mkimage --help | grep -q -- --format ; then
-            chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        else
-            chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660
-        fi
+        chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub/
+        MODULEBASE=$NFSROOT/usr/lib/grub
     else
         echo "no grub2 installation found in NFSROOT, using downloaded $grubPackage"
         apt-get -y -d install --reinstall grub-pc >/dev/null
@@ -96,25 +92,37 @@ create_grub2_image() {
         mkdir -p $GRUBDIR
         dpkg -x $grubPackage $GRUBDIR
         cd $GRUBDIR
-        if ./usr/bin/grub-mkimage --help | grep -q -- --format ; then
-            ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        else
-            ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660
-        fi
-        MODULEBASE=$GRUBDIR/usr/lib/grub/
+        ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
+        MODULEBASE=$GRUBDIR/usr/lib/grub
     fi
-    for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
-        [[ -e $a ]] && cp $a $tmp/boot/grub
+
+    # check for jessie path
+    if strings /usr/lib/grub/i386-pc/kernel.img | grep -q i386-pc/%s.mod; then
+	grubtarget=$tmp/boot/grub/i386-pc
+    else
+	# wheezy
+	grubtarget=$tmp/boot/grub
+    fi
+
+    mkdir -p $grubtarget
+    for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,boot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
+        [[ -e $a ]] && cp $a $grubtarget
     done
     rm -rf $GRUBDIR
     cp $grub_config $tmp/boot/grub/grub.cfg
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/grub.cfg
+    if [ -n "$config_space" ] || [ $configset -eq 1 ]; then
+	perl -pi -e "s|FAI_CONFIG_SRC=(.*?)\S+|FAI_CONFIG_SRC=$config_space|" $tmp/boot/grub/grub.cfg
+    fi
     cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
     cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
-    cat $tmp/boot/grub/cdboot.img $tmp/boot/grub/core.img > $tmp/boot/grub/eltorito.img
+    cat $grubtarget/cdboot.img $tmp/boot/grub/core.img > $tmp/boot/grub/eltorito.img
     boot_image="boot/grub/eltorito.img"
+
+    cat $grubtarget/boot.img $tmp/boot/grub/core.img > $tmp/boot/grub/embed.img
+    embed_image="$tmp/boot/grub/embed.img"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 provide_memtest_boot_option() {
@@ -127,7 +135,7 @@ provide_memtest_boot_option() {
         echo "no memtest86+.bin found, omit memtest boot option"
         return
     fi
-    
+
         cat >> $tmp/boot/grub/grub.cfg <<EOF
 
 menuentry "Memory test (memtest86+)" {
@@ -170,10 +178,10 @@ umount_dirs() {
     for d in $dirs; do
         umount $nfsrootdir/$d 2>/dev/null
     done
-    rm -f $nfsrootdir/etc/RUNNING_FROM_FAICD
     mountpoint -q $nfsrootdir && umount $nfsrootdir
     mountpoint -q $cow && umount $cow
     set -e
+    rm -rf $tmp $cow
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 sleep_now() {
@@ -186,49 +194,45 @@ mkiso() {
     [ $makeiso -eq 0 ] && return
 
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    genisoimage --iso-level 4 -V "$vname" -A "$aname" -log-file /dev/null -quiet -l -R -J -b "$boot_image" -no-emul-boot -boot-load-size 4 -boot-info-table -o $isoname $tmp || die 12 "genisoimage failed." 
+    xorriso -report_about HINT -as mkisofs -graft-points -b $boot_image \
+        -V "$vname" -A "$aname" \
+        -no-emul-boot -boot-info-table --embedded-boot ${embed_image} --protective-msdos-label -o $isoname \
+        -R $tmp --sort-weight 0 / --sort-weight 1 /boot || die 12 "xorriso failed."
     echo -n "ISO image size and filename: "; du -h $isoname
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
-mkusb(){
-
-    local device
-
-    [ $makeusb -eq 0 ] && return
-
-    # TODO: If usbdir is a device (matches /dev/) mount it
-    [ -d $usbdir ] || die 17 "$usbdir does not exist."
-    if [ $rsync -eq 1 ]; then
-        echo "Syncing FAI data to USB device $usbdir"
-        rsync --delete -avW $tmp/boot $usbdir || true
-        [ -d $tmp/live ] && rsync --delete -avW $tmp/live $usbdir || true
-    else
-        echo "Writing FAI data to USB device $usbdir"
-        cp -a $tmp/boot $usbdir 2>/dev/null || true
-        [ -d $tmp/live ] && cp -a $tmp/live $usbdir 2>/dev/null || true
-    fi
-    echo $isoversion > $usbdir/.FAI-CD-VERSION
-
-    # detect device of mounted usb stick, grub2
-    device=$(grub-probe -tdrive $usbdir | perl -ane 'm#(/dev/\w+),# && print "$1\n"')
-    echo "Installing grub2 to $device."
-    # this call seems to remove file and copies them again onto the stick
-    grub-install --no-floppy --root-directory=$usbdir $device
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_iso() {
 
     # Create the El Torito bootable iso9660 cdrom image
-    # or copy all FAI data to directory (for USB)
-
-    echo "Bind mounting all required parts"
 
     mkdir -p $nfsrootdir/media/mirror || true
 
-    > $nfsrootdir/etc/RUNNING_FROM_FAICD
-    mount --bind $FAI_CONFIGDIR $nfsrootdir/$FAI && echo "Config space $FAI_CONFIGDIR   mounted"
-    mount --bind $mirrordir $nfsrootdir/media/mirror && echo "Mirror       $mirrordir   mounted"
-    mount -o remount,ro,bind $nfsrootdir/$FAI
+    if [ -z "$config_space" ] && [ $configset -eq 0 ]; then
+	mount --bind $FAI_CONFIGDIR $nfsrootdir/$FAI && echo "Config space $FAI_CONFIGDIR mounted"
+	mount -o remount,ro,bind $nfsrootdir/$FAI
+    fi
+
+    addmirror
+
+    customize_nfsroot
+
+    if [ $keep -eq 1 ]; then
+        echo "fai-cd script stopped for 6666 seconds. The filesystem is now available in $tmp."
+        echo "To continue the script and call the cleanup call: pkill -f 'sleep 6666'"
+        sleep_now 2>/dev/null || true
+        echo "Continue cleanup."
+    fi
+
+    mkiso
+    unhide_dirs
+    umount_dirs
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+addmirror() {
+
+    [ $nomirror -eq 1 ] && return
+    
+    mount --bind $mirrordir $nfsrootdir/media/mirror && echo "Mirror $mirrordir mounted"
     mount -o remount,ro,bind $nfsrootdir/media/mirror
 # TODO: customize /etc/apt, copy apt preferences etc.
 
@@ -243,23 +247,10 @@ EOF
 
     for i in $dists ; do
         comp=$(find $mirrordir/dists/$i -maxdepth 2 -type d -name "binary-*" | \
-        sed -e "s#$mirrordir/*dists/$i/##" -e 's#/binary-.*##' | tr '\n' " ")
+        sed -e "s#$mirrordir/*dists/$i/##" -e 's#/binary-.*##' | uniq | tr '\n' " ")
         echo "deb file:/media/mirror $i $comp" >> $nfsrootdir/etc/apt/sources.list
     done
 
-    customize_nfsroot
-
-    if [ $keep -eq 1 ]; then
-        echo "fai-cd script stopped for 6666 seconds. The filesystem is now available in $tmp."
-        echo "To continue the script and call the cleanup call: pkill -f 'sleep 6666'"
-        sleep_now 2>/dev/null || true
-        echo "Continue cleanup."
-    fi
-
-    mkiso
-    mkusb
-    unhide_dirs
-    umount_dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 burniso() {
@@ -273,31 +264,29 @@ rsync=0
 if [ -x "$(which rsync)" ] ; then rsync=1 ; fi
 
 # Parse commandline options
-while getopts "nkfhHg:bBm:C:u:" opt ; do
+while getopts "nkfhHg:bBMm:C:d:" opt ; do
     case "$opt" in
-        C)  cdir=$OPTARG ;;
+        C)  cdir="$OPTARG" ;;
         f)  forceremoval=1 ;;
         h)  usage ;;
         H)  hidedirs="" ;;
         g)  grub_config="$OPTARG" ;;
         k)  keep=1 ;;
+        M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
         n)  makeiso=0 ;;
         b)  burn=1 ;;
         B)  bootonly=1 ;;
-        u)  usbdir="$OPTARG"
-            makeusb=1
-            makeiso=0
-            [ $rsync -eq 0 -a -e $usbdir/live ] && die 11 "Please remove $usbdir/live. Aborting."
-            ;;
+	d)  config_space="$OPTARG"; configset=1 ;;
         ?)  usage ;;
     esac
 done
 shift $(($OPTIND - 1))
 isoname=$1
 
+[ $nomirror -eq 1 -a -n "$mirrordir" ]  && die 6 "Do not use -M and -m at the same time."
 [ $makeiso -eq 1 -a "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
-if [ $bootonly -eq 0 ]; then
+if [ $bootonly -eq 0 -a $nomirror -eq 0 ]; then
     [ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
     [ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
     [ -z "$(ls $mirrordir)" ] && die 18 "No mirror found in $mirrordir. Empty directory."
@@ -305,13 +294,15 @@ fi
 [ -f "$isoname" ]     && [ $forceremoval -eq 1 ] && rm $isoname
 [ -f "$isoname" ]     && die 3 "Outputfile $isoname already exists. Please remove it or use -f."
 
-if [ $bootonly -eq 0 -o $makeusb -eq 1 ]; then
+if [ $bootonly -eq 0 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
 
 if [ $makeiso -eq 1 ]; then
-    [ -x "$(which genisoimage)" ] || die 8 "genisoimage not found. Please install package."
+    [ -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
 fi
+
+[ -x "$(which strings)" ] || die 8 "command strings not found. Please install package binutils."
 
 # use FAI_ETC_DIR from environment variable
 if [ -n "$FAI_ETC_DIR" -a -z "$cdir" ]; then
@@ -340,15 +331,7 @@ fi
 # if -g is a file name, add prefix
 
 if [ -z "$grub_config" ]; then
-    if [ $bootonly -eq 1 ]; then
-        grub_config="/usr/share/fai/menu.lst" # default for boot-only CD
-    else
-        grub_config="$cfdir/menu.lst" # set default if undefined
-    fi
-
-#    if [ "$grub_version" -eq 2 ]; then
-        grub_config="$cfdir/grub.cfg" # set default if undefined
-#    fi
+    grub_config="$cfdir/grub.cfg" # set default if undefined
 fi
 
 # if grub_config contains / do not change it, else add prefix $cfdir
@@ -369,20 +352,24 @@ mount -n -t tmpfs tmpfs $cow
 # check if dracut or live-boot is used
 if [ -d $ONFSROOT/live ]; then
     hidedirs="$hidedirs /boot"
-    mkdir -p $tmp/live/filesystem.dir
-    nfsrootdir=$tmp/live/filesystem.dir
-    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT/live/filesystem.dir=rr aufs $nfsrootdir  && echo "NFSROOT      $NFSROOT   mounted"
+    if [ $bootonly -ne 1 ]; then
+	mkdir -p $tmp/live/filesystem.dir
+	nfsrootdir=$tmp/live/filesystem.dir
+	mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT/live/filesystem.dir=rr aufs $nfsrootdir && echo "NFSROOT $NFSROOT mounted"
+    fi
 else
     # things to do for dracut
     nfsrootdir=$tmp
-    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT=rr aufs $nfsrootdir  && echo "NFSROOT      $NFSROOT   mounted"
+    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT=rr aufs $nfsrootdir  && echo "NFSROOT $NFSROOT mounted"
     echo "Found dracut inside nfsroot, but booting a FAI CD with dracut inside the nfsrroot does not yet work." >&2
+    echo "Recreate your nfsroot with the live-boot package instead of dracut. Use fai-make-nfsoot -l." >&2
+    die 20 "Aborting"
 fi
 
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|awk '/fai-client/ {print $3}')
 isoversion="FAI $faiversion -- build $(date '+%c')"
-vname="Fully Automatic Installation CD"
+vname="FAI_CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
 create_grub2_image
@@ -390,14 +377,12 @@ create_grub2_image
 provide_memtest_boot_option
 
 if [ $bootonly -eq 1 ]; then
-    rm -rf $tmp/live
     mkiso
-    mkusb
+    mountpoint -q $cow && umount $cow
 else
     trap "unhide_dirs;umount_dirs" EXIT ERR
     create_iso
 fi
 
-rm -rf $tmp $cow
 [ "$burn" -eq 1 ] && burniso
 exit 0

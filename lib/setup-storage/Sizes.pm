@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,8 +25,6 @@ use strict;
 # @file sizes.pm
 #
 # @brief Compute the size of the partitions and volumes to be created
-#
-# $Id$
 #
 # @author Christian Kern, Michael Tautschnig
 # @date Sun Jul 23 16:09:36 CEST 2006
@@ -203,7 +200,7 @@ sub compute_lv_sizes {
   foreach my $config (keys %FAI::configs) {
 
     # for RAID, encrypted, tmpfs or physical disks there is nothing to be done here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^PHY_./);
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^PHY_./);
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group name
@@ -250,7 +247,7 @@ sub compute_lv_sizes {
       $lv_size->{range} = "$start-$end";
 
       # the size is fixed
-      if ($start == $end) { 
+      if ($start == $end) {
         # write the size back to the configuration
         $lv_size->{eff_size} = $start * 1024.0 * 1024.0;
       } else {
@@ -347,7 +344,7 @@ sub do_partition_preserve {
     (0 == ($curr_part->{end_byte} + 1)
         % ($current_disk->{sector_size} *
           $current_disk->{bios_sectors_per_track} *
-          $current_disk->{bios_heads})) or 
+          $current_disk->{bios_heads})) or
       warn "Preserved partition $part_dev_name does not end at a cylinder boundary, parted may fail to restore the partition!\n";
 
     # make sure we don't change extended partitions to ordinary ones and
@@ -382,7 +379,7 @@ sub do_partition_preserve {
 ################################################################################
 sub do_partition_extended {
 
-  my ($part_id, $config, $current_disk) = @_;
+  my ($part_id, $config, $current_disk, $block_size) = @_;
 
   # reference to the current partition
   my $part = (\%FAI::configs)->{$config}->{partitions}->{$part_id};
@@ -401,8 +398,12 @@ sub do_partition_extended {
   foreach my $p (&numsort(keys %{ $FAI::configs{$config}{partitions} })) {
     next if ($p < 5);
 
-    $part->{start_byte} = $FAI::configs{$config}{partitions}{$p}{start_byte} -
-      (2 * $current_disk->{sector_size}) if (-1 == $part->{start_byte});
+    if (-1 == $part->{start_byte}) {
+      my $align_offset = 2 * $current_disk->{sector_size};
+      $align_offset = $block_size if ($block_size > $align_offset);
+      $part->{start_byte} = $FAI::configs{$config}{partitions}{$p}{start_byte}
+        - $align_offset;
+    }
 
     $part->{size}->{eff_size} +=
       $FAI::configs{$config}{partitions}{$p}{size}{eff_size} + (2 *
@@ -502,11 +503,13 @@ sub do_partition_real {
           $FAI::configs{$config}{partitions}{$p}{size}{range}, $max_avail);
 
         # logical partitions require the space for the EPBR to be left
-        # out; in fact, even alignment constraints would have to be considered
+        # out; in fact, even alignment constraints have to be considered
         if (($FAI::configs{$config}{disklabel} eq "msdos")
           && ($p != $part_id) && ($p > 4)) {
-          $min_size += 2 * $current_disk->{sector_size};
-          $max_size += 2 * $current_disk->{sector_size};
+          my $align_offset = 2 * $current_disk->{sector_size};
+          $align_offset = $block_size if ($block_size > $align_offset);
+          $min_size += $align_offset;
+          $max_size += $align_offset;
         }
 
         $min_req_space += $min_size;
@@ -526,7 +529,7 @@ sub do_partition_real {
 
     # the new size
     my $scaled_size = $end;
-    $scaled_size = POSIX::floor(($end - $start) * 
+    $scaled_size = POSIX::floor(($end - $start) *
       (($available_space - $min_req_space) /
           ($max_space - $min_req_space))) + $start
       if ($max_space > $available_space);
@@ -574,7 +577,7 @@ sub compute_partition_sizes
   foreach my $config (keys %FAI::configs) {
 
     # for RAID, encrypted, tmpfs or LVM, there is nothing to be done here
-    next if ($config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("invalid config entry $config");
     # nothing to be done, if this is a configuration for a virtual disk or a
     # disk without partitions
@@ -714,7 +717,8 @@ sub compute_partition_sizes
         $extended = $part_id;
 
         # determine the size of the extended partition
-        &FAI::do_partition_extended($part_id, $config, $current_disk);
+        &FAI::do_partition_extended($part_id, $config, $current_disk,
+          $block_size);
 
         # partition done
         shift @worklist;

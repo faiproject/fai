@@ -5,7 +5,7 @@
 # fai-debconf - set debconf values using classes
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2005-2010 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2005-2013 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -37,7 +37,7 @@ call_conf() {
     for class in $classes ; do
         [ -f $class ] && add_data $class
         if [ -d $class ]; then
-           for f in $(ls $class/* | egrep '^[[:alnum:]_.-]+$') ; do
+           for f in $(ls $class/* | egrep '^[[:alnum:]/_.-]+$') ; do
                [ -f $f ] && add_data $f
            done
         fi
@@ -60,7 +60,7 @@ reconfigure_packages() {
 
      [ -s $LOGDIR/debconf.data ] || return # nothing to do if is size 0 or missing
      if [ -r $LOGDIR/debconf.old ] ; then
-       $ROOTCMD debconf-get-selections > $LOGDIR/debconf.new
+       $ROOTCMD debconf-get-selections | sort > $LOGDIR/debconf.new
        diff --changed-group-format="%>" --unchanged-line-format="" \
          $LOGDIR/debconf.old $LOGDIR/debconf.new > $LOGDIR/debconf.data
      fi
@@ -115,7 +115,7 @@ if [ "x$classes" = "x" ]; then
     exit 9
 fi
 
-[ $forcereconf -eq 0 -a -x $target/usr/bin/debconf-get-selections ] && $ROOTCMD debconf-get-selections > $LOGDIR/debconf.old
+[ $forcereconf -eq 0 -a -x $target/usr/bin/debconf-get-selections ] && $ROOTCMD debconf-get-selections | sort > $LOGDIR/debconf.old
 call_conf # add data to debconf database
 [ $reconf -eq 1 ] && reconfigure_packages
 exit 0

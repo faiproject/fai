@@ -1,0 +1,13 @@
+#! /bin/bash
+
+# if package locales will be installed, then install it early, before
+#  other packages
+
+if [ $FAI_ACTION != "install" ]; then
+   exit 0
+fi
+
+install_packages -l 2>/dev/null | egrep  -q  ' locales|locales '
+if [ $? -eq 0 ]; then
+   $ROOTCMD aptitude -R -y install locales
+fi

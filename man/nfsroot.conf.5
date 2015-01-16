@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH nfsroot.conf 5 "9 February" "FAI 4.0"
+.TH nfsroot.conf 5 "January 2014" "FAI 4.0"
 .\" Please adjust this date whenever revising the manpage.
 
 .SH NAME
@@ -7,39 +7,28 @@ nfsroot.conf \- nfsroot configuration for FAI
 .SH SYNOPSIS
 .B /etc/fai/nfsroot.conf
 .SH DESCRIPTION
-FAI - Fully Automatic Installation - allows for non-interactive
-initial installation and online maintenance ("softupdates") of operating systems
-according to a user-defined configuration.
-See
-.BR fai (8)
-for the possible operation modes of FAI.
+The nfsroot is a file system on the install server. It is used during installation by
+the install clients.
 .LP
-The nfsroot is the file system which is used during installation by
-the install client. It is mounted by the install kernel via NFS.
-It's also used on the FAI CD.
+.BR nfsroot.conf
+defines the essential options for the install server, which are mostly
+used inside the nfsroot. Use bash(1) syntax for defining variables.
 
 .SH VARIABLES
-.BR nfsroot.conf
-is sourced by
-.BR fai-make-nfsroot (8)
-and other scripts and thus must be valid
-.BR bash (1)
-code.
-
 .TP
 .B FAI_DEBOOTSTRAP
 Two parameters for debootstrap(8), space separated. Debootstrap is
-called as the firt part of fai-make-nfsroot. This variable defines
+called as the first part of fai-make-nfsroot. This variable defines
 SUITE and MIRROR for debootstrap. Example:
 
-FAI_DEBOOTSTRAP="squeeze http://http.debian.net/debian"
+FAI_DEBOOTSTRAP="wheezy http://http.debian.net/debian"
 
 .TP
 .B NFSROOT_ETC_HOSTS
 This multiline variable is added to /etc/hosts inside the nfsroot.
 You can use this when DNS is not available on the clients. Example:
 
-NFSROOT_ETC_HOSTS="192.168.1.250 faiserver"
+NFSROOT_ETC_HOSTS="192.168.33.250 faiserver"
 
 .TP
 .B FAI_ROOTPW
@@ -69,11 +58,11 @@ fai-cd(8), fai-mirror(1) and fai-setup(8).
 
 .TP
 .B SSH_IDENTITY
-Location of a identity.pub file. This user can log into the install
+Location of a ssh public key file. This user can log into the install
 clients in as root without a password. Only useful with
 FAI_FLAGS="sshd". Example:
 
-SSH_IDENTITY=/home/admin/.ssh/identity.pub
+SSH_IDENTITY=/home/admin/.ssh/id_rsa.pub
 
 .TP
 .B NFSROOT_HOOKS
@@ -85,14 +74,19 @@ i.e. they have to be shell scripts.
 Options that will be passed to debootstrap(8). Used for excluding
 packages and for specifying a different architecture.
 
-FAI_DEBOOTSTRAP_OPTS="--exclude=info"
-
+.SH NOTES
+Normally, the nfsroot is mounted by the install kernel via NFS.
+It's also used on the FAI CD. You can convert an nfsroot to a
+compressed image using fai-nfsroot2image(8).
 
 .SH SEE ALSO
 
 .BR fai\-make-nfsroot (8),
 .BR fai\-setup (8),
 .BR fai (8)
+.BR fai\-mirror(1)
+.BR fai\-chboot(8)
+.BR fai\-nfsroot2image(8)
 
 .br
 This file is part of FAI (Fully Automatic Installation). The FAI

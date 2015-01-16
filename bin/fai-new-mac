@@ -11,12 +11,15 @@
 # -t read from tcpdump. If not given, read from stdin
 # -p <pattern> only print MACs matching the pattern
 
-$filename="/var/lib/fai/known-mac-addresses";
-$dhcpdconf="/etc/dhcp/dhcpd.conf";
+use strict;
+use Getopt::Std;
+
+my $filename="/var/lib/fai/known-mac-addresses";
+my $dhcpdconf="/etc/dhcp/dhcpd.conf";
+my %mac;
 $|=1;
 
-use Getopt::Std;
-our($opt_a,$opt_d,$opt_p,$opt_t);
+our($opt_a,$opt_d,$opt_p,$opt_t,$opt_i);
 
 sub read_known_macs {
 
@@ -66,6 +69,7 @@ sub append_new_mac {
 
 sub read_from_tcpdump {
 
+  my $newmac;
   if ($opt_t) {
     open (TCPDUMP,"tcpdump $opt_i -pnlqte udp and src port bootpc and broadcast|") || die "Can't read from tcpdump. $!\n";
   } else {

@@ -37,7 +37,7 @@ while (<>) {
   } else {
     die;
   }
-  
+
   if (defined($latest_post)) {
     foreach my $pre (split(/,/, $latest_pre)) {
       $pre =~ s/\//__/g;

@@ -80,7 +80,7 @@ WARNING: THIS DOCUMENTATION IS NOT UPDATED FOR FAI 4.X
 == [[introduction]]Introduction
 
 ////
- -MT: general comments: 
+ -MT: general comments:
   - dirinstall is only mentioned at the end
   - mailinglists, IRC channel should be mentioned
 ////
@@ -99,7 +99,7 @@ Download::
 http://fai-project.org/download
 
 Entry for 'sources.list'::
-`http://fai-project.org/download lenny koeln`
+`deb http://fai-project.org/download wheezy koeln`
 
 Mailing list::
 https://lists.uni-koeln.de/mailman/listinfo/linux-fai
@@ -116,12 +116,12 @@ User visible changes::
 http://fai-project.org/NEWS
 
 Source tree::
-You can access the subversion repository containing the newest
-developer version of FAI using the following commands
-`svn co svn://svn.debian.org/svn/fai/trunk fai`
+You can access the Git repository containing the newest
+developer version of FAI using the following command
+`git clone git://github.com/faiproject/fai.git`
 
 Source tree via http::
-http://svn.debian.org/wsvn/fai/
+https://github.com/faiproject/fai
 
 Now read this manual, then enjoy the fully automatic installation and
 your saved time.
@@ -192,7 +192,7 @@ topic.
 
 First, some terms used in this manual are described.
 
-install server:: 
+install server::
 The host where the package 'fai-server' is installed. It provides
 several services and data for all install clients. In the examples of
 this manual this host is called 'faiserver'.
@@ -212,7 +212,7 @@ short. It includes information about:
 * Local file systems, their types, mount points and mount options
 * Software packages
 * Keyboard layout, time zone, NIS, Xorg configuration, remote file
-  systems, user accounts, printers ... 
+  systems, user accounts, printers ...
 
 nfsroot::
 A file system located on the install server. It's the complete file
@@ -242,7 +242,7 @@ with a great number of nodes.
 FAI can also be used as a network rescue system. You can boot your
 computer, but it will not perform an installation. Instead it will run
 a fully functional Debian GNU/Linux without using the local hard
-disks. Then you 
+disks. Then you
 can do a remote login and backup or restore a disk partition, check a
 file system, inspect the hardware or do any other task.
 
@@ -260,8 +260,8 @@ here.
 * Hosts can boot from network card, CD, USB stick.
 * Simple creation of the CD and USB stick.
 * PXE with DHCP and BOOTP boot methods are supported.
-* Lilo and grub support.
-* ReiserFS, ext3 and XFS file system support.
+* Grub support.
+* ReiserFS, ext3/ext4 and XFS file system support.
 * Software RAID and LVM support.
 * Automatic hardware detection.
 * Remote login via ssh during installation process possible.
@@ -286,7 +286,7 @@ a few minutes.
 * Install the package 'fai-quickstart' on your install server (see <<faisetup>>).
 
 * Edit 'fai.conf' run fai-setup -v and read its output.
-   
+
 * Install the simple examples into the configuration space:
 
 ----
@@ -295,7 +295,7 @@ $ cp -a /usr/share/doc/fai-doc/examples/simple/* /srv/fai/config/
 
 * Get the MAC address of your demo host.
 * Add your host (try to name it 'demohost') to 'dhcpd.conf' and
- '/etc/hosts' (= your DNS) on the FAI server. 
+ '/etc/hosts' (= your DNS) on the FAI server.
 * When using PXE, tell the install client to boot the install
   kernel and perform an installation during the next boot by calling
  `fai-chboot` on the install server.
@@ -408,7 +408,7 @@ MT: some link to a signing howto would be nice
 
 === [[faisetup]]Setting up FAI
 
-To setup a FAI install server you need at least the packages
+To set up a FAI install server you need at least the packages
 _fai-server_ and _fai-doc_. The package _fai-quickstart_ contains
 dependencies on all required packages for an install server. Do not
 install the package _fai-nfsroot_ on a normal system. This package can
@@ -420,18 +420,18 @@ install server, use the following command
 ----
 # aptitude install fai-quickstart
 Reading Package Lists... Done
-Building Dependency Tree       
-Reading extended state information      
+Building Dependency Tree
+Reading extended state information
 Initializing package states... Done
-Reading task descriptions... Done  
+Reading task descriptions... Done
 
 The following NEW packages will be installed:
   apt-move{a} isc-dhcp-server{a} fai-doc{a} fai-quickstart fai-server{a}
-  genisoimage{a} inetutils-inetd{a} nfs-kernel-server{a} 
-  openssh-server{a} syslinux-common{a} tftpd-hpa{a} 
+  genisoimage{a} inetutils-inetd{a} nfs-kernel-server{a}
+  openssh-server{a} syslinux-common{a} tftpd-hpa{a}
 0 packages upgraded, 11 newly installed, 0 to remove and 0 not upgraded.
 Need to get 2593kB of archives. After unpacking 8561kB will be used.
-Do you want to continue? [Y/n/?] 
+Do you want to continue? [Y/n/?]
 ----
 
 The configuration for the FAI package (not the configuration data for
@@ -447,7 +447,7 @@ name of the distribution (etch, lenny, sid) for which the basic Debian
 system should be built.
 
 NFSROOT_ETC_HOSTS::
-If you use HTTP or FTP access to the Debain mirror, add its IP-address
+If you use HTTP or FTP access to the Debian mirror, add its IP-address
 and the name to this variable. For a Beowulf master node, add the name
 and IP-address of both networks to it. This variable is not needed
 when the clients have access to a DNS server.
@@ -466,14 +466,14 @@ The config space is mounted from host via NFS.
 - +cvs[+ssh]://user@host/path/to/cvsroot module[=tag]+
 The config space is received from a cvs checkout.
 
-- +svn://user@host/svnpath+ 
+- +svn://user@host/svnpath+
 The config space checked out from a subversion repository. Also
 supported are svn+file, svn+http, svn+ssh, svn+https and checkouts
 without a user name.
 
 - +git://host/path+
 The config space checked out from a
-git repository, host can be empty. Also supported is git+http. 
+git repository, host can be empty. Also supported is git+http.
 
 - +http://host/path/tarfile+
 The config space will be downloaded from the given location via HTTP.
@@ -481,12 +481,10 @@ Furthermore +path/tarfile.md5+ will be downloaded and the md5sum will be
 checked. +tarfile+ will be extracted by `ftar(8)`, and thus needs to have
 a recognized suffix, such as .tar.gz.
 
-If +$FAI_CONFIG_SRC+ is undefined in 'fai.conf', then the default is
-to use an NFS mount from the fai install server onto the install
-client. It's the same as +nfs://`hostname`/$FAI_CONFIGDIR+ with the
-host name determined on the install server. Remember that this
-directory must be exported to all install clients, so that all files
-can be read by root.
++$FAI_CONFIG_SRC+ is normally defined by fai-chboot with option -u.
+
+Remember that this directory must be exported to all install clients,
+if using the NFS protocol.
 
 
 FAI_DEBMIRROR::
@@ -504,7 +502,7 @@ card (as for a Beowulf server), use the install server name which is
 known by the install clients.
 
 FAI uses `debootstrap(8)` and `apt-get(8)` to create the nfsroot file
-system in '/srv/fai/nfsroot'. It needs about {nfsrootsize} of free
+system in '/srv/fai/nfsroot'. It needs about {nfsrootsize}MB of free
 disk space. After editing 'fai.conf' and 'make-fai-nfsroot.conf' call
 `fai-setup`.
 
@@ -538,7 +536,7 @@ subdirectories with different options.
 All install clients must belong to this netgroup, in order to mount
 these directories successfully. Netgroups are defined in the file
 '/etc/netgroup' or in the corresponding NIS map. An example can be found in
-'/usr/share/doc/fai-doc/examples/etc/netgroup'. For more information, 
+'/usr/share/doc/fai-doc/examples/etc/netgroup'. For more information,
 read the manual pages `netgroup(5)` and the NIS HOWTO. After changing
 the netgroups, the NFS server has to reload its configuration. Use the
 following command:
@@ -557,7 +555,7 @@ account, so this account has write permissions to '/srv/tftp/fai' in
 order to change the symbolic links to the kernel image which is booted
 by a client.
 
-//// 
+////
 MT: the log files - which ones? Give a
 little explanation here
 ////
@@ -632,7 +630,7 @@ your network card. So you can use DHCP and TFTP to get the install
 kernel that was created with `mknbi-linux(8)`.  A lot of ethernet
 cards support booting via ethernet if a special boot EPROM is inserted
 or booted from floppy provided by http://rom-o-matic.net. In depth
-documentation about booting via ethernet may be found at
+documentation about booting via Ethernet may be found at
 http://www.etherboot.org.
 
 
@@ -704,7 +702,7 @@ at all options used therein. The only FAI specific information inside
 this configuration file is to set _filename_ to _fai/pxelinux.0_ and to
 set _next-server_ and _server-name_. All other information is only
 network related data, which is used in almost all DHCP configurations.
- 
+
 If you make any changes to the DHCP daemon configuration, you must
 restart the daemon.
 
@@ -750,10 +748,12 @@ Enter 'help' for a list of built-in commands.
 (initramfs)
 ----
 
-You will get a shell prompt and can look at the log files, for
-examples '/live.log' or '/tmp/net-eth0.conf'. You can also enter the
-initramfs shell for debugging if you append the parameter 'break' to
-the kernel command line.
+You will get a shell prompt and can look at the log files, for example
+'/live.log' or /live-boot.log' (depending on the live-initramfs version) and
+'/tmp/net-eth0.conf' or '/run/net-eth0.conf' (depending on the klibc version).
+You can also enter the initramfs shell for debugging if you append the parameter
+'break' to the kernel command line (see `initramfs-tools(8)` for further
+information).
 
 Use the following command on the install server to see which directories are exported
 from the install server (named faiserver):
@@ -782,9 +782,9 @@ ____
 Check the initrd in the nfsroot if the kernel driver of your network
 card is included there.
 
-=== [[sysinfo]]Collecting other system information 
+=== [[sysinfo]]Collecting other system information
 
-If you set the variable +$FAI_ACTION+ to _sysinfo_ (for e.g. by using 
+If you set the variable +$FAI_ACTION+ to _sysinfo_ (for e.g. by using
 +fai-chboot -S+), the client will not install a new system, but will
 collect a lot of system information. Type
 _ctrl-c_ to get a shell or use _Alt-F2_ or _Alt-F3_ and you will get
@@ -803,7 +803,7 @@ use:
 ----
 $ ssh root@demohost
 Warning: Permanently added 'demohost,134.95.9.200' to the list of known hosts.
-root@demohost's password: 
+root@demohost's password:
 ----
 
 You now have a running Linux system on the install client without
@@ -820,11 +820,11 @@ into the directory _~fai/demohost/sysinfo/_.
 
 ////
 More general:
-_~$LOGUSER/$HOSTNAME/$FAI_ACTION/_. 
+_~$LOGUSER/$HOSTNAME/$FAI_ACTION/_.
 ////
 
 Two additional symbolic links are created. The symlink 'last' points
-to the log directory of the last fai action performed. The symlinks
+to the log directory of the last FAI action performed. The symlinks
 'last-install' and 'last-sysinfo' point to the directory with of the
 last corresponding action.  Examples of the log files can be found on
 the FAI homepage.
@@ -898,7 +898,7 @@ ____
   extrbase		# extract the minimal base.tgz
   mirror		# get a Debian mirror via NFS
   debconf		# do Debian preseeding
-  repository		# preapre access to the package repository
+  repository		# prepare access to the package repository
   updatebase		# Debian specific
   HOOK instsoft.FAIBASE	# fcopy kernel-img.conf
   instsoft		# install software packages
@@ -914,7 +914,7 @@ ____
 
 These are tasks, which are executed when a different action is performed
 
-  dirinstal 	       # install a chroot environment
+  dirinstall 	       # install a chroot environment
   softupdate	       # do a system configuration without the partitioning part
 ____
 
@@ -948,7 +948,7 @@ You can monitor the installation of all install clients with the
 command `faimond(8)`. All clients check if this daemon is running on
 the install server (or the machine defined by the variable
 +$monserver+). Then, a message is sent when a task starts and ends. The
-fai monitor daemon prints this messages to standard output. There's
+FAI monitor daemon prints this messages to standard output. There's
 also a graphical frontend available, called `faimond-gui(1)`.
 
 
@@ -966,14 +966,14 @@ compressed file system (using squashfs).
 
 After the root file system is mounted read only, it is made writable
 by mounting a RAM disk via aufs (another unionfs) on top of it. So
-it's possible for programms or daemons to write to files inside a read
+it's possible for programs or daemons to write to files inside a read
 only mounted file system.  We are using the package
 `live-initramfs(7)` to mount the nfsroot and to make this file system
 writable using aufs. The package _live-initramfs_ is only needed
 inside the nfsroot and adds some initramfs hooks.
 
 
-=== [[isetup]]Start and setup FAI
+=== [[isetup]]Start and set up FAI
 
 ////
 MT: CVS, SVN missing
@@ -1081,7 +1081,7 @@ More information about these scripts are described in <<cscripts>>.
 After the customization scripts are executed, FAI will execute some
 tests if available. Using these test, you can check for errors of the
 installation or of the softupdate. Test scripts are called via
-`fai-do-scripts(1)` and should append it's messages to
+`fai-do-scripts(1)` and should append its messages to
 _$LOGDIR/test.log_. A Perl module including some useful subroutines
 can be found in _Faitest.pm_. A test can also define a new class for
 executing another tests during next boot via the variable
@@ -1208,8 +1208,8 @@ that is used by `debconf-set-selections(8)`.
 
 _package_config/_::
 Files with class names contain lists of software packages to be
-installed or removed. Files named '*.asc' are added to the key list of
-apt. 
+installed or removed. Files named 'class.asc' are added to the key list of
+apt.
 
 _scripts/_::
 Script for local site
@@ -1299,7 +1299,7 @@ confdir::
 The kernel appended parameters define variables, the syslog and kernel
 log daemon are started. The list of network devices is stored in
 +$netdevices+. Then additional parameters are fetched from a DHCP
-server and also additional variables are defined. The DNS 
+server and also additional variables are defined. The DNS
 resolver configuration file is created.
 +
 The location of the configuration space is defined by the variable
@@ -1494,12 +1494,12 @@ reboot::
 Reboot the install client after installation is finished without
 typing RETURN on the console. If this flag is not set, and error.log
 contains anything, the install client will stop and wait that you
-press RETURN. If no errors occured, the client will always reboot
-automatically. 
+press RETURN. If no errors occurred, the client will always reboot
+automatically.
 
 initial::
 Used by `setup-storage(8)`. Partitions marked with +preserve_reinstall+
-are preserved unless this flag ist set. Often, this flag is set in a
+are preserved unless this flag is set. Often, this flag is set in a
 file 'class/*.var' by using setting 'flag_initial=1'.
 
 
@@ -1571,7 +1571,7 @@ written in uppercase. They must not contain a hyphen, a hash or a dot,
 but may contain underscores. A description of all classes can be found
 in '/usr/share/doc/fai-doc/classes_description.txt'.
 
-host names should rarely be used for the configuration files in the
+Host names should rarely be used for the configuration files in the
 configuration space. Instead, a class should be defined and then added
 for a given host. This is because most of the time the configuration
 data is not specific for one host, but can be shared among several
@@ -1630,7 +1630,7 @@ The following variables are used in the examples and may also be
 useful for your installation:
 
 FAI_ACTION::
-Set the action fai should perform. Normally this is done by
+Set the action FAI should perform. Normally this is done by
 `fai-chboot(8)`. If you can't use this command, define it in the
 script 'LAST.var'.
 
@@ -1682,14 +1682,14 @@ and don't list them otherwise
 ////
 
 
-Before installing packages, fai will add the content of all files
-named _package_config/*.asc_ to the list of apt keys. If your local
+Before installing packages, FAI will add the content of all files
+named _package_config/class.asc_ to the list of apt keys. If your local
 repository is signed by your keyid AB12CD34 you can easily add this key,
-so fai will use it during installation. Use this command for creating
-the '.asc' file:
+so FAI will use it during installation. Use this command for creating
+the 'class.asc' file:
 
 ----
-faiserver$ gpg -a --export AB12CD34 > /srv/fai/config/package_config/myrepo.asc
+faiserver$ gpg -a --export AB12CD34 > /srv/fai/config/package_config/class.asc
 ----
 
 
@@ -1701,7 +1701,7 @@ whose file name matches a defined class. The syntax is very simple.
 # an example package class
 
 PACKAGES taskinst
-german 
+german
 
 PACKAGES aptitude
 adduser netstd ae
@@ -1836,7 +1836,7 @@ files, e.g _LocateLineMatching, ReplaceAll, InsertLine,
 AppendIfNoSuchLine, HashCommentLinesContaining_. But it can't handle
 variables which are undefined. If a variable is undefined, the whole
 cfengine script will abort. Study the examples that are included in
-the fai package.
+the FAI package.
 
 More information can be found in the manual page `cfengine(8)` or at
 the cfengine homepage http://www.cfengine.org.
@@ -1890,7 +1890,7 @@ hooks for a task exists, they are called in the order defined by the
 classes.  If _debug_ is included in +$FAI_FLAG+ the option _-d_ is
 passed to all hooks, so you can debug your own hooks.  If some default
 tasks should be skipped, use the subroutine _skiptask_ and a list of
-default tasks as parameters. The example 'partition.DISKLESS' skips
+default tasks as parameters. The hooks of the class CENTOS skips
 some default tasks.
 
 The directory '$FAI/hooks/' contains all hooks. A hook is an executable
@@ -1992,7 +1992,7 @@ installation they will be copied to the install server (see
 <<isavelog>>). After the install client rebooted into his newly
 installed system, you can find the FAI logs in '/var/log/fai'.
 Log files are also created when doing the softupdate or dirinstall
-action. 
+action.
 
 These a some log files which are created by FAI.
 
@@ -2036,7 +2036,7 @@ all log files.
 This chapter describes the details about building a Beowulf cluster
 using Debian/GNU Linux and FAI. This chapter was written for FAI
 version 2.x for Debian woody and was not yet updated. The example
-configuration files were removed from the fai packages after FAI
+configuration files were removed from the FAI packages after FAI
 2.8.4.
 
 For more information about the Beowulf concept look at
@@ -2301,11 +2301,11 @@ might need to take care of some things yourself.
 These are things that may have to be changed on other architectures:
 
 Boot loader::
-There are scripts for setting up `lilo(8)` and `grub(8)`. Here you may
+There are scripts for setting up `grub(8)`. Here you may
 add support for your specific boot loader.
 
 If you want to serve multiple nfsroot directories on one FAI server,
-you need to create specific config directories in '/etc' for fai, like
+you need to create specific config directories in '/etc' for FAI, like
 '/etc/fai-sarge' and '/etc/fai-etch'. Then you need to set the
 +$NFSROOT+ variables to different directories and run
 
@@ -2317,7 +2317,7 @@ faiserver#make-fai-nfsroot -c /etc/fai-sarge
 
 To install a computer with a 32bit i386 system, you need an i386 nfsroot.
 Creating this 32bit nfsroot on an install server runnning amd64 is
-quiet simple. Install and setup the fai packages. Then copy your fai
+quite simple. Install and set up the FAI packages. Then copy your FAI
 config files to a new subdirectory.
 
 ----
@@ -2326,7 +2326,7 @@ faiserver# cp -a /etc/fai /etc/fai-i386
 
 Edit the variable +$FAI_DEBOOTSTRAP_OPTS+ in
 '/etc/fai-i386/make-fai-nfsroot.conf' and add the option +--arch
-i386+. Also choose a different directory for your new nfsroot. Here 
+i386+. Also choose a different directory for your new nfsroot. Here
 are the two lines after editing.
 
 ----
@@ -2356,14 +2356,14 @@ That's all!
 
 === [[powerpc]]FAI on PowerPC
 There's some stuff on http://www.layer-acht.org/fai.  Most notably
-there are hooks for partitioning and config-files to setup bootloaders
+there are hooks for partitioning and config-files to set up bootloaders
 for oldworld and newworld.
 
 === [[ia64]]FAI on IA64
 There's one big IA64 Beowulf cluster running which was installed with
 FAI. Only the partitioning part has to be replaced by a short script,
 since sfdisk is not available on IA64. This should not be need any
-more since the patitioning tool `setup-storage(8)` works on all
+more since the partitioning tool `setup-storage(8)` works on all
 architectures, were parted is supported.
 
 
@@ -2378,7 +2378,7 @@ file system. Additionally you have to adjust the 'sources.list' or
 similar configuration files which are needed for specifying the
 location of the package repository.
 
-//// 
+////
 rpmstrap
 mach (make a chroot)
 ////
@@ -2432,13 +2432,13 @@ The file format of the configuration files in 'disk_config' and
 
 == [[advanced]]Advanced FAI
 
-=== [[dirinstall]]Creating chroot and virtualization environments 
+=== [[dirinstall]]Creating chroot and virtualization environments
 
 If you have some chroot environments to install, or a virtualization
 environment where you neither can nor want to run a normal Debian
 Installer in to get to a working system (for example, Xen guest
 domains), there is the FAI action _dirinstall_.
-By calling 
+By calling
 
 ----
 faiserver# fai <options> dirinstall <target-directory>
@@ -2496,7 +2496,7 @@ list of classes. This can be changed by calling _fai -N softupdate_.
 * FAI doesn't prevent software packages to (re-)start daemons.
 * FAI doesn't reboot at the end of a softupdate.
 
-Except these changes, things are the same as when installing a new computer: 
+Except these changes, things are the same as when installing a new computer:
 
 . Define classes (by default use old list) and variables.
 . Update the installed packages.
@@ -2516,7 +2516,7 @@ installation:
 
 starts a softupdate.
 Make sure to set the variable +$LOGSERVER+ (done in a _class/*.var_
-file) if fai should save the log files to a remote machine.
+file) if FAI should save the log files to a remote machine.
 
 ===== How to do mass softupdates
 Probably you don't want to run to each client and start a softupdate
@@ -2617,7 +2617,7 @@ warnings contained in this section_, there must be a way to check what
 has been changed locally. A simple approach would be to use _debsums
 -e_, but this method fails miserably if you modify conffiles in your
 FAI scripts, because it only checks against the version contained in
-the Debian package. A better proposal is to setup/abuse `tripwire(8)` or
+the Debian package. A better proposal is to set up/abuse `tripwire(8)` or
 `integrit(1)` to scan for local changes and notify you about them.
 
 
@@ -2707,7 +2707,7 @@ for new hardware is to assign the MAC address to a host name and to an
 IP address, and to define classes for this host if the existing
 configuration files are not generic enough to deal with this new host.
 
-There's a tradeoff between writing a few large configuration scripts,
+There's a trade-off between writing a few large configuration scripts,
 or many short scripts, one for each class. Large scripts can
 distinguish classes by using case statements, the _ifclass_ test or
 with class mechanisms for _cfengine_ scripts.

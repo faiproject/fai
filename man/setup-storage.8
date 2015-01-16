@@ -17,11 +17,11 @@ Using FAI disk_config files,
 \fBsetup-storage\fP
 computes effective partition and volume sizes and executes the necessary
 commands to configure storage devices. It manages disk drives as well as RAID
-and LVM volumes plus encryption and tmpfs. It handles all file systems supported by
-\fBparted\fP(8)
-as well as ntfs but is flexible enough to be extended to further types as well.
+and LVM volumes plus encryption and tmpfs. It handles following
+filesystems: \fBext2/3/4\fP, \fBvFAT(FAT32)\fP, \fBmsdos(FAT16)\fP, \fBreiserFS\fP, \fBXFS\fP and
+\fBBTRFS\fP but is flexible enough to be extended to further types as well.
 Once the storage devices are prepared, an appropriate
-\fBfstab\fP(5) (and possibly also a \fBcrypttab\fP(5))
+\fBfstab\fP(5) (and possibly also a \fBcrypttab\fP(5)
 file is generated.
 
 Without the
@@ -72,7 +72,7 @@ Perform syntax check of disk_config file only and exit.
 \fB\-D\fP \fIdisks\fP
 Specify the list of disk drives to be configured using
 \fBsetup-storage\fP. Overrides
-.IR disklist.
+.IR disklist. Do not forget to quote this space separated list.
 
 .TP
 \fB\-L\fP \fIdirectory\fP
@@ -351,6 +351,43 @@ RAM in the machine. This is equivalent to using size=20% in the tmpfs mount
 options.
 .IP \(bu
 Mount a tmpfs on /scratch with a maximum size of 3 GiB.
+
+.TP
+Simple BTRFS example
+.sp
+.nf
+.ta 10n 20n 30n 40n 50n
+disk_config disk1
+primary /boot 500 ext4 rw
+primary - 2048 - -
+
+disk_config disk2
+primary - 2048 - -
+
+disk_config disk3 sameas:disk2
+disk_config disk4 sameas:disk2
+
+disk_config btrfs
+btrfs raid1 /                 disk1.2,disk2.1  noatime,subvol=@/
+btrfs raid1 /home             disk3.1,disk4.1  subvol=@home,noatime
+.sp
+.fi
+.PP
+.IP \(bu
+Four disks are used to create a BTRFS RAID. The first disk contains the boot
+partition, the second partition of disk one and the second disk in its
+entirety are used to create the / RAID.
+The third and fourth disks are used to create the /home RAID.
+.IP \(bu
+Note that each BTRFS RAID must contain an initial subvolume. This is
+necessary to use advanced BTRFS features such as snapshots. The intial
+subvolume name is taken from the subvol mountoption. In the above
+example those would be @/ and @home.
+ Subvolume names begin with an @ by convention.
+.IP \(bu
+Every BTRFS line must begin with btrfs followed by the RAID-level of
+the actual data -- NOT metadata! By default metadata uses RAID1,
+however this can be changed using createopts.
 
 .TP
 External log device example

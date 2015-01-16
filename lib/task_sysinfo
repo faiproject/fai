@@ -4,11 +4,11 @@
 
 
 # first show some hardware info
-echo
+echo Showing system information.
 
 # too much details [ -x "$(which dmidecode)" ] && dmidecode
 cd /sys/class/dmi/id
-grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv '123456789|To Be Filled|Not Applicable|N/A|:[[:blank:]]+$'
+grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv '123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
 cd - >/dev/null
 
 if [ -x "$(which lshw)" ]; then
@@ -58,10 +58,11 @@ lspci
 #[ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
 
 # start software raid
-/usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf 
+/usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf
 /etc/init.d/mdadm-raid start
 
 for device in /dev/sd?; do
+    [ -b "$device" ] || continue # make sure device exists and is valid block device
     [ `stat -c %G $device` = "disk" ] || continue
     hdparm -I $device | egrep -v '^$' | head -5 | sed -e 's/^[[:blank:]]*//'
 done
@@ -72,11 +73,12 @@ find /dev/disk/by-id ! -type d -printf "%-40f\t->  %l\n" | grep -v part | sort -
 echo
 cat /proc/partitions
 
+[ -x "$(which lsblk)" ] && lsblk -i
 [ -x "$(which blkid)" ] && blkid
 
 # very detailed
 for disk in $disklist; do
-    smartctl -i /dev/$disk 
+    smartctl -i /dev/$disk
     hdparm -iv /dev/$disk
     fdisk -lu /dev/$disk
     parted -s /dev/$disk print
@@ -84,6 +86,10 @@ for disk in $disklist; do
 done
 
 fdisk -lu
+
+# show lvm information
+pvs;vgs;lvs
+
 fai-mount-disk -f
 df -PTh | egrep ':|^/|^Filesystem'
 # - - - - - - - - - - -

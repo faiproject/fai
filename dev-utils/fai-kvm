@@ -14,7 +14,7 @@ size=5   # default size of the disk image
 ram=2000
 disks=1
 cdimage=/files/scratch/fai-cd.iso # default name for CD image
-diskdir=/dev/shm     # directory where the disk images will be created
+diskdir=/tmp     # directory where the disk images will be created, a RAM disk is recommended
 
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
@@ -71,6 +71,14 @@ shift $(($OPTIND - 1))
 
 hex=$(echo $user 16o p | dc)
 diskfile=$diskdir/faitest-disk-$user
+
+# not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
+# If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
+# x2:xx:xx:xx:xx:xx
+# x6:xx:xx:xx:xx:xx
+# xA:xx:xx:xx:xx:xx
+# xE:xx:xx:xx:xx:xx
+
 mac=52:54:00:11:23:$hex
 
 net="-net nic,macaddr=$mac,model=virtio -net tap,ifname=tap$user,script=no,downscript=no"
@@ -78,7 +86,7 @@ disk=""
 for i in `seq 1 $disks` ; do
   disk="$disk -drive file=$diskfile-$i.qcow2,if=virtio,index=$i"
   if [ $i -eq 1 ] ; then
-    disk="$disk,boot=on"
+    disk="$disk"
   fi
 done
 gopt="$fix -m $ram -smp 2 -name FAI-test"

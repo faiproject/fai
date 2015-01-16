@@ -1,6 +1,5 @@
 #! /usr/bin/perl
 
-# $Id$
 # copyright Thomas Lange 2001-2010, lange@debian.org
 # copyright Michael Goetze 2011, mgoetze@mgoetze.net
 # map "normal" device notation to grub notation
@@ -27,7 +26,7 @@ while (<DEVICEMAP>) {
   $map{$olddevice} = $grubdevice;
 }
 
-$device=~ m#^(/dev/(?:[shv]d\D|i2o/hd\D|ida/c\d*d\d*|cciss/c\d*d\d*))p*(\d*)$# || die "Can't match device: $device\n";
+$device=~ m#^(/dev/(?:[shv]d\D|xvd\D|i2o/hd\D|ida/c\d*d\d*|cciss/c\d*d\d*))p*(\d*)$# || die "Can't match device: $device\n";
 my ($disk,$partition) = ($1,$2);
 
 if ($map{$disk}) {
@@ -36,7 +35,7 @@ if ($map{$disk}) {
   opendir (my $dh, $devbyid) || die "Can't open /dev/disk/by-id\n";
 
   while (my $diskid = readdir $dh) {
-    next if ($diskid =~ /[.].*/);
+    next if ($diskid =~ /^[.].*/);
 
     $diskid = "$devbyid/$diskid";
     my $shortdev = abs_path($diskid);

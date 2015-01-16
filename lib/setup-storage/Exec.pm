@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,8 +25,6 @@ use strict;
 # @file exec.pm
 #
 # @brief functions to execute system commands
-#
-# $Id$
 #
 # @author Christian Kern, Michael Tautschnig
 # @date Sun Jul 23 16:09:36 CEST 2006
@@ -83,6 +80,15 @@ $FAI::error_codes = [
     message      => "Parted could not read a disk label (new disk?)\n",
     stderr_regex => "",
     stdout_regex => "Error: .* unrecognised disk label",
+    program      => "parted -s \\S+ unit TiB print",
+    response     => "warn",
+    exit_codes   => [1],
+  },
+  {
+    error        => "parted_3_2",
+    message      => "Parted could not read a disk label (new disk?)\n",
+    stderr_regex => "Error: .* unrecognised disk label",
+    stdout_regex => "",
     program      => "parted -s \\S+ unit TiB print",
     response     => "warn",
     exit_codes   => [1],
@@ -245,7 +251,7 @@ sub get_error {
 # output of the bash command
 #
 # @reference stderr reference to a list, that should contain the standard
-# errer output of the bash command
+# error output of the bash command
 #
 # @return the identifier of the error
 #
@@ -254,7 +260,7 @@ sub execute_command {
 
   my ($command, $stdout, $stderr) = @_;
 
-  my $err = &execute_command_internal($command, $stdout, $stderr);
+  my $err = &execute_command_internal($command, $stdout, $stderr,1);
 
   if ($err ne "") {
     my $response = &get_error($err, "response");
@@ -288,7 +294,7 @@ sub execute_ro_command {
   # set no_dry_run to perform read-only commands always
   $FAI::no_dry_run = 1;
 
-  my $err = &execute_command_internal($command, $stdout, $stderr);
+  my $err = &execute_command_internal($command, $stdout, $stderr,0);
 
   # reset no_dry_run
   $FAI::no_dry_run = $no_dry_run;
@@ -322,12 +328,14 @@ sub execute_ro_command {
 # @reference stderr_ref reference to a list, that should contain the standard
 # error output of the bash command
 #
+# @param print command or don't
+#
 # @return the identifier of the error
 #
 ################################################################################
 sub execute_command_internal {
 
-  my ($command, $stdout_ref, $stderr_ref) = @_;
+  my ($command, $stdout_ref, $stderr_ref,$prt) = @_;
 
   my @stderr      = ();
   my @stdout      = ();
@@ -339,6 +347,8 @@ sub execute_command_internal {
   my ($stderr_fh, $stderr_filename) = File::Temp::tempfile(UNLINK => 1);
   my ($stdout_fh, $stdout_filename) = File::Temp::tempfile(UNLINK => 1);
 
+  $FAI::debug and $prt=1; # always print if in debug mode
+
   # do only execute the given command, when in no_dry_mode
   if ($FAI::no_dry_run) {
 
@@ -346,7 +356,7 @@ sub execute_command_internal {
       and print "(CMD) $command 1> $stdout_filename 2> $stderr_filename\n";
 
     # execute the bash command, write stderr and stdout into the testfiles
-    print "Executing: $command\n";
+    print "Executing: $command\n" if $prt;
     `$command 1> $stdout_filename 2> $stderr_filename`;
     $exit_code = ($?>>8);
   } else {
@@ -362,6 +372,8 @@ sub execute_command_internal {
   close ($stderr_fh);
   close ($stdout_fh);
 
+  #print stderr and stdout when -d is set
+  #perhaps always print stdout?
   $FAI::debug and print "(STDERR) $_" foreach (@stderr);
   $FAI::debug and print "(STDOUT) $_" foreach (@stdout);
 

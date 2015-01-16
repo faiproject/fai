@@ -5,7 +5,7 @@
 # fai-chboot -- manage configuration for network boot
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2003-2012 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2003-2014 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -28,12 +28,17 @@
 
 # variable needed: $nfsroot
 
+use strict;
 use Socket;
 use Net::hostent;
 use Getopt::Std;
 use File::Copy;
 
-our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E);
+our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u,$opt_U);
+our ($error,$pxedir,$nfsroot,$tftproot,$verbose,$append,$action,$kernelsuffix);
+our ($mac,$ipadr,$cfdir,$flags,$debug,$match,$bootprot);
+our (%hname,%hexname,%type,@allfiles,@templates,@enabled,@other,@patterns,@disabled);
+our ($initrd,$kernelname,$rootfs);
 $Getopt::Std::STANDARD_HELP_VERSION=1;
 
 $0=~ s#.+/##; # remove path from program name
@@ -48,6 +53,7 @@ sub ip2hex {
 sub host2hex {
 
   my $host = shift;
+  my $h;
 
   if ($host =~ /^\d+\.\d+\.\d+\.\d+$/) {
     # hostname is already an IP address
@@ -70,7 +76,7 @@ sub host2hex {
     return ('no IP',$mac);
   }
 
-  my $h = gethost($host);
+  $h = gethost($host);
   die "$0: unknown host: $host\n" unless $h;
 
   if ( @{$h->addr_list} > 1 ) {
@@ -119,7 +125,7 @@ sub lsdir {
 # -lg list by goups (enabled, disabled, templates, others)
 # -l[detog] <pattern> list matching pattern
 
-  my ($n,$host,$iaddr,$hex,$type);
+  my ($h,$n,$host,$iaddr,$hex,$type);
 
   @patterns = @_; # a global variable
 
@@ -219,6 +225,7 @@ sub printpxe {
   undef $kernelname;
   open (CFG,"$pxedir/$hex") || die "$! $@\n";
   while (<CFG>) {
+    next if /^#/;
     /\bkernel\s+(\S+)/ and $kernelname = $1;
     /\b(localboot.+)/ and $kernelname = $1;
     /\bappend\s+(.+)/ and $append = $1;
@@ -280,7 +287,7 @@ EOM
 
   $append="append $initrd $bootprot $rootfs $opt_k $flags $action\n";
   print FILE "$append" unless ($append =~ /append\s+$/);
-  print FILE "IPAPPEND 3\n" if $opt_P;
+  print FILE "IPAPPEND 6\n" if $opt_P;
   close FILE;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -374,18 +381,23 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:oP') || usage;
+getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:U:oP') || usage;
 $opt_h and usage;
-defined @ARGV or usage;
 
 $opt_n and $opt_v = 1;
 $opt_v and $verbose = 1;
 $cfdir = $opt_C || $ENV{'FAI_ETC_DIR'} || '/etc/fai';
 -d $cfdir || die "ERROR: $cfdir does not exists.";
 $opt_L and $opt_l = 1;
+$opt_l or ( @ARGV ) or usage;
+
 ($opt_B and $opt_F) && die "ERROR: use only one option out of -B and -F\n";
 ($opt_S and $opt_I) && die "ERROR: use only one option out of -I and -S\n";
 #TODO: also -e, -r and -c can't be used together
+
+if ($opt_U && $opt_U !~ m#/$#) {
+    die "URL $opt_U must end with a slash\n";
+}
 
 # read the nfsroot variable; a little bit ugly, but it works
 $nfsroot = `. $cfdir/nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
@@ -447,6 +459,7 @@ if ($opt_i || $opt_s) {
 
 if ($opt_i) {
 
+  my $bopt;
   # check if we use live-boot or dracut inside the nfsroot
   if ( -d "$nfsroot/live/filesystem.dir/boot" ) {
     $bopt="boot=live";
@@ -455,9 +468,9 @@ if ($opt_i) {
   }
 
   # create config so host will boot the install kernel
-  $kernelname = "kernel vmlinuz-$kernelsuffix";
-  $initrd     = "initrd=initrd.img-$kernelsuffix";
-  $rootfs     = "root=/dev/nfs nfsroot=$nfsroot $bopt";
+  $kernelname = "kernel ${opt_U}vmlinuz-$kernelsuffix";
+  $initrd     = "initrd=${opt_U}initrd.img-$kernelsuffix";
+  $rootfs     = "root=$nfsroot $bopt";
   $bootprot   = "ip=dhcp ";
 
 } elsif ($opt_o) {

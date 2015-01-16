@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,8 +25,6 @@ use strict;
 # @file volumes.pm
 #
 # @brief Parse the current partition table and LVM/RAID configurations
-#
-# $Id$
 #
 # @author Christian Kern, Michael Tautschnig
 # @date Sun Jul 23 16:09:36 CEST 2006
@@ -63,6 +60,13 @@ sub find_all_phys_devs {
           push @phys_devs, $disk if (1 == $i_p_d);
         }
       }
+    } elsif ($config eq "BTRFS") {
+      foreach my $r (keys %{ $FAI::configs{$config}{volumes} }) {
+        foreach my $d (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} }) {
+          my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($d);
+          push @phys_devs, $disk if (1 == $i_p_d);
+        }
+      }
     } elsif ($config eq "CRYPT") {
       # devices must be one of the above already
       next;
@@ -85,6 +89,7 @@ sub find_all_phys_devs {
 ################################################################################
 sub get_current_disks {
 
+  # following creates an array of full paths to disks
   my %referenced_devs = ();
   @referenced_devs{ @{ &FAI::find_all_phys_devs() } } = ();
 
@@ -635,6 +640,8 @@ sub propagate_and_check_preserve {
         &FAI::mark_preserve($_, $FAI::configs{$config}{volumes}{$r}{devices}{$_}{missing})
           foreach (keys %{ $FAI::configs{$config}{volumes}{$r}{devices} });
       }
+    } elsif ($config eq "BTRFS") {
+      #no preserve, yet
     } elsif ($config eq "CRYPT") {
       # We don't do preserve for encrypted partitions
       next;

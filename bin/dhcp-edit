@@ -1,12 +1,11 @@
 #! /usr/bin/perl
 
-# $Id$
 #*********************************************************************
 #
 # dhcp-edit -- managing dhcpd entries made easy
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2010 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2010-2014 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -19,17 +18,19 @@
 # TODO
 # -q quiet: do not print error if host/mac entry not found, exit code 0
 
-$dhcpdconf=(-d "/etc/dhcp") ? "/etc/dhcp/dhcpd.conf" : "/etc/dhcp3/dhcpd.conf";
+my $dhcpdconf="/etc/dhcp/dhcpd.conf";
 
-$modified=0; # 1 if dhcpd.conf was modified
+my $modified=0; # 1 if dhcpd.conf was modified
+my @dhcpd;
 our ($opt_p,$opt_d,$opt_h,$opt_n,$opt_r);
 
+use strict;
 use Pod::Usage;
 use Getopt::Std;
 
 getopts('p:dhnr') || pod2usage(-msg => "edit-dhcp", -verbose => 2);
 $opt_h && pod2usage(-msg => "edit-dhcp",-verbose => 1);
-($hostname,$mac,$ip)= @ARGV;
+my ($hostname,$mac,$ip)= @ARGV;
 $hostname || pod2usage(-msg => "edit-dhcp",-verbose => 1);
 $ip && merror(4,"$ip is not a correct IP address") unless $ip =~ /^[.0-9]{7,15}$/i;
 
@@ -72,7 +73,7 @@ exit 0;
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub merror {
 
-  $error = shift;
+  my $error = shift;
   warn "$0 ERROR: @_\n";
   exit $error;
 }
@@ -149,8 +150,7 @@ sub restart_dhcpd {
     return;
   }
 
-  (-x "/etc/init.d/isc-dhcp-server") and print qx#/etc/init.d/isc-dhcp-server# or
-    print qx#/etc/init.d/dhcp3-server restart#;
+  (-x "/etc/init.d/isc-dhcp-server") and print qx#/etc/init.d/isc-dhcp-server restart#
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -214,6 +214,6 @@ dhcp-edit -r hostname|mac
 
 =head1 COPYRIGHT
 
-This program is Copyright (C) 2010 by Thomas Lange <lange@informatik.uni-koeln.de>
+This program is Copyright (C) 2010-2014 by Thomas Lange <lange@informatik.uni-koeln.de>
 
 =cut

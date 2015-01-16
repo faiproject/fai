@@ -5,7 +5,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2012 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2014 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -55,6 +55,7 @@ my $modeset;
 my $nobackup;
 my $backupdir;
 my @ignoredirs = qw'CVS .svn .arch-ids {arch} .git';
+my $preinst;
 
 # getopts:
 our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_M, $opt_v, $opt_d, $opt_D, $opt_i);
@@ -71,8 +72,8 @@ sub copy_one {
   my ($tmpfh,$tmpfile);
   my ($ps,$tpath,$bpath,$backupfile);
   my $preserve = 0; # if 1, the destination remains unchanged
-  my $preinst  = 0; # remember if a tmpfile was used, needed later for unlink
   my $logcomment = "";
+  $preinst  = 0; # remember if a tmpfile was used, needed later for unlink
 
   # 'normalize' source filenames: very important for updating !
   $source =~ s/^(\.\/|\/)*//;
@@ -253,7 +254,12 @@ sub runscript {
   # returns 0 on success, 1 if the script failed
 
   my ($scriptname,$sourcefile,$destfile,$class) = @_;
-  return 1 unless -x "$sourcefile/$scriptname";
+
+  return 1 unless -f "$sourcefile/$scriptname";
+  unless ( -x "$sourcefile/$scriptname") {
+    warn "ERROR: $sourcefile/$scriptname is not executable\n" if $verbose;
+    return 1;
+  }
   warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
   return 0 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   system "$sourcefile/$scriptname $class $destfile";
@@ -290,8 +296,16 @@ sub set_mode {
   # use the values from the source file
   my ($sourcefile,$destfile,$class) = @_;
   my ($uid,$gid,$owner,$group,$mode);
-  # get mtime,uid,gid,mode from source file
-  my ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+  my ($stime,@defmodes);
+
+  # get mtime,uid,gid,mode from source file or from -m
+  if ($modeset) { # use -m values
+    @defmodes = @opt_modes;
+    $stime = (stat("$sourcefile/$class"))[9];
+  } else {
+    # get mtime,uid,gid,mode from source file
+    ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+  }
 
   # get mtime,uid,gid,mode from destination file
   my ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
@@ -313,7 +327,9 @@ sub set_mode {
   return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   chown ($uid,$gid,     $destfile) || ewarn("chown $owner $group $destfile failed. $!");
   chmod ($mode,         $destfile) || ewarn("chmod $mode $destfile failed. $!");
-  utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
+  unless ($preinst) {
+      utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
+  }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub check_mopt {

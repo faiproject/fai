@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,8 +25,6 @@ use strict;
 # @file fstab.pm
 #
 # @brief Generate an fstab file as appropriate for the configuration
-#
-# $Id$
 #
 # @author Christian Kern, Michael Tautschnig
 # @date Sun Jul 23 16:09:36 CEST 2006
@@ -65,7 +62,7 @@ sub create_fstab_line {
   $fstab_line[-1] = 0 if ($d_ref->{filesystem} eq "tmpfs");
 
   # add a comment denoting the actual device name in case of UUID or LABEL
-  push @fstab_line, "# device at install: $dev_name"
+  push @fstab_line, "# device during installation: $dev_name"
     if ($name =~ /^(UUID|LABEL)=/);
 
   # set the ROOT_PARTITION variable, if this is the mountpoint for /
@@ -101,9 +98,8 @@ sub get_fstab_key {
   # or labels, use these if available
   my @uuid = ();
   `$FAI::udev_settle`;
-  &FAI::in_path("/usr/lib/fai/fai-vol_id") or die "/usr/lib/fai/fai-vol_id not found\n";
   &FAI::execute_ro_command(
-    "/usr/lib/fai/fai-vol_id -u $device_name", \@uuid, 0);
+    "/sbin/blkid -c /dev/null -s UUID -o value $device_name", \@uuid, 0);
 
   # every device must have a uuid, otherwise this is an error (unless we
   # are testing only)
@@ -117,7 +113,7 @@ sub get_fstab_key {
   my @label = ();
   `$FAI::udev_settle`;
   &FAI::execute_ro_command(
-    "/usr/lib/fai/fai-vol_id -l $device_name", \@label, 0);
+    "/sbin/blkid -c /dev/null -s LABEL -o value $device_name", \@label, 0);
 
   # print uuid and label to console
   warn "$device_name UUID=$uuid[0]" if @uuid;
@@ -165,6 +161,13 @@ sub find_boot_mnt_point {
 
         next if (!defined($this_mp));
 
+        return $this_mp if ($this_mp eq "/boot");
+        $mnt_point = $this_mp if ($this_mp eq "/");
+      }
+    } elsif ($c eq "BTRFS") {
+      foreach my $b (keys %{ $FAI::configs{$c}{volumes}}) {
+        my $this_mp = $FAI::configs{$c}{volumes}{mountpoint};
+        next if (!defined($this_mp));
         return $this_mp if ($this_mp eq "/boot");
         $mnt_point = $this_mp if ($this_mp eq "/");
       }
@@ -287,6 +290,20 @@ sub generate_fstab {
 
         push @fstab, &FAI::create_fstab_line($r_ref,
           &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
+      }
+    } elsif ($c eq "BTRFS") {
+      # cycles through the volume IDs
+      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+
+        # skip entries without a mountpoint
+        next if ( $config->{$c}->{volumes}->{$v}->{mountpoint} eq "-");
+
+        # get an array of devices that are part of the BTRFS RAID configuration
+        my @device_names = keys %{ $config->{$c}->{volumes}->{$v}->{devices}};
+
+        # Only one of the BTRFS RAID devices are necessary to get the fstab key
+        push @fstab, &FAI::create_fstab_line($config->{$c}->{volumes}->{$v},
+          &FAI::get_fstab_key($device_names[0], $config->{"BTRFS"}->{fstabkey}), $device_names[0]);
       }
     } elsif ($c eq "CRYPT") {
       foreach my $v (keys %{ $config->{$c}->{volumes} }) {

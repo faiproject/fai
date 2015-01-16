@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-chboot 8 "2 March 2012" "FAI 4.0"
+.TH fai-chboot 8 " October 2014" "FAI 4.3"
 .\"
 .\" File Name macro.  This used to be `.PN', for Path Name,
 .\" but Sun doesn't seem to like that very much.
@@ -122,15 +122,15 @@ Preserve existing config files. The default is to overwrite an
 existing config file.
 .TP
 .B \-P
-Add the pxelinux option IPAPPEND 3 to the config file. This will add
-two variables to the kernel command line, that are also defined as
-variables inside FAI.
+Add the pxelinux option IPAPPEND 6 to the config file. This will add
+the two variables BOOTIF and SYSUUID to the kernel command line, that
+are also defined as variables inside FAI.
 
 Example:
 .ti 19
 BOOTIF=01-08-00-27-12-34-56
 .ti 19
-ip=123.45.9.99:123.45.9.11:123.45.9.254:255.255.255.128
+SYSUUID=00234567-1111-2222-3333-123456789000
 .TP
 .BI "\-s " SUFFIX
 Use SUFFIX to determine which kernel and initrd to use.
@@ -139,8 +139,12 @@ Use SUFFIX to determine which kernel and initrd to use.
 Same as \-i but also sets FAI_ACTION=sysinfo.
 .TP
 .BI "\-u " URL
-Set FAI_CONFIG_SRC to URL. If not set the value from fai.conf inside
-the nfsroot will be used.
+Set FAI_CONFIG_SRC to URL. Setting this variable is mandatory for
+the operation of FAI.
+.TP
+.BI "\-U " URL
+Add URL to kernel and initrd file names. lpxelinux.0 can use FTP and
+HTTP for getting these files.
 .TP
 .B \-v
 Create verbose output.
@@ -199,8 +203,6 @@ Currently only PXE boot is supported.
 
 .SH SEE ALSO
 .br
-\fBfai-mirror\fP(1)
-.TP
 .FN /usr/share/doc/syslinux/pxelinux.doc.gz
 The pxelinux documentation.
 .TP

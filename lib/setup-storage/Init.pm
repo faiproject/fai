@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,8 +29,6 @@ use strict;
 # The layout of the data structures is documented in the wiki:
 # http://wiki.fai-project.org/index.php/Setup-storage
 #
-# $Id$
-#
 # @author Christian Kern, Michael Tautschnig
 # @date Sun Jul 23 16:09:36 CEST 2006
 #
@@ -44,20 +41,17 @@ package FAI;
 # @brief Enable debugging by setting $debug to a value greater than 0
 #
 ################################################################################
-$FAI::debug = 0;
-defined ($ENV{debug}) and $FAI::debug = $ENV{debug};
+$FAI::debug = $ENV{debug} // 0;
 
 ################################################################################
 #
 # @brief Directory to store generated files such as fstab, crypttab
 #
 ################################################################################
-$FAI::DATADIR = "/tmp/fai";
-defined ($ENV{LOGDIR}) and $FAI::DATADIR = $ENV{LOGDIR};
-
+$FAI::DATADIR = $ENV{LOGDIR} // "/tmp/fai";
 ################################################################################
 #
-# @brief Write changes to disk only if set to 1
+# @brief Write changes to disk only if set to
 #
 ################################################################################
 $FAI::no_dry_run = 0;
@@ -71,7 +65,8 @@ $FAI::check_only = 0;
 
 ################################################################################
 #
-# @brief The command to tell udev to settle (udevsettle or udevadm settle)
+# @brief The command to tell udev to settle (udevsettle or udevadm settle).
+#        Will be set in bin/setup-storage according to installed tool.
 #
 ################################################################################
 $FAI::udev_settle = undef;
@@ -106,7 +101,7 @@ $FAI::disk_var{BOOT_DEVICE} = "";
 #
 ################################################################################
 $FAI::reinstall = 1;
-defined( $ENV{flag_initial} ) and $FAI::reinstall = 0;
+$ENV{flag_initial} and $FAI::reinstall = 0;
 
 ################################################################################
 #
@@ -153,20 +148,6 @@ $FAI::n_c_i = 1;
 
 ################################################################################
 #
-# @brief Device alias names
-#
-################################################################################
-%FAI::dev_alias = ();
-
-################################################################################
-#
-# @brief Dependencies to be fulfilled before a disk is ready for use
-#
-################################################################################
-%FAI::partition_table_deps = ();
-
-################################################################################
-#
 # @brief Map from devices to volumes stacked on top of them
 #
 ################################################################################
@@ -175,14 +156,16 @@ $FAI::n_c_i = 1;
 
 ################################################################################
 #
-# @brief Add command to hash
+# @brief Add command to hash. $pre and $post are never executed, they are just
+# debug information showing the state of the program before and after the
+# command has been executed.
 #
 # @param cmd Command
 # @param pre Preconditions
 # @param post Postconditions
 #
 ################################################################################
-sub push_command { 
+sub push_command {
   my ($cmd, $pre, $post) = @_;
 
   $FAI::commands{$FAI::n_c_i} = {
@@ -236,7 +219,7 @@ sub phys_dev {
     return (1, "/dev/$1", $2);
   }
   elsif ($dev =~
-    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)(p(\d+))?$})
+    m{^/dev/(cciss/c\d+d\d+|ida/c\d+d\d+|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+)(p(\d+))?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $3);
@@ -248,6 +231,9 @@ sub phys_dev {
   }
   return (0, "", -2);
 }
+
+# used exclusively by enc_name() and mark_encrypted
+my %dev_alias;
 
 ################################################################################
 #
@@ -261,7 +247,7 @@ sub phys_dev {
 sub enc_name {
   my ($dev) = @_;
 
-  return $FAI::dev_alias{$dev} if defined($FAI::dev_alias{$dev});
+  return $dev_alias{$dev} if defined($dev_alias{$dev});
 
   # handle old-style encryption entries
   my ($i_p_d, $disk, $part_no) = &FAI::phys_dev($dev);
@@ -284,7 +270,7 @@ sub enc_name {
 
   &FAI::mark_encrypted($dev);
 
-  return $FAI::dev_alias{$dev};
+  return $dev_alias{$dev};
 }
 
 ################################################################################
@@ -303,7 +289,7 @@ sub mark_encrypted {
   my $enc_dev_short_name = "crypt$enc_dev_name";
   $enc_dev_name = "/dev/mapper/$enc_dev_short_name";
 
-  $FAI::dev_alias{$dev} = $enc_dev_name;
+  $dev_alias{$dev} = $enc_dev_name;
 }
 
 ################################################################################
@@ -320,7 +306,7 @@ sub mark_encrypted {
 sub make_device_name {
   my ($dev, $p) = @_;
   $dev .= "p" if ($dev =~
-    m{^/dev/(cciss/c\dd\d|ida/c\dd\d|rd/c\dd\d|ataraid/d\d|etherd/e\d+\.\d+)$});
+    m{^/dev/(cciss/c\d+d\d+|ida/c\d+d\d+|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+)$});
   if ((&FAI::loopback_dev($dev))[0])
   {
     $p += (&FAI::loopback_dev($dev))[1];

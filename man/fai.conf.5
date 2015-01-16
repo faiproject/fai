@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai.conf 5 "18 January 2012" "FAI 4.0"
+.TH fai.conf 5 "December 2013" "FAI 4.0"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -17,18 +17,6 @@ fai.conf \- FAI Configuration
 .SH SYNOPSIS
 .B /etc/fai/fai.conf
 .SH DESCRIPTION
-FAI - Fully Automatic Installation - allows for non-interactive
-initial installation and online maintenance ("softupdates") of operating systems
-according to a user-defined configuration.
-See
-.BR fai (8)
-for the possible operation modes of FAI.
-.LP
-To manage a set of configurations, FAI implements a concept of
-classes, i.e., a list of symbolic names, which is determined at the start of
-FAI on a given host.
-Each host is associated with an ordered set of classes.
-.LP
 The configuration for a target host consists of two parts:
 .IP \(bu
 The
@@ -47,30 +35,25 @@ below.
 .LP
 .BR fai.conf
 defines the essential options to successfully start a FAI run.
-
-.SH VARIABLES
-.BR fai.conf
-is sourced by
-.BR fai (8)
-and other scripts of fai and thus must be valid
+It must be valid
 .BR bash (1)
 code.
-All variables described below are variables that must be assigned to use
-.BR bash (1)
-syntax.
+This configuration file is NOT copied into the nfsroot by fai-make-nfsroot.
+.SH VARIABLES
 
 .TP
 \fBFAI_CONFIG_SRC\fP URL to access configuration space
 A protocol-specific URL defining the server and directory/repository to fetch
 the configuration space from.
-If left undefined, the assumed default value is
-nfs://<install server>/$FAI_CONFIGDIR
 .LP
 The following protocols and URL schemes are currently supported:
 .IP \(bu
 NFS: nfs://<server>/<exported directory>
 .IP \(bu
-Local file: file://<directory>
+Local directory: file://<directory>
+
+The directory has to be an absolute path. So, this URI always starts
+with three slashes like this: file:///
 .IP \(bu
 CVS: cvs[+ssh]://<user>@<host>/<cvs root> <module>[=<tag>]
 .IP \(bu

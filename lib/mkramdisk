@@ -5,7 +5,7 @@
 # mkramdisk -- mount a ramdisk on top of a directory
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2014 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -23,8 +23,6 @@ mount_ramdisk() {
         echo "WARNING: $1 is not a directory. Cannot make it writeable." >&2
         return
     fi
-
-    echo
 
     set -e
     local tmp1=$(mktemp) || exit 12
@@ -52,7 +50,9 @@ umount_ramdisk() {
 
     set -e
     mkdir $ram
-    mount --move $disk $ram   # move current ramdisk to a new location
+    # move current ramdisk to a new location
+    mount --bind $disk $ram
+    umount $disk
     rm -rf $disk/* $disk/.??* || true
     cp -a  $ram/. $disk/.   # copy ramdisk contents to disk
     umount $ram

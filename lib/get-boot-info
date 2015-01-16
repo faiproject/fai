@@ -5,7 +5,7 @@
 # bootinfo -- get boot information via DHCP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2014 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -26,11 +26,6 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-# TODO
-# -t timeout
-# a list of devices
-#
-
 # this script writes received information to $LOGDIR/boot.log
 
 bootlog=$LOGDIR/boot.log
@@ -45,38 +40,43 @@ netdevice_info() {
     [ -n "$netdevices" ] || netdevices=$netdevices_up
 
     # some network driver do not echo eth0,..; they are not detected
-    netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]\b/')
+    netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]+\b/')
     tmp=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep "^eth")
     netdevices_all="$netdevices_all $tmp"
     netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq| tr '\n' ' ')
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+get_dhcp_info() {
 
+    if [ $boot -eq 1 ]; then
+	return
+    fi
+    boot=1
     cat > $bootlog <<-EOF
 	netdevices_all="$netdevices_all"
 	netdevices_up="$netdevices_up"
 	netdevices="$netdevices"
 EOF
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-get_dhcp_info() {
-
-    boot=1
     dhclient -lf /dev/null -cf /usr/share/fai/dhclient-fai.conf -sf /usr/share/fai/dhclient-fai-script $netdevices >>$bootlog 2> $LOGDIR/dhclient.log
-    killall dhclient
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setnet() {
 
-    local ips=$1
-    IPADDR=${ips%%:*}
-    ips=${ips#*:}
-    SERVER=${ips%%:*}
-    ips=${ips#*:}
-    GATEWAYS=${ips%%:*}
-    ips=${ips#*:}
-    NETMASK=${ips%%:*}
-    BROADCAST=${IPADDR%\.*}.255
+    # get network parameters
+    # first get first active network device
+    local dev dummy
+    dev=$(ip ad show up | awk -F': ' '/^[0-9]/ && ! / lo:/ {print $2;exit}')
+    if [ -z "$dev" ]; then
+        sleep 3 # if interface needs some time to come up
+        dev=$(ip ad show up | awk -F': ' '/^[0-9]/ && ! / lo:/ {print $2;exit}')
+    fi
+    read IPADDR NETMASK BROADCAST dummy<<<$(ifdata -p $dev)
+    GATEWAYS=$(ip route | awk '/^default/ {print $3}')
 
     cat >> $bootlog <<-EOF
+	netdevices_all="$netdevices_all"
+	netdevices_up="$netdevices_up"
+	netdevices="$netdevices"
 	IPADDR=$IPADDR
 	SERVER=$SERVER
 	NETMASK=$NETMASK
@@ -87,28 +87,55 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_fixed_info() {
 
+    if [ $boot -eq 1 ]; then
+	return
+    fi
     boot=1
     # ip contains the network parameters
     echo $ip | grep -q : || echo "Kernel parameter ip= does not contain network parameters."
-    setnet $ip
+    setnet
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+nic_list_from_cmdline() {
+
+    # parse nic(s) that are specified on the kernel command line like this:  ip=etX:dhcp
+
+    niclist=
+    line=$(< /proc/cmdline)
+
+    for item in $line; do
+	case $item in
+
+	    ip=*:dhcp)
+            nic=
+	    # count the : char in the argument of ip=
+	    n="${item//[^:]}"
+	    # if there are more than 5 :, it's an static IP configuration, do not use this nic
+	    if [ ${#n} -lt 5 ]; then
+		nic=$(expr match "$item" 'ip=\(.*\):dhcp')
+		niclist+=" $nic"
+	    fi
+	    ;;
+	esac
+    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 netdevice_info
 boot=0
 
-# when using live-initramfs
-if [ -f /var/log/live.log ]; then
-    cp -p /var/log/live.log $LOGDIR
-    grep IP-Config /var/log/live.log | grep -q "DHCP" && get_dhcp_info
-else
-    dmesg | grep -q "Sending DHCP requests"  && get_dhcp_info
-    [ $boot -eq 0 -a "$ip" = "dhcp" ] && get_dhcp_info
-fi
-
-if [ $boot -eq 0 ]; then
+# if ip= parameter contains IP address, get fixed IP data, otherwise use DHCP
+if [[ $ip =~ ^.*:*[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3} ]]; then
     get_fixed_info
 fi
+
+# if devices are specified on the kernel command line, only use those devices for DHCP
+nic_list_from_cmdline
+if [ -n "$niclist" ]; then
+    netdevices=$niclist
+fi
+
+get_dhcp_info
 
 if ! grep -q DOMAIN= $bootlog; then
     echo 'Warning: no domain name configured, using "localdomain"' >&2

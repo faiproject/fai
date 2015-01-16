@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2013 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2012 Thomas Lange
+	Copyright (C) 1999-2014 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -228,7 +228,8 @@ setup_ssh() {
     fi
 
     # enable root login
-    sed -i -e 's/PermitRootLogin no/PermitRootLogin yes/' $NFSROOT/etc/ssh/sshd_config
+    sed -i -e '/PermitRootLogin/d' $NFSROOT/etc/ssh/sshd_config
+    ainsl $NFSROOT/etc/ssh/sshd_config 'PermitRootLogin yes'
     if [ -f "$SSH_IDENTITY" ]; then
         install -m0644 $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
         echo You can log into install clients without password using $SSH_IDENTITY
@@ -242,16 +243,9 @@ setup_ssh() {
 copy_fai_files() {
 
     [ $generic = 1 ] && return # do nothing here if we generate a generic nfsroot
-    # copy to nfsroot
+    # set root pw inside the nfsroot
     $ROOTCMD usermod -p "$FAI_ROOTPW" root
     return # do not copy fai files at all
-
-    cp -RLpv $cfdir/* $NFSROOT/etc/fai
-    # append additional variables to fai.conf for the install clients
-    [ -z "$FAI_CONFIG_SRC" ] && echo "FAI_CONFIG_SRC=nfs://`hostname`$FAI_CONFIGDIR" >> $NFSROOT/etc/fai/fai.conf
-
-    # remove some files that should not be copied
-    rm -f $NFSROOT/etc/fai/nfsroot.conf
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
@@ -288,7 +282,7 @@ add_etc_hosts_entries() {
     # some default entries
     ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
     ainsl     $NFSROOT/etc/hosts "# Following entries are specific to your environment"
-    ainsl     $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
+    ainsl $v  $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
 
     # add entries for all network devices
     local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
@@ -297,9 +291,9 @@ add_etc_hosts_entries() {
     for eth in $ips; do
         line=$(getent hosts $eth || true)
         if [ -n "$line" ] ; then
-          ainsl -v $NFSROOT/etc/hosts "$line"
+            ainsl $v $NFSROOT/etc/hosts "$line"
         else
-          echo "Warning: no hostname for $eth found, not adding to /etc/hosts."
+            echo "Warning: no hostname for $eth found, not adding to /etc/hosts."
         fi
     done
 
@@ -378,7 +372,7 @@ create_nfsroot() {
     # Work around Ubuntu's failure in installing rsyslog with
     # "start: Unable to connect to Upstart: Failed to connect to
     # socket /com/ubuntu/upstart: Connection refused"
-    if $ROOTCMD test -x /usr/sbin/dpkg-divert && [ -x $NFSROOT/sbin/initctl ] ; then
+    if $ROOTCMD which dpkg-divert >/dev/null 2>&1 && [ -x $NFSROOT/sbin/initctl ] ; then
       LC_ALL=C $ROOTCMD dpkg-divert --quiet --add --rename /sbin/initctl
       ln -sf /bin/true $NFSROOT/sbin/initctl
       INITCTL_DIVERT=true
@@ -386,11 +380,15 @@ create_nfsroot() {
 
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
-    cat <<EOF >$NFSROOT/etc/apt/apt.conf.d/10fai
+    cat >$NFSROOT/etc/apt/apt.conf.d/10fai <<EOF
 APT::Get::AllowUnauthenticated true;
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 Acquire::Languages none;
 EOF
+
+    # currently we do not want to use systemd
+    mkdir $NFSROOT/etc/dracut.conf.d
+    echo "omit_dracutmodules+=systemd" > $NFSROOT/etc/dracut.conf.d/12-no-systemd.conf
 
     # this copies sources.list into the nfsroot
     cp -La $cfdir/apt $NFSROOT/etc
@@ -441,18 +439,18 @@ upgrade_nfsroot() {
     mount -t proc   /proc  $NFSROOT/proc
     mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
-    /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg
+    /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg $NFSROOT/var/cache
     mkdir $NFSROOT/etc/mdadm; touch $NFSROOT/etc/mdadm/mdadm.conf # stop mdadm from calling mkconf
 
     # add any 3rd party repository keys that you may need installed into the NFSROOT
     if [ -d $cfdir/apt/keys ]; then
         local f
-        for f in `find $cfdir/apt/keys -type f -name *.asc`; do
+        for f in `find $cfdir/apt/keys -type f -name '*.asc'`; do
             cat $f | $ROOTCMD apt-key add -
         done
     fi
     $ROOTCMD apt-get update
-    $ROOTCMD aptitude -Rfy install fai-nfsroot
+    $ROOTCMD aptitude -Rfy install fai-nfsroot nfs-common
     $ROOTCMD apt-get -y dist-upgrade
     fdivert /usr/sbin/update-grub
 }
@@ -479,7 +477,7 @@ umount_dirs() {
     umount $NFSROOT/dev/pts 2> /dev/null || true
 
     if mount | grep -q "on $NFSROOT/var/lib/dpkg type tmpfs" ; then
-        /usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg
+        /usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg $NFSROOT/var/cache
     fi
 
     if [ -n "$FAI_DEBMIRROR" ]; then
@@ -492,12 +490,22 @@ umount_dirs() {
 setup_tftp(){
 
     # tftp environment
-    local pxebin=$NFSROOT/usr/lib/syslinux/pxelinux.0
+    local pxebin
+
+    # wheezy/jessie pathes
+    if [ -f $NFSROOT/usr/lib/PXELINUX/pxelinux.0 ]; then
+        pxebin=$NFSROOT/usr/lib/PXELINUX/pxelinux.0
+    else
+        pxebin=$NFSROOT/usr/lib/syslinux/pxelinux.0
+    fi
+
     rm -f $NFSROOT/boot/*.bak
     mkdir -p $TFTPROOT/pxelinux.cfg
+    chmod a+r $NFSROOT/boot/initrd.img-*
     cp -pv $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
-    [ -f $TFTPROOT/pxelinux.0 ] || cp $pxebin $TFTPROOT
-    echo "TFTP environment prepared. To use it, enable the dhcpd and start a TFTP daemon on root $TFTPROOT."
+    cp -u $pxebin $TFTPROOT
+    [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ] && cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
+    echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fdivert() {
@@ -515,8 +523,8 @@ run_hooks() {
     [ -d "$NFSROOT_HOOKS" ] || return 0
 
     echo "Running hooks..."
-    for file in $(cd $NFSROOT_HOOKS ;ls 2>/dev/null | egrep '^[[:alnum:]_.-]+$'); do
-        . $NFSROOT_HOOKS/$file
+    for file in $(run-parts --lsbsysinit --list "$NFSROOT_HOOKS"); do
+        . $file $v
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -534,7 +542,7 @@ trap "bad_exit" ERR
     exit
 }
 
-# just install a new kernel to the nfsroot
+# just upgrade the nfsroot and install packages into it
 [ -n "$kinstall" ] && {
     trap "true" EXIT
     echo "Upgrading nfsroot and installing new packages into the nfsroot."

@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 
-# $Id$
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,7 +52,7 @@ use warnings FATAL => qw(uninitialized);
 
 package FAI;
 
-my $version = "1.4";
+my $version = "1.7";
 
 # command line parameter handling
 use Getopt::Std;
@@ -127,7 +126,7 @@ unless ($opt_f) {
   # see which class file to use
   foreach my $classfile (reverse split(/\s+/, $ENV{classes})) {
     next unless (-r "$ENV{FAI}/disk_config/$classfile");
-    open($config_file, "$ENV{FAI}/disk_config/$classfile") 
+    open($config_file, "$ENV{FAI}/disk_config/$classfile")
       or die "Failed to open $ENV{FAI}/disk_config/$classfile\n";
     $opt_f = "$ENV{FAI}/disk_config/$classfile";
     last;
@@ -214,6 +213,7 @@ $FAI::debug and print Dumper \%FAI::dev_children;
 # generate the command script
 &FAI::build_disk_commands;
 &FAI::build_raid_commands;
+&FAI::build_btrfs_commands;
 &FAI::build_lvm_commands;
 &FAI::build_cryptsetup_commands;
 &FAI::order_commands;

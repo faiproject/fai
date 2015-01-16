@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2002-2012, lange@informatik.uni-koeln.de
+# (c) Thomas Lange, 2002-2013, lange@informatik.uni-koeln.de
 
 # NOTE: Files named *.source will be evaluated, but their output ignored. Instead
 # the contents of $newclasses will be added to the list of defined classes.
@@ -9,24 +9,15 @@
 
 echo 0 > /proc/sys/kernel/printk
 
-# wheezy does not have -m and modules.pcimap
-depmod -m 2>/dev/null
-if [ -f "/lib/modules/`uname -r`/modules.pcimap" ]; then
-    for module in $(pcimodules) ; do
-        [ "$verbose" ] && echo loading kernel module $module
-        modprobe "$module"
-    done
-fi
-
+#kernelmodules=
 # here, you can load modules depending on the kernel version
-kernelmodules="sd_mod sr_mod"
 case $(uname -r) in
     2.6*) kernelmodules="$kernelmodules mptspi dm-mod md-mod aes dm-crypt" ;;
       3*) kernelmodules="$kernelmodules mptspi dm-mod md-mod aes dm-crypt" ;;
 esac
 
 for mod in $kernelmodules; do
-    [ "$verbose" ] && echo loading kernel module $mod
+    [ "$verbose" ] && echo Loading kernel module $mod
     modprobe -a $mod 1>/dev/null 2>&1
 done
 

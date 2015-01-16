@@ -1,3 +1,276 @@
+fai (4.3.1) unstable; urgency=low
+
+  [Thomas Lange]
+  * Init.pm: fix code which uses value of $ENV{flag_initial}, Closes: #769923
+  * fai-quickstart.postrm: add new script, Closes: #769097
+  * fai-cd: add test if command strings is available, Closes: #769683
+  * control: add binutils to suggests for fai-server and to depends for
+    fai-quickstart, Closes: #769683
+  * control: use newer package name ntfs-3g instead of ntfsprogs
+  * conf/NFSROOT: fix typo in package name
+  * fai-kvm: remove deprecated option from kvm call
+  * 40-install-grub: fix code, so the exit code is not always != 0
+  * disk_config: remove separate /usr and /var, make / bigger
+
+  [Moritz 'Morty' Strübe]
+  * control: fix lintian warning debhelper-but-no-misc-depends
+  * fai-guide.txt: correct information about apt/.asc files
+
+ -- Thomas Lange <lange@debian.org>  Wed, 19 Nov 2014 16:06:10 +0100
+
+fai (4.3) unstable; urgency=low
+
+  [Kerim Güney]
+  * add btrfs support to setup-storage and to the man page
+  * Fix a small LVM bug concerning VG names
+
+  [Thomas Lange]
+  * make jessie the default release
+  * mk-basefile: add jessie
+  * NFSROOT: add pxelinux and syslinux-common instead of defining package
+    dependency
+  * fai-make-nfsroot: also copy ldlinux.c32 from the nfsroot
+  * task_inventory now calls task_savelog -r
+  * fcpoy: add warning if pre/postinst script is not executable
+  * dhcp-edit: drop support for old dhcp pathes
+  * fai-chboot: add option -U
+  * disk_config: increase size of / partition
+
+  [Christian Seiler]
+  * subroutine: On failure: also call hooks for savelog, Closes: #764246
+
+  [ Andreas B. Mundt]
+  * Restore capabilities that get lost in the base.tar.xz archive
+
+ -- Thomas Lange <lange@debian.org>  Fri, 24 Oct 2014 14:34:46 +0200
+
+fai (4.2.5) unstable; urgency=low
+
+  [Thomas Lange]
+  * control: increase standards version, no changes needed
+  * remove fai-vol_id with blkid call, this wrapper is not needed any more
+
+  [Thomas Neumann]
+  * minor code cleanup in setup-storage
+
+  [ Mika Prokop]
+  * setup-storage handling of empty disk(s) with parted >=3.*
+
+ -- Thomas Lange <lange@debian.org>  Mon, 29 Sep 2014 16:12:03 +0200
+
+fai (4.2.4) unstable; urgency=medium
+
+  * mkramdisk: replace mount --move with bind mount, Closes: #760133
+
+ -- Thomas Lange <lange@debian.org>  Wed, 10 Sep 2014 16:07:56 +0200
+
+fai (4.2.3) unstable; urgency=low
+
+  [Thomas Lange]
+  * fai-make-nfsroot: a lot of jessie adjustments
+    make mount --move work in jessie, Closes: #758613
+    disable systemd module in dracut
+    copy ldlinux.c32 if available, Closes: #757092
+    pxelinux.0 changes its path in jessie, Closes: #757092
+  * nfsroot.conf: add aptitude to debootstrap's package list,
+    Closes: #759795
+  * NFSROOT: add package for booting jessie without systemd,
+    Closes: #758614
+
+ -- Thomas Lange <lange@debian.org>  Sun, 31 Aug 2014 00:34:36 +0200
+
+fai (4.2.2) unstable; urgency=low
+
+  [Thomas Lange]
+  * control: fai-client now depends on debconf-utils, Closes: #755925
+  * start sshd very early if FAI_FLAGS=sshd is added to the kernel command
+    line
+  * kill rsyslogd before rebooting
+  * GRUB_PC/10-setup: move grub-install call to else part
+  * fai-monitor-gui: ignore a specific output line of fai-monitor
+  * THANKS: add Kerim
+  * mk-basefile: add entries for CentOS 7
+  * add CentOS 7 support in examples
+  * generate device.map for CentOS 7,  Closes: #755702
+
+  [Kerim Gueney]
+  * setup-storage: fix preserve issue when attempting a combination of
+    RAID and LVM
+    ensures that the VG is active, before trying to wipe any LV
+  
+ -- Thomas Lange <lange@debian.org>  Fri, 25 Jul 2014 15:43:21 +0200
+
+fai (4.2.1) unstable; urgency=low
+
+  [Thomas Lange]
+  * fai-cd: fix missing colon in getopt for option -C, Closes: #753113
+  * subroutine: remove obsolete -c3 from rsyslogd call
+  * updatebase: call fcopy with -B
+  * fai: set STOP_ON_ERROR only if not already defined
+  * setup-storage: call wipefs with correct device name and active VG
+    before wiping, Closes: #670614, #675137, #693701
+    Thanks to Kerim Gueney for the patches
+  * setup-storage: sameas: now supports diskX and sda/vda as parameter
+  * setup-storage: Fixes wipefs problem when attempting to preserve lv or vg
+    Thanks to Christian Kreidl for the patch
+  * setup-storage: fix for preservcing lv, deactivate vg before calling
+    parted, Thanks to Kerim Gueney for the patch
+  * add developers documentation for setup-storage
+  
+ -- Thomas Lange <lange@debian.org>  Wed, 09 Jul 2014 15:16:22 +0200
+
+fai (4.2) unstable; urgency=low
+
+  * fai-cd: use xorriso instead of genisoimage, this adds support for
+    isohybrid images, thanks to Sander Brandenburg for the patch
+    do not mount nfsroot when creating bootonly CD, Closes: #748839
+    Thanks to Kerim Gueney for the patch
+    add option -d, Thanks to Kerim Gueney for the patch
+    add support for new pathes in jessie
+  * faireboot,subroutines: do not shutdown interfaces
+  * get-config-dir-git: added patch 1b567f8c6790176c142f837
+    Closes: #682067, #727687
+  * install_packages: disable package name checking when using 'aptitude-r'
+  * fai-chboot: fix wrong IPAPPEND parameter
+  * NFSROOT: add package kdb which includes command setfont
+  * new code for detecting if run from CD or USB stick
+  * ainsl: add option -N, improve loop syntax, standardise use of
+    "and,or,&&,||", thanks to Rowan Thorpe for the patches
+  * grub.cfg: add FAI_CONFIG_SRC for CD to kernel command line
+  * fai: do not set default for FAI_CONFIG_SRC when booting from CD
+  * fai-setup: add NFS v4 entry to /etc/exports
+
+ -- Thomas Lange <lange@debian.org>  Tue, 03 Jun 2014 10:47:13 +0200
+
+fai (4.1.1) unstable; urgency=high
+
+  * doc/Makefile: use symlink instead of --icons-dir, Closes: #741809
+  * fai-debconf: sort debconf data before using it, Closes: #741929
+    Thanks to Christian Kreidl for the patch
+  * 10-setup: set locale when executing perl code, otherwise matching may fail
+  * fai-chboot: fix perl warning
+
+ -- Thomas Lange <lange@debian.org>  Mon, 31 Mar 2014 17:02:41 +0200
+
+fai (4.1) unstable; urgency=low
+
+  [Thomas Lange]
+  * new action inventory
+  * new variable $FAI_SENDID, sendmon can now send the MAC address or PXE info
+    instead of the hostname, FAI_SENDID must be defined on the kernel
+    command line or in the nfsroot, defining it in the config space is too
+    late.
+  * DEBIAN.asc: new gpg key for the fai-project.org package repository
+  * README: new gpg key for Thomas, new address
+  * new variable $APTPROXY, if set it is used in updatebase.DEBIAN
+  * fai-cd: add option -M
+  * FAISERVER: move from approx to apt-cacher-ng,
+    no more apache needed Closes: #669739
+  * instsoft.DEBIAN: new hook, Closes: #506971
+  * fai: fix wrong usage of ainsl, Closes: #714869
+    check if process is already running before starting rpc.statd
+  * fcopy: do not set atime/mtime if preinst was used, Closes: #699535
+  * remove fai-quickstart.{postinst,postm}, Closes: #679293
+  * setup-storage: support more than 9 drives with ciss driver, thanks to
+    Alexandros Kosiaris for the patch Closes: #712572
+  * Commands.pm: add blank to command, thanks to Sven Schumacher for the
+    patch, Closes: #698158, remove text tool call on binary data
+    Closes: #723084, thanks to Raphael Geissert for the patch,
+    check against undefined variables
+  * install_packages: extend regex, thanks to  Andrew Ruthven for the
+    patch Closes: #701875
+  * Parser.pm: add package to variable name, thanks to Scotland L. Nelsen
+    for the patch Closes: #703326, #695317
+  * fai-cd: remove doubled entries, patch from Andi B. Mundt,
+    Closes: #682799, die unless live-boot is used,
+  * task_sysinfo: add lsblk call, show lvm information
+  * fai-guide.txt: reference new examples for skiptask Closes: #569969
+  * fai.conf.5: improve description of file://, add a note that fai.conf
+    is not copied into the nfsroot
+  * updatebase: do not reset aptopt variable, Closes: #728439
+  * get-config-dir-hg: add -u to pull, Closes: #729440
+  * get-boot-info: parse ip=ethX:dhcp items on the kernel command line,
+    new code for detecting if DHCP or fixed IP address is needed,
+    use command ifdata to get IP parameters
+  * setup-storage: Fix Perl error, Closes: #703326, Thanks to Scot Nelsen
+    for the patch
+  * 10-setup: add code for installing grub into all devices of a software
+    raid, check if mdadm was missing
+  * device2grub: add support for /dev/xvda
+  * fai-make-nfsroot: use run-parts, use ramdisk on /var/cache,
+    add quotes to preserve *.asc in find command
+  * conf/NFSROOT: remove read-edid, add moreutils
+  * fai-setup: no default value for FAI_CONFIGDIR if undefined
+  * clarify default value for FAI_CONFIG_SRC, Closes: #685289
+  * dpkg uses force-unsafe-io for class DEBIAN
+  * replace $(cat ) with $(< )
+  * fai-chboot: replace root=/dev/nfs and nfsroot=<dir> with root=<dir>
+  * package_config/DEBIAN: fix kernel package names
+  * make Perl scripts use strict clean, Closes: #447204
+  * Sizes.pm: respect alignment for logical partion sizes Closes: #702019
+    Thanks to Jan-Marek Glogowski for the patch
+  * Use task finish for softupdate cleanup, patch from Jan-Marek
+  * ainsl: fix appending to file w/o trailing newline. Patch from
+    Jan-Marek
+  * fai: use die() for errors. Patch from Jan-Marek
+  * fix code for using logtail, Closes: #735484, thanks to Manuel
+    Hachtkemper for the patch
+  * Exec.pm: add parameter to &execute_command_internal, do not print ro
+    commands unless in debug mode
+  * FAIBASE/10-misc: fix code for adding entries to /etc/hosts
+  * subroutines: print error code when stopping installation
+  * load_keymap_consolechars: use setfont instead of consolechars
+  * savelog.LAST.source: add pattern
+  * VERSION: use dpkg-parsechangelog
+  * DEBIAN/40-misc: new code for setting UTC
+  * improve man pages
+  * rules: add build-arch and build-indep rules
+  * add debian/watch file
+  * control: update to policy 3.9.5, minor changes in rules
+  * debian/compat: update to 9
+
+  [ Mika Prokop]
+  * fai-guide: fix typos, update file names and repository data
+  * VERSION: fix syntax error
+  * Makefile: adjust list of scripts
+  * conf/NFSROOT: grub -> grub-pc
+  * task_sysinfo: test if it's a block device
+  * fai-cd: drop dead code
+
+ -- Thomas Lange <lange@debian.org>  Tue, 04 Feb 2014 22:34:41 +0100
+
+fai (4.0.6) unstable; urgency=low
+
+  * do not reboot if error.log is empty Closes: #699279, #690016
+  * fai-debconf: fix regex Closes: #699555
+
+ -- Thomas Lange <lange@debian.org>  Fri, 01 Feb 2013 21:25:08 +0100
+
+fai (4.0.5) unstable; urgency=low
+
+  * fai-make-nfsroot: make initrd readable for tftp daemon Closes: #693871
+  * subroutines: make sure files copied to /etc belong to root
+  * fcopy: respect -m values if specified Closes: #695134
+  * examples: add -M to some fcopy calls, so files are owned by root
+
+ -- Thomas Lange <lange@debian.org>  Thu, 27 Dec 2012 20:56:33 +0100
+
+fai (4.0.4) unstable; urgency=low
+
+  * device2grub: fix pattern Closes: #689311
+  * Parser.pm: Fix for perl warning Closes: #686388
+  * fai-make-nfsroot: install nfs-common early Closes: #682013
+    check if hook is a file before sourcing it Closes: #686758
+  * NFSROOT: replace transitional package name Closes: #688902
+  * savelog.LAST.source: add pattern to ignore list
+  * fai-chboot.8: update of -u option
+  * mk-basefile: add support for wheezy
+  * disk_config examples: use option sw for swap partitions
+  * NFSROOT: add package live-boot-doc, so we have the documentation
+    inside the nfsroot
+
+ -- Thomas Lange <lange@debian.org>  Thu, 15 Nov 2012 14:59:55 +0100
+
 fai (4.0.3) unstable; urgency=medium
 
   * replace fai-quickstart.prerm by postrm, remove interactive prompting
