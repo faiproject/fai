@@ -52,6 +52,7 @@ sub build_mkfs_commands {
   my ($device, $partition) = @_;
 
   # check for old-style encryption requests
+  # !! this call may modify '$partition' and '%FAI::configs'
   &FAI::handle_oldstyle_encrypt_device($device, $partition, \%FAI::configs);
 
   defined ($partition->{filesystem})
@@ -128,41 +129,48 @@ sub build_mkfs_commands {
 # @brief Check for encrypt option and prepare corresponding CRYPT entry
 #
 # If encrypt is set, a corresponding CRYPT entry will be created and filesystem
-# and mountpoint get set to -
+# and mountpoint are replaced with '-' (a single dash)
 #
-# @param $device Original device name of the target partition
-# @param $partition Reference to partition in the config hash
+# @param $device        - Original device name of the target partition
+# @param $partpntr      - Pointer to current partition in the config hash
+# @param $href_configs  - Reference to the config hash
 #
 ################################################################################
 sub handle_oldstyle_encrypt_device {
 
-  my ($device, $partition, $href_configs) = @_;
+  my ($device, $partpntr, $href_configs) = @_;
 
-  return unless ($partition->{encrypt});
+  return
+    unless ($partpntr->{encrypt});
 
-  if (!defined($href_configs->{CRYPT}{randinit})) {
+  if (not defined $href_configs->{CRYPT}{randinit}) {
     $href_configs->{CRYPT}{fstabkey} = "device";
     $href_configs->{CRYPT}{randinit} = 0;
     $href_configs->{CRYPT}{volumes} = {};
   }
 
-  $href_configs->{CRYPT}{randinit} = 1 if ($partition->{encrypt} > 1);
+  $href_configs->{CRYPT}{randinit} = 1
+    if ($partpntr->{encrypt} > 1);
+
+  my $is_preserve = defined $partpntr->{size} ? $partpntr->{size}->{preserve} : $partpntr->{preserve};
 
   my $vol_id = scalar(keys %{ $href_configs->{CRYPT}{volumes} });
   $href_configs->{CRYPT}{volumes}{$vol_id} = {
-    device => $device,
-    mode => "luks",
-    preserve => (defined($partition->{size}) ?
-        $partition->{size}->{preserve} : $partition->{preserve}),
-    mountpoint => $partition->{mountpoint},
-    mount_options => $partition->{mount_options},
-    filesystem => $partition->{filesystem},
-    createopts => $partition->{createopts},
-    tuneopts => $partition->{tuneopts}
+    device        => $device,
+    mode          => 'luks',
+    preserve      => $is_preserve,
+    mountpoint    => $partpntr->{mountpoint},
+    mount_options => $partpntr->{mount_options},
+    filesystem    => $partpntr->{filesystem},
+    createopts    => $partpntr->{createopts},
+    tuneopts      => $partpntr->{tuneopts}
   };
 
-  $partition->{mountpoint} = "-";
-  $partition->{filesystem} = "-";
+  # implicitely updates '%FAI::configs' since this is a pointer into it
+  $partpntr->{mountpoint} = '-';
+  $partpntr->{filesystem} = '-';
+
+  return;
 }
 
 ################################################################################
