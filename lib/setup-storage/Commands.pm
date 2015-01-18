@@ -52,7 +52,7 @@ sub build_mkfs_commands {
   my ($device, $partition) = @_;
 
   # check for old-style encryption requests
-  &FAI::handle_oldstyle_encrypt_device($device, $partition);
+  &FAI::handle_oldstyle_encrypt_device($device, $partition, \%FAI::configs);
 
   defined ($partition->{filesystem})
     or &FAI::internal_error("filesystem is undefined");
@@ -136,20 +136,20 @@ sub build_mkfs_commands {
 ################################################################################
 sub handle_oldstyle_encrypt_device {
 
-  my ($device, $partition) = @_;
+  my ($device, $partition, $href_configs) = @_;
 
   return unless ($partition->{encrypt});
 
-  if (!defined($FAI::configs{CRYPT}{randinit})) {
-    $FAI::configs{CRYPT}{fstabkey} = "device";
-    $FAI::configs{CRYPT}{randinit} = 0;
-    $FAI::configs{CRYPT}{volumes} = {};
+  if (!defined($href_configs->{CRYPT}{randinit})) {
+    $href_configs->{CRYPT}{fstabkey} = "device";
+    $href_configs->{CRYPT}{randinit} = 0;
+    $href_configs->{CRYPT}{volumes} = {};
   }
 
-  $FAI::configs{CRYPT}{randinit} = 1 if ($partition->{encrypt} > 1);
+  $href_configs->{CRYPT}{randinit} = 1 if ($partition->{encrypt} > 1);
 
-  my $vol_id = scalar(keys %{ $FAI::configs{CRYPT}{volumes} });
-  $FAI::configs{CRYPT}{volumes}{$vol_id} = {
+  my $vol_id = scalar(keys %{ $href_configs->{CRYPT}{volumes} });
+  $href_configs->{CRYPT}{volumes}{$vol_id} = {
     device => $device,
     mode => "luks",
     preserve => (defined($partition->{size}) ?

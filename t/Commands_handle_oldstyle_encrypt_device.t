@@ -4,7 +4,7 @@
 # manual execution:
 #  perl -I 'lib/setup-storage/' t/Commands_handle_oldstyle_encrypt_device.t
 
-## no critic (RequireExplicitPackage RequireEndWithOne ProhibitPackageVars)
+## no critic (RequireExplicitPackage RequireEndWithOne)
 
 use strict;
 use warnings;
@@ -690,14 +690,14 @@ sub execute_test {
 
 	plan tests => 3;
 
-	my $device    = $i_device;
-	my $partition = $i_partition;
-	%FAI::configs = %i_configs;
+	my $device       = $i_device;
+	my $partition    = $i_partition;
+	my $href_configs = \%i_configs;
 
-	&FAI::handle_oldstyle_encrypt_device($device, $partition);
+	&FAI::handle_oldstyle_encrypt_device($device, $partition, $href_configs);
 	my $r_device    = $device;
 	my $r_partition = $partition;
-	my %r_configs   = %FAI::configs;
+	my %r_configs   = %{ $href_configs };
 
 	is($r_device, $e_device, 'variable $device');
 
