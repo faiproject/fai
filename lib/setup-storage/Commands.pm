@@ -315,7 +315,7 @@ sub build_btrfs_commands {
     foreach (@devs) {
       my $tmp = $_;
       $tmp =~ s/\d//;
-      $pre_req = $pre_req . "pt_complete_" . $tmp . "," unless ($pre_req =~ m/pt_complete_$tmp/);
+      $pre_req = "${pre_req}pt_complete_${tmp}," unless ($pre_req =~ m/pt_complete_$tmp/);
     }
     # creates the BTRFS volume/RAID
     if ($raidlevel eq 'single') {
