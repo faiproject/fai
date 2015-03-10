@@ -755,7 +755,7 @@ eval_cmdline() {
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $faimond $sendid $SERVER $monserver
 # Requires-Var:    $LOGDIR $FAI
-# Suggests-Var:    $monserver $FAI_SENDID
+# Suggests-Var:    $monserver $FAI_SENDID $FAI_MONITOR_PORT
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
 
@@ -796,6 +796,7 @@ task_confdir() {
 
     # check if monitor server is available
     : ${monserver:=$SERVER}
+    : ${FAI_MONITOR_PORT:=4711}
 
     if [ -z "$monserver" ]; then
         echo "No monitor daemon defined."
@@ -818,7 +819,7 @@ task_confdir() {
             sendmon "TASKBEGIN confdir"
         else
             faimond=0
-            echo "Can't connect to monserver on $monserver port 4711. Monitoring disabled."
+            echo "Can't connect to monserver on $monserver port $FAI_MONITOR_PORT. Monitoring disabled."
         fi
     fi
 
@@ -1134,7 +1135,7 @@ sendmon() {
     # send message to monitor daemon
     echo "$*" >> $LOGDIR/fai-monitor.log
     [ "$faimond" -eq 0 ] && return 0
-    echo "$sendid $*" | nc -w 8 $monserver 4711 2>/dev/null
+    echo "$sendid $*" | nc -w 8 $monserver $FAI_MONITOR_PORT 2>/dev/null
     return $?
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
