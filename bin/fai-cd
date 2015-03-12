@@ -35,6 +35,7 @@ set -e
 # last die exit code 22
 
 boot_image="boot/grub/eltorito.img"
+size=4096
 config_space=""
 configset=0
 forceremoval=0
@@ -71,6 +72,44 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_ext3fs_img() {
+    # create the folder that will be used for the squashfs.img later
+    # along with it, a temporary folder is created to mount the ext3fs.img
+    mkdir -p $tmp/squashfs-root/LiveOS/ $tmp/squashfs-root/LiveOS/mounted-ext3fs
+
+    # creates an "empty" sparse file
+    truncate -s{$size}M $tmp/squashfs-root/LiveOS/ext3fs.img
+    
+    mkfs.ext3 -F -L FAINFSROOT $tmp/squashfs-root/LiveOS/ext3fs.img
+
+    # the resulting ext3fs.img is mounted
+    mount -o loop squashfs-root/LiveOS/ext3fs.img $tmp/squashfs-root/mounted-ext3fs
+
+    # copy the contents of the nfsroot into it
+    cp -a $ONFSROOT/* $ONFSROOT/.??* $tmp/squashfs-root/mounted-ext3fs/
+
+    # copy config space into nfsroot-copy
+    cp -a $config_space/* $tmp/squashfs-root/LiveOS/mounted-ext3fs/var/lib/fai/config/
+
+    # unmount it
+    umount $tmp/squashfs-root/LiveOS/mounted-ext3fs
+
+    rmdir $tmp/squashfs-root/LiveOS/mounted-ext3fs
+}
+
+create_squashfs_image() {
+    # this is where the squashfs.img needs to be placed
+    mkdir -p $tmp/LiveOS
+    
+    # create the squashfs.img
+    mksquashfs $tmp/squashfs-root $tmp/LiveOS/squashfs.img
+
+    rm $tmp/squashfs-root/LiveOS/ext3fs.img
+    rmdir $tmp/squashfs-root/LiveOS
+    rmdir $tmp/squashfs-root
+
+}
+
 create_grub2_image() {
 
     mkdir -p $tmp/boot/grub $NFSROOT/boot/grub
