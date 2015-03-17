@@ -213,7 +213,7 @@ sub loopback_dev {
 ################################################################################
 sub phys_dev {
   my ($dev) = @_;
-  if ($dev =~ m{^/dev/(i2o/hd[a-z]|sd[a-z]{1,2}|hd[a-z]|vd[a-z]|xvd[a-z])(\d+)?$})
+  if ($dev =~ m{^/dev/(i2o/hd[a-z]|sd[a-z]{1,2}|hd[a-z]|vd[a-z]|xvd[a-z]|fio[a-z])(\d+)?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $2);

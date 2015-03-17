@@ -62,7 +62,7 @@ sub create_fstab_line {
   $fstab_line[-1] = 0 if ($d_ref->{filesystem} eq "tmpfs");
 
   # add a comment denoting the actual device name in case of UUID or LABEL
-  push @fstab_line, "# device at install: $dev_name"
+  push @fstab_line, "# device during installation: $dev_name"
     if ($name =~ /^(UUID|LABEL)=/);
 
   # set the ROOT_PARTITION variable, if this is the mountpoint for /

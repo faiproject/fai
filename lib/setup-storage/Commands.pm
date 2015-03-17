@@ -310,8 +310,13 @@ sub build_btrfs_commands {
     defined($btrfscreateopts) or $btrfscreateopts = "";
     my $createopts = $vol->{createopts};
     defined($createopts) or $createopts = "";
-    my $pre_req = "pt_complete_/dev/vdd";
-
+    my $pre_req = "";
+    # creates the proper prerequisites for later command ordering
+    foreach (@devs) {
+      my $tmp = $_;
+      $tmp =~ s/\d//;
+      $pre_req = "${pre_req}pt_complete_${tmp}," unless ($pre_req =~ m/pt_complete_$tmp/);
+    }
     # creates the BTRFS volume/RAID
     if ($raidlevel eq 'single') {
           &FAI::push_command("mkfs.btrfs -d single $createopts ". join(" ",@devs),

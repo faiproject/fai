@@ -76,11 +76,11 @@ create_grub2_image() {
     mkdir -p $tmp/boot/grub $NFSROOT/boot/grub
     if [ -f $NFSROOT/boot/grub/core.img ]; then
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub/
+        MODULEBASE=$NFSROOT/usr/lib/grub
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
         chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub/
+        MODULEBASE=$NFSROOT/usr/lib/grub
     else
         echo "no grub2 installation found in NFSROOT, using downloaded $grubPackage"
         apt-get -y -d install --reinstall grub-pc >/dev/null
@@ -93,11 +93,11 @@ create_grub2_image() {
         dpkg -x $grubPackage $GRUBDIR
         cd $GRUBDIR
         ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        MODULEBASE=$GRUBDIR/usr/lib/grub/
+        MODULEBASE=$GRUBDIR/usr/lib/grub
     fi
 
     # check for jessie path
-    if strings /usr/lib/grub/i386-pc/kernel.img | grep -q i386-pc/%s.mod; then
+    if strings $NFSROOT/usr/lib/grub/i386-pc/kernel.img | grep -q i386-pc/%s.mod; then
 	grubtarget=$tmp/boot/grub/i386-pc
     else
 	# wheezy

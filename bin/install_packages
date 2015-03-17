@@ -288,7 +288,10 @@ sub readconfig {
 
     # warning if uppercase letters are found (package are always lowercase)
     warn "WARNING: Uppercase character found in package name in line $_\n" if $_ =~ /[A-Z]/;
-    warn "ERROR: PACKAGES .. line missing in $file\n",next unless $type;
+    unless ($type) {
+        warn "ERROR: PACKAGES .. line missing in $file\n";
+        next;
+    }
     push @{$list{$type}}, split if $doit;
     $types{$type}=1 if $doit;   # remember which types are used in package_config
   }
