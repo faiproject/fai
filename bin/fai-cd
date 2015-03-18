@@ -78,21 +78,20 @@ create_ext3fs_image() {
     mkdir -p $tmp/squashfs-root/LiveOS/ $tmp/squashfs-root/LiveOS/mounted-ext3fs
 
     # creates an "empty" sparse file
-    echo "1. $tmp"
-    truncate -s${size}M $tmp/squashfs-root/LiveOS/ext3fs.img
-    
+#   truncate -s${size}M $tmp/squashfs-root/LiveOS/ext3fs.img
+    dd if=/dev/zero of=$tmp/squashfs-root/LiveOS/ext3fs.img bs=1MB count=4096
     
     mkfs.ext3 -F -L FAINFSROOT $tmp/squashfs-root/LiveOS/ext3fs.img
 
     # the resulting ext3fs.img is mounted
     mount -o loop $tmp/squashfs-root/LiveOS/ext3fs.img $tmp/squashfs-root/LiveOS/mounted-ext3fs
-    echo $ONFSROOT
-    die 
+
     # copy the contents of the nfsroot into it
     cp -a $ONFSROOT/* $ONFSROOT/.??* $tmp/squashfs-root/LiveOS/mounted-ext3fs/
 
+    echo "AHA $FAI_CONFIGDIR"
     # copy config space into nfsroot-copy
-    cp -a $config_space/* $tmp/squashfs-root/LiveOS/mounted-ext3fs/var/lib/fai/config/
+    cp -a $FAI_CONFIGDIR/* $tmp/squashfs-root/LiveOS/mounted-ext3fs/var/lib/fai/config/
 
     # unmount it
     umount $tmp/squashfs-root/LiveOS/mounted-ext3fs
@@ -101,7 +100,6 @@ create_ext3fs_image() {
 }
 
 create_squashfs_image() {
-    echo "2. $tmp"
     # this is where the squashfs.img needs to be placed
     mkdir -p $tmp/LiveOS
     
