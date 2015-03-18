@@ -72,21 +72,24 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_ext3fs_img() {
+create_ext3fs_image() {
     # create the folder that will be used for the squashfs.img later
     # along with it, a temporary folder is created to mount the ext3fs.img
     mkdir -p $tmp/squashfs-root/LiveOS/ $tmp/squashfs-root/LiveOS/mounted-ext3fs
 
     # creates an "empty" sparse file
-    truncate -s{$size}M $tmp/squashfs-root/LiveOS/ext3fs.img
+    echo "1. $tmp"
+    truncate -s${size}M $tmp/squashfs-root/LiveOS/ext3fs.img
+    
     
     mkfs.ext3 -F -L FAINFSROOT $tmp/squashfs-root/LiveOS/ext3fs.img
 
     # the resulting ext3fs.img is mounted
-    mount -o loop squashfs-root/LiveOS/ext3fs.img $tmp/squashfs-root/mounted-ext3fs
-
+    mount -o loop $tmp/squashfs-root/LiveOS/ext3fs.img $tmp/squashfs-root/LiveOS/mounted-ext3fs
+    echo $ONFSROOT
+    die 
     # copy the contents of the nfsroot into it
-    cp -a $ONFSROOT/* $ONFSROOT/.??* $tmp/squashfs-root/mounted-ext3fs/
+    cp -a $ONFSROOT/* $ONFSROOT/.??* $tmp/squashfs-root/LiveOS/mounted-ext3fs/
 
     # copy config space into nfsroot-copy
     cp -a $config_space/* $tmp/squashfs-root/LiveOS/mounted-ext3fs/var/lib/fai/config/
@@ -98,6 +101,7 @@ create_ext3fs_img() {
 }
 
 create_squashfs_image() {
+    echo "2. $tmp"
     # this is where the squashfs.img needs to be placed
     mkdir -p $tmp/LiveOS
     
@@ -107,7 +111,6 @@ create_squashfs_image() {
     rm $tmp/squashfs-root/LiveOS/ext3fs.img
     rmdir $tmp/squashfs-root/LiveOS
     rmdir $tmp/squashfs-root
-
 }
 
 create_grub2_image() {
@@ -218,9 +221,8 @@ umount_dirs() {
         umount $nfsrootdir/$d 2>/dev/null
     done
     mountpoint -q $nfsrootdir && umount $nfsrootdir
-    mountpoint -q $cow && umount $cow
     set -e
-    rm -rf $tmp $cow
+    rm -rf $tmp
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 sleep_now() {
@@ -384,26 +386,9 @@ if [ $bootonly -eq 0 ]; then
 fi
 
 tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
-cow=$(mktemp -t -d cow-XXXXXX)
-mount -n -t tmpfs tmpfs $cow
 
-
-# check if dracut or live-boot is used
-if [ -d $ONFSROOT/live ]; then
-    hidedirs="$hidedirs /boot"
-    if [ $bootonly -ne 1 ]; then
-	mkdir -p $tmp/live/filesystem.dir
-	nfsrootdir=$tmp/live/filesystem.dir
-	mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT/live/filesystem.dir=rr aufs $nfsrootdir && echo "NFSROOT $NFSROOT mounted"
-    fi
-else
-    # things to do for dracut
-    nfsrootdir=$tmp
-    mount -t aufs -o noatime,noxino,dirs=$cow=rw:$ONFSROOT=rr aufs $nfsrootdir  && echo "NFSROOT $NFSROOT mounted"
-    echo "Found dracut inside nfsroot, but booting a FAI CD with dracut inside the nfsrroot does not yet work." >&2
-    echo "Recreate your nfsroot with the live-boot package instead of dracut. Use fai-make-nfsoot -l." >&2
-    die 20 "Aborting"
-fi
+create_ext3fs_image
+create_squashfs_image
 
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|awk '/fai-client/ {print $3}')
@@ -417,7 +402,6 @@ provide_memtest_boot_option
 
 if [ $bootonly -eq 1 ]; then
     mkiso
-    mountpoint -q $cow && umount $cow
 else
     trap "unhide_dirs;umount_dirs" EXIT ERR
     create_iso
