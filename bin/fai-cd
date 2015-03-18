@@ -78,8 +78,8 @@ create_ext3fs_image() {
     mkdir -p $tmp/squashfs-root/LiveOS/ $tmp/squashfs-root/LiveOS/mounted-ext3fs
 
     # creates an "empty" sparse file
-#   truncate -s${size}M $tmp/squashfs-root/LiveOS/ext3fs.img
-    dd if=/dev/zero of=$tmp/squashfs-root/LiveOS/ext3fs.img bs=1MB count=4096
+    truncate -s${size}M $tmp/squashfs-root/LiveOS/ext3fs.img
+#   dd if=/dev/zero of=$tmp/squashfs-root/LiveOS/ext3fs.img bs=1MB count=4096
     
     mkfs.ext3 -F -L FAINFSROOT $tmp/squashfs-root/LiveOS/ext3fs.img
 
@@ -89,7 +89,6 @@ create_ext3fs_image() {
     # copy the contents of the nfsroot into it
     cp -a $ONFSROOT/* $ONFSROOT/.??* $tmp/squashfs-root/LiveOS/mounted-ext3fs/
 
-    echo "AHA $FAI_CONFIGDIR"
     # copy config space into nfsroot-copy
     cp -a $FAI_CONFIGDIR/* $tmp/squashfs-root/LiveOS/mounted-ext3fs/var/lib/fai/config/
 
