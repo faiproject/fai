@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2013 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2015 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2014 Thomas Lange
+	Copyright (C) 1999-2015 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -55,18 +55,14 @@ check_nfsroot() {
 
     set +e
     # simple test, to see if important thing are available inside the nfsroot
-    if [ ! -x $NFSROOT/usr/share/initramfs-tools/scripts/live  -a ! $NFSROOT/usr/sbin/dracut ]; then
-        die 1 "Neither live-boot nor dracut was installed into the nfsroot."
-    fi
-
-    if [ -f $oldnfsroot/usr/share/initramfs-tools/scripts/live ]; then
-        echo "When using live-boot instead of dracut inside the nfsroot, please use fai-make-nfsroot -l." >&2
+    if [ ! -x $NFSROOT/usr/sbin/dracut ]; then
+        die 1 "dracut was not installed into the nfsroot."
     fi
 
     echo "FAI packages inside the nfsroot:"
     $ROOTCMD dpkg-query -W -f='${Package;-18} ${Version}\n' fai-client fai-nfsroot fai-setup-storage 2>/dev/null
     echo "FAI related packages inside the nfsroot:"
-    $ROOTCMD dpkg-query -W -f='${Package;-18} ${Version}\n' live-boot dracut-network dracut 2>/dev/null
+    $ROOTCMD dpkg-query -W -f='${Package;-18} ${Version}\n' dracut-network dracut 2>/dev/null
 
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
     [ -z "$files" ] && die 1 "No initrd installed."
@@ -93,7 +89,6 @@ sshpreserve=0
 adjust=0
 generic=0
 force=0
-live=0   # default is to generate nfsroot for dracut
 
 callname=${0##*/}
 if [ $callname = make-fai-nfsroot ]; then
@@ -102,7 +97,7 @@ if [ $callname = make-fai-nfsroot ]; then
 fi
 
 # option e currently does nothing
-while getopts aghervC:B:fkKlpU opt ; do
+while getopts aghervC:B:fkKpU opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
@@ -114,7 +109,6 @@ while getopts aghervC:B:fkKlpU opt ; do
         f) force=1 ;;
         k) kinstall=1 ;;
         K) kremove=1;;
-        l) live=1 ;;
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
@@ -157,15 +151,7 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 [ -n "$FAI_BOOT" ] && die 1 "Variable \$FAI_BOOT is not supported any more. Will only set up TFTP environment."
 
 oldnfsroot=$NFSROOT
-
-if [ $live -eq 1 ]; then
-    # live-boot
-    deldir=$NFSROOT # save it before redefining, this will be deleted
-    NFSROOT="$NFSROOT/live/filesystem.dir"
-else
-    # dracut
-    deldir=$NFSROOT
-fi
+deldir=$NFSROOT
 
 ROOTCMD="chroot $NFSROOT"
 export DEBIAN_FRONTEND=noninteractive
@@ -397,10 +383,6 @@ EOF
 
     [ "$verbose" ] && echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose upgrade_nfsroot
-
-    # overwrite default live.conf
-    [ -f $cfdir/live.conf ] || die 1 "$cfdir/live.conf not found."
-    cp -Lp $cfdir/live.conf etc/live.conf
 
     LC_ALL=C add_packages_nfsroot
     copy_fai_files
