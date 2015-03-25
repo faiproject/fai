@@ -571,7 +571,11 @@ if [ -d $NFSROOT/proc ]; then
     umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount
     # remove old nfsroot using a background process
     mv $deldir $deldir/../.will-now-be-deleted
-    nice rm -rf $deldir/../.will-now-be-deleted &
+    if [ $? -eq 1 ]; then
+        rm -rf $deldir
+    else
+        nice rm -rf $deldir/../.will-now-be-deleted &
+    fi
 fi
 
 create_nfsroot
