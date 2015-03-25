@@ -156,11 +156,6 @@ deldir=$NFSROOT
 ROOTCMD="chroot $NFSROOT"
 export DEBIAN_FRONTEND=noninteractive
 
-usexz=0
-if [ -x "$(which xz)" ]; then
-    usexz=1
-fi
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 adjust_nfsroot() {
 
@@ -295,17 +290,9 @@ create_base() {
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
-    if [ $usexz -eq 0 ]; then
-        echo "Creating base.tar.gz"
-    else
-        echo "Creating base.tar.xz"
-    fi
+    echo "Creating base.tar.xz"
     tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
-    if [ $usexz -eq 1 ]; then
-        nice xz -q $NFSROOT/var/tmp/base.tar &
-    else
-        nice gzip $NFSROOT/var/tmp/base.tar &
-    fi
+    nice xz -q $NFSROOT/var/tmp/base.tar &
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract_base() {
