@@ -5,7 +5,7 @@
 # dhcp-edit -- managing dhcpd entries made easy
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2010-2014 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2010-2015 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -64,7 +64,7 @@ if ($opt_r) {
 }
 
 # check if executed as root
-merror(3,"Terminated. $0 can only be run as root.") unless ($< == 0);
+merror(3,"Terminated. $0 can only be run as root.") unless ($< == 0 || $opt_d);
 add_entry($hostname,$ip) unless $opt_r;
 write_dhcpd();
 restart_dhcpd();
@@ -97,7 +97,7 @@ sub add_entry {
   unless (defined $opt_p) {
     $modified=1;
     push @dhcpd, "host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
-    print "Entry added: host $hostname {hardware ethernet $mac;fixed-address $ip;}\n" if $modified;
+    print "Entry added: host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
     return;
   }
 
@@ -105,9 +105,9 @@ sub add_entry {
   # if $opt_p matches multiple times, also the new entry is added multiple times
   foreach (@dhcpd) {
     if ($_ =~ /$opt_p/o) {
+      $modified=1;
       push @new, "host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
       print "Entry added: host $hostname {hardware ethernet $mac;fixed-address $ip;}\n";
-      $modified=1;
     }
     push @new,$_;
   }
@@ -135,18 +135,7 @@ sub write_dhcpd {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub restart_dhcpd {
 
-  if ($opt_d) {
-    print "DRY RUN. Did not restart dhcp daemon.\n";
-  }
-  if ($opt_n) {
-    print "Did not restart dhcp daemon.\n";
-  }
-  unless ($modified) {
-    print "No modifications.\n";
-  }
-
   if ($opt_d || $opt_n || $modified==0) {
-    print "Did not restart dhcp daemon.\n";
     return;
   }
 
@@ -214,6 +203,6 @@ dhcp-edit -r hostname|mac
 
 =head1 COPYRIGHT
 
-This program is Copyright (C) 2010-2014 by Thomas Lange <lange@informatik.uni-koeln.de>
+This program is Copyright (C) 2010-2015 by Thomas Lange <lange@informatik.uni-koeln.de>
 
 =cut
