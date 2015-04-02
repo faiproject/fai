@@ -89,6 +89,7 @@ sshpreserve=0
 adjust=0
 generic=0
 force=0
+usexz=1
 
 callname=${0##*/}
 if [ $callname = make-fai-nfsroot ]; then
@@ -97,10 +98,11 @@ if [ $callname = make-fai-nfsroot ]; then
 fi
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpU opt ; do
+while getopts aghervC:B:fkKpUz opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
+        z) usexz=0 ;;
         C) cfdir=$OPTARG ;;
         B) basetgz=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
@@ -155,11 +157,6 @@ deldir=$NFSROOT
 
 ROOTCMD="chroot $NFSROOT"
 export DEBIAN_FRONTEND=noninteractive
-
-usexz=0
-if [ -x "$(which xz)" ]; then
-    usexz=1
-fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 adjust_nfsroot() {
