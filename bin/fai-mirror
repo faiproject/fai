@@ -120,7 +120,7 @@ initialize() {
 delete_base_packages() {
 
     # now delete all packages that are already included in base.tgz
-    local p
+    local p all arch
 
     if [ ! -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
         echo "$NFSROOT/var/tmp/base-pkgs.lis not available."
@@ -129,9 +129,14 @@ delete_base_packages() {
     fi
     echo "Removing packages that are already included in base.tgz"
     for p in $(< $NFSROOT/var/tmp/base-pkgs.lis); do
-        if [ -f $archivedir/${p}_*.deb ]; then
-            [ $verbose -eq 1 ] && echo "deleting package $p"
-            rm $archivedir/${p}_*.deb
+
+        all=(${p//:/ })
+        p=${all[0]}
+        arch=${all[1]}
+
+        if [ -f $archivedir/${p}_*$arch.deb ]; then
+            [ $verbose -eq 1 ] && echo "deleting package $p $arch"
+            rm $archivedir/${p}_*$arch.deb
         fi
     done
 }
