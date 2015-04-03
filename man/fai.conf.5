@@ -107,10 +107,28 @@ If the variable is undefined, this feature is disabled.
 
 .TP
 \fBFAI_LOGPROTO\fP Protocol for saving logs
-Supported values are: ssh, rsh, and ftp. If undefined use ssh. Will only be used
-if
+Supported values are: ssh (default), rsh, ftp and none. This will only be used
+if also
 .BR LOGUSER
 is set.
+
+ssh: Use the scp command to copy the log files to the log server.
+
+rsh: Use the rcp command to copy the log files to the log server.
+
+ftp: This option saves logs to the remote FTP server defined by the
+$LOGSERVER variable ($SERVER value is used if not set). Connection
+to the FTP server is done as user $LOGUSER using password
+$LOGPASSWD.  The FTP server log directory is defined in
+$LOGREMOTEDIR. These variables are also defined in file
+'fai.conf'. You need write access for the $LOGREMOTEDIR on the FTP
+server. All files in the directory /tmp/fai are copied to the
+FTP server following this example:
+
+  ftp://$LOGUSER:$LOGPASSWD@$LOGSERVER/$LOGREMOTEDIR/
+
+none: Don't save the log files to the install server.
+
 
 .TP
 \fBFAI_DEBMIRROR\fP Access Debian mirror via NFS-mounted directory
