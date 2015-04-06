@@ -89,6 +89,7 @@ create_ext3fs_image() {
     # hide some directories before copying the nfsroot
     customize_nfsroot
 
+    echo "Copying content to temporary directory"
     # copy the contents of the nfsroot into it
     cp -Pr $ONFSROOT/* $ONFSROOT/.??* $tmp/$liveos/mounted-ext3fs/ 2>/dev/null
 
@@ -98,9 +99,9 @@ create_ext3fs_image() {
     # add the partial mirror to the CD
     addmirror
 
-    # unmount it
-    umount $tmp/$liveos/mounted-ext3fs
+    unhide_dirs
 
+    umount $tmp/$liveos/mounted-ext3fs
     rmdir $tmp/$liveos/mounted-ext3fs
 }
 
@@ -109,11 +110,10 @@ create_squashfs_image() {
     mkdir -p $tmp/LiveOS
 
     # create the squashfs.img
-    mksquashfs $tmp/squashfs-root $tmp/LiveOS/squashfs.img
+    mksquashfs $tmp/squashfs-root $tmp/LiveOS/squashfs.img $sqopt
 
     rm $tmp/$liveos/ext3fs.img
-    rmdir $tmp/$liveos
-    rmdir $tmp/squashfs-root
+    rmdir $tmp/$liveos $tmp/squashfs-root
 }
 
 create_grub2_image() {
@@ -268,6 +268,8 @@ addmirror() {
 
     mkdir $tmp/$liveos/mounted-ext3fs/media/mirror
 
+    echo "Copying mirror to temporary directory"
+
     cp -Pr $mirrordir/* $tmp/$liveos/mounted-ext3fs/media/mirror
     # create the sources.list for the CD
     cat > $tmp/$liveos/mounted-ext3fs/etc/apt/sources.list <<EOF
@@ -297,13 +299,14 @@ rsync=0
 if [ -x "$(which rsync)" ] ; then rsync=1 ; fi
 
 # Parse commandline options
-while getopts "nkfhHg:bBMm:C:d:" opt ; do
+while getopts "nkfhHg:JbBMm:C:d:" opt ; do
     case "$opt" in
         C)  cdir="$OPTARG" ;;
         f)  forceremoval=1 ;;
         h)  usage ;;
         H)  hidedirs="" ;;
         g)  grub_config="$OPTARG" ;;
+        J)  sqopt="-comp xz" ;;
         k)  keep=1 ;;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
