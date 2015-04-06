@@ -48,7 +48,8 @@ This command creates a bootable ISO CD-ROM image that performs the
 fully automatic installation from CD-ROM without an install server. The
 ISO image will be written to FILE. To create the image, the
 command needs the NFSROOT, the configuration space and a partial
-mirror, which is created by fai-mirror. This hybrid CD image can also
+mirror, which is created by fai-mirror. The ISO image will contain a compressed
+squashfs filesystem. This hybrid CD image can also
 be written to an USB stick using dd(1).
 
 .SH OPTIONS
@@ -89,6 +90,9 @@ Do not hide directories. Using this option will consume 220MB more
 disk space on your media. By default, some directories like man pages
 and locales are hidden and will not be put onto the CD or the USB stick.
 .TP
+.BI \-J
+Use xz compression when calling mksquashfs. Default is gzip.
+.TP
 .BI \-k
 Keep the temporary filesystem for debugging. The script will sleep for
 a long time, before continuing the cleanup of temp files and
@@ -120,15 +124,16 @@ CD image to the stick via dd(1).
 
 .SH NOTES
 Additional kernel command line options can be found in the man page of
-dracut.cmdline(7).
+dracut.cmdline(7). fai-cd needs enough disk space in TMPDIR (/tmp by
+default) for creating the compressed filesystem. You may want to set
+it to another directories, before calling fai.cd.
 
 .SH SEE ALSO
 .br
-This program is part of FAI (Fully Automatic Installation).
-The FAI homepage is http://fai-project.org.
-.TP
-\fBfai-mirror\fP(1)
-.PD
+
+.BR fai\-mirror(1)
+
+.BR mksquashfs(1)
 .SH FILES
 .PD 0
 .TP
