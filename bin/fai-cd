@@ -382,6 +382,8 @@ fi
 
 tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
 
+trap "unhide_dirs;umount_dirs" EXIT ERR
+
 create_ext3fs_image
 create_squashfs_image
 
@@ -398,7 +400,6 @@ provide_memtest_boot_option
 if [ $bootonly -eq 1 ]; then
     mkiso
 else
-    trap "unhide_dirs;umount_dirs" EXIT ERR
     create_iso
 fi
 
