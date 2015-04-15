@@ -89,18 +89,25 @@ create_ext3fs_image() {
     # hide some directories before copying the nfsroot
     customize_nfsroot
 
-    echo "Copying content to temporary directory"
+    echo "Copying the nfsroot to temporary directory"
     # copy the contents of the nfsroot into it
-    cp -Pr $ONFSROOT/* $ONFSROOT/.??* $tmp/$liveos/mounted-ext3fs/ 2>/dev/null && die $? "Not enough space left on device for the nfsroot"
+    cp -Pr $ONFSROOT/* $ONFSROOT/.??* $tmp/$liveos/mounted-ext3fs/ && die $? "Not enough space left on device for the nfsroot"
 
+    echo "Copying the config space to temporary directory"
     # copy config space into nfsroot-copy
-    cp -Pr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ 2>/dev/null && die $? "Not enough space left on device for the config directory"
+    cp -Pr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ && die $? "Not enough space left on device for the config directory"
 
     # add the partial mirror to the CD
     addmirror
 
     unhide_dirs
 
+    umount $tmp/$liveos/mounted-ext3fs
+    rmdir $tmp/$liveos/mounted-ext3fs
+}
+
+cleanup_liveos_mounts() {
+    echo "Cleaning up"
     umount $tmp/$liveos/mounted-ext3fs
     rmdir $tmp/$liveos/mounted-ext3fs
 }
@@ -382,7 +389,7 @@ fi
 
 tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
 
-trap "unhide_dirs;umount_dirs" EXIT ERR
+trap "cleanup_liveos_mounts;unhide_dirs;umount_dirs" EXIT ERR
 
 create_ext3fs_image
 create_squashfs_image
