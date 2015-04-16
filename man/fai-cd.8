@@ -43,6 +43,12 @@ fai-cd \- make a bootable CD-ROM or USB stick that performs an FAI
 .B fai-cd
 [\fIOPTION\fR] \-B \fIFILE\fR
 .br
+.B fai-cd
+[\fIOPTION\fR] \-d \fIPATH\fR
+.br
+.B fai-cd
+[\fIOPTION\fR] \-S \fIIMAGEFILE\fR
+.br
 .SH DESCRIPTION
 This command creates a bootable ISO CD-ROM image that performs the
 fully automatic installation from CD-ROM without an install server. The
@@ -70,7 +76,7 @@ also set the environment variable FAI_ETC_DIR.
 .TP
 .BI "\-d " CONFIG_SRC
 Set the path to the config space to CONFIG_SRC. Set to ""
-to create an ISO image with an empty path. If not set, the
+to create an ISO image without a config space. If not set, the
 config space of the fai server will be included in the image in
 /var/lib/fai/config.
 .TP
@@ -109,7 +115,10 @@ you use -M or -B.
 .BI \-n
 No ISO image. Do not call genisoimage to create the ISO image. This is for
 creating the filesystem only. Useful for writing it to a USB stick.
-
+.TP
+.BI \-S
+Create a squashfs image file, instead of a complete iso. This image
+file can be used to fetch the nfsroot through various ways over the network.
 .SH EXAMPLES
 .br
 After you've created a mirror with fai-mirror in /media/mirror, you
@@ -121,6 +130,24 @@ If you want to create a bootable USB stick (here /dev/sdf) , write the
 CD image to the stick via dd(1).
 
    # dd if=fai-cd.iso of=/dev/sdf bs=1M
+
+It is possible to install over the network without using NFS, i.e. by
+getting the nfsroot via an http request. To do so you have to create a
+squashfs image using the following command:
+
+   # fai-cd \-S squashfs.img
+
+In addition to that you can create said image without a config space
+and without a mirror. This is useful for when you want to avoid
+creating a new image after modifying your config space or
+updating your mirror:
+
+   # fai-cd \-M \-d "" \-S squashfs.img
+
+To fetch the image via http, use the following kernel command line
+option:
+
+   root=live:http://your_server_or_IP/path/to/squashfs.img
 
 .SH NOTES
 Additional kernel command line options can be found in the man page of
