@@ -41,6 +41,7 @@ configset=0
 forceremoval=0
 burn=0
 bootonly=0
+squash_only=0
 keep=0
 makeiso=1
 nomirror=0
@@ -88,7 +89,6 @@ create_ext3fs_image() {
 
     # hide some directories before copying the nfsroot
     customize_nfsroot
-
     echo "Copying the nfsroot to temporary directory"
     # copy the contents of the nfsroot into it
     cp -Pr $ONFSROOT/* $ONFSROOT/.??* $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
@@ -111,7 +111,13 @@ create_squashfs_image() {
     mkdir -p $tmp/LiveOS
 
     # create the squashfs.img
-    mksquashfs $tmp/squashfs-root $tmp/LiveOS/squashfs.img $sqopt
+    output_path=$tmp/LiveOS/squashfs.img
+
+    if [ $squash_only -eq 1 ]; then
+        output_path=$isoname
+    fi
+
+    mksquashfs $tmp/squashfs-root $output_path $sopts
 
     rm $tmp/$liveos/ext3fs.img
     rmdir $tmp/$liveos $tmp/squashfs-root
@@ -216,38 +222,13 @@ unhide_dirs() {
     set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-umount_dirs() {
-
-    set +e
-    local d
-    local dirs="boot $FAI media/mirror"
-    for d in $dirs; do
-        umount $nfsrootdir/$d
-    done
-    mountpoint -q $nfsrootdir && umount $nfsrootdir
-    set -e
-    rm -rf $tmp
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 cleanup_liveos_mounts() {
     echo -e "\nCleaning up."
 
     mountpoint -q $tmp/$liveos/mounted-ext3fs && umount $tmp/$liveos/mounted-ext3fs
-
-    # delete files that
-    [ -a $tmp/$liveos/ext3fs.img ] && rm $tmp/$liveos/ext3fs.img
-    [ -a $tmp/LiveOS/squashfs.img ] && rm $tmp/LiveOS/squashfs.img
-
-    # delete directories
-    [ -d $tmp/empty ] && rmdir $tmp/empty
-    [ -d $tmp/$liveos/mounted-ext3fs ] && rmdir $tmp/$liveos/mounted-ext3fs
-    [ -d $tmp/$liveos ] && rmdir $tmp/$liveos
-    [ -d $tmp/squashfs-root ] && rmdir $tmp/squashfs-root
-    [ -d $tmp/LiveOS ] && rmdir $tmp/LiveOS
-
     unhide_dirs
 
-    rmdir $tmp
+    rm -rf $tmp
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 sleep_now() {
@@ -281,7 +262,7 @@ create_iso() {
 
     mkiso
     unhide_dirs
-    umount_dirs
+#    umount_dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 addmirror() {
@@ -410,11 +391,8 @@ trap "cleanup_liveos_mounts" EXIT ERR
 create_ext3fs_image
 create_squashfs_image
 
-if [ $squash_only -eq 1 ] ; then
-    echo "Getting squashfs image ready"
-    mv $tmp/LiveOS/squashfs.img ${PWD}/$isoname
-    exit 0
-fi
+[ $squash_only -eq 1 ] && exit 0
+
 
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|awk '/fai-client/ {print $3}')
