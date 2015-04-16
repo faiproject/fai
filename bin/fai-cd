@@ -321,7 +321,7 @@ rsync=0
 if [ -x "$(which rsync)" ] ; then rsync=1 ; fi
 
 # Parse commandline options
-while getopts "nkfhHg:JbBMm:C:d:" opt ; do
+while getopts "nkfhHg:JbSBMm:C:d:" opt ; do
     case "$opt" in
         C)  cdir="$OPTARG" ;;
         f)  forceremoval=1 ;;
@@ -334,6 +334,7 @@ while getopts "nkfhHg:JbBMm:C:d:" opt ; do
         m)  mirrordir="$OPTARG" ;;
         n)  makeiso=0 ;;
         b)  burn=1 ;;
+        S)  squash_only=1 ;;
         B)  bootonly=1 ;;
 	d)  config_space="$OPTARG"; configset=1 ;;
         ?)  usage ;;
@@ -408,6 +409,11 @@ trap "cleanup_liveos_mounts" EXIT ERR
 
 create_ext3fs_image
 create_squashfs_image
+
+if [ $squash_only -eq 1 ] ; then
+    cp $tmp/LiveOS/squashfs.img ${PWD}/$isoname
+    exit 0
+fi
 
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|awk '/fai-client/ {print $3}')
