@@ -35,7 +35,7 @@ set -e
 # last die exit code 22
 
 boot_image="boot/grub/eltorito.img"
-size=4096
+count=0
 config_space=""
 configset=0
 forceremoval=0
@@ -78,8 +78,10 @@ create_ext3fs_image() {
     # along with it, a temporary folder is created to mount the ext3fs.img
     mkdir -p $tmp/$liveos/mounted-ext3fs
 
+    calculate_required_size
+
     # creates an "empty" sparse file
-    truncate -s${size}M $tmp/$liveos/ext3fs.img
+    dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1MB count=$count
 
     mkfs.ext4 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
 
@@ -95,7 +97,6 @@ create_ext3fs_image() {
     # copy config space into nfsroot-copy
     echo "Copying the config space to temporary directory"
     cp -Pr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ || die $? "Not enough space left on device for the config directory"
-
 
     # add the partial mirror to the CD
     addmirror
@@ -178,6 +179,14 @@ create_grub2_image() {
     embed_image="$tmp/boot/grub/embed.img"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+calculate_required_size() {
+    # calculates the amount of space needed for the ext3fsimage
+    size=`du -sc $ONFSROOT $FAI_CONFIGDIR $mirrordir | grep total | awk '{print $1}'`
+
+    # not dividing by 1024 to get the exact, this allows us to get some additional space
+    count=$(($size/900))
+}
+
 provide_memtest_boot_option() {
 
     if [ -f $NFSROOT/boot/memtest86+.bin ]; then
