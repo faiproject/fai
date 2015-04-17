@@ -183,6 +183,7 @@ task_error() {
 # Short-Description: call a certain task
 ### END SUBROUTINE INFO
 
+declare -A duration
 task() {
 
     # hooks are called before a task is called
@@ -204,7 +205,9 @@ task() {
         sendmon "TASKBEGIN $taskname"
         task_error=0   # task can set this variable to indicate an error
         task_error_func=''
+        duration[$taskname]=$SECONDS
         task_$taskname "$@"
+        [ "$verbose" ] && echo "Duration of task $taskname: " $(($SECONDS-${duration[$taskname]}))"s"
         sendmon "TASKEND $taskname $task_error"
         if [ "$task_error" -ne 0 ] ; then
           echo "Exit code task_$taskname: $task_error" >&2
