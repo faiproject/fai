@@ -42,7 +42,6 @@ forceremoval=0
 burn=0
 bootonly=0
 squash_only=0
-keep=0
 nomirror=0
 liveos="squashfs-root/LiveOS/"
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
@@ -244,21 +243,7 @@ mkiso() {
         -no-emul-boot -boot-info-table --embedded-boot ${embed_image} --protective-msdos-label -o $isoname \
         -R $tmp --sort-weight 0 / --sort-weight 1 /boot || die 12 "xorriso failed."
     echo -n "ISO image size and filename: "; du -h $isoname
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_iso() {
 
-    # Create the El Torito bootable iso9660 cdrom image
-
-
-    if [ $keep -eq 1 ]; then
-        echo "fai-cd script stopped for 6666 seconds. The filesystem is now available in $tmp."
-        echo "To continue the script and call the cleanup call: pkill -f 'sleep 6666'"
-        sleep_now 2>/dev/null || true
-        echo "Continue cleanup."
-    fi
-
-    mkiso
     unhide_dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -307,7 +292,6 @@ while getopts "nkfhHg:JbSBMm:C:d:" opt ; do
         H)  hidedirs="" ;;
         g)  grub_config="$OPTARG" ;;
         J)  sqopt="-comp xz" ;;
-        k)  keep=1 ;;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
         b)  burn=1 ;;
@@ -400,11 +384,7 @@ create_grub2_image
 
 provide_memtest_boot_option
 
-if [ $bootonly -eq 1 ]; then
-    mkiso
-else
-    create_iso
-fi
+mkiso
 
 [ "$burn" -eq 1 ] && burniso
 exit 0
