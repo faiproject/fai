@@ -43,7 +43,6 @@ burn=0
 bootonly=0
 squash_only=0
 keep=0
-makeiso=1
 nomirror=0
 liveos="squashfs-root/LiveOS/"
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/cache/apt /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
@@ -239,8 +238,6 @@ sleep_now() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkiso() {
 
-    [ $makeiso -eq 0 ] && return
-
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
     xorriso -report_about HINT -as mkisofs -graft-points -b $boot_image \
         -V "$vname" -A "$aname" \
@@ -313,7 +310,6 @@ while getopts "nkfhHg:JbSBMm:C:d:" opt ; do
         k)  keep=1 ;;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
-        n)  makeiso=0 ;;
         b)  burn=1 ;;
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
@@ -325,7 +321,7 @@ shift $(($OPTIND - 1))
 isoname=$1
 
 [ $nomirror -eq 1 -a -n "$mirrordir" ]  && die 6 "Do not use -M and -m at the same time."
-[ $makeiso -eq 1 -a "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
+[ "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
 if [ $bootonly -eq 0 -a $nomirror -eq 0 ]; then
     [ -z "$mirrordir" ]   && die 4 "Please specify the directory of your mirror using -m"
     [ -d "$mirrordir" ]   || die 5 "$mirrordir is not a directory"
@@ -338,9 +334,7 @@ if [ $bootonly -eq 0 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
 
-if [ $makeiso -eq 1 ]; then
-    [ -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
-fi
+[ -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
 
 [ -x "$(which strings)" ] || die 8 "command strings not found. Please install package binutils."
 
