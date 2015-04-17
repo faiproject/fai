@@ -286,9 +286,6 @@ burniso() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
 
-rsync=0
-if [ -x "$(which rsync)" ] ; then rsync=1 ; fi
-
 # Parse commandline options
 while getopts "nkfhHg:JbSBMm:C:d:" opt ; do
     case "$opt" in
@@ -324,8 +321,8 @@ if [ $bootonly -eq 0 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
 
-[ -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
-
+[ $squash_only -eq 1 -o -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
+[ -x "$(which mksquashfs)" ] || die 8 "mksquashfs not found. Please install the package mksquashfs-tools."
 [ -x "$(which strings)" ] || die 8 "command strings not found. Please install package binutils."
 
 # use FAI_ETC_DIR from environment variable
