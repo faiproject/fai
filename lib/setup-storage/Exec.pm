@@ -391,11 +391,18 @@ sub execute_command_internal {
 
   #get the error, if there was any
   foreach my $err (@$FAI::error_codes) {
-    return $err->{error} if
-      (($err->{stdout_regex} eq "" || $stdout_line =~ /$err->{stdout_regex}/)
+    if (($err->{stdout_regex} eq "" || $stdout_line =~ /$err->{stdout_regex}/)
         && ($err->{stderr_regex} eq "" || $stderr_line =~ /$err->{stderr_regex}/)
         && ($err->{program} eq "" || $command =~ /$err->{program}/)
-        && (grep {$_ == $exit_code} @{ $err->{exit_codes} }));
+        && (grep {$_ == $exit_code} @{ $err->{exit_codes} })) {
+
+      if ($err->{error} =~ /"catch_all_nonzero_exit_code"/) {
+        print "(STDERR) $_" foreach (@stderr);
+        print "(STDOUT) $_" foreach (@stdout);
+      }
+
+      return $err->{error};
+    }
   }
 
 }
