@@ -396,7 +396,7 @@ sub execute_command_internal {
         && ($err->{program} eq "" || $command =~ /$err->{program}/)
         && (grep {$_ == $exit_code} @{ $err->{exit_codes} })) {
 
-      if ($err->{error} =~ /"catch_all_nonzero_exit_code"/) {
+      if ($err->{error} =~ /catch_all_nonzero_exit_code/) {
         print "(STDERR) $_" foreach (@stderr);
         print "(STDOUT) $_" foreach (@stdout);
       }
