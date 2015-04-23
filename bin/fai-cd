@@ -81,7 +81,7 @@ create_ext3fs_image() {
     calculate_required_size
 
     # creates an "empty" sparse file
-    dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1MB count=$count
+    dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1MB count=$count 2>/dev/null
 
     mkfs.ext4 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
 
@@ -233,8 +233,6 @@ unhide_dirs() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 cleanup_liveos_mounts() {
-
-    echo -e "\nCleaning up."
 
     mountpoint -q $tmp/$liveos/mounted-ext3fs && umount $tmp/$liveos/mounted-ext3fs
     unhide_dirs
