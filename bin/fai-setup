@@ -178,7 +178,7 @@ if [ -z "$expert" ]; then
     addr=$(ip addr show dev $SERVERINTERFACE | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | head -1)
 
     # if not NFS v4 entry is found add a dummy entry. Workaround for #676883
-    if egrep -v ^# /etc/exports | grep fsid=0; then
+    if ! egrep -v ^# /etc/exports | grep -q fsid=0; then
 	echo "No entry for NFS v4 found. Adding a dummy entry. This forces NFS v3 for the nfsroot."
 	mkdir -p /srv/nfs4
 	add_export_line "/srv/nfs4  $addr(fsid=0,async,ro,no_subtree_check)"
