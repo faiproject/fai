@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# copyright Thomas Lange 2001-2011, lange@debian.org
+# copyright Thomas Lange 2001-2015, lange@debian.org
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
@@ -30,10 +30,12 @@ if ifclass DEBIAN ; then
         $ROOTCMD apt-get -f install
 fi
 
-lskernels=$(echo $target/boot/vmlinu*)
-[ -f ${lskernels%% *} ] || echo "ERROR: No kernel was installed. Have a look at shell.log" >&2
+if [ $FAI_ACTION = "install" ]; then
+    lskernels=$(echo $target/boot/vmlinu*)
+    [ -f ${lskernels%% *} ] || echo "ERROR: No kernel was installed. Have a look at shell.log" >&2
+fi
+
 # copy sources.list
 fcopy -iM /etc/apt/sources.list
 
 exit $error
-
