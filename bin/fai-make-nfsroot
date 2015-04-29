@@ -342,6 +342,12 @@ create_nfsroot() {
     # save the list of all packages in the base.tar.gz
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
+    # Export all the information we have about the system
+    iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
+    distro=$(. $NFSROOT/etc/os-release; echo ${ID} ${ID}_${VERSION_ID} | tr '[:lower:]' '[:upper:]')
+    export classes="NFSROOT $iarch $distro"
+    [ "$verbose" ] && echo Classes are set to $classes
+
     if [ -n "$FAI_DEBMIRROR" ]; then
         [ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
@@ -438,9 +444,7 @@ upgrade_nfsroot() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 add_packages_nfsroot() {
 
-    local iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
     export FAI_ROOT=$NFSROOT
-    export classes="NFSROOT $iarch"
 
     install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
     echo "Adding additional packages to $NFSROOT:"
