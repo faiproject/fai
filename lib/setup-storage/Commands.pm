@@ -292,6 +292,34 @@ sub build_cryptsetup_commands {
 #
 ################################################################################
 sub build_btrfs_commands {
+
+# following monstrosity takes care of single device/partition btrfs disk configs
+  foreach my $c (keys %FAI::configs) {
+    if ($c =~ /^PHY_(.+)$/) {
+      my $device = $1;
+      foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
+        my $this_fs = $FAI::configs{$c}{partitions}{$p}{filesystem};
+        if ($this_fs eq 'btrfs') {
+          my $config = 'BTRFS';
+          my $volume = 'single_' . $single_vol_index;
+          $FAI::configs{$config}{volumes}{$volume}{encrypt} = $FAI::configs{$c}{partitions}{$p}{encrypt};
+          $FAI::configs{$config}{volumes}{$volume}{raidlevel} = 'single';
+          $FAI::configs{$config}{volumes}{$volume}{filesystem} = $this_fs;
+          $FAI::configs{$c}{partitions}{$p}{filesystem} = '-';
+          $FAI::configs{$config}{volumes}{$volume}{mountpoint} = $FAI::configs{$c}{partitions}{$p}{mountpoint};
+          $FAI::configs{$c}{partitions}{$p}{mountpoint} = '-';
+          $FAI::configs{$config}{volumes}{$volume}{mount_options} = $FAI::configs{$c}{partitions}{$p}{mount_options};
+          $FAI::configs{$c}{partitions}{$p}{mount_options} = '-';
+          $FAI::configs{$config}{volumes}{$volume}{devices}{$device . $p} = {};
+          $FAI::configs{$config}{fstabkey} = 'device';
+          $FAI::configs{$config}{opts_all} = {};
+
+          $single_vol_index++;
+        }
+      }
+    }
+  }
+
   foreach my $config (keys %FAI::configs) { # loop through all configs
     next unless ($config eq "BTRFS");
 
