@@ -381,8 +381,13 @@ EOF
     echo "omit_dracutmodules+=systemd" > $NFSROOT/etc/dracut.conf.d/12-no-systemd.conf
     echo "add_dracutmodules+=dmsquash-live" > $NFSROOT/etc/dracut.conf.d/13-add-cd-support.conf
 
-    # this copies sources.list into the nfsroot
-    cp -La $cfdir/apt $NFSROOT/etc
+    local fname=$(readlink -f $cfdir/apt/sources.list)
+    if [ -d $fname ]; then
+        fcopy -s $cfdir/apt -t $NFSROOT/etc/apt sources.list
+    else
+        # this copies sources.list into the nfsroot
+        cp -La $cfdir/apt $NFSROOT/etc
+    fi
 
     add_etc_hosts_entries
 
