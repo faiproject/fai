@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2001-2014, lange@debian.org
+# (c) Thomas Lange, 2001-2015, lange@debian.org
 # (c) Michael Goetze, 2010-2011, mgoetze@mgoetze.net
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
@@ -20,9 +20,14 @@ if [ "$UTC" = "yes" ]; then
 else
     sed -i -e 's:^UTC$:LOCAL:' $target/etc/adjtime
 fi
-if [ -f ${target}/etc/inittab ]; then
+
+# enable linuxlogo
+if [ -f $target/etc/inittab ]; then
     sed -i -e 's#/sbin/getty 38400#/sbin/getty -f /etc/issue.linuxlogo 38400#' ${target}/etc/inittab
+else
+    sed -i -e 's#sbin/agetty --noclear#sbin/agetty -f /etc/issue.linuxlogo --noclear#' $target/lib/systemd/system/getty@.service
 fi
+
 
 rm -f $target/etc/dpkg/dpkg.cfg.d/fai
 
