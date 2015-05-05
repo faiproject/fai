@@ -2,13 +2,15 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2012
+# Author:    Thomas Lange, Uni Koeln, 2011-2015
 # License:   GPL v2 or any later version
 
-fix="-vga std -k en-us"  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
+fix="-k en-us -cpu host "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
 # without it centos initrd is not created properly and results in kernel panic
 
+# for booting form CD first, then hard disk: -boot order=dc 
 
+vga="-vga std"
 user=1
 size=5   # default size of the disk image
 ram=2000
@@ -29,7 +31,7 @@ boot_cd() {
   [ -n "$1" ] && cdimage=$1
   # boot fai-cd
   set -x
-  kvm $gopt $net $disk -cdrom $cdimage
+  kvm $gopt -boot order=dc $net $disk -cdrom $cdimage
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -50,13 +52,14 @@ usage() {
  -d <num>    number of local disks (default is one)
  -m <mem>    RAM size (MB, defaults to 2000MB)
  -u <num>    number of the user (so multiple users can call this script)
+ -V          do not use vga std with Bochs extensions, use the kvm default
 
 EOF
   exit 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "hnu:s:m:d:" opt ; do
+while getopts "hnu:s:m:d:V" opt ; do
     case "$opt" in
         n) newdisk=1    ;;
         u) user=$OPTARG ;;
@@ -64,6 +67,7 @@ while getopts "hnu:s:m:d:" opt ; do
         s) size=$OPTARG ;;
         d) disks=$OPTARG ;;
         h) usage;;
+        V) vga="";;
         ?) die 1 "Unknown option";;
     esac
 done
