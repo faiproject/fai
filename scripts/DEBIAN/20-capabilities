@@ -6,13 +6,17 @@
 
 set -e
 
-if [ -x $target/sbin/setcap ] ; then
-    for FILE in /bin/ping /bin/ping6 /usr/bin/arping ; do
-        if [ -x $target/$FILE ] ; then
-            $ROOTCMD /sbin/setcap cap_net_raw+ep $FILE
+if [ ! -x $target/sbin/setcap ] ; then
+    exit 0
+fi
+
+for FILE in /bin/ping /bin/ping6 /usr/bin/fping /usr/bin/fping6; do
+    if [ -x $target/$FILE ] ; then
+        if $ROOTCMD /sbin/setcap cap_net_raw+ep $FILE; then
+            echo "Setcap worked! $FILE is not suid!"
         fi
-    done
-    if [ -x $target/usr/bin/systemd-detect-virt ] ; then
-        $ROOTCMD /sbin/setcap cap_dac_override,cap_sys_ptrace+ep /usr/bin/systemd-detect-virt
     fi
+done
+if [ -x $target/usr/bin/systemd-detect-virt ] ; then
+    $ROOTCMD /sbin/setcap cap_dac_override,cap_sys_ptrace+ep /usr/bin/systemd-detect-virt
 fi
