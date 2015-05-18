@@ -827,6 +827,14 @@ task_confdir() {
         fi
     fi
 
+    local mdir=/lib/modules/`uname -r`
+    if [ ! -d $mdir ]; then
+        echo "ERROR: Kernel modules directory $mdir not available. Only found:"
+        ls -d /lib/modules/*
+        echo ""
+        task_error 790
+    fi
+
     get-config-dir || {
         echo "Problems accessing the config space."
         die ""
