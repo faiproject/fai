@@ -46,6 +46,12 @@ my %partition_table_deps;
 ################################################################################
 
 my @preserved_raid = ();
+my $parted_version = 0;
+
+sub get_parted_version {
+  my ($major, $minor) = (`parted -v | head -1` =~ m/\s+(\d).(\d)/);
+  $parted_version = 1 if ($major >= 3 or ($major == 2 and $minor >= 4));
+}
 
 sub build_mkfs_commands {
 
@@ -623,8 +629,13 @@ sub setup_logical_volumes {
           &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
             "e2fsck_f_resize_$vg/$lv", "lv_shrink_$vg/$lv" );
         } else {
-          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
-            "vg_enabled_$vg", "lv_shrink_$vg/$lv" );
+          if ($parted_version) {
+            &FAI::push_command( "parted -s /dev/$vg/$lv resizepart 1 " . $lv_size->{eff_size} .  "B",
+                                "vg_enabled_$vg", "lv_shrink_$vg/$lv" );
+          } else {
+           &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+                               "vg_enabled_$vg", "lv_shrink_$vg/$lv" );
+         }
         }
         &FAI::push_command( "lvresize -L $lvsize_mib $vg/$lv",
           "vg_enabled_$vg,lv_shrink_$vg/$lv", "lv_created_$vg/$lv" );
@@ -639,8 +650,13 @@ sub setup_logical_volumes {
           &FAI::push_command( "resize2fs /dev/$vg/$lv ${block_count}s",
             "e2fsck_f_resize_$vg/$lv", "exist_/dev/$vg/$lv" );
         } else {
-          &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
-            "vg_enabled_$vg,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
+          if ($parted_version) {
+            &FAI::push_command( "parted -s /dev/$vg/$lv resizepart 1 " . $lv_size->{eff_size} .  "B",
+                                "vg_enabled_$vg,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
+          } else {
+           &FAI::push_command( "parted -s /dev/$vg/$lv resize 1 0 " . $lv_size->{eff_size} .  "B",
+                                "vg_enabled_$vg,lv_grow_$vg/$lv", "exist_/dev/$vg/$lv" );
+         }
         }
       }
 
@@ -1192,11 +1208,16 @@ sub setup_partitions {
     ##     " ${block_count}s", "e2fsck_f_resize_" . &FAI::make_device_name($disk, $p),
     ##     "resized_" .  &FAI::make_device_name($disk, $p) );
     } else {
-      &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
-        "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps, "resized_" .
-        &FAI::make_device_name($disk, $p) );
+      if ($parted_version) {
+        &FAI::push_command( "parted -s $disk resizepart $p ${end}B",
+                            "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps, "resized_" .
+                            &FAI::make_device_name($disk, $p) );
+      } else {
+        &FAI::push_command( "parted -s $disk resize $p ${start}B ${end}B",
+                            "rebuilt_" . &FAI::make_device_name($disk, $p) . $deps, "resized_" .
+                            &FAI::make_device_name($disk, $p) );
+      }
     }
-
   }
 
   # write the disklabel again to drop the partition table and create a new one
