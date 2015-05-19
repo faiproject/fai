@@ -309,8 +309,8 @@ sub build_btrfs_commands {
     my $this_fs;
     foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
       $this_fs = $FAI::configs{$c}{partitions}{$p}{filesystem};
+      next unless defined($this_fs);
       next unless ($this_fs eq 'btrfs');
-      next unless (defined($this_fs));
       $volume = 'single_' . $single_vol_index;
       $FAI::configs{$config}{volumes}{$volume}{encrypt} = $FAI::configs{$c}{partitions}{$p}{encrypt};
       $FAI::configs{$config}{volumes}{$volume}{raidlevel} = 'single';
