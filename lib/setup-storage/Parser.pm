@@ -459,6 +459,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{fstabkey} = "device";
           $FAI::configs{$FAI::device}{opts_all} = {};
         }
+        btrfs_option(s?)
         | 'cryptsetup'
         {
           &FAI::in_path("cryptsetup") or die "cryptsetup not found in PATH\n";
@@ -549,6 +550,11 @@ $FAI::Parser = Parse::RecDescent->new(
           } else {
             $FAI::configs{RAID}{volumes}{$_}{always_format} = 1 foreach (split (",", $1));
           }
+        }
+
+    btrfs_option: /^fstabkey:(device|label|uuid)/
+        {
+        $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
 
     cryptsetup_option: /^randinit/
