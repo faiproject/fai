@@ -1,0 +1,37 @@
+#! /bin/bash
+
+# hook for installing a file system image (tar file)
+# this works for Ubuntu 14.04
+#
+# Copyright (C) 2015 Thomas Lange, lange@informatik.uni-koeln.de
+
+
+# I use this tar command to create the image of an already running and configured machine
+# tar -cf /tmp/IMAGE.tar --exclude /tmp/\* --exclude /run/\* --exclude /proc/\* --exclude /sys/\* --exclude /dev/\* /
+# Then copy this image to /srv/fai/config/basefiles/IMAGE.tar and make sure your client belongs to the class IMAGE
+
+task_extrbase
+skiptask extrbase debconf repository updatebase instsoft
+skiptask configure  # do not run the usual configure scripts
+
+# we assume, that the new host will get its hostname and IP via DHCP
+# remove old hostname
+fgrep -v 127.0.1.1 $target/etc/hosts >> /tmp/fai/hosts
+mv /tmp/fai/hosts $target/etc/hosts
+rm $target/etc/hostname
+
+#install grub
+mount -t proc   proc   $FAI_ROOT/proc
+mount -t sysfs  sysfs  $FAI_ROOT/sys
+mount --bind    /dev   $FAI_ROOT/dev
+$ROOTCMD grub-install $BOOT_DEVICE
+$ROOTCMD update-grub
+
+
+
+# things that may be adjusted:
+#
+# MAC address ?? (not needed for Ubuntu, it uses iftab(5)
+# /etc/hosts may contain the IP and name of the original host
+# /etc/hostname (for Ubuntu just remove it)
+# /var/lib/NetworkManager/dhclient-eth0.conf?
