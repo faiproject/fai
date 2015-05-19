@@ -304,11 +304,14 @@ sub build_btrfs_commands {
     next unless ($c =~ /^PHY_(.+)$/);
     my $device = $1;
     my $single_vol_index = 0;
+    my $config = 'BTRFS';
+    my $volume;
+    my $this_fs;
     foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
-      my $this_fs = $FAI::configs{$c}{partitions}{$p}{filesystem};
+      $this_fs = $FAI::configs{$c}{partitions}{$p}{filesystem};
       next unless ($this_fs eq 'btrfs');
-      my $config = 'BTRFS';
-      my $volume = 'single_' . $single_vol_index;
+      next unless (defined($this_fs));
+      $volume = 'single_' . $single_vol_index;
       $FAI::configs{$config}{volumes}{$volume}{encrypt} = $FAI::configs{$c}{partitions}{$p}{encrypt};
       $FAI::configs{$config}{volumes}{$volume}{raidlevel} = 'single';
       $FAI::configs{$config}{volumes}{$volume}{filesystem} = $this_fs;
