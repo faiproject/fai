@@ -297,6 +297,7 @@ sub build_btrfs_commands {
   foreach my $c (keys %FAI::configs) {
     next unless ($c =~ /^PHY_(.+)$/);
     my $device = $1;
+    my $single_vol_index = 0;
     foreach my $p (keys %{ $FAI::configs{$c}{partitions} }) {
       my $this_fs = $FAI::configs{$c}{partitions}{$p}{filesystem};
       next unless ($this_fs eq 'btrfs');
