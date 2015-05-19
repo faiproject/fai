@@ -59,7 +59,7 @@ sub build_mkfs_commands {
   my $fs = $partition->{filesystem};
   my $journal = $partition->{journal_dev};
 
-  return if ($fs eq "-");
+  return if ($fs eq "-" or $fs eq "btrfs");
 
   my ($create_options) = $partition->{createopts};
   my ($tune_options)   = $partition->{tuneopts};
