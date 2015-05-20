@@ -54,7 +54,7 @@ extract() {
     fi
 
     echo "ftar: extracting $file to $target/$dir" | tr -s '/'
-    $catname $file | tar --numeric-owner -C $target/$dir $vflag -xf -
+    $catname $file | tar $xattrs --numeric-owner -C $target/$dir $vflag -xf -
     tardone=1
     # if option -1 is set, only one class will be used
     [ $single -eq 1 ] && exit 0
@@ -109,6 +109,15 @@ done
 shift $(($OPTIND - 1))
 
 [ "$1" ] || usage
+
+# check if tar has xattrs support
+tar --xattrs -cf /dev/null /dev/null 2>/dev/null 1>/dev/null
+if [ $? -eq 0 ]; then
+    xattrs="--xattrs --selinux --acl"
+else
+    xattrs=
+fi
+
 [ -f $ENV{LOGDIR}/FAI_CLASSES ] && classes=$(< $ENV{LOGDIR}/FAI_CLASSES)
 # last class has highest priority
 
