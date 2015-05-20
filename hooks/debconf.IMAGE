@@ -8,6 +8,7 @@
 
 # I use this tar command to create the image of an already running and configured machine
 # tar -cf /tmp/IMAGE.tar --exclude /tmp/\* --exclude /run/\* --exclude /proc/\* --exclude /sys/\* --exclude /dev/\* /
+# add --xattrs --selinux --acl if needed (for CentOS 7)
 # Then copy this image to /srv/fai/config/basefiles/IMAGE.tar and make sure your client belongs to the class IMAGE
 
 skiptask extrbase debconf repository updatebase instsoft
@@ -23,9 +24,17 @@ rm $target/etc/hostname
 mount -t proc   proc   $FAI_ROOT/proc
 mount -t sysfs  sysfs  $FAI_ROOT/sys
 mount --bind    /dev   $FAI_ROOT/dev
-$ROOTCMD grub-install $BOOT_DEVICE
-$ROOTCMD update-grub
 
+if [ -f $target/etc/debian_version ]; then
+    $ROOTCMD grub-install $BOOT_DEVICE
+    $ROOTCMD update-grub
+fi
+if [ -f $target/etc/centos-release ]; then
+    rm $target/etc/grub2/device.map
+    $FAI/scripts/CENTOS/40-install-grub
+    $FAI/scripts/CENTOS/30-mkinitrd
+    $ROOTCMD fixfiles onboot # this fixes the SELinux security contexts during the first boot
+fi
 
 
 # things that may be adjusted:
