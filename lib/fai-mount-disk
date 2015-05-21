@@ -20,7 +20,6 @@ fstab_mount() {
 mount_local_disks() {
 
     # try to mount all local disk partitions containing a file system
-    local mountoption=ro
     local disk dev devname type
     fstabcount=0
     [ "$1" = "rw" ] && mountoption=$1
@@ -54,16 +53,24 @@ umount_local_disks() {
     test -d $FAI_ROOT/ida && rmdir $FAI_ROOT/ida/*
     test -d $FAI_ROOT/rd && rmdir $FAI_ROOT/rd/*
     rmdir $FAI_ROOT/* 2>/dev/null
-    umount $FAI_ROOT
+    mountpoint -q $FAI_ROOT && umount $FAI_ROOT
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # main program
 
-while getopts uf opt ; do
+mountoption=ro
+dofstab=0
+
+while getopts ufw opt ; do
       case "$opt" in
         u) umount_local_disks ; exit ;;
-        f) mount_local_disks; fstab_mount ; exit ;;
+        w) mountoption=rw ;;
+        f) dofstab=1 ;;
       esac
 done
+
 mount_local_disks
+if [ $dofstab -eq 1 ]; then
+    fstab_mount
+fi
