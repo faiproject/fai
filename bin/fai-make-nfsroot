@@ -197,6 +197,11 @@ setup_ssh() {
 
     # nothing to do if no ssh is available in nfsroot
     [ -f $NFSROOT/usr/bin/ssh ] || return 0
+
+    # enable root login
+    sed -i -e '/PermitRootLogin/d' $NFSROOT/etc/ssh/sshd_config
+    ainsl $NFSROOT/etc/ssh/sshd_config 'PermitRootLogin yes'
+
     if [ $sshpreserve = 1 ]; then
         tar -C $NFSROOT -xf $tmptar
         rm $tmptar
@@ -215,9 +220,6 @@ setup_ssh() {
         }
     fi
 
-    # enable root login
-    sed -i -e '/PermitRootLogin/d' $NFSROOT/etc/ssh/sshd_config
-    ainsl $NFSROOT/etc/ssh/sshd_config 'PermitRootLogin yes'
     if [ -f "$SSH_IDENTITY" ]; then
         install -m0644 $SSH_IDENTITY $NFSROOT/root/.ssh/authorized_keys
         echo You can log into install clients without password using $SSH_IDENTITY
