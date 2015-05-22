@@ -987,6 +987,7 @@ $FAI::Parser = Parse::RecDescent->new(
             # might be created later on
             unless ($dev =~ m{^/}) {
               if ($dev =~ m/^disk(\d+)\.(\d+)/) {
+                die "ERROR: No such disk disk$1\n" unless $FAI::disks[$1-1];
                 $dev = &FAI::make_device_name("/dev/" . $FAI::disks[ $1 - 1 ], $2);
               } elsif ($dev =~ m/^disk(\d+)/) {
                 $dev = "/dev/" . $FAI::disks[ $1 - 1 ];
