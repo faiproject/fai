@@ -31,6 +31,15 @@ mount_local_disks() {
         devname=${dev##*/}
         mkdir -p $FAI_ROOT/$devname
         mount -o $mountoption $dev $FAI_ROOT/$devname
+
+        # look for btrfs subvolume
+        if [[ "$type" =~ "btrfs" ]]; then
+            subvol=$(btrfs sub list -a $FAI_ROOT/$devname|head -1)
+            subvol=${subvol#*path }
+            umount $FAI_ROOT/$devname
+            mount $dev -osubvol=$subvol $FAI_ROOT/$devname
+        fi
+
         # \ && echo $partition mounted successfully
         if [ -f $FAI_ROOT/$devname/etc/fstab ]; then
             echo "/etc/fstab found in $dev"
