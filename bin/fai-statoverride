@@ -4,8 +4,9 @@
 # call dpkg-statoverride with multiple files,
 # this command is idempotent
 
-# copyright Thomas Lange, Uni Koeln, 2005
+# copyright Thomas Lange, Uni Koeln, 2005-2015
 
+set -x
 err=0
 
 owner=$1;shift
@@ -16,7 +17,10 @@ for f in $* ;do
     $ROOTCMD dpkg-statoverride --list | grep -q " $f"
     if [ "$?" -eq 1 ]; then
         echo "Overriding owner and mode: $owner $group $mode $f"
-        $ROOTCMD dpkg-statoverride --update --add $owner $group $mode $f && err=1
+        $ROOTCMD dpkg-statoverride --update --add $owner $group $mode $f
+        if [ $? -ne  0 ]; then
+            err=1
+        fi
     fi
 done
 
