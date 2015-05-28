@@ -245,6 +245,11 @@ export FAI_ETC_DIR
 if [ $(id -u) != "0" ]; then
     fdie 1 "Run this program as root." >&2
 fi
+# Make sure we only run once
+exec 200>/var/run/lock/fai
+flock -n 200 || fdie 1 "Could not acquire lock: /var/run/lock/fai " >&2
+pid=$$
+echo $pid 1>&200
 
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
