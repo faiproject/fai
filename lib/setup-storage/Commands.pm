@@ -868,9 +868,11 @@ sub build_lvm_commands {
 
     $vg_pre .= ",pv_sigs_removed_$vg" if (&FAI::cleanup_vg($vg));
     my $pre_deps_cl = "";
-    $pre_deps_cl = ",self_cleared_" .
-      join(",self_cleared_", @{ $FAI::current_dev_children{$d} })
-      if (scalar(@{ $FAI::current_dev_children{$d} }));
+    if (defined($FAI::current_dev_children{$d})) {
+      $pre_deps_cl = ",self_cleared_" .
+        join(",self_cleared_", @{ $FAI::current_dev_children{$d} })
+          if (scalar(@{ $FAI::current_dev_children{$d} }));
+    }
     &FAI::push_command("true", "$vg_pre$pre_deps_cl", "self_cleared_VG_$vg");
   }
 

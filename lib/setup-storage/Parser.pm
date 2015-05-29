@@ -1185,6 +1185,7 @@ sub check_config {
       }
     } elsif ($config =~ /^VG_(.+)$/) {
       next if ($1 eq "--ANY--");
+      next unless (keys %{ $FAI::configs{$config}{volumes} });
       (scalar(keys %{ $FAI::configs{$config}{volumes} }) ==
         scalar(@{ $FAI::configs{$config}{ordered_lv_list} })) or
         &FAI::internal_error("Inconsistent LV lists - missing entries");
