@@ -8,9 +8,9 @@ echo $TIMEZONE    > $target/etc/timezone
 cp -f /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
 
 if [ -n "$IPADDR" ]; then
-    ainsl -vs /etc/hosts "$IPADDR $HOSTNAME.$DOMAIN $HOSTNAME"
+    ifclass DHCPC || ainsl -s /etc/hosts "$IPADDR $HOSTNAME.$DOMAIN $HOSTNAME"
 else
-    ainsl -vs /etc/hosts "127.0.0.1 $HOSTNAME"
+    ifclass DHCPC && ainsl -s /etc/hosts "127.0.0.1 $HOSTNAME"
 fi
 
 fcopy -iM /etc/hosts /etc/motd
