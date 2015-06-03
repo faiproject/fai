@@ -1172,6 +1172,10 @@ sub check_config {
       (scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
         die "Empty disk_config stanza for device $1\n";
       foreach my $p (keys %{ $FAI::configs{$config}{partitions} }) {
+        # following catches if one attempts to use a partition that doesn't exist in the config file
+        if (!(defined($FAI::configs{$config}{partitions}{$p}{size}{range}))) {
+          die "Cannot use non-existent partition (partition number $p). Please check your config.\n";
+        }
         next if (1 == $FAI::configs{$config}{partitions}{$p}{size}{extended});
         defined($FAI::configs{$config}{partitions}{$p}{mountpoint}) or
           &FAI::internal_error("Undefined mountpoint for non-extended partition");
