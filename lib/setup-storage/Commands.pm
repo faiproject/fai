@@ -342,11 +342,9 @@ sub build_btrfs_commands {
     my $mountpoint = $vol->{mountpoint};
     my $mountoptions = $vol->{mount_options};
     ($mountoptions =~ m/subvol=([^,\s]+)/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
-    my $btrfscreateopts =  $vol->{btrfscreateopts};
-    defined($btrfscreateopts) or $btrfscreateopts = "";
-    my $createopts = $vol->{createopts};
-    defined($createopts) or $createopts = "";
-    $createopts =  $createopts . " $forcebtrfs";
+    my $btrfscreateopts =  $vol->{btrfscreateopts} // "" ;
+    my $createopts = $vol->{createopts} // "";
+    $createopts .= " $forcebtrfs";
     my $pre_req = "";
     # creates the proper prerequisites for later command ordering
     foreach (@devs) {
@@ -706,7 +704,7 @@ sub setup_logical_volumes {
     my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
     # prevent warnings of uninitialized variables
     $create_options = '' unless $create_options;
-    $create_options = $create_options  . " $optyes";
+    $create_options .= " $optyes";
     print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
     # create a new volume
     &FAI::push_command( "lvcreate $create_options -n $lv -L " .
