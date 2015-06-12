@@ -48,10 +48,10 @@ sub create_fstab_line {
   my ($d_ref, $name, $dev_name) = @_;
 
   my @fstab_line = ();
-  my @comment_line = ();
+  my $comment_line = "";
 
   # add a comment denoting the actual device name in case of UUID or LABEL
-  push @comment_line, "# device during installation: $dev_name\n"
+  $comment_line="# device during installation: $dev_name\n"
     if ($name =~ /^(UUID|LABEL)=/);
 
   # start with the device key
@@ -74,8 +74,7 @@ sub create_fstab_line {
   $FAI::disk_var{SWAPLIST} .= " " . $dev_name
     if ($d_ref->{filesystem} eq "swap");
 
-  my $ret = '';
-  $ret = join ("\n", @comment_line)."\n" if (scalar(@comment_line));
+  my $ret = "\n$comment_line";
   # join the columns of one line with tabs
   $ret .= join ("\t", @fstab_line);
   return $ret;
