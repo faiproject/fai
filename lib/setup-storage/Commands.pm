@@ -863,6 +863,15 @@ sub build_lvm_commands {
       $tmp_vg = $1 if $tmp_vg =~ /(\S+)$/;
       $preserved = 1 if ($tmp_vg eq $vg);
     }
+
+    # prevent error due to different VG name of existing VG
+    if (defined(%FAI::configs{$d})) { 
+      # don't deactivate preserved VGs to prevent blkid error later on
+      foreach my $v (keys %FAI::configs{$d}->{volumes}) {
+        $preserved = 1 if (%FAI::configs{$d}->{volumes}->{$v}->{size}->{preserve});
+      }
+    }
+
     &FAI::push_command("vgchange -a n $vg", "$pre_deps_vgc", $vg_pre)
       unless $preserved;
 
