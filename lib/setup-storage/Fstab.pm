@@ -48,6 +48,11 @@ sub create_fstab_line {
   my ($d_ref, $name, $dev_name) = @_;
 
   my @fstab_line = ();
+  my @comment_line = ();
+
+  # add a comment denoting the actual device name in case of UUID or LABEL
+  push @comment_line, "# device during installation: $dev_name\n"
+    if ($name =~ /^(UUID|LABEL)=/);
 
   # start with the device key
   push @fstab_line, $name;
@@ -61,10 +66,6 @@ sub create_fstab_line {
   $fstab_line[-1] = 0 if ($d_ref->{filesystem} eq "swap");
   $fstab_line[-1] = 0 if ($d_ref->{filesystem} eq "tmpfs");
 
-  # add a comment denoting the actual device name in case of UUID or LABEL
-  push @fstab_line, "# device during installation: $dev_name"
-    if ($name =~ /^(UUID|LABEL)=/);
-
   # set the ROOT_PARTITION variable, if this is the mountpoint for /
   $FAI::disk_var{ROOT_PARTITION} = $name
     if ($d_ref->{mountpoint} eq "/");
@@ -73,8 +74,11 @@ sub create_fstab_line {
   $FAI::disk_var{SWAPLIST} .= " " . $dev_name
     if ($d_ref->{filesystem} eq "swap");
 
+  my $ret = '';
+  $ret = join ("\n", @comment_line)."\n" if (scalar(@comment_line));
   # join the columns of one line with tabs
-  return join ("\t", @fstab_line);
+  $ret .= join ("\t", @fstab_line);
+  return $ret;
 }
 
 
