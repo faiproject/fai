@@ -1458,6 +1458,29 @@ sub restore_partition_table {
 
 ################################################################################
 #
+# @brief test whether --force option is available for btrfs
+#
+################################################################################
+sub btrfs_options {
+  # check if --force is available for mkfs.btrfs
+  my $opt = `mkfs.btrfs 2>&1`;
+  my $btrfsopt = $opt =~ '--force' ? '-f' : '';
+  return $btrfsopt;
+}
+
+################################################################################
+#
+# @brief test whether --yes option is available for lvcreate
+#
+################################################################################
+# Closes: #750212
+sub lvm_options {
+  my $opt = `lvcreate --yes 2>&1`;
+  my $lvmopt = $opt =~ 'unrecognized option' ? '' : '--yes';
+}
+
+################################################################################
+#
 # @brief Try to order the queued commands to satisfy all dependencies
 #
 ################################################################################
