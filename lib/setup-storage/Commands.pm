@@ -1328,7 +1328,7 @@ sub setup_partitions {
     $prev_id = $part_id;
   }
 
-  &FAI::push_command("echo ,,,* | sfdisk --force $boot_disk -N1",
+  &FAI::push_command("parted $boot_disk set 1 boot on",
     "pt_complete_$disk", "gpt_bios_fake_bootable")
     if($FAI::configs{$config}{disklabel} eq "gpt-bios" and $boot_disk);
 
