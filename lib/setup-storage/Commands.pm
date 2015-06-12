@@ -320,6 +320,7 @@ sub build_btrfs_commands {
       $FAI::configs{$c}{partitions}{$p}{mountpoint} = '-';
       $FAI::configs{$config}{volumes}{$volume}{mount_options} = $FAI::configs{$c}{partitions}{$p}{mount_options};
       $FAI::configs{$c}{partitions}{$p}{mount_options} = '-';
+      $FAI::configs{$config}{volumes}{$volume}{fstabkey} = $FAI::configs{$c}{fstabkey};
       $FAI::configs{$config}{volumes}{$volume}{devices}{$device . $p} = {};
       $FAI::configs{$config}{opts_all} = {};
       $single_vol_index++;

@@ -305,8 +305,14 @@ sub generate_fstab {
         my @device_names = keys %{ $config->{$c}->{volumes}->{$v}->{devices}};
 
         # Only one of the BTRFS RAID devices are necessary to get the fstab key
-        push @fstab, &FAI::create_fstab_line($config->{$c}->{volumes}->{$v},
-          &FAI::get_fstab_key($device_names[0], $config->{"BTRFS"}->{fstabkey}), $device_names[0]);
+
+        if (defined($config->{"BTRFS"}->{fstabkey})) {
+          push @fstab, &FAI::create_fstab_line($config->{$c}->{volumes}->{$v},
+                                               &FAI::get_fstab_key($device_names[0], $config->{"BTRFS"}->{fstabkey}), $device_names[0]);
+        } else {
+          push @fstab, &FAI::create_fstab_line($config->{$c}->{volumes}->{$v},
+                                               &FAI::get_fstab_key($device_names[0], $config->{$c}->{volumes}->{$v}->{fstabkey}), $device_names[0]);
+        }
       }
     } elsif ($c eq "CRYPT") {
       foreach my $v (keys %{ $config->{$c}->{volumes} }) {
