@@ -298,6 +298,7 @@ sub build_cryptsetup_commands {
 #
 ################################################################################
 sub build_btrfs_commands {
+  my $forcebtrfs = &btrfs_options;
 
 # following monstrosity takes care of single device/partition btrfs disk configs
   foreach my $c (keys %FAI::configs) {
@@ -345,6 +346,7 @@ sub build_btrfs_commands {
     defined($btrfscreateopts) or $btrfscreateopts = "";
     my $createopts = $vol->{createopts};
     defined($createopts) or $createopts = "";
+    $createopts =  $createopts . " $forcebtrfs";
     my $pre_req = "";
     # creates the proper prerequisites for later command ordering
     foreach (@devs) {
@@ -627,7 +629,7 @@ sub setup_logical_volumes {
   my ($config) = @_;
   ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
   my $vg = $1; # the actual volume group
-
+  my $optyes = &lvm_options;
   # now create or resize the configured logical volumes
   foreach my $lv (@{ $FAI::configs{$config}{ordered_lv_list} }) {
     # reference to the size of the current logical volume
@@ -704,6 +706,7 @@ sub setup_logical_volumes {
     my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
     # prevent warnings of uninitialized variables
     $create_options = '' unless $create_options;
+    $create_options = $create_options  . " $optyes";
     print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
     # create a new volume
     &FAI::push_command( "lvcreate $create_options -n $lv -L " .
@@ -1477,6 +1480,7 @@ sub btrfs_options {
 sub lvm_options {
   my $opt = `lvcreate --yes 2>&1`;
   my $lvmopt = $opt =~ 'unrecognized option' ? '' : '--yes';
+  return $lvmopt;
 }
 
 ################################################################################
