@@ -303,12 +303,13 @@ sub generate_fstab {
 
         # get an array of devices that are part of the BTRFS RAID configuration
         my @device_names = keys %{ $config->{$c}->{volumes}->{$v}->{devices}};
+        my $name_string = join(".", @device_names);
 
         # Only one of the BTRFS RAID devices are necessary to get the fstab key
 
         if (defined($config->{"BTRFS"}->{fstabkey})) {
           push @fstab, &FAI::create_fstab_line($config->{$c}->{volumes}->{$v},
-                                               &FAI::get_fstab_key($device_names[0], $config->{"BTRFS"}->{fstabkey}), $device_names[0]);
+                                               &FAI::get_fstab_key($device_names[0], $config->{"BTRFS"}->{fstabkey}), $name_string);
         } else {
           push @fstab, &FAI::create_fstab_line($config->{$c}->{volumes}->{$v},
                                                &FAI::get_fstab_key($device_names[0], $config->{$c}->{volumes}->{$v}->{fstabkey}), $device_names[0]);
