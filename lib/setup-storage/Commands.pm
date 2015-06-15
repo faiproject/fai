@@ -867,10 +867,10 @@ sub build_lvm_commands {
     }
 
     # prevent error due to different VG name of existing VG
-    if (defined(%FAI::configs{$d})) {
+    if (defined($FAI::configs{$d})) {
       # don't deactivate preserved VGs to prevent blkid error later on
-      foreach my $v (keys %FAI::configs{$d}->{volumes}) {
-        $preserved = 1 if (%FAI::configs{$d}->{volumes}->{$v}->{size}->{preserve});
+      foreach my $v (keys $FAI::configs{$d}{volumes}) {
+        $preserved = 1 if ($FAI::configs{$d}{volumes}{$v}{size}{preserve});
       }
     }
 
