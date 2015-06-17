@@ -1,4 +1,4 @@
-fai (4.4~beta21) unstable; urgency=medium
+fai (4.4~beta22) unstable; urgency=low
 
   [ Thomas Lange ]
   * major rewrite of the FAI guide
@@ -24,7 +24,9 @@ fai (4.4~beta21) unstable; urgency=medium
   * subroutines: print execution time for each task if $duration is set
   * subroutines: do not print hash of ROOTPW
   * control: add mksquashfs-tools
-  * fai-mirror: take arch into account in base-pkgs.lis
+  * fai-mirror: take arch into account in base-pkgs.lis, do not remove
+    reprepro dirs in mirror, fix order of getting packages, preserve
+    reprepro config files
   * dhcp-edit: make restart_dhcpd more quiet, allow non-root if using -d
   * fai.conf: add detailed info about FAI_CONFIG_SRC format
   * fai-kvm: add option -V
@@ -36,11 +38,16 @@ fai (4.4~beta21) unstable; urgency=medium
   * get-config-dir-http: add ram disk before extracting
   * simple examples: fix SELinux problems with CentOS 7, fix gnome package
     name
+  * 20-hwdetect.source: fix setting $disklist, calling set_disk_info is
+    insufficient
   * subroutines: check if kernel modules dir matches the kernel version
   * subroutines: check only for network or CD installation, Closes: #788230
   * subroutines: print disk_config if an error occurs within setup-storage
-  
+  * Commands.pm: use parted istead of sfdisk for setting boot flag
+  * Fstab.pm: put comments on a seperate line, Closes: #784842
+    Thanks to Raphael Geissert for the patch
   * task_sysinfo: start lvm, Closes: #769229, print also btrfs infos
+  * fai-cd: do only copy dists and pool dirs from mirror
 
   [ Kerim Güney ]
   * fai-cd: use dracut instead of live-boot, remove option -n, -k,
@@ -53,10 +60,13 @@ fai (4.4~beta21) unstable; urgency=medium
     Prevent setup-storage from attempting to run mkfs twice for single
     device btrfs filesystems
     Remove hardcoded fstabkey and enables using label and uuid for btrfs
+    Don't disable volume groups that need to be preserved, Closes: #787843
+    implement test for btrfs/lvm create options, Closes: #750212
   * setup-storage: support parted's old "resize" command and also the new
     "resizepart"
+  * Fstab.pm: list all btrfs devices in comment line
 
- -- Thomas Lange <lange@debian.org>  Tue, 26 May 2015 11:16:39 +0200
+ -- Thomas Lange <lange@debian.org>  Wed, 17 Jun 2015 13:53:52 +0200
 
 fai (4.3.2) unstable; urgency=low
 
