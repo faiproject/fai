@@ -25,6 +25,12 @@ ip ad show up | egrep -iv 'loopback|127.0.0.1|::1/128|_lft'
 
 echo $printk > /proc/sys/kernel/printk
 
-set_disk_info  # calculate number of available disks
+odisklist=$disklist
+set_disk_info  # recalculate list of available disks
+if [ X$disklist != X$odisklist ]; then
+    echo New disklist: $disklist
+    echo disklist=\"$disklist\" >> $LOGDIR/additional.var
+fi
+
 save_dmesg     # save new boot messages (from loading modules)
 
