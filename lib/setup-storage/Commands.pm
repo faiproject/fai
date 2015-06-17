@@ -1459,7 +1459,7 @@ sub restore_partition_table {
 
 ################################################################################
 #
-# @brief test whether --force option is available for btrfs
+# @brief test whether --force option is available for btrfs, wheezy/jessie
 #
 ################################################################################
 sub btrfs_options {
@@ -1471,7 +1471,7 @@ sub btrfs_options {
 
 ################################################################################
 #
-# @brief test whether --yes option is available for lvcreate
+# @brief test whether --yes option is available for lvcreate, wheezy/jessie
 #
 ################################################################################
 # Closes: #750212
