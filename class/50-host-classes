@@ -5,17 +5,17 @@
 # use a list of classes for our demo machine
 case $HOSTNAME in
     faiserver)
-        echo "FAIBASE DEBIAN DHCPC DEMO FAISERVER" ;;
+        echo "FAIBASE DEBIAN DEMO FAISERVER" ;;
     demohost|client*)
-        echo "FAIBASE DEBIAN DHCPC DEMO" ;;
+        echo "FAIBASE DEBIAN DEMO" ;;
     xfcehost)
-        echo "FAIBASE DEBIAN DHCPC DEMO XORG XFCE";;
+        echo "FAIBASE DEBIAN DEMO XORG XFCE";;
     gnomehost)
-        echo "FAIBASE DEBIAN DHCPC DEMO XORG GNOME";;
+        echo "FAIBASE DEBIAN DEMO XORG GNOME";;
     bear)
-        echo "FAIBASE DEBIAN DHCPC LVM_XEN_SERVER XEN" ;;
+        echo "FAIBASE DEBIAN LVM_XEN_SERVER XEN" ;;
     puma)
-        echo "FAIBASE DEBIAN DHCPC RAID_XEN_VIRTUAL" ;;
+        echo "FAIBASE DEBIAN RAID_XEN_VIRTUAL" ;;
     centos)
         echo "FAIBASE CENTOS"   # you may want to add class XORG here
         ifclass I386 && echo CENTOS6_32  # AFAIK there's no 32bit C7
@@ -28,8 +28,17 @@ case $HOSTNAME in
         ifclass AMD64 && echo SLC7_64
         exit 0 ;; # CentOS/SLC does not use the GRUB class
     *)
-        echo "FAIBASE DEBIAN DHCPC DEMO" ;;
+        echo "FAIBASE DEBIAN DEMO" ;;
 esac
+
+# determin if we are a DHCP client or not
+# count the : chars in the argument of ip=
+n="${ip//[^:]}"
+if [[ $ip =~ ^(on|any|dhcp)$ ]]; then
+    echo DHCP
+elif [ ${#n} -lt 6 ]; then
+    echo DHCP
+fi
 
 ifclass -o I386 AMD64 && echo GRUB_PC
 exit 0
