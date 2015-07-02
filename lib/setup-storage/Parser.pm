@@ -1066,6 +1066,10 @@ $FAI::Parser = Parse::RecDescent->new(
           my ($fs, $journal) = split(/:/, $item[1]);
           my $to_be_preserved = 0;
 
+          if ($fs eq "efi") {
+            $FAI::partition_pointer->{efi} = 1;
+            $fs = "vfat";
+          }
           $FAI::partition_pointer->{filesystem} = $fs;
 
           defined($journal) and $journal =~ s/journal=//;

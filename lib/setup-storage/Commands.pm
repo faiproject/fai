@@ -1321,6 +1321,7 @@ sub setup_partitions {
       $pre, "prep2_$dn");
     my $cmd = "true";
     $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
+    $cmd = "sgdisk --typecode=$part_id:ef00 $disk" if ($cmd eq "true" and $part->{efi} == 1);
     &FAI::push_command($cmd, "prep2_$dn", "exist_$dn");
 
     # (re-)set all flags
