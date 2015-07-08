@@ -183,7 +183,7 @@ task_error() {
 # Short-Description: call a certain task
 ### END SUBROUTINE INFO
 
-declare -A duration
+declare -A taskduration
 export duration=0
 task() {
 
@@ -206,9 +206,9 @@ task() {
         sendmon "TASKBEGIN $taskname"
         task_error=0   # task can set this variable to indicate an error
         task_error_func=''
-        duration[$taskname]=$SECONDS
+        taskduration[$taskname]=$SECONDS
         task_$taskname "$@"
-        [ $duration -eq 1 ] && echo "Duration of task $taskname: " $(($SECONDS-${duration[$taskname]}))"s"
+        [ $duration -eq 1 ] && echo "Duration of task $taskname: " $(($SECONDS-${taskduration[$taskname]}))"s"
         sendmon "TASKEND $taskname $task_error"
         if [ "$task_error" -ne 0 ] ; then
           echo "Exit code task_$taskname: $task_error" >&2
