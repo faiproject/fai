@@ -1324,7 +1324,7 @@ sub setup_partitions {
     &FAI::push_command($cmd, "prep2_$dn", "prep3_$dn");
 
     my $efi_cmd = "true";
-    $efi_cmd = "parted $disk set $part_id bios_grub on" if ($part->{efi} == 1 and $part->{mountpoint} =~ m/^\/boot/);
+    $efi_cmd = "sgdisk --typecode=$part_id:ef00 $disk" if ($part->{efi} == 1 and $part->{mountpoint} =~ m/^\/boot/);
     &FAI::push_command($efi_cmd, "prep3_$dn", "exist_$dn");
 
 
