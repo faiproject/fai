@@ -17,6 +17,7 @@ ram=2000
 disks=1
 cdimage=/files/scratch/fai-cd.iso # default name for CD image
 diskdir=/tmp     # directory where the disk images will be created, a RAM disk is recommended
+usernet=0
 
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
@@ -53,15 +54,16 @@ usage() {
  -m <mem>    RAM size (MB, defaults to 2000MB)
  -u <num>    number of the user (so multiple users can call this script)
  -V          do not use vga std with Bochs extensions, use the kvm default
-
+ -U          Use kvm user networking instead of tap devices
 EOF
   exit 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "hnu:s:m:d:V" opt ; do
+while getopts "Uhnu:s:m:d:V" opt ; do
     case "$opt" in
         n) newdisk=1    ;;
+        U) usernet=1 ;;
         u) user=$OPTARG ;;
         m) ram=$OPTARG ;;
         s) size=$OPTARG ;;
@@ -72,6 +74,11 @@ while getopts "hnu:s:m:d:V" opt ; do
     esac
 done
 shift $(($OPTIND - 1))
+
+if [ -z "$1" ]; then
+    echo Missing argument. pxe or cd
+    exit 1
+fi
 
 hex=$(echo $user 16o p | dc)
 diskfile=$diskdir/faitest-disk-$user
@@ -85,7 +92,13 @@ diskfile=$diskdir/faitest-disk-$user
 
 mac=52:54:00:11:23:$hex
 
-net="-net nic,macaddr=$mac,model=virtio -net tap,ifname=tap$user,script=no,downscript=no"
+if [ $usernet = 1 ]; then
+    net=""
+else
+    net="-net nic,macaddr=$mac,model=virtio -net tap,ifname=tap$user,script=no,downscript=no"
+fi
+
+
 disk=""
 for i in `seq 1 $disks` ; do
   disk="$disk -drive file=$diskfile-$i.qcow2,if=virtio,index=$i"
