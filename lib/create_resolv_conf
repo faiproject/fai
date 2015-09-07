@@ -6,12 +6,15 @@
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
 
-# create a resolv.conf using the DHCP or BOOTP information
-if [ "$DNSSRVS" ]; then
-        [ "$DOMAIN" ] && echo "domain $DOMAIN" >/etc/resolv.conf
-        for dnshost in $DNSSRVS ; do
-            echo "nameserver $dnshost" >>/etc/resolv.conf
-        done
+# use resolv.conf from dracut's initrd
+if [ -f /run/initramfs/state/etc/resolv.conf ]; then
+    cp  /run/initramfs/state/etc/resolv.conf /etc/resolv.conf
+elif [ "$DNSSRVS" ]; then
+    # create a resolv.conf using the DHCP information
+    [ "$DOMAIN" ] && echo "domain $DOMAIN" >/etc/resolv.conf
+    for dnshost in $DNSSRVS ; do
+        echo "nameserver $dnshost" >>/etc/resolv.conf
+    done
 else
     # use the resolv.conf from the installserver
     cp -p /etc/resolv.conf-installserver /etc/resolv.conf
