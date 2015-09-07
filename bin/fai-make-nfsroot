@@ -143,7 +143,7 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 . $cfdir/nfsroot.conf
 
 # IMO this may be removed, since all information should be included into sources.list
-[ -n "$FAI_LOCAL_REPOSITORY" ] && die "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list."
+[ -n "$FAI_LOCAL_REPOSITORY" ] && die 1 "The use of \$FAI_LOCAL_REPOSITORY is now deprecated. Please include this information into sources.list."
 [ -n "$packages" ] && badupdateto32 "The use of \$packages in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$NFSROOT_PACKAGES" ] && die 1 "The use of \$NFSROOT_PACKAGES in nfsroot.conf is now deprecated. Please include this information into $cfdir/NFSROOT."
 [ -n "$FAI_SOURCES_LIST" ] && die 1 "The use of \$FAI_SOURCES_LIST is deprecated. Please use sources.list now."
@@ -313,7 +313,7 @@ create_base() {
 extract_base() {
 
     if [ ! -r "$basetgz" ] ; then
-      die "Specified $basetgz could not be used."
+      die 7 "Specified $basetgz could not be used."
     fi
 
     if cd $NFSROOT ; then
@@ -571,6 +571,7 @@ fi
 echo "Creating FAI nfsroot in $NFSROOT"
 
 if [ $sshpreserve = 1 ]; then
+    [ -d $NFSROOT/root/.ssh ] || die 8 "Cannot preserve non-existing $NFSROOT/root/.ssh."
     [ "$verbose" ] && echo "Preserving root/.ssh directory from inside the nfsroot."
     # save old .ssh directory
     tmptar=$(mktemp) || die 12 "Cannot create tmp file"
