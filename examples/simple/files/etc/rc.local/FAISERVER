@@ -17,7 +17,9 @@ sleep 2
 if [ ! -d "$FAI_CONFIGDIR/class" ]; then
     mkdir -p $FAI_CONFIGDIR
     cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR
+    ainsl /srv/fai/config/class/FAIBASE.var "LOGUSER=fai"
 fi
+ainsl /etc/fai/fai.conf "LOGUSER=fai"
 
 # setup network
 ifup eth0
@@ -31,11 +33,17 @@ wget 'http://192.168.33.250:3142/acng-report.html?doImport=Start+Import&calcSize
 fai-setup -B /var/tmp/base.tar.xz -v 2>&1
 [ $? -eq 0 ] && rm /var/tmp/base.tar.xz
 
+# create default pxelinux boot configuration
+fai-chboot -o default
+
 # create a template for booting the installation
 fai-chboot -IFv -u nfs://faiserver/srv/fai/config jessie.tmpl
 
-# create default pxelinux boot configuration (same as jessie.tmpl)
-fai-chboot -vc jessie default
+fai-chboot -vc jessie.tmpl xfcehost demohost
+for c in {01..10}; do
+    fai-chboot -vc jessie.tmpl client$c
+done
+
 
 # move me away
 mv $0 /var/tmp
