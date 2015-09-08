@@ -39,9 +39,12 @@ fai-chboot -o default
 # create a template for booting the installation
 fai-chboot -IFv -u nfs://faiserver/srv/fai/config jessie.tmpl
 
-fai-chboot -vc jessie.tmpl xfcehost demohost
+# Since we do not know the MAC address, our DHCP cannot provide the hostname.
+# Therefore we do explicitly set the hostname
+fai-chboot -IFv -u nfs://faiserver/srv/fai/config -k hostname=xfcehost xfcehost
+fai-chboot -IFv -u nfs://faiserver/srv/fai/config -k hostname=demohost demohost
 for c in {01..10}; do
-    fai-chboot -vc jessie.tmpl client$c
+    fai-chboot -IFv -u nfs://faiserver/srv/fai/config -k hostname=client$c client$c
 done
 
 
