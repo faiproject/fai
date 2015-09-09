@@ -19,6 +19,7 @@ if [ ! -d "$FAI_CONFIGDIR/class" ]; then
     cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR
     ainsl /srv/fai/config/class/FAIBASE.var "LOGUSER=fai"
 fi
+# set the LOGUSER, wo we get all the logs from our install clients
 ainsl /etc/fai/fai.conf "LOGUSER=fai"
 
 # setup network
@@ -26,10 +27,11 @@ ifup eth0
 #ip addr add 192.168.33.250/24 brd + dev eth0 # (fixed address of faiserver)
 [ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
 
-# make index, then import
+# make index, then import the packages from the CD mirror
 apt-get update
 wget 'http://192.168.33.250:3142/acng-report.html?doImport=Start+Import&calcSize=cs&asNeeded=an#bottom'
 
+# setup the FAI server, including creating the nfsroot
 fai-setup -B /var/tmp/base.tar.xz -v 2>&1
 [ $? -eq 0 ] && rm /var/tmp/base.tar.xz
 
