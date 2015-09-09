@@ -214,7 +214,7 @@ sub generate_fstab {
   my @fstab = ();
 
   # mount point for /boot
-  my $boot_mnt_point = &FAI::find_boot_mnt_point();
+  my $boot_mnt_point = find_boot_mnt_point();
 
   # walk through all configured parts
   # the order of entries is most likely wrong, it is fixed at the end
@@ -247,8 +247,8 @@ sub generate_fstab {
           $FAI::disk_var{BOOT_DEVICE} = $device;
         }
 
-        push @fstab, &FAI::create_fstab_line($p_ref,
-          &FAI::get_fstab_key($device_name, $config->{$c}->{fstabkey}), $device_name);
+        push @fstab, create_fstab_line($p_ref,
+          get_fstab_key($device_name, $config->{$c}->{fstabkey}), $device_name);
 
       }
     } elsif ($c =~ /^VG_(.+)$/) {
@@ -271,8 +271,8 @@ sub generate_fstab {
         $FAI::disk_var{BOOT_DEVICE} = $device_name
           if ($l_ref->{mountpoint} eq $boot_mnt_point);
 
-        push @fstab, &FAI::create_fstab_line($l_ref,
-          &FAI::get_fstab_key($device_name, $config->{"VG_--ANY--"}->{fstabkey}), $device_name);
+        push @fstab, create_fstab_line($l_ref,
+          get_fstab_key($device_name, $config->{"VG_--ANY--"}->{fstabkey}), $device_name);
       }
     } elsif ($c eq "RAID") {
 
@@ -291,8 +291,8 @@ sub generate_fstab {
         $FAI::disk_var{BOOT_DEVICE} = $device_name
           if ($r_ref->{mountpoint} eq $boot_mnt_point);
 
-        push @fstab, &FAI::create_fstab_line($r_ref,
-          &FAI::get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
+        push @fstab, create_fstab_line($r_ref,
+          get_fstab_key($device_name, $config->{RAID}->{fstabkey}), $device_name);
       }
     } elsif ($c eq "BTRFS") {
       # cycles through the volume IDs
@@ -326,7 +326,7 @@ sub generate_fstab {
         ($c_ref->{mountpoint} eq $boot_mnt_point) and
           die "Boot partition cannot be encrypted\n";
 
-        push @fstab, &FAI::create_fstab_line($c_ref, $device_name, $device_name);
+        push @fstab, create_fstab_line($c_ref, $device_name, $device_name);
       }
     } elsif ($c eq "TMPFS") {
       foreach my $v (keys %{ $config->{$c}->{volumes} }) {
@@ -345,7 +345,7 @@ sub generate_fstab {
 	  $c_ref->{mount_options} .= "size=" . $c_ref->{size};
 	}
 
-        push @fstab, &FAI::create_fstab_line($c_ref, "tmpfs", "tmpfs");
+        push @fstab, create_fstab_line($c_ref, "tmpfs", "tmpfs");
       }
     } else {
       &FAI::internal_error("Unexpected key $c");
