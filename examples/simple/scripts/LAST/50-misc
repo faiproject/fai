@@ -4,6 +4,22 @@
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
+# check if mdadm has been forgotten
+if grep -q active /proc/mdstat 2>/dev/null; then
+    if [ ! -d $target/etc/mdadm ]; then
+	echo ERROR: Found Software RAID, but the mdadm package was not installed
+	error=1
+    fi
+fi
+
+usedm=$(dmsetup ls | egrep -v '^live-rw|^live-base' | wc -l)
+if [ $usedm -ne 0 ]; then
+    if [ ! -d $target/etc/lvm ]; then
+	echo ERROR: Found lvm devices, but the lvm2 package was not installed
+	error=1
+    fi
+fi
+
 # remove backup files from cfengine, but only if cfengine is installed
 if [ -x /usr/sbin/cfagent ] || [ -x $target/usr/sbin/cfagent ] ; then
     dirs="root etc var"
