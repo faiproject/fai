@@ -20,19 +20,6 @@ if [ $FAI_ACTION != "install" ]; then
     exit $error
 fi
 
-# check if mdadm has been forgotten
-if grep -q active /proc/mdstat 2>/dev/null; then
-    if [ ! -d $target/etc/mdadm ]; then
-	echo WARNING: Found Software RAID, but mdadm package was not installed
-    fi
-fi
-
-if [ -b /dev/dm-0 ]; then
-    if [ ! -d $target/etc/lvm ]; then
-	echo WARNING: Found lvm devices, but lvm2 pacakge was not installed
-    fi
-fi
-
 $ROOTCMD grub-mkdevicemap --no-floppy
 GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
 
