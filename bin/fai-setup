@@ -181,7 +181,7 @@ if [ -z "$expert" ]; then
     else
 	opt="dev $SERVERINTERFACE"
     fi
-    addr=$(ip addr show $SERVERINTERFACE | grep -w 'inet'|grep -v 127.0.0.1| cut -d t -f 2 | cut -d ' ' -f 2 |head -1)
+    iprange=$(ip addr show $SERVERINTERFACE | grep -w 'inet'|grep -v 127.0.0.1| cut -d t -f 2 | cut -d ' ' -f 2 |head -1)
     myip=$(ip a s $dev|sed -ne '/127.0.0.1/!{s/^[ \t]*inet[ \t]*\([0-9.]\+\)\/.*$/\1/p}'|head -1)
 
     echo "FAI_CONFIGDIR=$FAI_CONFIGDIR" >> /var/log/fai/variables
@@ -191,11 +191,11 @@ if [ -z "$expert" ]; then
     if ! egrep -v ^# /etc/exports | grep -q fsid=0; then
 	echo "No entry for NFS v4 found. Adding a dummy entry. This forces NFS v3 for the nfsroot."
 	mkdir -p /srv/nfs4
-	add_export_line "/srv/nfs4  $addr(fsid=0,async,ro,no_subtree_check)"
+	add_export_line "/srv/nfs4  $iprange(fsid=0,async,ro,no_subtree_check)"
     fi
 
-    add_export_line $FAI_CONFIGDIR  "$addr(async,ro,no_subtree_check)"
-    add_export_line $NFSROOT  "$addr(async,ro,no_subtree_check,no_root_squash)"
+    add_export_line $FAI_CONFIGDIR  "$iprange(async,ro,no_subtree_check)"
+    add_export_line $NFSROOT  "$iprange(async,ro,no_subtree_check,no_root_squash)"
     if [ -z "$nfsserver" ]; then
         echo "Could not find the type of your nfs server. Maybe"
         echo "no nfs server is installed. I can't restart it."
