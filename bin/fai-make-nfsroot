@@ -524,6 +524,18 @@ run_hooks() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+write_variables() {
+
+    local varfile=/var/log/fai/variables
+    local fai_version=$($ROOTCMD dpkg-query -W -f='${Version}' fai-client)
+
+    # remove old values from file
+    [ -s $varfile ] && sed -i -e '/FAI_VERSION/d' -e '/NFSROOT/d' $varfile
+    echo "FAI_VERSION=$fai_version" >> $varfile
+    echo "NFSROOT=$NFSROOT" >> $varfile
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 # main routine
 
 trap 'echo "Aborting";umount_dirs' EXIT
@@ -598,6 +610,7 @@ setup_tftp
 call_verbose setup_ssh
 run_hooks
 check_nfsroot
+write_variables
 
 if [ $generic = 1 ]; then
     # remove fai.conf which comes from package fai-client
