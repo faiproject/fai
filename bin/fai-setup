@@ -150,6 +150,7 @@ if [ -n "$LOGUSER" ]; then
     setup_fai_account
 fi
 
+cp /dev/null /var/log/fai/variables
 fai-make-nfsroot $options
 
 if [ -n "$LOGUSER" ]; then
@@ -174,8 +175,17 @@ mkdir -p $FAI_CONFIGDIR
 if [ -z "$expert" ]; then
     test -f /etc/init.d/nfs-kernel-server && nfsserver=nfs-kernel-server
 
-    : ${SERVERINTERFACE:=eth0}  # set to eth0 if not already set
-    addr=$(ip addr show dev $SERVERINTERFACE | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | head -1)
+    # by default use the first interface which is up
+    if [ -z "$SERVERINTERFACE" ]; then
+	opt="up"
+    else
+	opt="dev $SERVERINTERFACE"
+    fi
+    addr=$(ip addr show $SERVERINTERFACE | grep -w 'inet'|grep -v 127.0.0.1| cut -d t -f 2 | cut -d ' ' -f 2 |head -1)
+    myip=$(ip a s $dev|sed -ne '/127.0.0.1/!{s/^[ \t]*inet[ \t]*\([0-9.]\+\)\/.*$/\1/p}'|head -1)
+
+    echo "FAI_CONFIGDIR=$FAI_CONFIGDIR" >> /var/log/fai/variables
+    echo "FAI_CONFIG_SRC=nfs://${myip}$FAI_CONFIGDIR" >> /var/log/fai/variables
 
     # if not NFS v4 entry is found add a dummy entry. Workaround for #676883
     if ! egrep -v ^# /etc/exports | grep -q fsid=0; then
