@@ -6,7 +6,7 @@
 # fai-monitor -- monitor daemon which collects client status info
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2012 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2015 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -21,6 +21,8 @@ my $pidfile = '/var/run/fai-monitor.pid';
 my $logfile = '-';
 my $daemonlogfile = '/var/log/fai-monitor.log';
 my $useip;
+
+our %variables;
 
 our ($opt_b,$opt_h,$opt_p,$opt_l,$opt_t,$opt_d,$opt_P,$opt_T,$opt_i);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -114,6 +116,7 @@ sub big_loop() {
       alarm($timeout);
       $inp = <CLIENT>;
       alarm(0);
+      defined($inp) && $inp =~ /^VARIABLE / && reply_to_client($inp)
     };
 
     close CLIENT;
@@ -136,12 +139,47 @@ sub big_loop() {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub read_list_of_variables {
+
+  # read a file which contains a list of variables
+  # format:  key=value
+  # value may contain blanks
+  # generate a hash
+
+  my $varfile = "/var/log/fai/fai-variables";
+  return unless -f $varfile;
+
+  open(VARFILE, '<', "$varfile") or die "open $varfile: $!";
+  while (<VARFILE>) {
+    next if /^#/;
+    if (/^(\w+)=(.*)/) {
+      $variables{$1} = $2;
+    }
+  }
+  close(VARFILE);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub reply_to_client {
+
+  my $name = shift;
+
+  chomp $name;
+  $name =~ s/^VARIABLE //;
+
+  unless (exists $variables{$name}) {
+    print CLIENT "UNKNOWN $name\n";
+    return;
+  }
+  print CLIENT "OK $variables{$name}\n";
+  return;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub usage {
 
   print << "EOF";
 fai-monitor, FAI monitor daemon.
 
-    Copyright (C) 2003-2012 by Thomas Lange
+    Copyright (C) 2003-2015 by Thomas Lange
 
 Usage: fai-monitor [OPTIONS]
 
@@ -203,5 +241,6 @@ else {
 }
 
 
+read_list_of_variables;
 server_init;
 big_loop;
