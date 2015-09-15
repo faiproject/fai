@@ -33,8 +33,13 @@ base=${file%%.*}
 
 # now download tarball of config space
 echo -n "Getting configuration space tarball from $FAI_CONFIG_SRC ..."
-wget -q -t 5 $FAI_CONFIG_SRC && echo "done"
-task_error 882 $?
+wget -q -t 5 $FAI_CONFIG_SRC
+ret=$?
+if [ $? -eq 0 ]; then
+    echo "done"
+else    
+    task_error 882 $ret
+fi
 
 # extraxt the downloaded file using ftar. Therefore define a class
 # with the basename of the file
