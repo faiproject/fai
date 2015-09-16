@@ -761,6 +761,17 @@ eval_cmdline() {
 
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+read_fai_monitor_vars() {
+
+    # read variables which are received from the fai-monitor
+    if [ ! -s /run/initramfs/fai-variables ]; then
+	return
+    fi
+
+    eval `grep FAI_CONFIG_SRC /run/initramfs/fai-variables`
+    eval `grep FAI_FLAGS /run/initramfs/fai-variables`
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $faimond $sendid $SERVER $monserver
 # Requires-Var:    $LOGDIR $FAI
@@ -771,6 +782,8 @@ eval_cmdline() {
 task_confdir() {
 
     if [ $do_init_tasks -eq 1 ] ; then
+
+	read_fai_monitor_vars
         eval_cmdline
 
         get-boot-info
