@@ -1,4 +1,4 @@
-fai (4.4~beta31) unstable; urgency=low
+fai (4.4~beta34) unstable; urgency=low
 
   [ Thomas Lange ]
   * major rewrite of the FAI guide
@@ -10,6 +10,9 @@ fai (4.4~beta31) unstable; urgency=low
   * fai-mount-disk: now support lvm and RAID: Closes: #769229
   * fai-mount-disk: add option -w, add btrfs support
   * do not add machine-id into base file, create a new one Closes: #787235
+  * fai-monitor: add reply function which is used for autodiscover
+  * fai-monitor.8: add info about the new protocol extensions
+  * install_packages, get-config-dir-http: use curl instead of wget
   * fai-make-nfsroot: remove option -l, add otion -z, use xz as default
     compression,
     use os-release to define more classes for install_packages,
@@ -18,16 +21,24 @@ fai (4.4~beta31) unstable; urgency=low
     add test if sysvinit-core was installed
     setup ssh environment when using -a
     use apt-get instead of aptitude
+    do not install recommends inside nfsroot
     install dracut-* packages early, they are now hardcoded here
   * fai-setup: also add config space dir to exports, new home dir for
     LOGUSER
   * fai-cd: add -J, fix xorriso options to USB sticks bootable
+    do only copy dists and pool dirs from mirror, do not put
+    resolv.conf onto the CD, add more dirs to hide list
+    do not add memtest menu entry on bootonly CD
   * grub.cfg: add --unrestricted to some menu entries, handle boot from
     local disk via chainloader more advanced
     add entry for FAI server with fixed IP
-  * install_pacakges: add dnf support
+  * install_packages: add dnf support
   * subroutines: print execution time for each task if $duration is set
-  * subroutines: do not print hash of ROOTPW
+    do not print hash of ROOTPW
+    new subroutine read_fai_monitor_vars, called by task_confdir
+    check if kernel modules dir matches the kernel version
+    check only for network or CD installation, Closes: #788230
+    print disk_config if an error occurs within setup-storage
   * control: add mksquashfs-tools
   * fai-mirror: take arch into account in base-pkgs.lis, do not remove
     reprepro dirs in mirror, fix order of getting packages, preserve
@@ -37,7 +48,7 @@ fai (4.4~beta31) unstable; urgency=low
   * fai-kvm: add option -V, -U, -N, disable floppy disk
   * add fai-kvm to package fai-client
   * NFSROOT: use class DEBIAN_8, do not install systemd-sysv into the
-    nfsroot, add dracut-config-generic
+    nfsroot, add dracut-config-generic, use curn instead of wget
   * increase MAXPACKAGES
   * 10-setup: call update-grub later, disable os-prober because of #788062
   * package_config: add desktop-base for nicer grub and desktop background
@@ -51,16 +62,11 @@ fai (4.4~beta31) unstable; urgency=low
     insufficient
     50-host-classes: set class DHCP depending on the content of the ip=
     parameter of the kernel command line
-  * subroutines: check if kernel modules dir matches the kernel version
-  * subroutines: check only for network or CD installation, Closes: #788230
-  * subroutines: print disk_config if an error occurs within setup-storage
   * Commands.pm: use parted instead of sfdisk for setting boot flag
     Closes: #798390
   * Fstab.pm: put comments on a seperate line, Closes: #784842
     Thanks to Raphael Geissert for the patch
   * task_sysinfo: start lvm, Closes: #769229, print also btrfs infos
-  * fai-cd: do only copy dists and pool dirs from mirror, do not put
-    resolv.conf onto the CD
   * fai-chboot: add support for writing .tmpl files, new default (-1) for
     localboot
   * create_resolv_conf: use dracut's resolv.conf if available
@@ -89,7 +95,7 @@ fai (4.4~beta31) unstable; urgency=low
   * Fstab.pm: use local variable instead of global, remove &FAI:: from
     local function
     
- -- Thomas Lange <lange@debian.org>  Thu, 10 Sep 2015 14:04:17 +0200
+ -- Thomas Lange <lange@debian.org>  Wed, 16 Sep 2015 17:58:23 +0200
 
 fai (4.3.2) unstable; urgency=low
 
