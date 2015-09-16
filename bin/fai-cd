@@ -198,6 +198,10 @@ calculate_required_size() {
 
 provide_memtest_boot_option() {
 
+    if [ $bootonly -eq 1 ]; then
+	return
+    fi
+
     if [ -f $NFSROOT/boot/memtest86+.bin ]; then
         cp $NFSROOT/boot/memtest86+.bin $tmp/boot
     elif [ -f /boot/memtest86+.bin ]; then
@@ -207,7 +211,7 @@ provide_memtest_boot_option() {
         return
     fi
 
-        cat >> $tmp/boot/grub/grub.cfg <<EOF
+    cat >> $tmp/boot/grub/grub.cfg <<EOF
 
 menuentry "Memory test (memtest86+)" {
     linux16 /boot/memtest86+.bin
