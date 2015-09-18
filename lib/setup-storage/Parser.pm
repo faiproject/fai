@@ -703,6 +703,10 @@ $FAI::Parser = Parse::RecDescent->new(
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
+	| /^vg:(\d+)/
+	{
+          $FAI::configs{$FAI::device}{vg} = $1;
+        }
 	| /^sameas:(\S+)/
 	{
 	  my $ref_dev = &FAI::resolve_disk_shortname($1);
@@ -1169,8 +1173,10 @@ sub check_config {
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
     if ($config =~ /^PHY_(.+)$/) {
-      (scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
-        die "Empty disk_config stanza for device $1\n";
+      unless ($FAI::configs{$config}{vg} == 1) {
+	(scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
+	  die "Empty disk_config stanza for device $1\n";
+      }
       foreach my $p (keys %{ $FAI::configs{$config}{partitions} }) {
         # following catches if one attempts to use a partition that doesn't exist in the config file
         if (!(defined($FAI::configs{$config}{partitions}{$p}{size}{range})) and $FAI::configs{$config}{partitions}{$p}{size}{extended} == 0) {

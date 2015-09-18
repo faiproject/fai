@@ -225,7 +225,7 @@ sub generate_fstab {
     # entry is a physical device
     if ($c =~ /^PHY_(.+)$/) {
       my $device = $1;
-
+      next if ($config->{$c}->{vg} == 1);
       # make sure the desired fstabkey is defined at all
       defined ($config->{$c}->{fstabkey})
         or &FAI::internal_error("fstabkey undefined");
@@ -247,6 +247,7 @@ sub generate_fstab {
           # set the BOOT_DEVICE and BOOT_PARTITION variables
           $FAI::disk_var{BOOT_PARTITION} = $device_name;
           $FAI::disk_var{BOOT_DEVICE} = $device;
+
         }
 
         push @fstab, create_fstab_line($p_ref,

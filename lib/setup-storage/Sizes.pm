@@ -464,6 +464,10 @@ sub do_partition_real {
     $max_avail = $current_disk->{end_byte} + 1 - $next_start;
     $max_avail = "${max_avail}B";
   }
+
+  unless ($part->{size}->{range}) {
+    $part->{size}->{range} = '512-100%';
+  }
   my ($start, $end) = &FAI::make_range($part->{size}->{range}, $max_avail);
 
   # check, whether the size is fixed

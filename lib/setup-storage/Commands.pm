@@ -1360,7 +1360,7 @@ sub build_disk_commands {
   # loop through all configs
   foreach my $config ( keys %FAI::configs ) {
     # no RAID, encrypted, tmpfs or LVM devices here
-    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./);
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $FAI::configs{$config}{vg});
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
     my $disk = $1; # the device to be configured
 
