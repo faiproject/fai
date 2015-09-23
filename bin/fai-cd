@@ -43,6 +43,7 @@ burn=0
 bootonly=0
 squash_only=0
 nomirror=0
+hidevartmp=0
 liveos="squashfs-root/LiveOS/"
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/cache/debconf /var/cache/apt /var/cache/man /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
 
@@ -58,7 +59,7 @@ usage() {
 	Usage: fai-cd [OPTIONS] -B ISONAME
 	Usage: fai-cd [OPTIONS] -S IMAGEFILE
 	Create a FAI CD, a bootable CD that performs the FAI or a squashfs boot image.
-	Read the man pages pages fai-cd(8).
+	Read the man pages pages fai-cd(8) for more information.
 EOF
 exit 0
 }
@@ -96,6 +97,7 @@ create_ext3fs_image() {
     cp -Pr $ONFSROOT/* $ONFSROOT/.??* $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
     rm -f $tmp/$liveos/mounted-ext3fs/etc/resolv.conf
 
+    # find $tmp/$liveos/mounted-ext3fs # for debugging
     # copy config space into nfsroot-copy unless -d is given
     if [ $configset -eq 0 ]; then
         echo "Copying the config space to temporary directory"
@@ -298,9 +300,10 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "nkfhHg:JbSBMm:C:d:" opt ; do
+while getopts "enkfhHg:JbSBMm:C:d:" opt ; do
     case "$opt" in
         C)  cdir="$OPTARG" ;;
+        e)  hidevartmp=1 ;;
         f)  forceremoval=1 ;;
         h)  usage ;;
         H)  hidedirs="" ;;
@@ -355,6 +358,8 @@ fi
 ONFSROOT=$NFSROOT # save original nfsroot
 
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling fai-make-nfsroot or fai-setup."
+
+[ $hidevartmp -eq 1 ] && hidedirs+="/var/tmp"
 
 # if -g is a file name, add prefix
 
