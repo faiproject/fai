@@ -191,7 +191,7 @@ preserve=0
 verbose=0
 add=1
 qflag=-qq
-while getopts "a:Bvhx:pc:C:m:" opt ; do
+while getopts "a:Bvhx:pc:C:m:P:" opt ; do
     case "$opt" in
         a) arch=$OPTARG ;;
         B) add=0 ;;
@@ -202,6 +202,7 @@ while getopts "a:Bvhx:pc:C:m:" opt ; do
         m) MAXPACKAGES="$OPTARG";;
         p) preserve=1;;
         v) verbose=1; vflag=-v; qflag='';;
+        P) aptpref="$OPTARG";;
         ?) die 1 "Unknown option";;
     esac
 done
@@ -256,6 +257,9 @@ if [ "$(ls -A $cfdir/apt/sources.list.d/)" ]; then
     sed -e 's/file:/copy:/' $cfdir/apt/sources.list.d/* >> $aptcache/etc/apt/sources.list
 else
 
+if [ -f "$aptpref" ]; then
+    cp "$aptpref" $aptcache/etc/apt/preferences
+fi
 echo "Getting package information"
 apt-get $qflag $aptoptions update >/dev/null
 
