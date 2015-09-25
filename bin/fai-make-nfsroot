@@ -462,12 +462,18 @@ upgrade_nfsroot() {
 add_packages_nfsroot() {
 
     export FAI_ROOT=$NFSROOT
+    local err
 
     install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
     echo "Adding additional packages to $NFSROOT:"
     cat $NFSROOT/var/tmp/packages.nfsroot
+    set +e
     call_verbose install_packages -N $v -p$cfdir
-    echo "install_packages exit code: $?"
+    err=$?
+    if [ $e -ne 0 ]; then
+	die 12 "install_packages had exit code: $err"
+    fi
+    set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_dirs() {

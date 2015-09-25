@@ -151,7 +151,14 @@ if [ -n "$LOGUSER" ]; then
 fi
 
 cp /dev/null /var/log/fai/variables
+set +e
 fai-make-nfsroot $options
+err=$?
+if [ $err -ne 0 ]; then
+    echo "ERROR when calling fai-make-nfsroot."
+    exit 9
+fi
+set -e
 
 if [ -n "$LOGUSER" ]; then
     # chown only if cd was successful
