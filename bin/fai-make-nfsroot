@@ -470,7 +470,7 @@ add_packages_nfsroot() {
     set +e
     call_verbose install_packages -N $v -p$cfdir
     err=$?
-    if [ $e -ne 0 ]; then
+    if [ $err -ne 0 ]; then
 	die 12 "install_packages had exit code: $err"
     fi
     set -e
@@ -510,10 +510,10 @@ setup_tftp(){
     rm -f $NFSROOT/boot/*.bak
     mkdir -p $TFTPROOT/pxelinux.cfg
     chmod a+r $NFSROOT/boot/initrd.img-* || die 9 "No initrd was created. Check the package name of the linux-image package in /etc/fai/NFSROOT."
-    cp -pv $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
+    cp -p $v $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
     cp -u $pxebin $TFTPROOT
     [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ] && cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
-    echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
+    [ $verbose ] && echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fdivert() {
