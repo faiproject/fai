@@ -1,4 +1,4 @@
-fai (4.4~beta38) unstable; urgency=low
+fai (4.4~beta40) unstable; urgency=low
 
   [ Thomas Lange ]
   * major rewrite of the FAI guide
@@ -9,6 +9,7 @@ fai (4.4~beta38) unstable; urgency=low
   * use httpredir.debian.org instead of http.debian.net
   * fai-mount-disk: now support lvm and RAID: Closes: #769229
   * fai-mount-disk: add option -w, add btrfs support
+  * use .sh instead of .source suffix for file being sourced
   * do not add machine-id into base file, create a new one Closes: #787235
   * fai-monitor: add reply function which is used for autodiscover
   * fai-monitor.8: add info about the new protocol extensions
@@ -23,6 +24,7 @@ fai (4.4~beta38) unstable; urgency=low
     use apt-get instead of aptitude
     do not install recommends inside nfsroot
     install dracut-* packages early, they are now hardcoded here
+    add dracut.conf.d files to make initrd smaller
   * fai-setup: also add config space dir to exports, new home dir for
     LOGUSER
   * fai-cd: add -J, -e, fix xorriso options to USB sticks bootable
@@ -41,8 +43,10 @@ fai (4.4~beta38) unstable; urgency=low
     print disk_config if an error occurs within setup-storage
   * control: add mksquashfs-tools
   * fai-mirror: take arch into account in base-pkgs.lis, do not remove
-    reprepro dirs in mirror, fix order of getting packages, preserve
-    reprepro config files
+    reprepro dirs in mirror, fix order of getting packages,
+    preserve reprepro config files,
+    also use files in /etc/fai/apt/sources.list.d
+    add option -P, t Thanks to Andreas Heinlein for the patch
   * dhcp-edit: make restart_dhcpd more quiet, allow non-root if using -d
   * fai.conf: add detailed info about FAI_CONFIG_SRC format
   * fai-kvm: add option -V, -U, -N, disable floppy disk
@@ -71,6 +75,8 @@ fai (4.4~beta38) unstable; urgency=low
     localboot, search nfsroot for kernel suffix
   * create_resolv_conf: use dracut's resolv.conf if available
   * fai-nfsroot2image removed, this can now be done using fai-cd
+  * fai-savelog: return error code if scp fails
+  * subroutines: call task_error after fai-savelog -r
 
   [ Kerim Güney ]
   * fai-cd: use dracut instead of live-boot, remove option -n, -k,
@@ -97,7 +103,7 @@ fai (4.4~beta38) unstable; urgency=low
   * Fstab.pm: use local variable instead of global, remove &FAI:: from
     local function
     
- -- Thomas Lange <lange@debian.org>  Wed, 16 Sep 2015 19:40:33 +0200
+ -- Thomas Lange <lange@debian.org>  Fri, 25 Sep 2015 18:51:57 +0200
 
 fai (4.3.2) unstable; urgency=low
 
