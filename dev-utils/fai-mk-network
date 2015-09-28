@@ -1,0 +1,116 @@
+#! /bin/bash
+
+#*********************************************************************
+#
+# fai-mk-network -- setup a test network for FAI
+#
+# This script is part of FAI (Fully Automatic Installation)
+# (c) 2015 by Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+
+tapnum=9          # how many tap devies will be created
+brip=192.168.33.1 # IP of bridge device
+
+usage() {
+
+    cat <<EOF
+fai-mk-network, setup a test network for FAI
+
+   Copyright (C) 2015 by Thomas Lange
+
+Usage: fai-mk-network  {OPTION] USER
+
+   -r                   Remove the network setup.
+
+DESCRIPTION
+fai-mk-network creates a number of tap devices which are added to a
+software bridge. This bridge will be on a private subnet.
+
+Using fai-kvm you can start virtual machines which are connected
+to on of the tap devices.
+EOF
+    exit 0
+}
+
+
+mk_tap_devices() {
+
+  for i in $(eval echo {1..$tapnum}); do
+      [ -f /sys/class/net/tap$i/address ] && continue
+      ip tuntap add dev tap$i mode tap user $user
+      # when mixing tap devices and a real eth0 into a bridge, the
+      # ethernet device should alsways have the lowest MAC address.
+      # A bridge always uses the smallest/lowest MAC address when
+      # doing dhcp requests. Make sure the tap devices have a high MAC address
+      # change MAC address, so it begins with fX:
+      mac=`sed -e 's/^./f/' /sys/class/net/tap$i/address`
+      ip link set tap$i address $mac
+  done
+}
+
+mk_bridge() {
+
+    brctl addbr br0
+    ip addr add $brip/24 brd + dev br0
+    ip link set br0 up
+
+    for i in $(eval echo {1..$tapnum}); do
+	[ -f /sys/class/net/tap$i/address ] || continue
+	brctl addif br0 tap$i          # add device to the bridge
+	ip link set tap$i up
+    done
+}
+
+rm_bridge() {
+
+    for i in $(eval echo {1..$tapnum}); do
+	[ -f /sys/class/net/tap$i/address ] || continue
+	brctl delif br0 tap$i          # add device to the bridge
+	ip link set tap$i down
+	ip tuntap del dev tap$i mode tap
+    done
+    ip link set br0 down
+    ip addr flush br0
+    brctl delbr br0
+    exit 0
+}
+
+
+
+while getopts r opt ; do
+    case "$opt" in
+        r) rm_bridge ;;
+        h) usage ;;
+        esac
+done
+shift $(($OPTIND - 1))
+
+if [ $(id -u) != "0" ]; then
+    echo "Run this program as root."
+    exit 3
+fi
+
+if [ -z "$1" ]; then
+    echo "Please add a user name which will own the tap devices."
+    echo ""
+    usage
+fi
+user=$1
+
+
+mk_tap_devices
+mk_bridge
+
+# enable forward IP and do NATing
+sysctl -w net.ipv4.ip_forward=1
+iptables -t nat -I POSTROUTING -o eth0 -j MASQUERADE
+
+
+#  entry for /etc/network/interfaces:
+#  auto br0
+#  iface br0 inet static
+#  address 192.168.33.1
+#  netmask 255.255.255.0
+#  bridge_ports regex (tap).*
