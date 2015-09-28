@@ -126,7 +126,7 @@ sub lsdir {
 # -lg list by goups (enabled, disabled, templates, others)
 # -l[detog] <pattern> list matching pattern
 
-  my ($h,$n,$host,$iaddr,$hex,$type);
+  my ($h,$n,$host,$iaddr,$filename,$type);
 
   @patterns = @_; # a global variable
 
@@ -141,26 +141,26 @@ sub lsdir {
   $opt_g and @allfiles = (@enabled,@disabled,@templates,@other);
 
   # map all entries (in HEX) to hostname or IP
-  foreach $hex (@allfiles) {
+  foreach $filename (@allfiles) {
     undef $host;
     undef $type;
 
-    if ($hex =~ /^default(.disable)?$/) {
-      $host = $hex;
+    if ($filename =~ /^default(.disable)?$/) {
+      $host = $filename;
       $type = '[DEFAULT]';
     }
-    if ($hex =~ /\.tmpl$/) {
-      $host = "$hex";
+    if ($filename =~ /\.tmpl$/) {
+      $host = "$filename";
       $type = '[Template]';
     }
 
-    if ($hex =~ /^01-[0-9A-F-]{17}$/i) {
-      $host = "$hex";
+    if ($filename =~ /^01-[0-9A-F-]{17}$/i) {
+      $host = "$filename";
       $type = '[MAC address]';
     }
 
-    if (($hex =~ /^[0-9A-F]+/) && ($hex !~ /^01-/) ) {
-      my $hexstrip = (split /\./,$hex)[0]; # remove .disable if necessary
+    if (($filename =~ /^[0-9A-F]+/) && ($filename !~ /^01-/) ) {
+      my $hexstrip = (split /\./,$filename)[0]; # remove .disable if necessary
       $n = $hexstrip;
       # hex to ip/subnet address
       while ( length $n ) {
@@ -180,13 +180,13 @@ sub lsdir {
     }
 
     if ( !$host ) {
-      $host = $hex;
+      $host = $filename;
       $type = '[Other]';
     }
 
-    $hexname{$host} = $hex;
-    $hname{$hex}= $host;
-    $type{$hex} = $type if $type;
+    $hexname{$host} = $filename;
+    $hname{$filename}= $host;
+    $type{$filename} = $type if $type;
   }
 
   if ($opt_g) { # print in group, sorted inside each group
