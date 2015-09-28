@@ -2,8 +2,7 @@
 
 # (c) Thomas Lange, 2002-2013, lange@informatik.uni-koeln.de
 
-# NOTE: Files named *.source will be evaluated, but their output ignored. Instead
-# the contents of $newclasses will be added to the list of defined classes.
+# NOTE: Files named *.sh will be evaluated, but their output ignored.
 
 [ $do_init_tasks -eq 1 ] || return 0 # Do only execute when doing install
 
