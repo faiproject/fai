@@ -74,6 +74,9 @@ rm_bridge() {
     ip link set br0 down
     ip addr flush br0
     brctl delbr br0
+
+    iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+    sysctl -w net.ipv4.ip_forward=0
     exit 0
 }
 
