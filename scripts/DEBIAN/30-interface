@@ -23,7 +23,9 @@ then
 	  gateway $GATEWAYS
 EOF
     [ -n "$NETWORK" ] && echo "localnet $NETWORK" > $target/etc/networks
-    [ -L $target/etc/resolv.conf ] || cp -p /etc/resolv.conf $target/etc
+    if [ ! -L $target/etc/resolv.conf -a -e /etc/resolv.conf ]; then
+	cp -p /etc/resolv.conf $target/etc
+    fi
 fi
 
 # here fcopy is mostly used, when installing a client for running in a
