@@ -20,7 +20,7 @@ fai-mk-network, setup a test network for FAI
 
    Copyright (C) 2015 by Thomas Lange
 
-Usage: fai-mk-network  {OPTION] USER
+Usage: fai-mk-network  {OPTION} USER
 
    -r                   Remove the network setup.
 
@@ -92,13 +92,14 @@ while getopts hr opt ; do
 done
 shift $(($OPTIND - 1))
 
-if [ ! -x "$(which brctl)" ]; then
-    echo "brctl not found. Please install bridge-utils."
-    exit 3
+if [ $(id -u) != "0" ]; then
+    echo "You must run this program as root."
+    echo
+    usage
 fi
 
-if [ $(id -u) != "0" ]; then
-    echo "Run this program as root."
+if [ ! -x "$(which brctl)" ]; then
+    echo "brctl not found. Please install bridge-utils."
     exit 3
 fi
 
