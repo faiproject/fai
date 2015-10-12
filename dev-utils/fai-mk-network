@@ -25,8 +25,10 @@ Usage: fai-mk-network  {OPTION] USER
    -r                   Remove the network setup.
 
 DESCRIPTION
-fai-mk-network creates a number of tap devices which are added to a
-software bridge. This bridge will be on a private subnet.
+fai-mk-network creates $tapnum tap devices which are added to a
+software bridge. This bridge will be on a private subnet ($brip/24).
+Also a NAT rule for iptables is used for routing traffic to the
+outside internet through eth0.
 
 Using fai-kvm you can start virtual machines which are connected
 to on of the tap devices.
@@ -82,7 +84,7 @@ rm_bridge() {
 
 
 
-while getopts r opt ; do
+while getopts hr opt ; do
     case "$opt" in
         r) rm_bridge ;;
         h) usage ;;
