@@ -51,9 +51,9 @@ usage() {
 
  -n          create a new empty disk image, which is used as a local disk
  -N          recreate a new empty disk image, even if one already exists
- -s <size>   size of the local disk (GB, defaults to 5GB)
+ -s <size>   size of the local disk (GB, defaults to ${size}GB)
  -d <num>    number of local disks (default is one)
- -m <mem>    RAM size (MB, defaults to 2000MB)
+ -m <mem>    RAM size (MB, defaults to ${ram}MB)
  -u <num>    user id. This will become the tap device number and a part of the MAC address
              and part of the disk files names. Each VM must have a unique number.
  -V          do not use vga std with Bochs extensions, use the kvm default
@@ -118,11 +118,11 @@ gopt="$fix $vga -m $ram -smp 2 -name FAI-test"
 if [ X$newdisk != X0 ]; then
   for i in `seq 1 $disks` ; do
       if [ X$newdisk = X1 -a -f $diskfile-$i.qcow2 ]; then
-	  echo "Cannot overwrite disk image. Please use -N."
+	  echo "Will not overwrite disk image. Please use -N."
 	  exit 3
       fi
       rm -f $diskfile-$i.qcow2
-    qemu-img create -f qcow2 -o preallocation=metadata $diskfile-$i.qcow2 ${size}G
+      qemu-img create -f qcow2 -o preallocation=metadata $diskfile-$i.qcow2 ${size}G
   done
 fi
 
