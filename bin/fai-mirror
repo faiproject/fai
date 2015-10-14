@@ -156,7 +156,8 @@ add_base_packages() {
         echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
     fi
 
-    # now use sources.list for debootstrap packages
+    mv $aptcache/etc/apt/sources.list $aptcache   # save sources.list
+    # now use different sources.list for debootstrap packages
     echo "$FAI_DEBOOTSTRAP" | awk '{printf "deb %s %s main\n",$2,$1}' | perl -p -e 's/file:/copy:/' > $aptcache/etc/apt/sources.list
     echo "Adding packages from $NFSROOT/var/tmp/base-pkgs.lis"
     if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
@@ -167,6 +168,8 @@ add_base_packages() {
         echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists." >&2
         echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
     fi
+    mv $aptcache/sources.list $aptcache/etc/apt/sources.list   # restore sources.list
+    apt-get $qflag $aptoptions update >/dev/null
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set-classes() {
@@ -278,7 +281,7 @@ cat > $mirrordir/conf/distributions <<EOF   # generate config file for reprepro
 Codename: cskoeln
 Architectures: i386 amd64
 Components: main non-free contrib
-DebIndices: Packages Release . .bz2
+DebIndices: Packages Release . .xz
 Description: FAI packages from author's repository
 Label: fai-project.org
 Origin: Original FAI archive
