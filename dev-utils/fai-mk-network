@@ -12,6 +12,7 @@
 
 tapnum=9          # how many tap devies will be created
 brip=192.168.33.1 # IP of bridge device
+netdev=eth0       # network device used for routing to the outside internet
 
 usage() {
 
@@ -28,7 +29,7 @@ DESCRIPTION
 fai-mk-network creates $tapnum tap devices which are added to a
 software bridge. This bridge will be on a private subnet ($brip/24).
 Also a NAT rule for iptables is used for routing traffic to the
-outside internet through eth0.
+outside internet through $netdev.
 
 Using fai-kvm you can start virtual machines which are connected
 to on of the tap devices.
@@ -77,7 +78,7 @@ rm_bridge() {
     ip addr flush br0
     brctl delbr br0
 
-    iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+    iptables -t nat -D POSTROUTING -o $netdev -j MASQUERADE
     sysctl -w net.ipv4.ip_forward=0
     exit 0
 }
@@ -116,7 +117,7 @@ mk_bridge
 
 # enable forward IP and do NATing
 sysctl -w net.ipv4.ip_forward=1
-iptables -t nat -I POSTROUTING -o eth0 -j MASQUERADE
+iptables -t nat -I POSTROUTING -o $netdev -j MASQUERADE
 
 
 #  entry for /etc/network/interfaces:
