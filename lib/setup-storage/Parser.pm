@@ -1173,7 +1173,7 @@ sub check_config {
   # loop through all configs
   foreach my $config (keys %FAI::configs) {
     if ($config =~ /^PHY_(.+)$/) {
-      unless ($FAI::configs{$config}{vg} == 1) {
+      unless (exists($FAI::configs{$config}{vg}) && $FAI::configs{$config}{vg} == 1) {
 	(scalar(keys %{ $FAI::configs{$config}{partitions} }) > 0) or
 	  die "Empty disk_config stanza for device $1\n";
       }

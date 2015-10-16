@@ -225,7 +225,7 @@ sub generate_fstab {
     # entry is a physical device
     if ($c =~ /^PHY_(.+)$/) {
       my $device = $1;
-      next if ($config->{$c}->{vg} == 1);
+      next if (exists($config->{$c}->{vg}) && $config->{$c}->{vg} == 1);
       # make sure the desired fstabkey is defined at all
       defined ($config->{$c}->{fstabkey})
         or &FAI::internal_error("fstabkey undefined");
