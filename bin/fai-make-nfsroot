@@ -387,6 +387,11 @@ EOF
 
     add_etc_hosts_entries
 
+    # use a proxy if variable is defined
+    if [ -n "$APTPROXY" ]; then
+	echo "Acquire::http::Proxy \"$APTPROXY\";" > $NFSROOT/etc/apt/apt.conf.d/02proxy
+    fi
+
     [ "$verbose" ] && echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose upgrade_nfsroot
 
