@@ -19,18 +19,12 @@ if [ $FAI_ACTION = "install" ]; then
     ainsl -av /etc/apt/apt.conf.d/02proxy 'Acquire::http::Proxy "http://127.0.0.1:3142";'
 
     # create some host entries
-    ainsl /etc/hosts "192.168.33.250 faiserver"  # that's me
+    myip=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
+    ainsl /etc/hosts "$myip faiserver"  # that's me
     ainsl /etc/hosts "192.168.33.100 demohost"
     ainsl /etc/hosts "192.168.33.101 xfcehost"
     # add entries for 10 hosts called client 01 .. 10
     perl -e 'for (1..10) {printf "192.168.33.%s client%02s\n",101+$_,$_;}' >> $target/etc/hosts
-
-    # workaround for #676883, this disables NFS v4, so the nfsroot is exported via NFS v3
-    mkdir $target/srv/nfs4
-    ainsl /etc/exports '/srv/nfs4  192.168.33.0/24(fsid=0,async,ro,no_subtree_check,no_root_squash)'
-
-    # add access via apt-cacher-ng
-    sed -i -e 's#http://#&faiserver:3142/#' $target/etc/fai/nfsroot.conf $target/etc/fai/apt/sources.list
 
     sed -i -e '/# ReuseConnections: 1/d' $target/etc/apt-cacher-ng/acng.conf
     ainsl -v /etc/apt-cacher-ng/acng.conf "ReuseConnections: 0"
