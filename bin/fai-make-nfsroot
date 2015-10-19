@@ -442,6 +442,12 @@ upgrade_nfsroot() {
             cat $f | $ROOTCMD apt-key add -
         done
     fi
+
+    # if we have the keyring on the host, install the key of the fai-project.org package repository
+    if [ -f /usr/share/keyrings/debian-keyring.gpg ]; then
+	HOME=/root gpg --keyring /usr/share/keyrings/debian-keyring.gpg --export 074BCDE4 | chroot $NFSROOT apt-key add -
+    fi
+
     $ROOTCMD apt-get update
     $ROOTCMD apt-get -yf --no-install-recommends install dracut-network dracut-config-generic fai-nfsroot nfs-common
     $ROOTCMD apt-get -y dist-upgrade
