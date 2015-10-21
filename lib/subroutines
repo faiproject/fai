@@ -1050,6 +1050,8 @@ task_repository () {
 APT::Get::AllowUnauthenticated "true";
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
+    else
+	rm -f $FAI_ROOT/etc/apt/apt.conf.d/10fai
     fi
 
     # add apt keys for signed repositories
@@ -1064,7 +1066,7 @@ EOF
     for keyfile in ${classes:-}; do
         [ ! -f $FAI/package_config/$keyfile.asc ] && continue
         echo -n "Loading APT key from $keyfile.asc "
-        cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key add -
+        cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key --keyring /etc/apt/trusted.gpg.d/$keyfile.asc.gpg add -
         unset keys["$keyfile.asc"]
     done
 
