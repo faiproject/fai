@@ -5,7 +5,13 @@
 # (c) 2015 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 
-[ X$FAI_ACTION = Xinstall ] || return 0
+if [ X$FAI_ACTION = Xinstall -o X$FAI_ACTION = X ]; then
+    :
+else
+    return
+fi
+
+   
 [ "$flag_menu" ] || return 0
 
 tempfile=`(tempfile) 2>/dev/null`
