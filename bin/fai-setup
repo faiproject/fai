@@ -207,7 +207,12 @@ if [ -z "$expert" ]; then
         echo "Could not find the type of your nfs server. Maybe"
         echo "no nfs server is installed. I can't restart it."
     else
-        /etc/init.d/$nfsserver reload
+	if pidof nfsd >/dev/null
+	then
+	    /etc/init.d/$nfsserver reload
+	else
+	    /etc/init.d/$nfsserver restart
+	fi
     fi
 fi
 
