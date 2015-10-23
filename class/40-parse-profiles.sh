@@ -1,3 +1,4 @@
+
 #! /bin/bash
 
 # parse *.profile and build a curses menu, so the user can select a profile
@@ -11,7 +12,6 @@ else
     return
 fi
 
-   
 [ "$flag_menu" ] || return 0
 
 tempfile=`(tempfile) 2>/dev/null`
