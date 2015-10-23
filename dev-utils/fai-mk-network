@@ -10,8 +10,11 @@
 #
 #*********************************************************************
 
-tapnum=9          # how many tap devies will be created
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+tapnum=3          # how many tap devies will be created
 brip=192.168.33.1 # IP of bridge device
+brname=br0
 netdev=eth0       # network device used for routing to the outside internet
 
 usage() {
@@ -21,17 +24,18 @@ fai-mk-network, setup a test network for FAI
 
    Copyright (C) 2015 by Thomas Lange
 
-Usage: fai-mk-network  {OPTION} USER
+Usage: fai-mk-network  {OPTIONS} USER
 
    -r                   Remove the network setup.
+   -P                   Do not put the bridge into a private network
 
 DESCRIPTION
-fai-mk-network creates $tapnum tap devices which are added to a
-software bridge. The tap devices will belong to the user spacified.
-This bridge will be on a private subnet ($brip/24). Also a NAT rule
-for iptables is used for routing traffic to the outside internet through
-$netdev. You can configure different settings by modifying some
-variables in the script itself.
+fai-mk-network creates $tapnum tap devices which are added to a software bridge.
+The tap devices will belong to the user specified. This bridge will be on a
+private subnet ($brip/24) unless -P is specified, Using -P the bridge
+will use the network of $netdev. Also a NAT rule for iptables is used for routing
+traffic to the outside internet through $netdev. You can configure different
+settings by modifying some variables in the script itself.
 
 Using fai-kvm you can start virtual machines which are connected
 to on of the tap devices.
@@ -57,39 +61,60 @@ mk_tap_devices() {
 
 mk_bridge() {
 
-    brctl addbr br0
-    ip addr add $brip/24 brd + dev br0
-    ip link set br0 up
+
+    if [ $private -eq 0 ]; then
+	dhclient -r $netdev
+	ip addr flush $netdev            # remove IP address of real nic
+	ip link set $netdev down
+	ip link set $netdev name r$netdev
+	brname=$netdev                   # use name of NIC for bridge
+    fi
+
+    brctl addbr $brname
+    ip link set $brname up
+    if [ $private -eq 0 ]; then
+	brctl addif $brname r$netdev
+	ip link set r$netdev up
+	dhclient -v $netdev
+    else
+	ip addr add $brip/24 brd + dev $brname
+    fi
 
     for i in $(eval echo {1..$tapnum}); do
 	[ -f /sys/class/net/tap$i/address ] || continue
-	brctl addif br0 tap$i          # add device to the bridge
+	brctl addif $brname tap$i          # add device to the bridge
 	ip link set tap$i up
     done
 }
 
 rm_bridge() {
 
+    # TODO: check if private is set, currently only working for private network
+
     for i in $(eval echo {1..$tapnum}); do
 	[ -f /sys/class/net/tap$i/address ] || continue
-	brctl delif br0 tap$i          # add device to the bridge
+	brctl delif $brname tap$i          # add device to the bridge
 	ip link set tap$i down
 	ip tuntap del dev tap$i mode tap
     done
-    ip link set br0 down
-    ip addr flush br0
-    brctl delbr br0
+    ip link set $brname down
+    ip addr flush $brname
+    brctl delbr $brname
 
-    iptables -t nat -D POSTROUTING -o $netdev -j MASQUERADE
-    sysctl -w net.ipv4.ip_forward=0
+    if [ $private -eq 1 ]; then
+	iptables -t nat -D POSTROUTING -o $netdev -j MASQUERADE
+	sysctl -w net.ipv4.ip_forward=0
+    fi
     exit 0
 }
 
 
+private=1 # private network by default
 
-while getopts hr opt ; do
+while getopts Phr opt ; do
     case "$opt" in
         r) rm_bridge ;;
+        P) private=0 ;;
         h) usage ;;
         esac
 done
@@ -118,8 +143,10 @@ mk_tap_devices
 mk_bridge
 
 # enable forward IP and do NATing
-sysctl -w net.ipv4.ip_forward=1
-iptables -t nat -I POSTROUTING -o $netdev -j MASQUERADE
+if [ $private -eq 1 ]; then
+    sysctl -w net.ipv4.ip_forward=1
+    iptables -t nat -I POSTROUTING -o $netdev -j MASQUERADE
+fi
 
 
 #  entry for /etc/network/interfaces:
