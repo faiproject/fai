@@ -5,27 +5,45 @@ Description: My first FAI installation
 Short: just a very simple example, no xorg, an account called demo
 Long: This is the demohost example of FAI.
 Additional account called demo. PW: fai, root pw: fai
-Classes: FAIBASE DEBIAN DEMO
+Classes: INSTALL FAIBASE DEBIAN DEMO
 
 Name: Xfce
 Description: Xfce desktop, LVM partitioning
 Short: A fancy Xfce desktop will be installed, the user account is demo
 Long: This is the Xfce desktop example. Additional account called
 demo. PW: fai, root pw: fai
-Classes: FAIBASE DEBIAN DEMO XORG XFCE LVM
+Classes: INSTALL FAIBASE DEBIAN DEMO XORG XFCE LVM
 
 Name: Gnome
 Description: Gnome desktop installation
 Short: A Gnome desktop, no LVM, You will get an account called demo
 Long: This is the Gnome desktop example. Additional account called
 demo. PW: fai, root pw: fai
-Classes: FAIBASE DEBIAN DEMO XORG GNOME
+Classes: INSTALL FAIBASE DEBIAN DEMO XORG GNOME
+
 Name: FAI server
 Description: automatically install a FAI server
 Short: All services needed for FAI are installed and configured
 Long: A complete FAI server is set up automatically
-Classes: FAIBASE DEBIAN DEMO FAISERVER
+Classes: INSTALL FAIBASE DEBIAN DEMO FAISERVER
 
+Name: CentOS 7
+Description: CentOS 7 with Xfce desktop
+Short: A normal Xfce desktop, running CentOS 7
+Long: We use the Debian nfsroot for installing the CentOS 7 OS.
+Classes: INSTALL FAIBASE AMD64 CENTOS XORG
+
+Name: Inventory
+Description: Show hardware info
+Short: Show some basic hardware infos
+Long: Execute commands for showing hardware info
+Classes: INVENTORY
+
+Name: Sysinfo
+Description: Show defailed system information
+Short: Show detailed hardware and system  information
+Long: Execute a lot of commands for collecting system information
+Classes: SYSINFO
 
 Name: dummy
 Description: A dummy profile
