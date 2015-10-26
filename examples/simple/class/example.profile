@@ -31,7 +31,7 @@ Name: CentOS 7
 Description: CentOS 7 with Xfce desktop
 Short: A normal Xfce desktop, running CentOS 7
 Long: We use the Debian nfsroot for installing the CentOS 7 OS.
-Classes: INSTALL FAIBASE AMD64 CENTOS XORG
+Classes: INSTALL FAIBASE AMD64 CENTOS CENTOS7_64 XORG
 
 Name: Inventory
 Description: Show hardware info
