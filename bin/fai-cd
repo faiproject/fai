@@ -44,6 +44,9 @@ bootonly=0
 squash_only=0
 nomirror=0
 hidevartmp=0
+rel=0
+target=0
+
 liveos="squashfs-root/LiveOS/"
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/cache/debconf /var/cache/apt /var/cache/man /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
 
@@ -110,6 +113,32 @@ create_ext3fs_image() {
 
     umount $tmp/$liveos/mounted-ext3fs
     rmdir $tmp/$liveos/mounted-ext3fs
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_autodiscover_iso() {
+
+    # boot-only CD does not need those dracut modules
+    cat <<EOF > $ONFSROOT/etc/dracut.conf.d/02-omit.conf
+omit_dracutmodules+=" fs-lib dmsquash-live rootfs-block "
+EOF
+
+    arguments=""
+    [ $burn -eq 1 ] && arguments+=" -b"
+    if [ -n "$sqopt" ]; then
+	arguments+=" -J"
+	compress="--xz"
+    else
+	compress=--compress='gzip -1'
+    fi
+    mv $ONFSROOT/boot/initrd.img* $ONFSROOT/tmp
+    hide_dirs
+    chroot $ONFSROOT dracut --add 'fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
+    unhide_dirs
+    rm $ONFSROOT/etc/dracut.conf.d/02-omit.conf
+
+
+    fai-cd $arguments -g -MB $isoname
+    mv $ONFSROOT/tmp/initrd.img* $ONFSROOT/boot
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_squashfs_image() {
@@ -221,6 +250,20 @@ menuentry "Memory test (memtest86+)" {
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+hide_dirs() {
+
+# hide some dirs to save space and make the CD image smaller
+    local d
+
+    mkdir -p $tmp/empty
+    for d in $hidedirs; do
+        if [ -d $target/$d ]; then
+            [ "$debug" ] && echo "hiding $d"
+            mount --bind $tmp/empty $target/$d
+        fi
+    done
+}
+
 customize_nfsroot() {
 
     # hide some dirs to save space and make the CD image smaller
@@ -229,8 +272,8 @@ customize_nfsroot() {
     mkdir -p $tmp/empty
     for d in $hidedirs; do
         if [ -d $ONFSROOT/$d ]; then
-            [ "$debug" ] && echo "hiding $d"
-            mount --bind $tmp/empty $ONFSROOT/$d
+	    [ "$debug" ] && echo "hiding $d"
+	    mount --bind $tmp/empty $ONFSROOT/$d
         fi
     done
 }
@@ -239,10 +282,17 @@ unhide_dirs() {
 
     set +e
     for d in $hidedirs; do
-        if [ -d $nfsrootdir/$d ]; then
-            [ "$debug" ] && echo "disclosing $d"
-            umount $ONFSROOT/$d 2>/dev/null
-        fi
+	if [ $autodiscover -eq 1 ]; then
+	    if [ -d $target/$d ]; then
+		[ "$debug" ] && echo "disclosing $d"
+		umount  $target/$d 2>/dev/null
+            fi
+	else
+            if [ -d $nfsrootdir/$d ]; then
+		[ "$debug" ] && echo "disclosing $d"
+		umount $ONFSROOT/$d 2>/dev/null
+            fi
+	fi
     done
     set -e
 }
@@ -300,8 +350,9 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "enkfhHg:JbSBMm:C:d:" opt ; do
+while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
     case "$opt" in
+	A)  autodiscover=1 ;;
         C)  cdir="$OPTARG" ;;
         e)  hidevartmp=1 ;;
         f)  forceremoval=1 ;;
@@ -320,6 +371,30 @@ while getopts "enkfhHg:JbSBMm:C:d:" opt ; do
 done
 shift $(($OPTIND - 1))
 isoname=$1
+
+
+if [ $autodiscover -eq 1 ]; then
+    nomirror=1
+    bootonly=1
+    hidedirs="
+    net/ceph
+    net/wireless
+    sound
+    drivers/block/drbd
+    drivers/staging/lustre
+    drivers/scsi
+    drivers/ata
+    drivers/target
+    drivers/pcmcia
+    drivers/mmc
+    drivers/media
+    drivers/infiniband
+    drivers/isdn
+    drivers/video
+    drivers/mtd
+    drivers/md
+    "
+fi
 
 [ $nomirror -eq 1 -a -n "$mirrordir" ]  && die 6 "Do not use -M and -m at the same time."
 [ "$#" -eq 0 ]        && die 2 "Please specify the output file for the ISO image."
@@ -357,6 +432,11 @@ fi
 : ${FAI:=/var/lib/fai/config} # default value
 ONFSROOT=$NFSROOT # save original nfsroot
 
+if [ $autodiscover -eq 1 ]; then
+    rel=$(ls $ONFSROOT/lib/modules/|head -1)
+    target=$ONFSROOT/lib/modules/$rel/kernel
+fi
+
 [ -d "$NFSROOT/etc/fai" ] || die 10 "Please create NFSROOT by calling fai-make-nfsroot or fai-setup."
 
 [ $hidevartmp -eq 1 ] && hidedirs+="/var/tmp"
@@ -364,7 +444,9 @@ ONFSROOT=$NFSROOT # save original nfsroot
 # if -g is a file name, add prefix
 
 if [ -z "$grub_config" ]; then
+
     grub_config="$cfdir/grub.cfg" # set default if undefined
+    [ $autodiscover -eq 1 ] && grub_config="$cfdir/grub.cfg.autodiscover" # set default if undefined
 fi
 
 # if grub_config contains / do not change it, else add prefix $cfdir
@@ -384,6 +466,11 @@ trap "cleanup_liveos_mounts" EXIT ERR
 if [ $bootonly -eq 0 ]; then
 create_ext3fs_image
 create_squashfs_image
+fi
+
+if [ $autodiscover -eq 1 ]; then
+    create_autodiscover_iso
+    exit 0
 fi
 
 [ $squash_only -eq 1 ] && exit 0
