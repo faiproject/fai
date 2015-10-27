@@ -96,7 +96,7 @@ create_ext3fs_image() {
 
     # hide some directories before copying the nfsroot
     customize_nfsroot
-    echo "Copying the nfsroot to temporary directory"
+    echo "Copying the nfsroot to CD image"
     # copy the contents of the nfsroot into it
     cp -Pr $ONFSROOT/* $ONFSROOT/.??* $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
     rm -f $tmp/$liveos/mounted-ext3fs/etc/resolv.conf
@@ -104,7 +104,7 @@ create_ext3fs_image() {
     # find $tmp/$liveos/mounted-ext3fs # for debugging
     # copy config space into nfsroot-copy unless -d is given
     if [ $configset -eq 0 ]; then
-        echo "Copying the config space to temporary directory"
+        echo "Copying the config space to CD image"
         cp -Pr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ || die $? "Not enough space left on device for the config directory"
     fi
     # add the partial mirror to the CD
@@ -323,7 +323,7 @@ addmirror() {
 
     mkdir $tmp/$liveos/mounted-ext3fs/media/mirror
 
-    echo "Copying mirror to temporary directory"
+    echo "Copying mirror to CD image"
     cp -Pr $mirrordir/{dists,pool} $tmp/$liveos/mounted-ext3fs/media/mirror 2>/dev/null || die $? "Not enough space left on device for the mirror"
 
     # create the sources.list for the CD
