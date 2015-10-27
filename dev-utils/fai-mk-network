@@ -90,14 +90,20 @@ mk_bridge() {
 
 rm_bridge() {
 
-    # TODO: check if private is set, currently only working for private network
-
     for i in $(eval echo {1..$tapnum}); do
 	[ -f /sys/class/net/tap$i/address ] || continue
-	brctl delif $brname tap$i          # add device to the bridge
+	brctl delif $brname tap$i
 	ip link set tap$i down
 	ip tuntap del dev tap$i mode tap
     done
+
+    if [ $private -eq 0 ]; then
+	brname=$netdev                   # use name of NIC for bridge
+	dhclient -r $netdev
+	brctl delif $brname r$netdev
+    fi
+
+
     ip link set $brname down
     ip addr flush $brname
     brctl delbr $brname
@@ -105,16 +111,22 @@ rm_bridge() {
     if [ $private -eq 1 ]; then
 	iptables -t nat -D POSTROUTING -o $netdev -j MASQUERADE
 	sysctl -w net.ipv4.ip_forward=0
+    else
+	ip link set r$netdev down
+	ip link set r$netdev name $netdev
+	ip link set $netdev up
+	dhclient -v $netdev
     fi
     exit 0
 }
 
 
+remove=0
 private=1 # private network by default
 
 while getopts Phr opt ; do
     case "$opt" in
-        r) rm_bridge ;;
+        r) remove=1;;
         P) private=0 ;;
         h) usage ;;
         esac
@@ -130,6 +142,10 @@ fi
 if [ ! -x "$(which brctl)" ]; then
     echo "brctl not found. Please install bridge-utils."
     exit 3
+fi
+
+if [ $remove -eq 1 ]; then
+    rm_bridge
 fi
 
 if [ -z "$1" ]; then
