@@ -47,6 +47,8 @@ hidevartmp=0
 rel=0
 target=0
 autodiscover=0
+# arguments to be passed on to internal fai-cd call
+arguments="-MB"
 
 liveos="squashfs-root/LiveOS/"
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/cache/debconf /var/cache/apt /var/cache/man /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
@@ -123,10 +125,7 @@ create_autodiscover_iso() {
 omit_dracutmodules+=" fs-lib dmsquash-live rootfs-block "
 EOF
 
-    arguments=""
-    [ $burn -eq 1 ] && arguments+=" -b"
     if [ -n "$sqopt" ]; then
-	arguments+=" -J"
 	compress="--xz"
     else
 	compress=--compress='gzip -1'
@@ -138,7 +137,7 @@ EOF
     rm $ONFSROOT/etc/dracut.conf.d/02-omit.conf
 
 
-    fai-cd $arguments -g $grub_config -MB $isoname
+    fai-cd $arguments -g $grub_config $isoname
     mv $ONFSROOT/tmp/initrd.img* $ONFSROOT/boot
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -354,19 +353,19 @@ burniso() {
 while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
-        C)  cdir="$OPTARG" ;;
+        C)  cdir="$OPTARG" ; arguments+=" -C $cdir";;
         e)  hidevartmp=1 ;;
         f)  forceremoval=1 ;;
         h)  usage ;;
         H)  hidedirs="" ;;
         g)  grub_config="$OPTARG" ;;
-        J)  sqopt="-comp xz" ;;
+        J)  sqopt="-comp xz" ; arguments+=" -J";;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
-        b)  burn=1 ;;
+        b)  burn=1 ; arguments+=" -b";;
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
-	d)  config_space="$OPTARG"; configset=1 ;;
+	d)  config_space="$OPTARG"; configset=1 ; arguments+=" -d $config_space";;
         ?)  usage ;;
     esac
 done
