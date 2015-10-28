@@ -10,7 +10,7 @@
 
 # Supported distributions (each i386/amd64):
 # Debian GNU/Linux
-# Ubuntu 10.04
+# Ubuntu 14.04
 # CentOS 5/6/7
 # Scientific Linux Cern 5/6
 #
@@ -22,7 +22,7 @@
 # For the first stage, set the CentOS/SLC mirror in /etc/rinse/rinse.conf
 MIRROR_DEBIAN=http://httpredir.debian.org/debian/
 MIRROR_DEBIAN=http://localmirror/debian/
-MIRROR_UBUNTU=http://ftp.halifax.rwth-aachen.de/ubuntu/
+MIRROR_UBUNTU=http://mirror.netcologne.de/ubuntu/
 MIRROR_CENTOS=http://mirror.netcologne.de/
 #MIRROR_CENTOS=http://localmirror
 #MIRROR_SLC=http://localmirror
@@ -30,9 +30,9 @@ MIRROR_CENTOS=http://mirror.netcologne.de/
 EXCLUDE_SQUEEZE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_WHEEZY=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_JESSIE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
-EXCLUDE_LUCID=dhcp3-client,dhcp3-common
+EXCLUDE_TRUSTY=dhcp3-client,dhcp3-common,info
 
-INCLUDE_JESSIE=aptitude
+INCLUDE_DEBIAN=aptitude
 
 
 setarch() {
@@ -99,7 +99,7 @@ EOM
 cleanup-deb() {
 
     chroot $xtmp aptitude clean
-    rm $xtmp/etc/hostname $xtmp/etc/resolv.conf
+    rm $xtmp/etc/hostname $xtmp/etc/resolv.conf $xtmp/etc/machine-id
     rm $xtmp/var/lib/apt/lists/*_*
     rm -f $xtmp/etc/udev/rules.d/70-persistent-net.rules
 }
@@ -182,17 +182,17 @@ jessie() {
     local arch=$1
 
     check
-    debootstrap --arch $arch --exclude=${EXCLUDE_JESSIE} --include=${INCLUDE_JESSIE} jessie $xtmp ${MIRROR_DEBIAN}
+    debootstrap --arch $arch --exclude=${EXCLUDE_JESSIE} --include=${INCLUDE_DEBIAN} jessie $xtmp ${MIRROR_DEBIAN}
     cleanup-deb
     tarit
 }
 
-lucid() {
+trusty() {
 
     local arch=$1
 
     check
-    debootstrap --arch $arch --exclude=${EXCLUDE_LUCID} lucid $xtmp ${MIRROR_UBUNTU}
+    debootstrap --arch $arch --exclude=${EXCLUDE_TRUSTY} --include=${INCLUDE_DEBIAN} trusty $xtmp ${MIRROR_UBUNTU}
     cleanup-deb
     tarit
 }
@@ -208,7 +208,7 @@ unknown() {
     CENTOS7_32   CENTOS7_64
     SLC5_32      SLC5_64
     SLC6_32      SLC6_64
-    LUCID32      LUCID64
+    TRUSTY32     TRUSTY64
     SQUEEZE32    SQUEEZE64
     WHEEZY32     WHEEZY64
     JESSIE32     JESSIE64
@@ -251,8 +251,8 @@ case "$target" in
     SLC5_64) slc amd64 5 ;;
     SLC6_32) slc i386 6 ;;
     SLC6_64) slc amd64 6 ;;
-    LUCID32) lucid i386 ;;
-    LUCID64) lucid amd64 ;;
+    TRUSTY32) trusty i386 ;;
+    TRUSTY64) trusty amd64 ;;
     SQUEEZE32) squeeze i386 ;;
     SQUEEZE64) squeeze amd64 ;;
     WHEEZY32) wheezy i386 ;;
