@@ -33,6 +33,12 @@ Short: A normal Xfce desktop, running CentOS 7
 Long: We use the Debian nfsroot for installing the CentOS 7 OS.
 Classes: INSTALL FAIBASE CENTOS CENTOS7_64 XORG
 
+Name: Ubuntu
+Description: Ubuntu 14.04 desktop installation
+Short: Unity desktop
+Long: We use the Debian nfsroot for installing the Ubuntu OS.
+Classes: INSTALL FAIBASE DEMO DEBIAN UBUNTU TRUSTY64 XORG
+
 Name: Inventory
 Description: Show hardware info
 Short: Show some basic hardware infos
