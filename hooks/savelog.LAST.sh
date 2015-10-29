@@ -144,6 +144,8 @@ ERST: Table is not found
 HEST: Table not found
 failed to stat /dev/pts
 fail to add MMCONFIG information
+Authentication warning overridden
+update-alternatives: warning: skip creation of
 update-rc.d: warning: start and stop actions are no longer supported"
 
 # add pattern on some conditions
