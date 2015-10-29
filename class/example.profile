@@ -21,12 +21,6 @@ Long: This is the Gnome desktop example. Additional account called
 demo. PW: fai, root pw: fai
 Classes: INSTALL FAIBASE DEBIAN DEMO XORG GNOME
 
-Name: FAI server
-Description: automatically install a FAI server
-Short: All services needed for FAI are installed and configured
-Long: A complete FAI server is set up automatically
-Classes: INSTALL FAIBASE DEBIAN DEMO FAISERVER
-
 Name: CentOS 7
 Description: CentOS 7 with Xfce desktop
 Short: A normal Xfce desktop, running CentOS 7
@@ -37,7 +31,7 @@ Name: Ubuntu
 Description: Ubuntu 14.04 desktop installation
 Short: Unity desktop
 Long: We use the Debian nfsroot for installing the Ubuntu OS.
-Classes: INSTALL FAIBASE DEMO DEBIAN UBUNTU TRUSTY64 XORG
+Classes: INSTALL FAIBASE DEMO DEBIAN UBUNTU TRUSTY TRUSTY64 XORG
 
 Name: Inventory
 Description: Show hardware info
