@@ -24,11 +24,11 @@ fi
 # enable linuxlogo
 if [ -f $target/etc/inittab ]; then
     sed -i -e 's#/sbin/getty 38400#/sbin/getty -f /etc/issue.linuxlogo 38400#' ${target}/etc/inittab
-else
+elif [ -f $target/lib/systemd/system/getty@.service ]; then
     sed -i -e 's#sbin/agetty --noclear#sbin/agetty -f /etc/issue.linuxlogo --noclear#' $target/lib/systemd/system/getty@.service
 fi
 
-if [ ! -f $target/etc/machine-id ]; then
+if [ ! -f $target/etc/machine-id -a -f $target/bin/systemd-machine-id-setup]; then
     $ROOTCMD systemd-machine-id-setup
 fi
 
