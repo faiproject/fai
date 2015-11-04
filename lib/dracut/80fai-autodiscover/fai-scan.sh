@@ -81,7 +81,7 @@ while [ 1 ]; do
     faisrv=($faiserver)
 
     if [ ${#faisrv[@]} -eq 0 ]; then
-	dialog --colors --yesno "\n  \Zr\Z1No FAI server found.\Zn\n\n\n   Retry scan?\n" 10 28
+	dialog --colors --yesno "\n  \Zr\Z1No FAI server found.\Zn\n\n\n      Retry scan?\n" 10 28
 	if [ $? -eq 1 ]; then
 	   die "No FAI server found."
 	   root=
