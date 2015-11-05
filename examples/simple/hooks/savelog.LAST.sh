@@ -144,6 +144,8 @@ HEST: Table not found
 failed to stat /dev/pts
 Failed to connect to socket /var/run/dbus/system_bus_socket
 fail to add MMCONFIG information
+can't initialize iptables table
+can't initialize ip6tables table
 Authentication warning overridden
 update-alternatives: warning: skip creation of
 update-rc.d: warning: start and stop actions are no longer supported"
