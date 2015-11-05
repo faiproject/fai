@@ -137,16 +137,17 @@ for i in "${list[@]}"; do
     par+=("${ardesc[${i}]}")
     par+=("${arshort[${i}]}")
     echo "Name: ${i}" >> $tempfile2
-    echo -e ${arlong[${i}]} "\n" >> $tempfile2
+    echo -e ${arlong[${i}]} >> $tempfile2
+    echo -e "Classes: " ${arclasses[${i}]} "\n" >> $tempfile2
 done
 unset i
 
 while true; do
 
-    dialog --clear --item-help --title "Select your FAI profile" --help-button \
+    dialog --clear --item-help --title "FAI - Fully Automatic Installation" --help-button \
 	--default-item "$default" \
-	--menu "\nThe profile will define a list of classes,\nwhich are used by FAI.\n\n\n\
-         Choose the FAI profile now:" 15 70 0 "${par[@]}" 2> $tempfile 1>/dev/console
+	--menu "\nSelect your FAI profile\n\nThe profile will define a list of classes,\n\
+          which are used by FAI.\n\n\n" 15 70 0 "${par[@]}" 2> $tempfile  1>/dev/console
 
     _retval=$?
     case $_retval in
@@ -161,3 +162,4 @@ while true; do
     esac
 
 done
+unset par ardesc arshort arlong arclasses list tempfile tempfile2 _parsed _retval line
