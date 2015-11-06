@@ -213,6 +213,11 @@ process it's the complete file system for the install clients. All
 clients share the same nfsroot, which they mount read only. The
 nfsroot needs about {nfsrootsize}MB of free disk space.
 
+TFTP::
+Serves clients the initrd and kernel that is used for the installation process.
+Along with the file system served by NFS, these two make up a temporary
+OS in which the installations are performed.
+
 FAI classes::
 Classes are names which determine which configuration file is
 selected. If a client belongs to class WEBSERVER, it will be configured
@@ -221,8 +226,10 @@ packages will be installed.
 
 profile::
 A FAI profile is just a list of FAI classes assiged to a profile name,
-which is extended by a description of this profile.
-
+which is extended by a description of this profile. E.g. one could have
+two "Webserver" profiles, one with the APACHE class to install the Apache
+webserver and another including the NGINX class, which in turn would
+install Nginx instead.
 
 tasks::
 The FAI is divided into several parts which we call tasks.
@@ -242,7 +249,7 @@ performs the automatic installation which doesn't need any
 interaction. First, the hard disks will be partitioned, file systems
 are created and then software packages are installed. After that, the
 new installed operating system is configured to your local needs using
-some scripts. Finally the new operating system will be booted from the
+some scripts. Finally, the new operating system will be booted from the
 local disk.
 
 The details of how to install the computer (the configuration) are
@@ -307,7 +314,7 @@ times. All install clients had a 1Gbit network card installed.
 
 === [[first]]My first installation
 
-Using the FAI CD and a virtual machine, you can easily try an fully
+Using the FAI CD and a virtual machine, you can easily try a fully
 automatic installation.
 
 Just download the CD ISO image from http://fai-project/fai-cd and boot
@@ -320,7 +327,7 @@ the FAI install server.
 
 === [[cdserver]]My first server installation
 
-For setting up your first own FAI server, we recommend to create a
+For setting up your first own FAI server, we recommend creating a
 test network on your computer and to use KVM. For creating this
 private network there's the script `fai-mk-network` (in the package
 fai-server). It sets up a software bridge with several tap devices
@@ -347,7 +354,7 @@ fai-kvm -Vn -s20 -u 1 cd fai-cd.iso
 In the grub menu select +faiserver, fixed IP+. This will install a host called
 faiserver with IP 192.168.33.250 which contains all software needed
 for a FAI server. It will also set up a local package cache (using
-apt-cacher-ng). If the installtion is finished, reboot the
+apt-cacher-ng). Once the installation is finished, reboot the
 machine. During the first boot of the new system, it will
 automatically set up the nfsroot. This may take some minutes.
 
@@ -412,7 +419,7 @@ This will also install the packages for DHCP, TFTP and NFS server daemons.
 ----
 
 * By default, FAI uses http://httpredir.debian.org as package
-  mirror. footnote:[If you want to use a faster mirror, adjust the URL
+  mirror, which should attempt to find a fast package repository for you. footnote:[If you want to use a faster mirror, adjust the URL
   in _/etc/fai/apt/sources.list_ and +FAI_DEBOOTSTRAP+ in _/etc/fai/nfsroot.conf_ before calling fai-setup.]
 Now, we can run `fai-setup(8)` footnote:[This will call `fai-make-nfsroot(8)` internally.]
 and check if everything went well.
@@ -564,7 +571,7 @@ Here you have to replace 01:02:03:AB:CD:EF ith the MAC you have found.
 ----
 
 After calling this command, this is what the host entry in
-_dhcpd.conf_ will look like after calling the command above:
+_dhcpd.conf_ will look like:
 ----
 host demohost {hardware ethernet 01:02:03:AB:CD:EF;fixed-address demohost;}
 ----
@@ -693,12 +700,11 @@ If a client belongs to class _A_, we say the class _A_
 is defined for this client. A class has no value, it is just defined or
 undefined.
 
-Classes can describe how the hard disk should be partitioned, they can
-define which software packages will be installed, or which
-customization steps are performed for a certain class. Classes
-determine how the installation is performed. For example, an install
+Classes determine how the installation is performed. For example, an install
 client can be configured to get the XFCE desktop by just adding the
-class _XFCE_ to it.
+class _XFCE_ to it. Naturally, also more granular configurations are possible. For instance, classes can describe how the hard disk should be partitioned, they can
+define which software packages will be installed, or which
+customization steps are performed. 
 
 Often, a client configuration is created by only changing or appending the
 classes to which this client belongs, making the installation of a new
@@ -759,7 +765,7 @@ of the classes from low to high.
 == [[instprocess]]Overview of the installation sequence
 
 
-The installation of a client consist of several parts, which are called tasks.
+The installation of a client consists of several parts, which are called tasks.
 Tasks are predefined subroutines which perform a certain part of the
 FAI. The following FAI tasks are performed during an installation
 on the install clients.
@@ -798,7 +804,7 @@ ____
 You can also define additional programs or scripts which will be run
 on particular occasions. They are called _hooks_. Hooks are like
 plugins, they can add additional functions to the installation process
-or replace the some tasks of FAI. So it's very easy to customize the
+or replace some tasks of FAI. So it's very easy to customize the
 whole installation process. Hooks are explained in detail in
 <<hooks>>.
 
@@ -830,7 +836,7 @@ contain vaild shell code.
 For the disk partitioning exactly one disk configuration file from
 '$FAI/disk_config' is selected using classes.
 
-The format of the disk configuration is similar to an fstab file.
+The format of the disk configuration is similar to a fstab file.
 
 The partitioning tool `setup-storage(8)` performs all commands
 necessary for creating the disk partition layout, software RAID, LVM
@@ -866,7 +872,7 @@ types (shell, cfengine, ...) to be executed for one class.
 
 The default set of scripts in '$FAI/scripts' include examples for
 installing Debian and CentOS machines. They set the root password, add
-an demo user account, set the timezone, configure the network for DHCP
+a demo user account, set the timezone, configure the network for DHCP
 or using a fixed IP address, setup grub and more.
 They should do a reasonable job for your installation. You can edit
 them or add new scripts to match your local needs.
@@ -913,7 +919,7 @@ Examples of the log files can be found at http://fai-project.org/logs.
 
 Before rebooting, the install client calls `fai-chboot -d <hostname>`
 on the install server, to disable its own PXELINUX
-configuration. Otherwise it would restart the installation during the
+configuration. Otherwise, it would restart the installation during the
 next boot. Normally this should boot the new installed system from
 its second boot device, the local hard disk.
 
@@ -952,7 +958,7 @@ the line +add_drivers+++=+.
 
 This is the error message you will see, when your network card is
 working, but the install server does not export the nfsroot
-directory to the install clients, mostly a problem of missing
+directory to the install clients, This is often caused by missing
 NFS permissions on the server side.
 
 ----
@@ -1114,7 +1120,7 @@ NFSROOT_ETC_HOSTS::
 This variable is only needed if the clients do not have access to a DNS server.
 This multiline variable is added to /etc/hosts inside the
 nfsroot. Then the install clients can access those hosts by name
-without usin DNS.
+without using DNS.
 
 
 The content of '/etc/fai/apt/sources.list' is
@@ -1295,7 +1301,7 @@ FAI can also do updates of already running systems, without a
 re-installation from scratch. 
 This is called softupdate. A FAI softupdate skips the tasks which are
 not suitable for updating a running system, like partitioning the
-hard disks and creating file systems. Instead it only executes the
+hard disks and creating file systems. Instead, it only executes the
 tasks for updating and installing software packages and calling the
 customization scripts.
 
@@ -1332,7 +1338,7 @@ function _AppendIfNoSuchLine_.
 
 All commands in the customization script must be capable of modifying
 the target file system wether it's available in _/target_ during the
-initial installation or wether it's the normal file system relativ to
+initial installation or wether it's the normal file system relative to
 _/_ during softupdate.
 
 Here are some variable that help writing these scripts:
@@ -1355,10 +1361,10 @@ can use this variable. It contains the currently executed action:
 _install_, _softupdate_, _dirinstall_, _sysinfo_, _inventory_ or your
 own defined action.
 
-=== [[archcross]]How to install 32bit OS from an 64bit OS
+=== [[archcross]]How to install 32bit OS from a 64bit OS
 
 To install a computer with a 32bit OS, you need an i386 nfsroot.
-Creating this 32bit nfsroot on an install server runnning amd64 is
+Creating this 32bit nfsroot on an install server running amd64 is
 quite simple. Install and set up the FAI packages. Then copy your FAI
 config files to a new subdirectory.
 
@@ -1553,7 +1559,7 @@ This chapter describes some technical details of some parts of FAI.
 
 === [[c3]]The subdirectories of the configuration space
 
-The configuration is the collection of information about how exactly
+The configuration space is the collection of information about how exactly
 to install a computer. The central configuration space for all install
 clients is located on the install server in '/srv/fai/config' and its
 subdirectories. This will be mounted by the install clients to
@@ -1625,7 +1631,7 @@ and only if the install client belongs to the class DEBIAN.
 
 === [[tasks]]The list of tasks
 
-Most tasks of the installation are defined a subroutines which are
+Most tasks of the installation are defined as subroutines which are
 defined in '/usr/lib/fai/subroutines' (e.g. +task_instsoft+).
 Some are external shell scripts located in '/usr/lib/fai/'.
 They are called via a superior subroutine called _task_.
@@ -1669,7 +1675,7 @@ hook has written some variable definitions to the file
 
 action::
 Depending on the value of +$FAI_ACTION+ this subroutine decides which
-action FAI should be called. The default available actions are:
+action FAI should perform. The default available actions are:
 _sysinfo_, _install_, _inventory_, _dirinstall_ and _softupdate_.  If +$FAI_ACTION+ has another
 value, a user defined action is called if a file
 '$FAI/hooks/$FAI_ACTION' exists. So you can easily define your own
@@ -1707,7 +1713,7 @@ Calls `setup-storage(8)` to partition the hard
 disks and to create file systems. The task writes variable definitions
 for the root and boot partition and device (+$ROOT_PARTITION,
 $BOOT_PARTITION, $BOOT_DEVICE+) to '/tmp/fai/disk_var.sh' and creates
-an 'fstab' file for the new system.
+a 'fstab' file for the new system.
 
 mountdisks::
 Mounts the created partitions according to the created
@@ -1737,7 +1743,7 @@ in the directory _package_config_.
 updatebase::
 Updates the base packages of the new system and updates the list of
 available packages. It also fakes some commands (called diversions)
-inside the new installed system using `dpkg-divert(8)`, so not daemons
+inside the new installed system using `dpkg-divert(8)`, so no daemons
 will be started during the installation.
 
 instsoft::
@@ -1826,7 +1832,7 @@ log in without a password when using +$SSH_IDENTITY+.
 createvt::
 Create two virtual terminals and execute a bash if _ctrl-c_ is typed
 in the console terminal. The additional terminals can be accessed by
-typing _Alt-F2_ or _Alt-F3_. Otherwise no terminals are available and
+typing _Alt-F2_ or _Alt-F3_. Otherwise, no terminals are available and
 typing _ctrl-c_ will reboot the install client. Setting this flag is
 useful for debugging. If you want an installation which should not be
 interruptible, do not set this flag.
@@ -1964,7 +1970,7 @@ lilo- grub
 
 Comments are starting with a hash (#) and are ending at the end of the
 line. Every package command begins with the word _PACKAGES_ followed by a
-command name, which maps to a differebt package tool like apt-get,
+command name, which maps to a different package tool like apt-get,
 aptitude or yum for e.g. The command defines which command will be used to
 install the packages named after this command. The list of all
 available commands can be listed using _install_packages -H_.
@@ -2250,9 +2256,9 @@ all log files.
 
 == [[plan]]Plan your installation, and FAI installs your plans
 
-Before starting your installation, you should spend a lot of time in
-planning your installation. When you're happy with your installation
-concept, FAI can do all the boring, repetitive tasks to turn your
+Before starting your installation, you should invest a lot of time into
+planning your installation. Once you're happy with your installation
+concept, FAI can do all the boring and repetitive tasks to turn your
 plans into reality. FAI can't do good installations if your concept is
 imperfect or lacks some important details. Start planning the
 installation by answering the following questions:
@@ -2265,7 +2271,7 @@ installation by answering the following questions:
 * How should the hosts be named?
 * How should the local hard disks be partitioned?
 * Which applications will be run by the users?
-* Do the users need a queueing system?
+* Do the users need a queuing system?
 * What software should be installed?
 * Which daemons should be started, and what  should the configuration for these look like?
 * Which remote file systems should be mounted?
@@ -2279,7 +2285,7 @@ remember that knowledge is power, and it's up to you to use
 it. Installation and administration is a process, not a product. FAI
 can't do things you don't tell it to do.
 
-But you need not start from scratch. Look at all files and scripts in
+But you need not start from scratch. Look at the files and scripts in
 the configuration space. There are a lot of things you can use for
 your own installation. A good paper called "Bootstrapping an
 Infrastructure" with more aspects of building an infrastructure is
