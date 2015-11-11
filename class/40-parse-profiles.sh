@@ -146,8 +146,8 @@ while true; do
 
     dialog --clear --item-help --title "FAI - Fully Automatic Installation" --help-button \
 	--default-item "$default" \
-	--menu "\nSelect your FAI profile\n\nThe profile will define a list of classes,\n\
-          which are used by FAI.\n\n\n" 15 70 0 "${par[@]}" 2> $tempfile  1>/dev/console
+	--menu "\nSelect your FAI profile\n\nThe profile will define a list of classes,\nwhich are used by FAI.\n\n\n"\
+	15 70 0 "${par[@]}" 2> $tempfile  1>/dev/console
 
     _retval=$?
     case $_retval in
