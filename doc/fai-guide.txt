@@ -1998,83 +1998,30 @@ and automatically reboots the install clients or waits for manual
 input before reboot.
 
 
-=== [[logfiles]]Log files
+=== [[changeboot]]Changing the boot device
 
-FAI is creating several log files. During installation they are stored
-in '/tmp/fai' on the install client itself. At the end of the
-installation they will be copied to the install server (see
-<<isavelog>>). After the install client rebooted into his newly
-installed system, you can find the FAI logs in '/var/log/fai'.
-Log files are also created when doing the softupdate or dirinstall
-action.
+Changing the boot sequence is normally done in the BIOS setup. But you
+can't change the BIOS from a running Linux system.
 
-Sample log files from successfully installed computers are
-available on http://fai-project.org/logs.
-These a some log files which are created by FAI.
-
-FAI_CLASSES::
-Contains a list of all classes defined.
-
-dmesg.log::
-Output of the `dmesg` command. Contains useful messages of the kernel
-ring buffer.
-
-fai.log::
-The main log file. Contains all important information. You should
-*always* read this file.
-
-boot.log::
-A list of variables of network parameters, mostly defined by the DHCP daemon.
-
-format.log::
-Output of the partition tool `setup-storage(8)`.
-
-shell.log::
-Output of all shell scripts, that are used for customization.
-
-variables.log::
-A list of all shell variables which are available during an
-installation.
-
-error.log::
-A summary of possible errors in all log files.
-
-disk_var.sh::
-A list of variables that contain information about devices and
-partitions to boot from, the root partition and a list of swap
-devices. These information is used by some customization scripts
-(e.g. _GRUB_PC/10-setup_).
+So, the boot sequence of the BIOS will remain unchanged and
+your computer should always boot first from its network card and the
+second boot device should be the local disk. Then you can
+change the boot device of the client by creating different PXELINUX
+configurations. This will define if an installation
+should be performed, or if the client should to boot from local
+disk. This is done using `fai-chboot(8)`.
 
 
+=== [[itests]]Automated tests
 
-
-If the installation process finishes, the hook 'savelog.LAST.sh'
-searches all log files for common errors and writes them to the file
-'error.log'. So, you should first look into this file for errors. Also
-the file 'status.log' give you the exit code of the last command
-executed in a script. To be sure, you should look for more details in
-all log files.
-
-
-=== How to use HTTP for PXE boot
-
-----
-cp /usr/lib/PXELINUX/lpxelinux.0 /srv/tftp/fai/pxelinux.0
-----
-
-Enable HTTP access to the tftp directory:
-
-----
-cd /var/www/html
-ln -s /srv/tftp/fai
-----
-
-Add '-U URL' to the 'fai-chboot' call. For example:
-
-----
-fai-chboot -U http://faiserver/fai -IFv .......
-----
-
+After the customization scripts are executed, FAI will execute some
+tests if available. Using these test, you can check for errors of the
+installation. Test scripts are called via
+`fai-do-scripts(1)` and should append its messages to
+_$LOGDIR/test.log_. A Perl module including some useful subroutines
+can be found in _Faitest.pm_. A test can also define a new class for
+executing another tests during next boot via the variable
++$ADDCLASSES+.
 
 
 === [[debian-mirror]]How to create a local Debian mirror
@@ -2204,6 +2151,88 @@ you need to create specific config directories in '/etc' for FAI, like
 faiserver#fai-make-nfsroot -c /etc/fai-jessie
 ----
 
+=== [[logfiles]]Log files
+
+FAI is creating several log files. During installation they are stored
+in '/tmp/fai' on the install client itself. At the end of the
+installation they will be copied to the install server (see
+<<isavelog>>). After the install client rebooted into his newly
+installed system, you can find the FAI logs in '/var/log/fai'.
+Log files are also created when doing the softupdate or dirinstall
+action.
+
+Sample log files from successfully installed computers are
+available on http://fai-project.org/logs.
+These a some log files which are created by FAI.
+
+FAI_CLASSES::
+Contains a list of all classes defined.
+
+dmesg.log::
+Output of the `dmesg` command. Contains useful messages of the kernel
+ring buffer.
+
+fai.log::
+The main log file. Contains all important information. You should
+*always* read this file.
+
+boot.log::
+A list of variables of network parameters, mostly defined by the DHCP daemon.
+
+format.log::
+Output of the partition tool `setup-storage(8)`.
+
+shell.log::
+Output of all shell scripts, that are used for customization.
+
+variables.log::
+A list of all shell variables which are available during an
+installation.
+
+error.log::
+A summary of possible errors in all log files.
+
+disk_var.sh::
+A list of variables that contain information about devices and
+partitions to boot from, the root partition and a list of swap
+devices. These information is used by some customization scripts
+(e.g. _GRUB_PC/10-setup_).
+
+
+
+
+If the installation process finishes, the hook 'savelog.LAST.sh'
+searches all log files for common errors and writes them to the file
+'error.log'. So, you should first look into this file for errors. Also
+the file 'status.log' give you the exit code of the last command
+executed in a script. To be sure, you should look for more details in
+all log files.
+
+
+=== How to use HTTP for PXE boot
+
+----
+cp /usr/lib/PXELINUX/lpxelinux.0 /srv/tftp/fai/pxelinux.0
+----
+
+Enable HTTP access to the tftp directory:
+
+----
+cd /var/www/html
+ln -s /srv/tftp/fai
+----
+
+Add '-U URL' to the 'fai-chboot' call. For example:
+
+----
+fai-chboot -U http://faiserver/fai -IFv .......
+----
+
+
+
+
+
+
 
 
 == [[config]]Installation details
@@ -2215,30 +2244,6 @@ This chapter describes some technical details of some parts of FAI.
 
 
 
-=== [[changeboot]]Changing the boot device
-
-Changing the boot sequence is normally done in the BIOS setup. But you
-can't change the BIOS from a running Linux system.
-
-So, the boot sequence of the BIOS will remain unchanged and
-your computer should always boot first from its network card and the
-second boot device should be the local disk. Then you can
-change the boot device of the client by creating different PXELINUX
-configurations. This will define if an installation
-should be performed, or if the client should to boot from local
-disk. This is done using `fai-chboot(8)`.
-
-
-=== [[itests]]Automated tests
-
-After the customization scripts are executed, FAI will execute some
-tests if available. Using these test, you can check for errors of the
-installation. Test scripts are called via
-`fai-do-scripts(1)` and should append its messages to
-_$LOGDIR/test.log_. A Perl module including some useful subroutines
-can be found in _Faitest.pm_. A test can also define a new class for
-executing another tests during next boot via the variable
-+$ADDCLASSES+.
 
 
 == [[troubleshoot]]Troubleshooting
