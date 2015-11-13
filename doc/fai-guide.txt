@@ -1176,6 +1176,69 @@ Some examples for what hooks could be used:
 
 - Have a look at +hooks/debconf.IMAGE+ for how to clone a machine using a file system image.
 
+=== [[faiflags]]FAI flags
+
+The variable +$FAI_FLAGS+ contains a space separated list of
+flags. The following flags are known:
+
+verbose::
+Create verbose output during installation. This should always be the
+first flag, so consecutive definitions of flags will be verbosely
+displayed.
+
+debug::
+Create debug output. No unattended installation is performed. During
+package installation you have to answer all questions of the
+postinstall scripts on the client's console. A lot of debug
+information will be printed out. This flag is only useful for FAI
+developers.
+
+sshd::
+Start the ssh daemon to enable remote logins.
+You can then log in as _root_ to all install clients during the
+installation. The default password is _fai_ and can be changed by
+setting `FAI_ROOTPW` in `nfsroot.conf(5)`. To log in from your server
+to the install client (named demohost in this example) use:
+
+----
+$ ssh root@demohost
+Warning: Permanently added 'demohost,192.168.33.100' to the list of known hosts.
+root@demohost's password:
+----
+
+This is only the root password during the
+installation process, not for the new installed system. You can also
+log in without a password when using +$SSH_IDENTITY+. 
+
+
+createvt::
+Create two virtual terminals and execute a bash if _ctrl-c_ is typed
+in the console terminal. The additional terminals can be accessed by
+typing _Alt-F2_ or _Alt-F3_. Otherwise, no terminals are available and
+typing _ctrl-c_ will reboot the install client. Setting this flag is
+useful for debugging. If you want an installation which should not be
+interruptible, do not set this flag.
+
+menu::
+This enables a user menu for selecting a profile. All files
++class/*.profile+ are read and a curses based menu will be created.
+
+reboot::
+Reboot the install client after installation is finished without
+typing RETURN on the console. If this flag is not set, and error.log
+contains anything, the install client will stop and wait that you
+press RETURN. If no errors occurred, the client will always reboot
+automatically.
+
+halt::
+Halt the install client at the end of the installation, instead of
+rebooting into the new system.
+
+initial::
+Used by `setup-storage(8)`. Partitions marked with +preserve_reinstall+
+are preserved unless this flag is set. Often, this flag is set in a
+file 'class/*.var' by using setting 'flag_initial=1'.
+
 
 === [[bootmesg]]Boot messages
 
@@ -2085,68 +2148,6 @@ in '$FAI' footnote:['$FAI' is an internal variable used by the FAI
 scripts. By default the path is _/var/lib/fai/config_.]
 
 
-=== [[faiflags]]FAI flags
-
-The variable +$FAI_FLAGS+ contains a space separated list of
-flags. The following flags are known:
-
-verbose::
-Create verbose output during installation. This should always be the
-first flag, so consecutive definitions of flags will be verbosely
-displayed.
-
-debug::
-Create debug output. No unattended installation is performed. During
-package installation you have to answer all questions of the
-postinstall scripts on the client's console. A lot of debug
-information will be printed out. This flag is only useful for FAI
-developers.
-
-sshd::
-Start the ssh daemon to enable remote logins.
-You can then log in as _root_ to all install clients during the
-installation. The default password is _fai_ and can be changed by
-setting `FAI_ROOTPW` in `nfsroot.conf(5)`. To log in from your server
-to the install client (named demohost in this example) use:
-
-----
-$ ssh root@demohost
-Warning: Permanently added 'demohost,192.168.33.100' to the list of known hosts.
-root@demohost's password:
-----
-
-This is only the root password during the
-installation process, not for the new installed system. You can also
-log in without a password when using +$SSH_IDENTITY+. 
-
-
-createvt::
-Create two virtual terminals and execute a bash if _ctrl-c_ is typed
-in the console terminal. The additional terminals can be accessed by
-typing _Alt-F2_ or _Alt-F3_. Otherwise, no terminals are available and
-typing _ctrl-c_ will reboot the install client. Setting this flag is
-useful for debugging. If you want an installation which should not be
-interruptible, do not set this flag.
-
-menu::
-This enables a user menu for selecting a profile. All files
-+class/*.profile+ are read and a curses based menu will be created.
-
-reboot::
-Reboot the install client after installation is finished without
-typing RETURN on the console. If this flag is not set, and error.log
-contains anything, the install client will stop and wait that you
-press RETURN. If no errors occurred, the client will always reboot
-automatically.
-
-halt::
-Halt the install client at the end of the installation, instead of
-rebooting into the new system.
-
-initial::
-Used by `setup-storage(8)`. Partitions marked with +preserve_reinstall+
-are preserved unless this flag is set. Often, this flag is set in a
-file 'class/*.var' by using setting 'flag_initial=1'.
 
 
 
