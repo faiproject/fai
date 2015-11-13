@@ -316,6 +316,8 @@ requirements are easy to establish using FAI. But don't forget to plan
 your installation. Chapter <<plan>> has some useful hints for this
 topic.
 
+=== [[terms]] Important Terms
+
 First, some terms used in this manual are described.
 
 install server::
@@ -372,7 +374,48 @@ webserver and another including the NGINX class, which in turn would
 install Nginx instead.
 
 tasks::
-The FAI is divided into several parts which we call tasks.
+The installation of a client consists of several parts, which are called tasks.
+Tasks are predefined subroutines which perform a certain part of the
+FAI. The following FAI tasks are performed during an installation
+on the install clients.
+
+____
+  confdir		# get the config space
+  setup			# some initialization, start sshd on demand
+  defclass		# define FAI classes
+  defvar		# define variables
+  action		# evaluate FAI_ACTION
+  install		# Start the installation
+  partition		# partition the harddisks, create file systems
+  mountdisks		# mount the file systems
+  extrbase		# extract the base.tar.xz
+  debconf		# do the Debian debconf preseeding
+  repository		# prepare access to the package repository
+  updatebase		# Set up package tools and update packages
+  instsoft		# install software packages
+  configure		# call customization scripts
+  finish		# do some cleanup, show installation statistics
+  tests			# call tests if defined
+  chboot		# call fai-chboot on the install server
+  savelog		# save log files to local and remote location
+  faiend		# reboot host, eject CD if needed
+____
+____
+
+These are tasks, which are only executed when a different action is performed
+
+  dirinstall 	       # install a chroot environment
+  softupdate	       # only do the system configuration
+  sysinfo              # print detailed system information
+  inventory            # print short hardware inventory list
+____
+
+You can also define additional programs or scripts which will be run
+on particular occasions. They are called _hooks_. Hooks are like
+plugins, they can add additional functions to the installation process
+or replace some tasks of FAI. So it's very easy to customize the
+whole installation process. Hooks are explained in detail in
+<<hooks>>.
 
 hooks::
 Hooks are plugins, which can extend or change the behavior of a task.
@@ -760,52 +803,6 @@ hosts.
 
 The order of the classes is important because it defines the priority
 of the classes from low to high.
-
-== [[instprocess]]Overview of the installation sequence
-
-
-The installation of a client consists of several parts, which are called tasks.
-Tasks are predefined subroutines which perform a certain part of the
-FAI. The following FAI tasks are performed during an installation
-on the install clients.
-
-____
-  confdir		# get the config space
-  setup			# some initialization, start sshd on demand
-  defclass		# define FAI classes
-  defvar		# define variables
-  action		# evaluate FAI_ACTION
-  install		# Start the installation
-  partition		# partition the harddisks, create file systems
-  mountdisks		# mount the file systems
-  extrbase		# extract the base.tar.xz
-  debconf		# do the Debian debconf preseeding
-  repository		# prepare access to the package repository
-  updatebase		# Set up package tools and update packages
-  instsoft		# install software packages
-  configure		# call customization scripts
-  finish		# do some cleanup, show installation statistics
-  tests			# call tests if defined
-  chboot		# call fai-chboot on the install server
-  savelog		# save log files to local and remote location
-  faiend		# reboot host, eject CD if needed
-____
-____
-
-These are tasks, which are only executed when a different action is performed
-
-  dirinstall 	       # install a chroot environment
-  softupdate	       # only do the system configuration
-  sysinfo              # print detailed system information
-  inventory            # print short hardware inventory list
-____
-
-You can also define additional programs or scripts which will be run
-on particular occasions. They are called _hooks_. Hooks are like
-plugins, they can add additional functions to the installation process
-or replace some tasks of FAI. So it's very easy to customize the
-whole installation process. Hooks are explained in detail in
-<<hooks>>.
 
 We now describe the most important tasks.
 
