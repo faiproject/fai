@@ -152,92 +152,6 @@ I chose to adapt this technique to a PC cluster running Linux.
 
 
 
-=== [[overview]]Overview and concepts
-
-FAI is a non-interactive system to install, customize and manage Linux
-systems and software configurations on computers as well as virtual
-machines and chroot environments, from small networks to large
-infrastructures and clusters. You can take one or more virgin PCs,
-turn on the power and after a few minutes Linux is installed,
-configured and running on the whole cluster, without any interaction
-necessary. Thus, it's a scalable method for installing and updating a
-cluster unattended with little effort involved. FAI uses the 
-Linux operating system and a collection of shell and Perl scripts for
-the installation process. Changes to the configuration files of the
-operating system can be made by CFEngine, shell (bash and zsh), Perl,
-Python, Ruby and expect scripts.
-
-FAI's target group are system administrators who have to install Linux
-onto one or even hundreds of computers. Because it's a general purpose
-installation tool, it can be used for installing a Beowulf cluster, a
-rendering farm or a Linux laboratory or a classroom. Also large-scale
-Linux networks with different hardware or different installation
-requirements are easy to establish using FAI. But don't forget to plan
-your installation. Chapter <<plan>> has some useful hints for this
-topic.
-
-First, some terms used in this manual are described.
-
-install server::
-It provides DHCP, TFTP and NFS services and the configuration data for
-all install clients. In the examples of this manual this host is
-called 'faiserver'. The host where the package 'fai-server' is installed.
-
-install client::
-A host which will be installed using FAI and a configuration provided
-by the install server. Also called client for short. In this manual,
-the example hosts are called 'demohost, xfcehost, gnomehost ...'
-This computer should boot from its network interface using PXE.
-
-configuration space::
-A subdirectory structure containg several files. Those files describe
-the details of how the installation of the clients will be
-performed. All configuration data is stored here. It's also called
-config space for short. It includes information about:
-
-* Hard disk layout in a format similar to fstab
-* Local file systems, their types, mount points and mount options
-* Software packages
-* Keyboard layout, time zone, Xorg configuration, remote file
-  systems, user accounts, printers ...
-
-+
-The package _fai-doc_ includes a sample configuration space including
-examples for hosts using the XFCE and GNOME environment amongst other
-examples.
-
-
-nfsroot, NFS-Root::
-A file system located on the install server. During the installation
-process it's the complete file system for the install clients. All
-clients share the same nfsroot, which they mount read only. The
-nfsroot needs about {nfsrootsize}MB of free disk space.
-
-TFTP::
-Serves clients the initrd and kernel that is used for the installation process.
-Along with the file system served by NFS, these two make up a temporary
-OS in which the installations are performed.
-
-FAI classes::
-Classes are names which determine which configuration file is
-selected. If a client belongs to class WEBSERVER, it will be configured
-as a webserver, the class DESKTOP for e.g. determines which software
-packages will be installed.
-
-profile::
-A FAI profile is just a list of FAI classes assiged to a profile name,
-which is extended by a description of this profile. E.g. one could have
-two "Webserver" profiles, one with the APACHE class to install the Apache
-webserver and another including the NGINX class, which in turn would
-install Nginx instead.
-
-tasks::
-The FAI is divided into several parts which we call tasks.
-
-hooks::
-Hooks are plugins, which can extend or change the behavior of a task.
-
-
 === [[work]]How does FAI work
 
 The install client which will be installed using FAI, is booted via
@@ -377,6 +291,91 @@ fai-kvm -Vn -u 3 pxe
 You can start as many machines in the network, as tap devices are
 available. All these machine can connect to the outside internet but are
 only reachable from your host machine.
+
+=== [[overview]]Overview and concepts
+
+FAI is a non-interactive system to install, customize and manage Linux
+systems and software configurations on computers as well as virtual
+machines and chroot environments, from small networks to large
+infrastructures and clusters. You can take one or more virgin PCs,
+turn on the power and after a few minutes Linux is installed,
+configured and running on the whole cluster, without any interaction
+necessary. Thus, it's a scalable method for installing and updating a
+cluster unattended with little effort involved. FAI uses the 
+Linux operating system and a collection of shell and Perl scripts for
+the installation process. Changes to the configuration files of the
+operating system can be made by CFEngine, shell (bash and zsh), Perl,
+Python, Ruby and expect scripts.
+
+FAI's target group are system administrators who have to install Linux
+onto one or even hundreds of computers. Because it's a general purpose
+installation tool, it can be used for installing a Beowulf cluster, a
+rendering farm or a Linux laboratory or a classroom. Also large-scale
+Linux networks with different hardware or different installation
+requirements are easy to establish using FAI. But don't forget to plan
+your installation. Chapter <<plan>> has some useful hints for this
+topic.
+
+First, some terms used in this manual are described.
+
+install server::
+It provides DHCP, TFTP and NFS services and the configuration data for
+all install clients. In the examples of this manual this host is
+called 'faiserver'. The host where the package 'fai-server' is installed.
+
+install client::
+A host which will be installed using FAI and a configuration provided
+by the install server. Also called client for short. In this manual,
+the example hosts are called 'demohost, xfcehost, gnomehost ...'
+This computer should boot from its network interface using PXE.
+
+configuration space::
+A subdirectory structure containg several files. Those files describe
+the details of how the installation of the clients will be
+performed. All configuration data is stored here. It's also called
+config space for short. It includes information about:
+
+* Hard disk layout in a format similar to fstab
+* Local file systems, their types, mount points and mount options
+* Software packages
+* Keyboard layout, time zone, Xorg configuration, remote file
+  systems, user accounts, printers ...
+
++
+The package _fai-doc_ includes a sample configuration space including
+examples for hosts using the XFCE and GNOME environment amongst other
+examples.
+
+
+nfsroot, NFS-Root::
+A file system located on the install server. During the installation
+process it's the complete file system for the install clients. All
+clients share the same nfsroot, which they mount read only. The
+nfsroot needs about {nfsrootsize}MB of free disk space.
+
+TFTP::
+Serves clients the initrd and kernel that is used for the installation process.
+Along with the file system served by NFS, these two make up a temporary
+OS in which the installations are performed.
+
+FAI classes::
+Classes are names which determine which configuration file is
+selected. If a client belongs to class WEBSERVER, it will be configured
+as a webserver, the class DESKTOP for e.g. determines which software
+packages will be installed.
+
+profile::
+A FAI profile is just a list of FAI classes assiged to a profile name,
+which is extended by a description of this profile. E.g. one could have
+two "Webserver" profiles, one with the APACHE class to install the Apache
+webserver and another including the NGINX class, which in turn would
+install Nginx instead.
+
+tasks::
+The FAI is divided into several parts which we call tasks.
+
+hooks::
+Hooks are plugins, which can extend or change the behavior of a task.
 
 
 == [[stepbystep]]Step-by-step walkthrough
