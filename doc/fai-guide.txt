@@ -816,6 +816,55 @@ A hook called +updatebase.DEBIAN+ is executed prior to the task `updatebase`
 and only if the install client belongs to the class DEBIAN.
 
 
+=== [[defining classes]]Defining classes
+
+There are different possibilities to define classes:
+
+. Some default classes are defined for every host:     DEFAULT, LAST and its host name.
+. Classes may be listed within a file.
+. Classes may be dynamically defined by scripts.
+
+The last option is a very nice feature, since these scripts will
+define classes is a very flexible way. For example, several classes
+may be defined only if certain hardware is identified or a class is
+defined depending on the network subnet information.
+
+All names of classes, except the host name, are written in
+uppercase. They must not contain a hyphen, a hash, a semicolon or a
+dot, but may contain underscores and digits.
+
+The task _defclass_ calls the command `fai-class(1)` to define
+classes. All scripts matching _^[0-9][0-9]*_ (they start with two
+digits) in the subdirectory
+_$FAI/class_ are executed for defining classes. Everything that is printed
+to STDOUT is automatically defined as a class. For more
+information on defining class, read the manual pages for
+`fai-class(1)`. The script _50-host-classes_ (see below a stripped
+version) is used to define classes depending on the host name.
+
+----
+# use a list of classes for our demo machines
+case $HOSTNAME in
+    demohost)
+        echo "FAIBASE GRUB DHCPC DEMO" ;;
+    xfcehost)
+        echo "FAIBASE GRUB DHCPC DEMO XORG XFCE";;
+    faiserver)
+        echo "FAIBASE DEBIAN DHCPC DEMO FAISERVER" ;;
+    *)
+        echo "FAIBASE GRUB DHCPC" ;;
+esac
+----
+
+Host names should rarely be used for the configuration files in the
+configuration space. Instead, a class should be defined and then added
+for a given host. This is because most of the time the configuration
+data is not specific for one host, but can be shared among several
+hosts.
+
+The order of the classes is important because it defines the priority
+of the classes from low to high.
+
 
 === [[bootmesg]]Boot messages
 
@@ -865,54 +914,6 @@ small Debian system. You can login as user _demo_ or _root_ with password _fai_.
 
 
 
-=== [[s2]]Defining classes
-
-There are different possibilities to define classes:
-
-. Some default classes are defined for every host:     DEFAULT, LAST and its host name.
-. Classes may be listed within a file.
-. Classes may be dynamically defined by scripts.
-
-The last option is a very nice feature, since these scripts will
-define classes is a very flexible way. For example, several classes
-may be defined only if certain hardware is identified or a class is
-defined depending on the network subnet information.
-
-All names of classes, except the host name, are written in
-uppercase. They must not contain a hyphen, a hash, a semicolon or a
-dot, but may contain underscores and digits.
-
-The task _defclass_ calls the command `fai-class(1)` to define
-classes. All scripts matching _^[0-9][0-9]*_ (they start with two
-digits) in the subdirectory
-_$FAI/class_ are executed for defining classes. Everything that is printed
-to STDOUT is automatically defined as a class. For more
-information on defining class, read the manual pages for
-`fai-class(1)`. The script _50-host-classes_ (see below a stripped
-version) is used to define classes depending on the host name.
-
-----
-# use a list of classes for our demo machines
-case $HOSTNAME in
-    demohost)
-        echo "FAIBASE GRUB DHCPC DEMO" ;;
-    xfcehost)
-        echo "FAIBASE GRUB DHCPC DEMO XORG XFCE";;
-    faiserver)
-        echo "FAIBASE DEBIAN DHCPC DEMO FAISERVER" ;;
-    *)
-        echo "FAIBASE GRUB DHCPC" ;;
-esac
-----
-
-Host names should rarely be used for the configuration files in the
-configuration space. Instead, a class should be defined and then added
-for a given host. This is because most of the time the configuration
-data is not specific for one host, but can be shared among several
-hosts.
-
-The order of the classes is important because it defines the priority
-of the classes from low to high.
 
 We now describe the most important tasks.
 
