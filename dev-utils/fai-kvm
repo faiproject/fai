@@ -19,6 +19,7 @@ cdimage=/files/scratch/fai-cd.iso # default name for CD image
 diskdir=/tmp     # directory where the disk images will be created, a RAM disk is recommended
 usernet=0
 newdisk=0
+title=FAI-test
 
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
@@ -61,12 +62,13 @@ usage() {
              If you have created 9 tap devies you can use the numbers 1 to 9.
  -V          do not use vga std with Bochs extensions, use the kvm default
  -U          Use kvm user networking instead of tap devices
+ -t          Set title of the Qemu windows
 EOF
   exit 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "UhnNu:s:m:d:VD:" opt ; do
+while getopts "UhnNu:s:m:d:VD:t:" opt ; do
     case "$opt" in
         n) newdisk=1    ;;
         N) newdisk=2    ;;
@@ -76,6 +78,7 @@ while getopts "UhnNu:s:m:d:VD:" opt ; do
         s) size=$OPTARG ;;
         d) disks=$OPTARG ;;
         D) diskdir=$OPTARG ;;
+        t) title=$OPTARG ;;
         h) usage;;
         V) vga="";;
         ?) die 1 "Unknown option";;
@@ -115,7 +118,7 @@ for i in `seq 1 $disks` ; do
     disk="$disk"
   fi
 done
-gopt="$fix $vga -m $ram -smp 2 -name FAI-test"
+gopt="$fix $vga -m $ram -smp 2 -name $title"
 
 
 # create new disk images
