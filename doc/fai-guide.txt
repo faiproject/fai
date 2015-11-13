@@ -152,6 +152,7 @@ I chose to adapt this technique to a PC cluster running Linux.
 
 
 
+
 === [[work]]How does FAI work
 
 The install client which will be installed using FAI, is booted via
@@ -864,6 +865,251 @@ hosts.
 
 The order of the classes is important because it defines the priority
 of the classes from low to high.
+
+=== [[classvariables]]Defining variables
+
+The task _defvar_ defines the variables for the install
+client. Variables are defined by scripts in _class/*.var_. All global
+variables can be set in 'DEFAULT.var'. For certain groups of hosts use
+a class file or for a single host use the file +$HOSTNAME+ _.var_. Also
+here, it's useful to study all the examples.
+
+The following variables are used in the examples and may also be
+useful for your installation:
+
+FAI_ACTION::
+Set the action FAI should perform. Normally this is done by
+`fai-chboot(8)`. If you can't use this command, define this variable
+i.e. in the script 'LAST.var'.
+
+FAI_ALLOW_UNSIGNED::
+If set to 1, FAI allows the installation of packages from unsigned
+repositories.
+
+CONSOLEFONT::
+Is the font which is loaded during installation by `setfont(8)`.
+
+KEYMAP::
+Defines the keyboard map files in '/usr/share/keymaps' and
+'$FAI/files'. You need not specify the full path, since this file
+will be located automatically.
+
+ROOTPW::
+The encrypted root password for the new system. You can use
+`crypt(3)`, md5 and other hash types for the password. Use
+`mkpasswd(1)` for creating the hash for a certain password.
+For example, to generate a md5 hash for the password use
+----
+$ echo "yoursecrectpassword" | mkpasswd -Hmd5 -s
+----
+
+
+UTC::
+Set hardware clock to UTC if _UTC=yes_. Otherwise set clock to local
+time. See `clock(8)` for more information.
+
+TIMEZONE::
+Is the file relative to '/usr/share/zoneinfo/' which indicates your
+time zone. E.g.: _TIMEZONE=Europe/Berlin_.
+_
+
+MODULESLIST::
+A list of kernel modules which are loaded during boot of the new system (written to
+/etc/modules).
+
+
+=== [[diskconfig]]Hard disk configuration
+
+The tool `setup-storage(8)` reads a file in '$FAI/disk_config' for the
+disk configuration. This file describes how
+all the local disks will be partitioned, which file systems types should be
+created (like ext3/4, xfs, btrfs), and where they are
+mounted to. You can also create software RAID and LVM setups using this
+config file. It's also possible to preserve the disk layout or to
+preserve the data on certain partitions.
+
+During the installation process all local file systems are mounted
+relative to '/target'. For example if you specify the mount point
+'/home' in a disk configuration file this will be the directory
+'/target/home' during the installation process und will become '/home'
+for the new installed system.
+
+=== [[extrbase]]Extract base file
+
+=== [[debconf]]Debconf preseeding
+
+=== [[repository]]Access to the package repository
+
+=== [[packageconfig]]Software package configuration
+
+Before installing packages, FAI will add the content of all files
+named _package_config/class.asc_ to the list of apt keys. If your local
+repository is signed by your keyid AB12CD34 you can easily add this key,
+so FAI will use it during installation. Use this command for creating
+the 'CLASS.asc' file:
+
+----
+faiserver$ gpg -a --export AB12CD34 > /srv/fai/config/package_config/MYCLASS.asc
+----
+
+
+The script `install_packages(8)` installs the selected software
+packages. It reads all configuration files in '$FAI/package_config'
+whose file name matches a defined class. The syntax is very simple.
+
+----
+# an example package class
+
+PACKAGES taskinst
+german
+
+PACKAGES aptitude
+adduser netstd ae
+less passwd
+
+PACKAGES remove
+gpm xdm
+
+PACKAGES aptitude GRUB
+lilo- grub
+
+----
+
+Comments are starting with a hash (#) and are ending at the end of the
+line. Every package command begins with the word _PACKAGES_ followed by a
+command name, which maps to a different package tool like apt-get,
+aptitude or yum for e.g. The command defines which command will be used to
+install the packages named after this command. The list of all
+available commands can be listed using _install_packages -H_.
+Supported package tools are: _aptitude, apt-get, smart, y2pmsh, yast,
+yum, urpm, rpm_
+
+hold::
+Put a package on hold. This package will not be handled by dpkg, e.g
+not upgraded.
+
+install::
+Install all packages (using `apt-get`) that are specified in the following lines. If a
+hyphen is appended to the package name (with no intervening space),
+the package will be removed, not installed. All package names are
+checked for misspellings.  Any package which does not exist, will be
+removed from the list of packages to install. So be careful not to
+misspell any package names.
+
+remove::
+Remove all packages that are specified in the following lines. Append
+a + to the package name if the package should be installed.
+
+taskinst::
+Install all packages belonging to the tasks that are specified in the
+following lines using `tasksel(1)`. You can also use _aptitude_ for
+installing tasks.
+
+aptitude::
+Install all packages with the command `aptitude`. This will be the
+default in the future and may replace apt-get and taskinst. Aptitude
+can also install task packages.
+
+aptitude-r::
+Same as aptitude with option _--with-recommends_.
+
+unpack::
+Download package and unpack only. Do not configure the package.
+
+dselect-upgrade::
+Set package selections using the following lines and install or remove
+the packages specified. These lines are the output of the command
+_dpkg --get-selections_. It's not recommended to use this format,
+since you are also specifying all packages which are only installed
+because of a dependency or a recommends. It's better just to specify
+the pacakge you like to have, and to let FAI (and apt-get) resolv the
+dependencies.
+
+
+Multiple lines with lists of space separated names of packages follow
+the PACKAGES lines. All dependencies are resolved. Packages with
+suffix _-_ (eg. _lilo-_) will be removed instead of installed. The
+order of the packages is of no matter.  If you like to install
+packages from another release than the default, you can append the
+release name to the package name like in
+_openoffice.org/etch-backports_. You can also specify a certain
+version like _apt=0.3.1_. More information on these features are
+described in `aptitude(8)`.
+
+A line which contains the _PRELOADRM_ commands, downloads a file using
+`wget(1)` into a directory before installing the packages. Using the
+_file:_ URL, this file is copied from +$FAI_ROOT+ to the download
+directory.  For example the package `realplayer` needs an archive to
+install the software, so this archive is downloaded to the directory
+'/root'. After installing the packages this file will be removed. If
+the file shouldn't be removed, use the command _PRELOAD_ instead.
+
+It's possible to append a list of class names after the command for
+apt-get. So this _PACKAGE_ command will only be executed when the
+corresponding class is defined. So you can combine many small files
+into the file DEFAULT. WARNING! Use this feature only in the file
+DEFAULT to keep everything simple. See this file for some examples.
+
+If you want to remove a package name from a certain class was part of
+this class before, you should not remove the package name from the
+class file, but instead append a dash (-) to it. This will make sure
+that the package is remove during a softupdate on hosts which were
+installed using the old class definition which included this package
+name.
+
+If you specify a package that does not exist this package will be
+removed automatically from the installation list only if the command _install_ is used.
+
+=== [[cscripts]] Customization scripts
+
+The command `fai-do-scripts(1)` is called to execute all scripts in
+this directory. If a directory with a class name exists, all scripts
+matching '^[0-9][0-9]*' are executed in alphabetical order. So it's
+possible to use scripts of different languages (shell, cfengine,
+Perl, Python, Ruby, expect,..) for one class.
+
+Thoses scripts write their output to different log files, depending on
+the type of scipt. For e.g. all shell scripts write their log to
+`shell.log`.
+
+
+
+==== [[shell]]Shell scripts
+
+Most scripts are Bourne shell scripts. Shell scripts are useful if the
+configuration task only needs to call some shell commands or create a
+file from scratch. In order not to write many short scripts, it's
+possible to use the `ifclass` command for testing if certain classes
+are defined.
+
+----
+ifclass -o A B C
+----
+
+checks if one of classes A, B or C are defined. Using -a (logical
+AND) checks if all classes of a list are defined. The command 'ifclass
+C' checks if only class C is defined.
+
+For copying files with classes, use the command
+`fcopy(8)`. If you want to extract an archive using classes, use
+`ftar(8)`. For appending lines to a configuration file use `ainsl(1)`
+instead of just +echo string >> filename+.
+
+
+FAI also supports 'zsh(1)' scripts during the
+customization task. Within scripts, the variable +$classes+ holds a space
+separated list with the names of all defined classes.
+
+==== [[cfengine]]Cfengine scripts
+
+CFEngine has a rich set of functions to edit existing configuration
+files, e.g _LocateLineMatching, ReplaceAll, InsertLine,
+AppendIfNoSuchLine, HashCommentLinesContaining_. But it can't handle
+variables which are undefined. If a variable is undefined, the whole
+cfengine script will abort.
+
+More information can be found in the manual page `cfengine(8)` or at
+the cfengine homepage http://www.cfengine.org.
 
 
 === [[bootmesg]]Boot messages
@@ -1839,250 +2085,6 @@ file 'class/*.var' by using setting 'flag_initial=1'.
 
 
 
-=== [[classvariables]]Defining variables
-
-The task _defvar_ defines the variables for the install
-client. Variables are defined by scripts in _class/*.var_. All global
-variables can be set in 'DEFAULT.var'. For certain groups of hosts use
-a class file or for a single host use the file +$HOSTNAME+ _.var_. Also
-here, it's useful to study all the examples.
-
-The following variables are used in the examples and may also be
-useful for your installation:
-
-FAI_ACTION::
-Set the action FAI should perform. Normally this is done by
-`fai-chboot(8)`. If you can't use this command, define this variable
-i.e. in the script 'LAST.var'.
-
-FAI_ALLOW_UNSIGNED::
-If set to 1, FAI allows the installation of packages from unsigned
-repositories.
-
-CONSOLEFONT::
-Is the font which is loaded during installation by `setfont(8)`.
-
-KEYMAP::
-Defines the keyboard map files in '/usr/share/keymaps' and
-'$FAI/files'. You need not specify the full path, since this file
-will be located automatically.
-
-ROOTPW::
-The encrypted root password for the new system. You can use
-`crypt(3)`, md5 and other hash types for the password. Use
-`mkpasswd(1)` for creating the hash for a certain password.
-For example, to generate a md5 hash for the password use
-----
-$ echo "yoursecrectpassword" | mkpasswd -Hmd5 -s
-----
-
-
-UTC::
-Set hardware clock to UTC if _UTC=yes_. Otherwise set clock to local
-time. See `clock(8)` for more information.
-
-TIMEZONE::
-Is the file relative to '/usr/share/zoneinfo/' which indicates your
-time zone. E.g.: _TIMEZONE=Europe/Berlin_.
-_
-
-MODULESLIST::
-A list of kernel modules which are loaded during boot of the new system (written to
-/etc/modules).
-
-
-=== [[diskconfig]]Hard disk configuration
-
-The tool `setup-storage(8)` reads a file in '$FAI/disk_config' for the
-disk configuration. This file describes how
-all the local disks will be partitioned, which file systems types should be
-created (like ext3/4, xfs, btrfs), and where they are
-mounted to. You can also create software RAID and LVM setups using this
-config file. It's also possible to preserve the disk layout or to
-preserve the data on certain partitions.
-
-During the installation process all local file systems are mounted
-relative to '/target'. For example if you specify the mount point
-'/home' in a disk configuration file this will be the directory
-'/target/home' during the installation process und will become '/home'
-for the new installed system.
-
-=== [[extrbase]]Extract base file
-
-=== [[debconf]]Debconf preseeding
-
-=== [[repository]]Access to the package repository
-
-=== [[packageconfig]]Software package configuration
-
-Before installing packages, FAI will add the content of all files
-named _package_config/class.asc_ to the list of apt keys. If your local
-repository is signed by your keyid AB12CD34 you can easily add this key,
-so FAI will use it during installation. Use this command for creating
-the 'CLASS.asc' file:
-
-----
-faiserver$ gpg -a --export AB12CD34 > /srv/fai/config/package_config/MYCLASS.asc
-----
-
-
-The script `install_packages(8)` installs the selected software
-packages. It reads all configuration files in '$FAI/package_config'
-whose file name matches a defined class. The syntax is very simple.
-
-----
-# an example package class
-
-PACKAGES taskinst
-german
-
-PACKAGES aptitude
-adduser netstd ae
-less passwd
-
-PACKAGES remove
-gpm xdm
-
-PACKAGES aptitude GRUB
-lilo- grub
-
-----
-
-Comments are starting with a hash (#) and are ending at the end of the
-line. Every package command begins with the word _PACKAGES_ followed by a
-command name, which maps to a different package tool like apt-get,
-aptitude or yum for e.g. The command defines which command will be used to
-install the packages named after this command. The list of all
-available commands can be listed using _install_packages -H_.
-Supported package tools are: _aptitude, apt-get, smart, y2pmsh, yast,
-yum, urpm, rpm_
-
-hold::
-Put a package on hold. This package will not be handled by dpkg, e.g
-not upgraded.
-
-install::
-Install all packages (using `apt-get`) that are specified in the following lines. If a
-hyphen is appended to the package name (with no intervening space),
-the package will be removed, not installed. All package names are
-checked for misspellings.  Any package which does not exist, will be
-removed from the list of packages to install. So be careful not to
-misspell any package names.
-
-remove::
-Remove all packages that are specified in the following lines. Append
-a + to the package name if the package should be installed.
-
-taskinst::
-Install all packages belonging to the tasks that are specified in the
-following lines using `tasksel(1)`. You can also use _aptitude_ for
-installing tasks.
-
-aptitude::
-Install all packages with the command `aptitude`. This will be the
-default in the future and may replace apt-get and taskinst. Aptitude
-can also install task packages.
-
-aptitude-r::
-Same as aptitude with option _--with-recommends_.
-
-unpack::
-Download package and unpack only. Do not configure the package.
-
-dselect-upgrade::
-Set package selections using the following lines and install or remove
-the packages specified. These lines are the output of the command
-_dpkg --get-selections_. It's not recommended to use this format,
-since you are also specifying all packages which are only installed
-because of a dependency or a recommends. It's better just to specify
-the pacakge you like to have, and to let FAI (and apt-get) resolv the
-dependencies.
-
-
-Multiple lines with lists of space separated names of packages follow
-the PACKAGES lines. All dependencies are resolved. Packages with
-suffix _-_ (eg. _lilo-_) will be removed instead of installed. The
-order of the packages is of no matter.  If you like to install
-packages from another release than the default, you can append the
-release name to the package name like in
-_openoffice.org/etch-backports_. You can also specify a certain
-version like _apt=0.3.1_. More information on these features are
-described in `aptitude(8)`.
-
-A line which contains the _PRELOADRM_ commands, downloads a file using
-`wget(1)` into a directory before installing the packages. Using the
-_file:_ URL, this file is copied from +$FAI_ROOT+ to the download
-directory.  For example the package `realplayer` needs an archive to
-install the software, so this archive is downloaded to the directory
-'/root'. After installing the packages this file will be removed. If
-the file shouldn't be removed, use the command _PRELOAD_ instead.
-
-It's possible to append a list of class names after the command for
-apt-get. So this _PACKAGE_ command will only be executed when the
-corresponding class is defined. So you can combine many small files
-into the file DEFAULT. WARNING! Use this feature only in the file
-DEFAULT to keep everything simple. See this file for some examples.
-
-If you want to remove a package name from a certain class was part of
-this class before, you should not remove the package name from the
-class file, but instead append a dash (-) to it. This will make sure
-that the package is remove during a softupdate on hosts which were
-installed using the old class definition which included this package
-name.
-
-If you specify a package that does not exist this package will be
-removed automatically from the installation list only if the command _install_ is used.
-
-=== [[cscripts]] Customization scripts
-
-The command `fai-do-scripts(1)` is called to execute all scripts in
-this directory. If a directory with a class name exists, all scripts
-matching '^[0-9][0-9]*' are executed in alphabetical order. So it's
-possible to use scripts of different languages (shell, cfengine,
-Perl, Python, Ruby, expect,..) for one class.
-
-Thoses scripts write their output to different log files, depending on
-the type of scipt. For e.g. all shell scripts write their log to
-`shell.log`.
-
-
-
-==== [[shell]]Shell scripts
-
-Most scripts are Bourne shell scripts. Shell scripts are useful if the
-configuration task only needs to call some shell commands or create a
-file from scratch. In order not to write many short scripts, it's
-possible to use the `ifclass` command for testing if certain classes
-are defined.
-
-----
-ifclass -o A B C
-----
-
-checks if one of classes A, B or C are defined. Using -a (logical
-AND) checks if all classes of a list are defined. The command 'ifclass
-C' checks if only class C is defined.
-
-For copying files with classes, use the command
-`fcopy(8)`. If you want to extract an archive using classes, use
-`ftar(8)`. For appending lines to a configuration file use `ainsl(1)`
-instead of just +echo string >> filename+.
-
-
-FAI also supports 'zsh(1)' scripts during the
-customization task. Within scripts, the variable +$classes+ holds a space
-separated list with the names of all defined classes.
-
-==== [[cfengine]]Cfengine scripts
-
-CFEngine has a rich set of functions to edit existing configuration
-files, e.g _LocateLineMatching, ReplaceAll, InsertLine,
-AppendIfNoSuchLine, HashCommentLinesContaining_. But it can't handle
-variables which are undefined. If a variable is undefined, the whole
-cfengine script will abort.
-
-More information can be found in the manual page `cfengine(8)` or at
-the cfengine homepage http://www.cfengine.org.
 
 
 === [[changeboot]]Changing the boot device
