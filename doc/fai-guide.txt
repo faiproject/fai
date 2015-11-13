@@ -1034,64 +1034,6 @@ At the end, the system is automatically rebooted if "reboot" was added to
 +$FAI_FLAGS+. 
 
 
-== [[booterror]]Troubleshooting the boot messages
-
-
-The following error message indicates that your install client doesn't
-get an answer from a DHCP server. Check your cables or start the
-`dhcpd(8)` daemon with the debug flag enabled.
-
-____
-  PXE-E51: No DHCP or BOOTP offers received
-  Network boot aborted
-____
-
-If you do not see the following message, the install kernel could not
-detect your network card, for example because of a missing driver:
-
-----
-Starting dhcp for interface eth0
-dhcp: PREINIT eth0 up
-dhcp: BOND setting eth
-----
-
-Check the initrd in the nfsroot (`lsinird`) if the kernel driver of your network
-card is included there and check if you like to add the package
-'firmware-linux-nonfree' in +/etc/fai/NFSROOT+ and rebuild the initrd
-by calling `fai-make-nfsroot -k`.
-You may also add a driver to +/srv/fai/nfsroot/etc/dracut.conf+ in
-the line +add_drivers+++=+.
-
-
-This is the error message you will see, when your network card is
-working, but the install server does not export the nfsroot
-directory to the install clients, This is often caused by missing
-NFS permissions on the server side.
-
-----
-Starting dhcp for interface eth0
-dhcp: PREINIT eth0 up
-dhcp: BOND setting eth
-mount.nfs: access denied by server while mounting 192.168.33.250:/srv/fai/nfsroot
-.
-.
-dracut Warning: Could not boot
-.
-Dropping to debug shell
-dracut:/#
-----
-
-Now, you are inside the emergency shell of the initrd which was created
-by 'dracut(8)'. You will get a shell prompt, and can look at the log files.
-For more information about debugging the early boot process using
-dracut see `dracut.cmdline(7)`
-
-Use the following command on the install server to see which directories are exported
-from the install server (named faiserver):
-
-----
-$ showmount -e faiserver
-----
 
 
 == [[advanced]]Advanced FAI topics
@@ -2292,3 +2234,62 @@ executed in a script. To be sure, you should look for more details in
 all log files.
 
 
+== [[troubleshoot]]Troubleshooting
+
+=== [[booterror]]Booterrors
+
+The following error message indicates that your install client doesn't
+get an answer from a DHCP server. Check your cables or start the
+`dhcpd(8)` daemon with the debug flag enabled.
+
+____
+  PXE-E51: No DHCP or BOOTP offers received
+  Network boot aborted
+____
+
+If you do not see the following message, the install kernel could not
+detect your network card, for example because of a missing driver:
+
+----
+Starting dhcp for interface eth0
+dhcp: PREINIT eth0 up
+dhcp: BOND setting eth
+----
+
+Check the initrd in the nfsroot (`lsinird`) if the kernel driver of your network
+card is included there and check if you like to add the package
+'firmware-linux-nonfree' in +/etc/fai/NFSROOT+ and rebuild the initrd
+by calling `fai-make-nfsroot -k`.
+You may also add a driver to +/srv/fai/nfsroot/etc/dracut.conf+ in
+the line +add_drivers+++=+.
+
+
+This is the error message you will see, when your network card is
+working, but the install server does not export the nfsroot
+directory to the install clients, This is often caused by missing
+NFS permissions on the server side.
+
+----
+Starting dhcp for interface eth0
+dhcp: PREINIT eth0 up
+dhcp: BOND setting eth
+mount.nfs: access denied by server while mounting 192.168.33.250:/srv/fai/nfsroot
+.
+.
+dracut Warning: Could not boot
+.
+Dropping to debug shell
+dracut:/#
+----
+
+Now, you are inside the emergency shell of the initrd which was created
+by 'dracut(8)'. You will get a shell prompt, and can look at the log files.
+For more information about debugging the early boot process using
+dracut see `dracut.cmdline(7)`
+
+Use the following command on the install server to see which directories are exported
+from the install server (named faiserver):
+
+----
+$ showmount -e faiserver
+----
