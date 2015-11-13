@@ -229,8 +229,7 @@ times. All install clients had a 1Gbit network card installed.
 
 === [[first]]My first installation
 
-Using the FAI CD and a virtual machine, you can easily try a fully
-automatic installation.
+Without further ado, this section will provide a quick and easy demonstration of a fully automatic installation using the FAI CD and a virtual machine.
 
 Just download the CD ISO image from http://fai-project/fai-cd and boot
 your VM using this CD. You will see a grub menu where you can select
@@ -293,7 +292,7 @@ You can start as many machines in the network, as tap devices are
 available. All these machine can connect to the outside internet but are
 only reachable from your host machine.
 
-== [[overview]]Overview and concepts
+== [[overview]]Overview and Concepts
 
 FAI is a non-interactive system to install, customize and manage Linux
 systems and software configurations on computers as well as virtual
@@ -411,15 +410,15 @@ These are tasks, which are only executed when a different action is performed
   inventory            # print short hardware inventory list
 ____
 
-You can also define additional programs or scripts which will be run
-on particular occasions. They are called _hooks_. Hooks are like
-plugins, they can add additional functions to the installation process
-or replace some tasks of FAI. So it's very easy to customize the
-whole installation process. Hooks are explained in detail in
-<<hooks>>.
+For a more in-depth description of _tasks_ , see <<tasks>>.
+
+Note that you are not limited to the FAI tasks. You can also define additional programs or scripts which will be run
+on particular occasions. They are called _hooks_.
 
 hooks::
-Hooks are plugins, which can extend or change the behavior of a task.
+Hooks are plugins, they can add additional functionality to the installation process
+or even replace entire tasks of FAI. Hooks are explained in detail in
+<<hooks>>.
 
 === [[classc]]The class concept
 
@@ -474,6 +473,9 @@ classes to which this client belongs, making the installation of a new
 client very easy. Thus no additional information needs to be added to
 the configuration space if the existing classes suffice for your
 needs. 
+
+As you can see, classes are a central pillar of customizing your configuration space and with that your client installation. On how to define your own classes, refer to <<defining classes>>.
+
 
 == [[setup]]Setup your faiserver
 
@@ -605,6 +607,8 @@ server for exporting the nfsroot and the config space was installed.
 
 ==== [[bootdhcp]]Configuration of the DHCP daemon
 
+Ideally, your faiserver should also be your DHCP server. If that is not the case, instruct the admin responsible of the DHCP server to configure it according to this section. Optionally, it is possible to avoid that by using the <<auto-discover>> feature released in FAI 5.0.
+
 An example for `dhcpd.conf(5)` is provided with the _fai-doc_
 package. Start using this example and look at all options used therein.
 
@@ -707,6 +711,11 @@ demohost has 192.168.33.100 in hex C0A82164
 Writing file /srv/tftp/fai/pxelinux.cfg/C0A82164 for demohost
 ----
 
+At this point, you should have a working faiserver setup and your clients should boot into FAI and be able to install one of the examples.
+
+In the following section, you can read about planning your installation, tailoring your configuration space to your particular needs and extending FAI using hooks.
+
+
 == [[plan]]Plan your installation
 
 Before starting your installation, you should invest a lot of time into
@@ -744,10 +753,10 @@ your own installation. A good paper called "Bootstrapping an
 Infrastructure" with more aspects of building an infrastructure is
 available at http://www.infrastructures.org/papers/bootstrap
 
-=== [[c3]]The subdirectories of the configuration space
+=== [[c3]]The configuration space and its subdirectories
 
 The configuration space is the collection of information about how exactly
-to install a computer. The central configuration space for all install
+to install a client. The central configuration space for all install
 clients is located on the install server in '/srv/fai/config' and its
 subdirectories. This will be mounted by the install clients to
 '/var/lib/fai/config'. The main installation command `fai(8)` uses all
@@ -1110,6 +1119,7 @@ cfengine script will abort.
 
 More information can be found in the manual page `cfengine(8)` or at
 the cfengine homepage http://www.cfengine.org.
+
 
 === [[hooks]]Hooks
 
@@ -1532,7 +1542,7 @@ support loading the kernel and initrd via FTP or HTTP. The command
 'fai-chboot(8)' supports this with the option '-U'.
 
 
-=== Customizing your install server setup
+=== [[Customizing your install server setup]]Customizing your install server setup
 
 - local/faster package mirror
 - different loguser
@@ -1835,6 +1845,7 @@ That's all!
 
 
 == [[hints]]Various hints and details
+
 
 === [[tasks]]The list of tasks
 
