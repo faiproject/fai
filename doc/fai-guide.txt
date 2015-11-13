@@ -292,7 +292,7 @@ You can start as many machines in the network, as tap devices are
 available. All these machine can connect to the outside internet but are
 only reachable from your host machine.
 
-=== [[overview]]Overview and concepts
+== [[overview]]Overview and concepts
 
 FAI is a non-interactive system to install, customize and manage Linux
 systems and software configurations on computers as well as virtual
@@ -420,6 +420,59 @@ whole installation process. Hooks are explained in detail in
 hooks::
 Hooks are plugins, which can extend or change the behavior of a task.
 
+=== [[classc]]The class concept
+
+Classes are used in nearly all tasks of the installation. Classes
+determine which configuration files to choose from a list of available
+alternatives. To determine which config files to use, FAI searches the
+list of defined classes and uses all configuration files that match a
+class name footnote:[It's also possible to use only the configuration
+file with the highest priority since the order of classes define a
+priority from low to high within the list of classes.  ]. The following loop implements
+this function in pseudo shell code:
+
+----
+for class in $all_classes; do
+   if [ -r $config_dir/$class ]; then      # if a file with name $class exists
+      your_command $config_dir/$class      # call a command with this file name
+      # exit if only the first matching file is needed
+   fi
+done
+----
+
+The very nice feature of this is that you can add a new configuration
+alternative and it will automatically be used by FAI without changing
+the code, if the configuration file uses a class name.
+
+This is because the loop automatically detects new configuration files
+that should be used.
+The idea of using classes in general and using certain files matching
+a class name for a configuration is adopted from the installation
+scripts by Casper Dik for Solaris. This technique proved to be very
+useful and easy.
+
+You can group multiple hosts that share the same configuration
+files by using the same class. You can also split the whole
+configuration data for all clients into several classes and use them
+like lego bricks and build the entire configuration for a single
+client by assembling the bricks together.
+
+
+If a client belongs to class _A_, we say the class _A_
+is defined for this client. A class has no value, it is just defined or
+undefined.
+
+Classes determine how the installation is performed. For example, an install
+client can be configured to get the XFCE desktop by just adding the
+class _XFCE_ to it. Naturally, also more granular configurations are possible. For instance, classes can describe how the hard disk should be partitioned, they can
+define which software packages will be installed, or which
+customization steps are performed. 
+
+Often, a client configuration is created by only changing or appending the
+classes to which this client belongs, making the installation of a new
+client very easy. Thus no additional information needs to be added to
+the configuration space if the existing classes suffice for your
+needs. 
 
 == [[stepbystep]]Step-by-step walkthrough
 
@@ -700,59 +753,6 @@ small Debian system. You can login as user _demo_ or _root_ with password _fai_.
 
 
 
-== [[classc]]The class concept
-
-Classes are used in nearly all tasks of the installation. Classes
-determine which configuration files to choose from a list of available
-alternatives. To determine which config files to use, FAI searches the
-list of defined classes and uses all configuration files that match a
-class name footnote:[It's also possible to use only the configuration
-file with the highest priority since the order of classes define a
-priority from low to high within the list of classes.  ]. The following loop implements
-this function in pseudo shell code:
-
-----
-for class in $all_classes; do
-   if [ -r $config_dir/$class ]; then      # if a file with name $class exists
-      your_command $config_dir/$class      # call a command with this file name
-      # exit if only the first matching file is needed
-   fi
-done
-----
-
-The very nice feature of this is that you can add a new configuration
-alternative and it will automatically be used by FAI without changing
-the code, if the configuration file uses a class name.
-
-This is because the loop automatically detects new configuration files
-that should be used.
-The idea of using classes in general and using certain files matching
-a class name for a configuration is adopted from the installation
-scripts by Casper Dik for Solaris. This technique proved to be very
-useful and easy.
-
-You can group multiple hosts that share the same configuration
-files by using the same class. You can also split the whole
-configuration data for all clients into several classes and use them
-like lego bricks and build the entire configuration for a single
-client by assembling the bricks together.
-
-
-If a client belongs to class _A_, we say the class _A_
-is defined for this client. A class has no value, it is just defined or
-undefined.
-
-Classes determine how the installation is performed. For example, an install
-client can be configured to get the XFCE desktop by just adding the
-class _XFCE_ to it. Naturally, also more granular configurations are possible. For instance, classes can describe how the hard disk should be partitioned, they can
-define which software packages will be installed, or which
-customization steps are performed. 
-
-Often, a client configuration is created by only changing or appending the
-classes to which this client belongs, making the installation of a new
-client very easy. Thus no additional information needs to be added to
-the configuration space if the existing classes suffice for your
-needs. 
 
 
 === [[s2]]Defining classes
