@@ -1240,49 +1240,6 @@ are preserved unless this flag is set. Often, this flag is set in a
 file 'class/*.var' by using setting 'flag_initial=1'.
 
 
-=== [[bootmesg]]Boot messages
-
-When booting the install client from network card with PXE you will some
-messages like this:
-include::includes/bootexample.txt[]
-
-At this point the install client has successfully received the network
-config via DHCP and the kernel and initrd via TFTP. It now boots the
-Linux kernel and the initrd. If everything went right, the initrd
-mounts the nfsroot footnote:['/srv/fai/nfsroot' from the install
-server via NFS] and the FAI scripts are started. The first
-thing you see is the red FAI copyright message.
-
-include::includes/fai-1st-part.txt[]
-
-You can also see the list of FAI classes, that are defined for this
-host. This list is very important for the rest of the installation.
-
-The first task is called _confdir_, which is responsible for getting
-access to the config space. Here, we use an NFS mount from the install
-server as you can see on the console (and later in the logs).
-
-----
-FAI_CONFIG_SRC is set to nfs://faiserver/srv/fai/config
-Configuration space faiserver:/srv/fai/config mounted to /var/lib/fai/config
-----
-
-Before the installation is started (+$FAI_ACTION=install+) the computer
-beeps three times. So, be careful when you hear three beeps but you do
-not want to perform an installation and let FAI erase all yout data on
-the local disk!
-
-
-=== [[reboot]]Rebooting the computer into the new system
-
-For rebooting the computer during or at the end of the installation you
-should use the command `faireboot` in favour of the normal reboot command.
-Use `faireboot` also if logged in from remote. If the installation
-hasn't finished, use _faireboot -s_, so the log files are also copied
-to the install server.
-
-If the installation has finished successfully, the computer should boot a
-small Debian system. You can login as user _demo_ or _root_ with password _fai_.
 
 
 
@@ -1291,121 +1248,6 @@ small Debian system. You can login as user _demo_ or _root_ with password _fai_.
 
 We now describe the most important tasks.
 
-=== [[isetup]]Starting FAI (task confdir)
-
-After the install client has booted only the script '/usr/sbin/fai' is
-executed. It will do some minimal initialization. The variable
-+$FAI_CONFIG_SRC+ footnote:[It it defined on the kernel command line]
-is used to get access to the FAI configuration space which is then
-available in the directory +$FAI+ footnote:[/var/lib/fai/config]. FAI
-will not proceed without the config space.
-
-
-=== [[iclass]]Defining classes and variables (tasks defclass and defvar)
-
-The command `fai-class(1)` executes scripts in '$FAI/class' for defining
-classes. If the scripts write a string to stdout, this will be defined
-as a class. Read all the details in the man page of `fai-class(1)`.
-
-
-After defining the classes, every file matching _.var_ with a prefix
-which matches a defined class is sourced to define variables. It must
-contain vaild shell code.
-
-=== [[ipartition]]Partitioning local disks, creating file systems (task partition)
-
-For the disk partitioning exactly one disk configuration file from
-'$FAI/disk_config' is selected using classes.
-
-The format of the disk configuration is similar to a fstab file.
-
-The partitioning tool `setup-storage(8)` performs all commands
-necessary for creating the disk partition layout, software RAID, LVM
-and for creating the file systems. Read the manual page of
-`setup-storage(8)` for a detailed description and some examples of the
-format.
-
-
-=== [[ipreseed]]Debconf preseeding (task debconf)
-Files in '$FAI/debconf' are used for the usual `debconf(7)` presseding
-if the file names match a class name.
-
-=== [[ipackages]]Installing software packages (task instsoft)
-
-The command `install_packages(8)` reads the config files from
-'$FAI/package_config' in a class based manner and installs software
-packages on the new file system.
-
-It installs the packages using `apt-get(8)`, `aptitude(1)`, `yum` or other
-package tools without any manual interaction needed. Package
-dependecies are also resolved by the package tools.
-
-The format of the configuration files is described in <<packageconfig>>.
-
-=== [[icscripts]]Site specific customization (task configure)
-
-Often the default configurations of the software packages will not
-meet your site-specific needs. You can call arbitrary scripts which
-adjust the system configuration. Therefore the command
-`fai-do-scripts(1)` executes scripts in '$FAI/scripts' in a class
-based manner. It is possible to have several scripts of different
-types (shell, cfengine, ...) to be executed for one class.
-
-The default set of scripts in '$FAI/scripts' include examples for
-installing Debian and CentOS machines. They set the root password, add
-a demo user account, set the timezone, configure the network for DHCP
-or using a fixed IP address, setup grub and more.
-They should do a reasonable job for your installation. You can edit
-them or add new scripts to match your local needs.
-
-More information about these scripts are described in <<cscripts>>.
-
-
-=== [[isavelog]]Saving log files (task savelog)
-
-When all tasks are finished, the log files are written to
-_/var/log/fai/$HOSTNAME/install/_
-footnote:['/var/log/fai/localhost/install/' is a link to this
-directory.] on the new system and to the account on the install server
-if +$LOGUSER+ is defined. It is also possible to specify
-another host as log saving destination through the variable
-+$LOGSERVER+. If +$LOGSERVER+ is not defined, FAI uses the variable
-+$SERVER+ which is only defined during an initial installation (by
-get-boot-info). Make sure to set +$LOGSERVER+ in a _class/*.var_ script
-if you are using the action _softupdate_.
-
-Additionally, two symlinks will be created to indicated the last
-directory written to. The symlink 'last' points to the log directory
-of the last FAI action performed. The symlinks 'last-install' and
-'last-sysinfo' point to the directory with of the last corresponding
-action. By default log files will be copied to the log
-server using scp. You can use the variable +$FAI_LOGPROTO+ in file
-'fai.conf(5)' to choose another method for saving logs to the remote
-server. Here's an example of the symlink structure:
-
-----
-lrwxrwxrwx   1 fai fai   23 Dec  2  2013 last-sysinfo -> sysinfo-20131202_161237
-drwxr-xr-x   2 fai fai 4096 Dec  2  2013 sysinfo-20131202_161237
-drwxr-xr-x   2 fai fai 4096 Feb 14  2014 install-20140214_142150
-drwxr-xr-x   2 fai fai 4096 Dec  2 11:47 install-20141202_113918
-lrwxrwxrwx   1 fai fai   23 Dec  4 13:22 last-install -> install-20141204_131351
-lrwxrwxrwx   1 fai fai   23 Dec  4 13:22 last -> install-20141204_131351
-drwxr-xr-x   2 fai fai 4096 Dec  4 13:22 install-20141204_131351
-----
-
-Examples of the log files can be found at http://fai-project.org/logs.
-
-
-=== [[ireboot]]Reboot the new installed system
-
-Before rebooting, the install client calls `fai-chboot -d <hostname>`
-on the install server, to disable its own PXELINUX
-configuration. Otherwise, it would restart the installation during the
-next boot. Normally this should boot the new installed system from
-its second boot device, the local hard disk.
-
-At the end, the system is automatically rebooted if "reboot" was added to
-+$FAI_FLAGS+. 
 
 
 
@@ -2148,9 +1990,165 @@ in '$FAI' footnote:['$FAI' is an internal variable used by the FAI
 scripts. By default the path is _/var/lib/fai/config_.]
 
 
+=== [[bootmesg]]Boot messages
+
+When booting the install client from network card with PXE you will some
+messages like this:
+include::includes/bootexample.txt[]
+
+At this point the install client has successfully received the network
+config via DHCP and the kernel and initrd via TFTP. It now boots the
+Linux kernel and the initrd. If everything went right, the initrd
+mounts the nfsroot footnote:['/srv/fai/nfsroot' from the install
+server via NFS] and the FAI scripts are started. The first
+thing you see is the red FAI copyright message.
+
+include::includes/fai-1st-part.txt[]
+
+You can also see the list of FAI classes, that are defined for this
+host. This list is very important for the rest of the installation.
+
+The first task is called _confdir_, which is responsible for getting
+access to the config space. Here, we use an NFS mount from the install
+server as you can see on the console (and later in the logs).
+
+----
+FAI_CONFIG_SRC is set to nfs://faiserver/srv/fai/config
+Configuration space faiserver:/srv/fai/config mounted to /var/lib/fai/config
+----
+
+Before the installation is started (+$FAI_ACTION=install+) the computer
+beeps three times. So, be careful when you hear three beeps but you do
+not want to perform an installation and let FAI erase all yout data on
+the local disk!
 
 
+=== [[reboot]]Rebooting the computer into the new system
 
+For rebooting the computer during or at the end of the installation you
+should use the command `faireboot` in favour of the normal reboot command.
+Use `faireboot` also if logged in from remote. If the installation
+hasn't finished, use _faireboot -s_, so the log files are also copied
+to the install server.
+
+If the installation has finished successfully, the computer should boot a
+small Debian system. You can login as user _demo_ or _root_ with password _fai_.
+
+=== [[isetup]]Starting FAI (task confdir)
+
+After the install client has booted only the script '/usr/sbin/fai' is
+executed. It will do some minimal initialization. The variable
++$FAI_CONFIG_SRC+ footnote:[It it defined on the kernel command line]
+is used to get access to the FAI configuration space which is then
+available in the directory +$FAI+ footnote:[/var/lib/fai/config]. FAI
+will not proceed without the config space.
+
+
+=== [[iclass]]Defining classes and variables (tasks defclass and defvar)
+
+The command `fai-class(1)` executes scripts in '$FAI/class' for defining
+classes. If the scripts write a string to stdout, this will be defined
+as a class. Read all the details in the man page of `fai-class(1)`.
+
+
+After defining the classes, every file matching _.var_ with a prefix
+which matches a defined class is sourced to define variables. It must
+contain vaild shell code.
+
+=== [[ipartition]]Partitioning local disks, creating file systems (task partition)
+
+For the disk partitioning exactly one disk configuration file from
+'$FAI/disk_config' is selected using classes.
+
+The format of the disk configuration is similar to a fstab file.
+
+The partitioning tool `setup-storage(8)` performs all commands
+necessary for creating the disk partition layout, software RAID, LVM
+and for creating the file systems. Read the manual page of
+`setup-storage(8)` for a detailed description and some examples of the
+format.
+
+
+=== [[ipreseed]]Debconf preseeding (task debconf)
+Files in '$FAI/debconf' are used for the usual `debconf(7)` presseding
+if the file names match a class name.
+
+=== [[ipackages]]Installing software packages (task instsoft)
+
+The command `install_packages(8)` reads the config files from
+'$FAI/package_config' in a class based manner and installs software
+packages on the new file system.
+
+It installs the packages using `apt-get(8)`, `aptitude(1)`, `yum` or other
+package tools without any manual interaction needed. Package
+dependecies are also resolved by the package tools.
+
+The format of the configuration files is described in <<packageconfig>>.
+
+=== [[icscripts]]Site specific customization (task configure)
+
+Often the default configurations of the software packages will not
+meet your site-specific needs. You can call arbitrary scripts which
+adjust the system configuration. Therefore the command
+`fai-do-scripts(1)` executes scripts in '$FAI/scripts' in a class
+based manner. It is possible to have several scripts of different
+types (shell, cfengine, ...) to be executed for one class.
+
+The default set of scripts in '$FAI/scripts' include examples for
+installing Debian and CentOS machines. They set the root password, add
+a demo user account, set the timezone, configure the network for DHCP
+or using a fixed IP address, setup grub and more.
+They should do a reasonable job for your installation. You can edit
+them or add new scripts to match your local needs.
+
+More information about these scripts are described in <<cscripts>>.
+
+
+=== [[isavelog]]Saving log files (task savelog)
+
+When all tasks are finished, the log files are written to
+_/var/log/fai/$HOSTNAME/install/_
+footnote:['/var/log/fai/localhost/install/' is a link to this
+directory.] on the new system and to the account on the install server
+if +$LOGUSER+ is defined. It is also possible to specify
+another host as log saving destination through the variable
++$LOGSERVER+. If +$LOGSERVER+ is not defined, FAI uses the variable
++$SERVER+ which is only defined during an initial installation (by
+get-boot-info). Make sure to set +$LOGSERVER+ in a _class/*.var_ script
+if you are using the action _softupdate_.
+
+Additionally, two symlinks will be created to indicated the last
+directory written to. The symlink 'last' points to the log directory
+of the last FAI action performed. The symlinks 'last-install' and
+'last-sysinfo' point to the directory with of the last corresponding
+action. By default log files will be copied to the log
+server using scp. You can use the variable +$FAI_LOGPROTO+ in file
+'fai.conf(5)' to choose another method for saving logs to the remote
+server. Here's an example of the symlink structure:
+
+----
+lrwxrwxrwx   1 fai fai   23 Dec  2  2013 last-sysinfo -> sysinfo-20131202_161237
+drwxr-xr-x   2 fai fai 4096 Dec  2  2013 sysinfo-20131202_161237
+drwxr-xr-x   2 fai fai 4096 Feb 14  2014 install-20140214_142150
+drwxr-xr-x   2 fai fai 4096 Dec  2 11:47 install-20141202_113918
+lrwxrwxrwx   1 fai fai   23 Dec  4 13:22 last-install -> install-20141204_131351
+lrwxrwxrwx   1 fai fai   23 Dec  4 13:22 last -> install-20141204_131351
+drwxr-xr-x   2 fai fai 4096 Dec  4 13:22 install-20141204_131351
+----
+
+Examples of the log files can be found at http://fai-project.org/logs.
+
+
+=== [[ireboot]]Reboot the new installed system
+
+Before rebooting, the install client calls `fai-chboot -d <hostname>`
+on the install server, to disable its own PXELINUX
+configuration. Otherwise, it would restart the installation during the
+next boot. Normally this should boot the new installed system from
+its second boot device, the local hard disk.
+
+At the end, the system is automatically rebooted if "reboot" was added to
++$FAI_FLAGS+. 
 
 
 === [[changeboot]]Changing the boot device
