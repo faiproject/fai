@@ -1111,6 +1111,71 @@ cfengine script will abort.
 More information can be found in the manual page `cfengine(8)` or at
 the cfengine homepage http://www.cfengine.org.
 
+=== [[hooks]]Hooks
+
+Hooks let you specify functions or programs which are run at certain
+steps of the installation process. Before a task is called,
+FAI searches for existing hooks for this task and executes them. As
+you might expect, classes are also used when calling hooks. Hooks are
+executed for every defined class. You only have to create the hook
+with the name for the desired class and it will be used.  If several
+hooks for a task exists, they are called in the order defined by the
+classes.  If _debug_ is included in +$FAI_FLAG+ the option _-d_ is
+passed to all hooks, so you can debug your own hooks.  If some default
+tasks should be skipped, use the subroutine _skiptask_ and a list of
+default tasks as parameters. In the examples provided, the hooks of
+the class CENTOS skips some Debian specific tasks.
+
+The directory '$FAI/hooks/' contains all hooks. A hook is an executable
+file following the naming scheme 'taskname.CLASSNAME[.sh]' (e.g.
+'repository.CENTOS' or 'savelog.LAST.sh), a task name and a
+class name separated by a dot, optionally followed by '.sh'. The
+task name specifies which task to precede executing this hook, if the
+specified class is defined for the installing client.  See section
+<<tasks>> for a complete list of default tasks that can be used.
+
+A hook of the form _hookprefix.classname_ can't define variables for
+the installation script, because it's a subprocess. But you can use
+any binary executable or any script you wrote. Hooks that have the
+suffix _.sh_ (e.g. 'partition.DEFAULT.sh) must be Bourne
+shell scripts and are sourced. So it's possible to redefine variables
+for the installation scripts.
+
+In the first part of FAI, all hooks with prefix _confdir_ are called.
+Those hooks can not be located in the config space, since it's not yet
+available. Therefore these hooks are the only hooks located in
++$nfsroot+'/$FAI/hooks' on the install server. All other hooks are
+found in '$FAI_CONFIGDIR/hooks' on the install server.
+
+
+All hooks that are called before classes are defined can only use the
+following classes: _DEFAULT $HOSTNAME LAST_. If a hook for class
+_DEFAULT_ should only be called if no hook for class +$HOSTNAME+ is
+available, insert these lines to the default hook:
+
+----
+hookexample.DEFAULT:
+
+#! /bin/sh
+
+# skip DEFAULT hook if a hook for $HOSTNAME exists
+scriptname=$(basename $0 .DEFAULT)
+[-f $FAI/hooks/$scriptname.$HOSTNAME ] && exit
+# here follows the actions for class DEFAULT
+.
+.
+----
+
+Some examples for what hooks could be used:
+
+- Load kernel modules before classes are defined in '$FAI/class'.
+
+- Send an email to the administrator if the installation is finished.
+
+- Install a diskless client and skip local disk partitioning.
+
+- Have a look at +hooks/debconf.IMAGE+ for how to clone a machine using a file system image.
+
 
 === [[bootmesg]]Boot messages
 
@@ -2113,70 +2178,6 @@ executing another tests during next boot via the variable
 +$ADDCLASSES+.
 
 
-=== [[hooks]]Hooks
-
-Hooks let you specify functions or programs which are run at certain
-steps of the installation process. Before a task is called,
-FAI searches for existing hooks for this task and executes them. As
-you might expect, classes are also used when calling hooks. Hooks are
-executed for every defined class. You only have to create the hook
-with the name for the desired class and it will be used.  If several
-hooks for a task exists, they are called in the order defined by the
-classes.  If _debug_ is included in +$FAI_FLAG+ the option _-d_ is
-passed to all hooks, so you can debug your own hooks.  If some default
-tasks should be skipped, use the subroutine _skiptask_ and a list of
-default tasks as parameters. In the examples provided, the hooks of
-the class CENTOS skips some Debian specific tasks.
-
-The directory '$FAI/hooks/' contains all hooks. A hook is an executable
-file following the naming scheme 'taskname.CLASSNAME[.sh]' (e.g.
-'repository.CENTOS' or 'savelog.LAST.sh), a task name and a
-class name separated by a dot, optionally followed by '.sh'. The
-task name specifies which task to precede executing this hook, if the
-specified class is defined for the installing client.  See section
-<<tasks>> for a complete list of default tasks that can be used.
-
-A hook of the form _hookprefix.classname_ can't define variables for
-the installation script, because it's a subprocess. But you can use
-any binary executable or any script you wrote. Hooks that have the
-suffix _.sh_ (e.g. 'partition.DEFAULT.sh) must be Bourne
-shell scripts and are sourced. So it's possible to redefine variables
-for the installation scripts.
-
-In the first part of FAI, all hooks with prefix _confdir_ are called.
-Those hooks can not be located in the config space, since it's not yet
-available. Therefore these hooks are the only hooks located in
-+$nfsroot+'/$FAI/hooks' on the install server. All other hooks are
-found in '$FAI_CONFIGDIR/hooks' on the install server.
-
-
-All hooks that are called before classes are defined can only use the
-following classes: _DEFAULT $HOSTNAME LAST_. If a hook for class
-_DEFAULT_ should only be called if no hook for class +$HOSTNAME+ is
-available, insert these lines to the default hook:
-
-----
-hookexample.DEFAULT:
-
-#! /bin/sh
-
-# skip DEFAULT hook if a hook for $HOSTNAME exists
-scriptname=$(basename $0 .DEFAULT)
-[-f $FAI/hooks/$scriptname.$HOSTNAME ] && exit
-# here follows the actions for class DEFAULT
-.
-.
-----
-
-Some examples for what hooks could be used:
-
-- Load kernel modules before classes are defined in '$FAI/class'.
-
-- Send an email to the administrator if the installation is finished.
-
-- Install a diskless client and skip local disk partitioning.
-
-- Have a look at +hooks/debconf.IMAGE+ for how to clone a machine using a file system image.
 
 === [[logfiles]]Log files
 
