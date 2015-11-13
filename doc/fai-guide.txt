@@ -743,6 +743,80 @@ your own installation. A good paper called "Bootstrapping an
 Infrastructure" with more aspects of building an infrastructure is
 available at http://www.infrastructures.org/papers/bootstrap
 
+=== [[c3]]The subdirectories of the configuration space
+
+The configuration space is the collection of information about how exactly
+to install a computer. The central configuration space for all install
+clients is located on the install server in '/srv/fai/config' and its
+subdirectories. This will be mounted by the install clients to
+'/var/lib/fai/config'. The main installation command `fai(8)` uses all
+these subdirectories in the order listed except for hooks.
+
+_class/_::
+Scripts and files to
+define classes and variables.
+
+_disk_config/_::
+Configuration files for disk partitioning, software RAID, LVM and file system creation.
+
+_basefiles/_::
+Normally the file 'base.tar.xz' (located inside the nfsroot) is extracted on the install
+client after the new file systems are created and before package are
+installed. This is a minimal base image, created right after calling
+debootstrap during the creation of the nfsroot on the install
+server. If you want to install another distribution than the nfsroot
+is, you can put a tar file into the subdirectory 'basefiles/' and name
+it after a class. Then the command `ftar(8)` is used to extract the
+tar file based on the classes defined. Thus the file has to be named 'CLASS.tar.xz' not 'CLASS.base.tar.xz'. This is done in task
+_extrbase_. Use this if you want to install another distribution or
+version than that running during the installation.
++
+This basefile can also be received based on FAI classes via HTTP or FTP
+by defining the variable FAI_BASEFILEURL. FAI will download a file
+CLASSNAME.tar.xz (or tgz, or tar.gz,...) from this URL, if CLASSNAME
+matches a FAI class.
++
+Example:
+----
+FAI_BASEFILEURL=http://fai-project.org/download/basefiles
+----
+The folder must support directory listing. FAI will not probe for potentially matching files.
+
+See chapter <<otherdists>> for how to install different distributions.
+
+_debconf/_::
+This directory holds all `debconf(7)` data. The format is the same
+that is used by `debconf-set-selections(8)`.
+
+_package_config/_::
+Files with class names contain lists of software packages to be
+installed or removed by `install_packages(8)`. Files named
+'<CLASS>.asc' are added to the list of keys used by apt (using
+`apt-key(8)`) for trusted package repositories.
+
+_scripts/_::
+Scripts for your local site customization. Used by `fai-do-scripts(1)`.
+
+_files/_::
+Files used by customization scripts.  Most files are located in a
+subtree structure which reflects the ordinary directory tree. For
+example, the templates for 'nsswitch.conf' are located in
+'$FAI/files/etc/nsswitch.conf' and are named according to the classes
+that they should match: '$FAI/files/etc/nsswitch.conf/NIS' is the
+version of '/etc/nsswitch.conf' to use for the NIS class. Note that
+the contents of the files directory are not automatically copied to
+the target machine, rather they must be explicitly copied by
+customization scripts using the `fcopy(8)` command.
+
+_hooks/_::
+Hooks are user defined programs or scripts, which are called during
+the installation process. The can extend or replace the default tasks.
+The file name must be of format 'taskname.CLASSNAME[.sh]'.
+A hook called +updatebase.DEBIAN+ is executed prior to the task `updatebase`
+and only if the install client belongs to the class DEBIAN.
+
+
+
 === [[bootmesg]]Boot messages
 
 When booting the install client from network card with PXE you will some
@@ -1589,77 +1663,6 @@ faiserver#fai-make-nfsroot -c /etc/fai-jessie
 This chapter describes some technical details of some parts of FAI.
 
 
-=== [[c3]]The subdirectories of the configuration space
-
-The configuration space is the collection of information about how exactly
-to install a computer. The central configuration space for all install
-clients is located on the install server in '/srv/fai/config' and its
-subdirectories. This will be mounted by the install clients to
-'/var/lib/fai/config'. The main installation command `fai(8)` uses all
-these subdirectories in the order listed except for hooks.
-
-_class/_::
-Scripts and files to
-define classes and variables.
-
-_disk_config/_::
-Configuration files for disk partitioning, software RAID, LVM and file system creation.
-
-_basefiles/_::
-Normally the file 'base.tar.xz' (located inside the nfsroot) is extracted on the install
-client after the new file systems are created and before package are
-installed. This is a minimal base image, created right after calling
-debootstrap during the creation of the nfsroot on the install
-server. If you want to install another distribution than the nfsroot
-is, you can put a tar file into the subdirectory 'basefiles/' and name
-it after a class. Then the command `ftar(8)` is used to extract the
-tar file based on the classes defined. Thus the file has to be named 'CLASS.tar.xz' not 'CLASS.base.tar.xz'. This is done in task
-_extrbase_. Use this if you want to install another distribution or
-version than that running during the installation.
-+
-This basefile can also be received based on FAI classes via HTTP or FTP
-by defining the variable FAI_BASEFILEURL. FAI will download a file
-CLASSNAME.tar.xz (or tgz, or tar.gz,...) from this URL, if CLASSNAME
-matches a FAI class.
-+
-Example:
-----
-FAI_BASEFILEURL=http://fai-project.org/download/basefiles
-----
-The folder must support directory listing. FAI will not probe for potentially matching files.
-
-See chapter <<otherdists>> for how to install different distributions.
-
-_debconf/_::
-This directory holds all `debconf(7)` data. The format is the same
-that is used by `debconf-set-selections(8)`.
-
-_package_config/_::
-Files with class names contain lists of software packages to be
-installed or removed by `install_packages(8)`. Files named
-'<CLASS>.asc' are added to the list of keys used by apt (using
-`apt-key(8)`) for trusted package repositories.
-
-_scripts/_::
-Scripts for your local site customization. Used by `fai-do-scripts(1)`.
-
-_files/_::
-Files used by customization scripts.  Most files are located in a
-subtree structure which reflects the ordinary directory tree. For
-example, the templates for 'nsswitch.conf' are located in
-'$FAI/files/etc/nsswitch.conf' and are named according to the classes
-that they should match: '$FAI/files/etc/nsswitch.conf/NIS' is the
-version of '/etc/nsswitch.conf' to use for the NIS class. Note that
-the contents of the files directory are not automatically copied to
-the target machine, rather they must be explicitly copied by
-customization scripts using the `fcopy(8)` command.
-
-_hooks/_::
-Hooks are user defined programs or scripts, which are called during
-the installation process. The can extend or replace the default tasks.
-The file name must be of format 'taskname.CLASSNAME[.sh]'.
-A hook called +updatebase.DEBIAN+ is executed prior to the task `updatebase`
-and only if the install client belongs to the class DEBIAN.
 
 
 === [[tasks]]The list of tasks
