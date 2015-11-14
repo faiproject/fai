@@ -9,6 +9,11 @@ GREEN='\E[32m'
 
 set -o pipefail
 
+# setup network
+ifup eth0
+sleep 8
+[ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
+
 echo "=================================" >/dev/console
 echo "Setting up the FAI install server" >/dev/console
 echo "This will take a few minutes" >/dev/console
@@ -31,11 +36,6 @@ if [ ! -d "$FAI_CONFIGDIR/class" ]; then
 fi
 # set the LOGUSER, wo we get all the logs from our install clients
 ainsl /etc/fai/fai.conf "LOGUSER=fai"
-
-# setup network
-ifup eth0
-sleep 8
-[ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
 
 # make index, then import the packages from the CD mirror
 apt-get update
