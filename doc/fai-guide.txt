@@ -2026,6 +2026,19 @@ Wait for background jobs to finish (e.g. emacs compiling lisp files)
 and automatically reboots the install clients or waits for manual
 input before reboot.
 
+
+=== [[itests]]Automated tests
+
+After the customization scripts are executed, FAI will execute some
+tests if available. Using these test, you can check for errors of the
+installation. Test scripts are called via
+`fai-do-scripts(1)` and should append its messages to
+_$LOGDIR/test.log_. A Perl module including some useful subroutines
+can be found in _Faitest.pm_. A test can also define a new class for
+executing another tests during next boot via the variable
++$ADDCLASSES+.
+
+
 === [[autodiscover]] Autodiscover
 
 In FAI 5.0 we released a feature that allows clients to search for the
@@ -2046,13 +2059,6 @@ in the configuration space in the same manner as the 'menu' flag
 does. From this menu, you can select the installation type you wish to
 perform.
 
-
-=== flag_reboot (FAI_FLAGS)
-
-If flag_reboot is set, by adding "reboot" to +$FAI_FLAGS+, your client
-machine will reboot after the task faiend has finished. This is true
-for network as well as bootmedium installations.
-
 === [[changeboot]]Changing the boot device
 
 Changing the boot sequence is normally done in the BIOS setup. But you
@@ -2065,18 +2071,6 @@ change the boot device of the client by creating different PXELINUX
 configurations. This will define if an installation
 should be performed, or if the client should to boot from local
 disk. This is done using `fai-chboot(8)`.
-
-
-=== [[itests]]Automated tests
-
-After the customization scripts are executed, FAI will execute some
-tests if available. Using these test, you can check for errors of the
-installation. Test scripts are called via
-`fai-do-scripts(1)` and should append its messages to
-_$LOGDIR/test.log_. A Perl module including some useful subroutines
-can be found in _Faitest.pm_. A test can also define a new class for
-executing another tests during next boot via the variable
-+$ADDCLASSES+.
 
 
 === [[debian-mirror]]How to create a local Debian mirror
@@ -2205,6 +2199,14 @@ you need to create specific config directories in '/etc' for FAI, like
 ----
 faiserver#fai-make-nfsroot -c /etc/fai-jessie
 ----
+
+
+=== flag_reboot (FAI_FLAGS)
+
+If flag_reboot is set, by adding "reboot" to +$FAI_FLAGS+, your client
+machine will reboot after the task faiend has finished. This is true
+for network as well as bootmedium installations.
+
 
 === [[logfiles]]Log files
 
