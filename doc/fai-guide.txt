@@ -368,10 +368,9 @@ packages will be installed.
 
 profile::
 A FAI profile is just a list of FAI classes assiged to a profile name,
-which is extended by a description of this profile. E.g. one could have
-two "Webserver" profiles, one with the APACHE class to install the Apache
-webserver and another including the NGINX class, which in turn would
-install Nginx instead.
+which is extended by a description of this profile. I.e. one could have
+two "Webserver" profiles, one including the APACHE class another including the NGINX class,
+to then install the respective webserver solution.
 
 tasks::
 The installation of a client consists of several parts, which are called tasks.
@@ -475,7 +474,6 @@ the configuration space if the existing classes suffice for your
 needs.
 
 As you can see, classes are a central pillar of customizing your configuration space and with that your client installation. On how to define your own classes, refer to <<defining classes>>.
-
 
 == [[setup]]Setup your faiserver
 
@@ -607,7 +605,11 @@ server for exporting the nfsroot and the config space was installed.
 
 ==== [[bootdhcp]]Configuration of the DHCP daemon
 
-Ideally, your faiserver should also be your DHCP server. If that is not the case, instruct the admin responsible of the DHCP server to configure it according to this section. Optionally, it is possible to avoid that by using the <<auto-discover>> feature released in FAI 5.0.
+Ideally, your faiserver should also be your DHCP server. If that is
+not the case, instruct the admin responsible of the DHCP server to
+configure it according to this section. Optionally, it is possible to
+avoid that by using the <<autodiscover>> feature released in FAI 5.0.
+
 
 An example for `dhcpd.conf(5)` is provided with the _fai-doc_
 package. Start using this example and look at all options used therein.
@@ -1997,6 +1999,27 @@ faiend::
 Wait for background jobs to finish (e.g. emacs compiling lisp files)
 and automatically reboots the install clients or waits for manual
 input before reboot.
+
+=== [[autodiscover]] Autodiscover
+
+In FAI 5.0 we released a feature that allows clients to search for the
+faiserver in their respective subnetwork. This lifts the necessity of
+having to collect every client's MAC address and configuring the DHCP
+daemon.
+
+This is done by booting from a small FAI autodiscover bootmedium (CD,
+USB, etc.), which can be created via the command:
+
+----
+faiserver# fai-cd -A autodiscover.iso
+----
+
+The image is roughly 25MB in size and scans the  subnet  for
+a  FAI server. By  default it shows a menu with all profiles available
+in the configuration space in the same manner as the 'menu' flag
+does. From this menu, you can select the installation type you wish to
+perform. Do note that at this time this feature does not work over a
+wireless connection.
 
 
 === [[changeboot]]Changing the boot device
