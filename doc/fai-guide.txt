@@ -1688,6 +1688,32 @@ system with read-write access use the `rwmount` command:
 demohost# rwmount /target/home
 ----
 
+=== [[nonfs]]FAI without NFS
+
+To boot into FAI and begin the installation sequence
+without using the NFS protocol. You boot the client machine using PXE as
+usual and then retrieve an image containing the nfsroot via http.
+
+To create an image, use fai-cd's -S argument
+
+----
+faiserver# fai-cd -S squash.img
+----
+
+Move this image to a directory from which it can be requested via http
+(usually a directory served by the webserver)
+
+To now request the squashfs image, add the following to your kernel
+command line, e.g. in your pxelinux configuration file for the client.
+
+----
+root=live:http://faiserver/cskoeln/squash.img
+----
+
+Replace faiserver with the domain name or IP of the machine your
+squash image is served from.
+
+
 === [[otherdists]]Installing other distributions using a Debian nfsroot
 
 You can install all sorts of Linux distributions from a single Debian
@@ -2018,9 +2044,14 @@ The image is roughly 25MB in size and scans the  subnet  for
 a  FAI server. By  default it shows a menu with all profiles available
 in the configuration space in the same manner as the 'menu' flag
 does. From this menu, you can select the installation type you wish to
-perform. Do note that at this time this feature does not work over a
-wireless connection.
+perform.
 
+
+=== flag_reboot (FAI_FLAGS)
+
+If flag_reboot is set, by adding "reboot" to +$FAI_FLAGS+, your client
+machine will reboot after the task faiend has finished. This is true
+for network as well as bootmedium installations.
 
 === [[changeboot]]Changing the boot device
 
