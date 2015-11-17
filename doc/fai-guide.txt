@@ -241,6 +241,24 @@ the FAI install server.
 
 === [[cdserver]]My first server installation
 
+
+Please note, if you intend to use QEMU/KVM then you need to have
+qemu-kvm qemu-utils bridge-utils installed on the machine to
+use fai-mk-network and fai-kvm footnote:[fai-kvm needs a lot of ram
+for the vm, because of caching of /var, 2GB are OK].
+
+
+You can do that via
+
+----
+# apt-get install qemu-kvm qemu-utils bridge-utils
+----
+
+If you intend to use VMware or VirtualBox, ensure that your client
+uses a bridged network connection. Also, It is not possible to use
+bridged network interfaces over wireless, as most WiFi network cards
+do not support this feature.
+
 For setting up your first own FAI server, we recommend creating a
 test network on your computer and to use KVM. For creating this
 private network there's the script `fai-mk-network` (in the package
@@ -276,12 +294,17 @@ After that you can start additional hosts using network boot. For
 every new host, you have to use a different value for `-u`, which will be used for
 generating different MAC addresses and using different disk image file
 names.
+
 ----
 fai-kvm -Vn -u 2 pxe
 ----
 
 Those install clients will show you a menu, where you can select which
-type of installation you like to perform.
+type of installation you like to perform. If the install client does
+not find the server, it is usually because fai-monitor is no longer
+running on it. This can happen, if you reboot the faiserver after the
+installation. To remedy this, simply run fai-monitor on the faiserver
+and re-attempt the client boot.
 
 Another client could be started with:
 ----
@@ -2059,6 +2082,9 @@ in the configuration space in the same manner as the 'menu' flag
 does. From this menu, you can select the installation type you wish to
 perform.
 
+For the clients to find the faiserver, the faiserver must run
+fai-monitor.
+
 === [[changeboot]]Changing the boot device
 
 Changing the boot sequence is normally done in the BIOS setup. But you
@@ -2208,6 +2234,11 @@ machine will reboot after the task faiend has finished. This is true
 for network as well as bootmedium installations.
 
 
+=== CentOS reboot
+After the installation CentOS usually requires one additional reboot,
+because of the SELinux security fixes that are applied post-installation.
+
+
 === [[logfiles]]Log files
 
 FAI is creating several log files. During installation they are stored
@@ -2217,6 +2248,9 @@ installation they will be copied to the install server (see
 installed system, you can find the FAI logs in '/var/log/fai'.
 Log files are also created when doing the softupdate or dirinstall
 action.
+
+On the faiserver, you can find the (remote) log files under the ~fai
+directory.
 
 Sample log files from successfully installed computers are
 available on http://fai-project.org/logs.
