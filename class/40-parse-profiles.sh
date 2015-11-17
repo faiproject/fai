@@ -6,7 +6,7 @@
 # (c) 2015 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 
-if [ X$FAI_ACTION = Xinstall -o X$FAI_ACTION = X ]; then
+if [ X$FAI_ACTION = Xinstall -o X$FAI_ACTION = Xdirinstall -o X$FAI_ACTION = X ]; then
     :
 else
     return
@@ -14,6 +14,7 @@ fi
 
 [ "$flag_menu" ] || return 0
 
+out=$(tty)
 tempfile=`(tempfile) 2>/dev/null`
 tempfile2=`(tempfile) 2>/dev/null`
 trap "rm -f $tempfile $tempfile2" EXIT INT QUIT
@@ -147,7 +148,7 @@ while true; do
     dialog --clear --item-help --title "FAI - Fully Automatic Installation" --help-button \
 	--default-item "$default" \
 	--menu "\nSelect your FAI profile\n\nThe profile will define a list of classes,\nwhich are used by FAI.\n\n\n"\
-	15 70 0 "${par[@]}" 2> $tempfile  1>/dev/console
+	15 70 0 "${par[@]}" 2> $tempfile  1> $out
 
     _retval=$?
     case $_retval in
@@ -158,7 +159,7 @@ while true; do
 	    echo "No profile selected."
 	    break ;;
 	2)
-	    dialog --title "Description of all profiles" --textbox $tempfile2 0 0 1>/dev/console;;
+	    dialog --title "Description of all profiles" --textbox $tempfile2 0 0 1> $out;;
     esac
 
 done
