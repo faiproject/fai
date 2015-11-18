@@ -413,9 +413,17 @@ EOF
     cp -H /etc/localtime etc/localtime
     ln -sf /proc/mounts etc/mtab
 
+    # Start FAI using SysV
     [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
+
+    # Start FAI using Upstart
     if [ -d etc/init ]; then   # if upstart is available
         find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
+    fi
+
+    #Start FAI using Systemd
+    if [ -f /bin/systemctl ]; then
+        LC_ALL=C $ROOTCMD  systemctl set-default fai-install.target
     fi
 
     rm -f etc/mdadm/mdadm.conf # remove file which may contain info of the install server
