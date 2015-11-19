@@ -122,7 +122,7 @@ create_autodiscover_iso() {
 
     # boot-only CD does not need those dracut modules
     cat <<EOF > $ONFSROOT/etc/dracut.conf.d/02-omit.conf
-omit_dracutmodules+=" fs-lib dmsquash-live rootfs-block "
+omit_dracutmodules+=" fs-lib livenet rootfs-block "
 EOF
 
     if [ -n "$sqopt" ]; then
@@ -134,8 +134,7 @@ EOF
     hide_dirs
     chroot $ONFSROOT dracut --add 'fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
     unhide_dirs
-    rm $ONFSROOT/etc/dracut.conf.d/02-omit.conf
-
+    rm -f $ONFSROOT/etc/dracut.conf.d/02-omit.conf
 
     fai-cd $arguments -g $grub_config $isoname
     mv $ONFSROOT/tmp/initrd.img* $ONFSROOT/boot
