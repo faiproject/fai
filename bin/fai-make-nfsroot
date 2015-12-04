@@ -514,8 +514,12 @@ setup_tftp(){
     chmod a+r $NFSROOT/boot/initrd.img-* || die 9 "No initrd was created. Check the package name of the linux-image package in /etc/fai/NFSROOT."
     cp -p $v $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
     cp -u $pxebin $TFTPROOT
-    [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ] && cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
-    [ $verbose ] && echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
+    if [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ]; then
+	cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
+    fi
+    if [ "$verbose" ]; then
+	echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fdivert() {
