@@ -8,8 +8,13 @@ ifclass XORG && {
     fcopy -M /etc/X11/xorg.conf
 }
 
+ifclass UBUNTU && groups="adm cdrom sudo dip plugdev lpadmin sambashare"
+
 # add a demo user account
 if ! $ROOTCMD getent passwd demo ; then
     $ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
     $ROOTCMD usermod -p "$ROOTPW" demo
+    for g in $groups; do
+	$ROOTCMD adduser demo $g
+    done
 fi
