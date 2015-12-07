@@ -27,7 +27,7 @@ echo $printk > /proc/sys/kernel/printk
 
 odisklist=$disklist
 set_disk_info  # recalculate list of available disks
-if [ X$disklist != X$odisklist ]; then
+if [ "$disklist" != "$odisklist" ]; then
     echo New disklist: $disklist
     echo disklist=\"$disklist\" >> $LOGDIR/additional.var
 fi
