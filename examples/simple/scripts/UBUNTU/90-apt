@@ -1,0 +1,14 @@
+#! /bin/bash
+
+dist=trusty
+
+cat <<EOM > $target/etc/apt/sources.list
+deb MIRRORURL $dist main restricted universe multiverse
+deb MIRRORURL $dist-updates main restricted universe multiverse
+deb MIRRORURL $dist-security main restricted universe multiverse
+EOM
+
+# determine a fast mirror for Ubuntu
+list=$(curl -s http://mirrors.ubuntu.com/mirrors.txt)
+mirror=$(netselect $list | awk '{print $2}')
+sed -i -e "s#MIRRORURL#$mirror#" $target/etc/apt/sources.list
