@@ -6,8 +6,7 @@
 
 . /lib/dracut-lib.sh
 
-opt=$(getargs fai.discover)
-if [ -z $opt ] ; then
+if ! getargbool 0 fai.discover; then
     return
 fi
 
