@@ -1204,6 +1204,27 @@ scriptname=$(basename $0 .DEFAULT)
 .
 ----
 
+If you want to execute a hook after a task, here is how to do that: create
+a DEFAULT-hook that first calls _skiptask_, then executes the task manually and 
+place your desired action at the end. The following example executes 
+_fai-deps_ (8) after the task _defclass_:
+
+----
+defclass.DEFAULT:
+
+#! /bin/sh
+
+# task defclass will not be executed by fai ...
+skiptask defclass
+
+# ... but manually: note, that to call a task manually, you have to prefix it
+# with task_
+task_defclass
+
+# now execute your own stuff:
+fai-deps
+----
+
 Some examples for what hooks could be used:
 
 - Load kernel modules before classes are defined in '$FAI/class'.
