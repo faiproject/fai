@@ -26,7 +26,7 @@ echo "=================================" >/dev/console
 if [ ! -d "$FAI_CONFIGDIR/class" ]; then
     mkdir -p $FAI_CONFIGDIR
     cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR
-    ainsl /srv/fai/config/class/FAIBASE.var "LOGUSER=fai"
+    ainsl /srv/fai/config/class/FAIBASE.var "^LOGUSER=fai"
     myip=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
     echo "APTPROXY=http://$myip:3142" >> /srv/fai/config/class/DEBIAN.var
     # determine a fast mirror for Ubuntu
@@ -35,7 +35,7 @@ if [ ! -d "$FAI_CONFIGDIR/class" ]; then
     sed -i -e "s#MIRRORURL#$mirror#" /srv/fai/config/files/etc/apt/sources.list/UBUNTU
 fi
 # set the LOGUSER, wo we get all the logs from our install clients
-ainsl /etc/fai/fai.conf "LOGUSER=fai"
+ainsl /etc/fai/fai.conf "^LOGUSER=fai"
 
 # make index, then import the packages from the CD mirror
 apt-get update
