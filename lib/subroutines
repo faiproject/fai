@@ -1066,6 +1066,7 @@ EOF
     for keyfile in ${classes:-}; do
         [ ! -f $FAI/package_config/$keyfile.asc ] && continue
         echo -n "Loading APT key from $keyfile.asc "
+	[ -f $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg ] || touch $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg
         cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key --keyring /etc/apt/trusted.gpg.d/$keyfile.asc.gpg add -
         unset keys["$keyfile.asc"]
     done
