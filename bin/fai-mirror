@@ -194,10 +194,12 @@ preserve=0
 verbose=0
 add=1
 qflag=-qq
-while getopts "a:Bvhx:pc:C:m:P:" opt ; do
+bcount=0
+while getopts "a:bBvhx:pc:C:m:P:" opt ; do
     case "$opt" in
         a) arch=$OPTARG ;;
-        B) add=0 ;;
+        B) add=0 ; ((bcount++)) ;;
+        b) add=2 ; ((bcount++)) ;;
         C) cfdir=$OPTARG ;;
         h) usage ;;
         x) exclasses="$OPTARG";;
@@ -218,6 +220,7 @@ shift $(($OPTIND - 1))
 cfdir=$(readlink -f $cfdir) # canonicalize path
 [ ! -d "$cfdir" ] && die 6 "$cfdir is not a directory"
 [ "$verbose" -eq 1 ] && echo "Using configuration files from $cfdir"
+[ $bcount -gt 1 ] && die 7 "You can't use -b and -B simultaneously."
 . $cfdir/fai.conf
 . $cfdir/nfsroot.conf
 : ${MNTPOINT:=/media/mirror}  # default value
@@ -266,7 +269,7 @@ apt-get $qflag $aptoptions update >/dev/null
 set-classes
 [ $add -eq 1 ] && add_base_packages
 echo "Downloading packages for classes:" $classes
-FAI=$FAI_CONFIGDIR install_packages -d $vflag
+FAI=$FAI_CONFIGDIR install_packages -N -d $vflag
 umount_dirs
 trap "" EXIT ERR
 [ $add -eq 0 ] && delete_base_packages

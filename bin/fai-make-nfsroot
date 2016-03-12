@@ -180,6 +180,16 @@ call_verbose() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+setclasses() {
+
+    local iarch distro
+    # Export all the information we have about the system
+    iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
+    distro=$(. $NFSROOT/etc/os-release; echo ${ID} ${ID}_${VERSION_ID} | tr '[:lower:].' '[:upper:]_')
+    export classes="NFSROOT $iarch $distro"
+    [ "$verbose" ] && echo Classes are set to $classes
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
 
     # nothing to do if no ssh is available in nfsroot
@@ -336,12 +346,7 @@ create_nfsroot() {
     # save the list of all packages in the base.tar.gz
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
-    # Export all the information we have about the system
-    iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
-    distro=$(. $NFSROOT/etc/os-release; echo ${ID} ${ID}_${VERSION_ID} | tr '[:lower:].' '[:upper:]_')
-    export classes="NFSROOT $iarch $distro"
-    [ "$verbose" ] && echo Classes are set to $classes
-
+    setclasses
     if [ -n "$FAI_DEBMIRROR" ]; then
         [ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
@@ -466,6 +471,7 @@ add_packages_nfsroot() {
     export FAI_ROOT=$NFSROOT
     local err
 
+    setclasses
     install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
     echo "Adding additional packages to $NFSROOT:"
     cat $NFSROOT/var/tmp/packages.nfsroot
@@ -514,8 +520,12 @@ setup_tftp(){
     chmod a+r $NFSROOT/boot/initrd.img-* || die 9 "No initrd was created. Check the package name of the linux-image package in /etc/fai/NFSROOT."
     cp -p $v $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
     cp -u $pxebin $TFTPROOT
-    [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ] && cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
-    [ $verbose ] && echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
+    if [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ]; then
+	cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
+    fi
+    if [ "$verbose" ]; then
+	echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fdivert() {

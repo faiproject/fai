@@ -14,10 +14,7 @@ images:
 	ln -s /usr/share/asciidoc/images images 
 
 html: $(DOC).txt images
-	a2x $(OPT) -L --icons --copy --asciidoc-opt="-a toc2 -a toclevels=3 -a theme=flask" --xsltproc-opts="--stringparam use.id.as.filename 1" -f xhtml $(DOC).txt
-
-chunked: $(DOC).txt  images
-	a2x $(OPT) -L --icons --copy --asciidoc-opt="-a toc2 -a toclevels=3 -a theme=flask" --xsltproc-opts="--stringparam use.id.as.filename 1" -f chunked $(DOC).txt
+	asciidoc -a toc2 -a toclevels=3 --theme=flask $(DOC).txt
 
 pdf: $(DOC).txt	images
 	a2x $(OPT) -L --icons -a toc -a toclevels=3 -f pdf $(DOC).txt

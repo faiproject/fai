@@ -295,16 +295,16 @@ if [ $do_init_tasks -eq 1 ]; then
     done
     unset word
     if [ -n "$HOSTNAME" ]; then
-	hostname $HOSTNAME
+	echo $HOSTNAME > /proc/sys/kernel/hostname
 	export HOSTNAME
     fi
 
     # if the host name is still not set, use the IP for setting the hostname
-    hname=$(hostname)
+    read hname < /proc/sys/kernel/hostname
     if [ -z "$HOSTNAME" -o $HOSTNAME = '(none)' -o -z "$hname" ]; then
 	myip=$(ip ad show up | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1| tr '.' '-')
 	export HOSTNAME="ip-$myip"
-	hostname $HOSTNAME
+	echo $HOSTNAME > /proc/sys/kernel/hostname
 	echo "Using IP for setting the host name: $HOSTNAME"
     fi
     unset hname myip
