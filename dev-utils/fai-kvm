@@ -21,6 +21,13 @@ usernet=0
 newdisk=0
 
 # - - - - - - - - - - - - - - - - - - - - - - - - -
+boot_disk() {
+
+  # boot from disk
+  set -x
+  kvm $gopt -boot order=c $net $disk
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
 
   # PXE boot
@@ -47,6 +54,7 @@ usage() {
   cat <<EOF
 
  fai-kvm [options] pxe   # start a host booting using PXE from NIC
+ fai-kvm [options] disk  # start a host booting from first disk
  fai-kvm [options] cd [imagename] # start a host booting from a ISO image
 
  -n          create a new empty disk image, which is used as a local disk
@@ -136,6 +144,7 @@ fi
 case "$1" in
     pxe) boot_pxe ;;
     cd) boot_cd $2 ;;
+    disk) boot_disk $2 ;;
     *)
         echo "Missing argument." >&2
         usage
