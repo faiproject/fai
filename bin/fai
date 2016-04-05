@@ -99,6 +99,7 @@ fai_init() {
 
     if [ $do_init_tasks -eq 1 ]; then
         eval_cmdline
+        define_fai_flags
         [ -d /sys/kernel ] || mount -t sysfs sysfs /sys
         # we really need to start udev
         if [ -x /etc/init.d/udev ]; then
@@ -108,7 +109,7 @@ fai_init() {
                 test -f /etc/init/udevtrigger.conf && udevadm trigger --action=add && udevadm settle
             fi
         fi
-        mkdir -p /var/run/network /dev/shm/network # when using initrd kernels
+        mkdir -p /var/run/sshd /var/run/network /dev/shm/network # when using initrd kernels
         ifup lo
         [ -x /sbin/portmap ] && /sbin/portmap
 	if [ -x /sbin/rpcbind ]; then
