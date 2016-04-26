@@ -92,8 +92,9 @@ tardone=0
 single=0
 ignore=0
 
-[ -f $LOGDIR/FAI_CLASSES ] && classes=$(< $LOGDIR/FAI_CLASSES)
-# last class has highest priority
+if [ -n "$classes" ]; then
+    [ -f $LOGDIR/FAI_CLASSES ] && classes=$(< $LOGDIR/FAI_CLASSES)
+fi
 
 while getopts 1hDdrvs:t:c:i opt ; do
         case "$opt" in
@@ -121,6 +122,7 @@ else
     xattrs=
 fi
 
+# last class has highest priority
 # reverse order of classes
 for class in $classes; do
     revclasses="$class $revclasses"
