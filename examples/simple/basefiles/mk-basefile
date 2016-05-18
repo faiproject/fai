@@ -10,7 +10,7 @@
 
 # Supported distributions (each i386/amd64):
 # Debian GNU/Linux
-# Ubuntu 14.04
+# Ubuntu 14.04/16.04
 # CentOS 5/6/7
 # Scientific Linux Cern 5/6
 #
@@ -23,6 +23,7 @@
 MIRROR_DEBIAN=http://httpredir.debian.org/debian/
 MIRROR_DEBIAN=http://localmirror/debian/
 MIRROR_UBUNTU=http://mirror.netcologne.de/ubuntu/
+#MIRROR_UBUNTU=http://ubuntu.univ-nantes.fr/ubuntu/
 MIRROR_CENTOS=http://mirror.netcologne.de/
 #MIRROR_CENTOS=http://localmirror
 #MIRROR_SLC=http://localmirror
@@ -31,6 +32,7 @@ EXCLUDE_SQUEEZE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_WHEEZY=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_JESSIE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_TRUSTY=dhcp3-client,dhcp3-common,info
+EXCLUDE_XENIAL=isc-dhcp-client,isc-dhcp-common,udhcpc,dibbler-client,dhcpcd5,info,tasksel,tasksel-data
 
 INCLUDE_DEBIAN=aptitude
 
@@ -197,6 +199,16 @@ trusty() {
     tarit
 }
 
+xenial() {
+
+    local arch=$1
+
+    check
+    debootstrap --arch $arch --exclude=${EXCLUDE_XENIAL} --include=${INCLUDE_DEBIAN} xenial $xtmp ${MIRROR_UBUNTU}
+    cleanup-deb
+    tarit
+}
+
 
 unknown() {
 
@@ -209,6 +221,7 @@ unknown() {
     SLC5_32      SLC5_64
     SLC6_32      SLC6_64
     TRUSTY32     TRUSTY64
+    XENIAL32     XENIAL64
     SQUEEZE32    SQUEEZE64
     WHEEZY32     WHEEZY64
     JESSIE32     JESSIE64
@@ -253,6 +266,8 @@ case "$target" in
     SLC6_64) slc amd64 6 ;;
     TRUSTY32) trusty i386 ;;
     TRUSTY64) trusty amd64 ;;
+    XENIAL32) xenial i386 ;;
+    XENIAL64) xenial amd64 ;;
     SQUEEZE32) squeeze i386 ;;
     SQUEEZE64) squeeze amd64 ;;
     WHEEZY32) wheezy i386 ;;
