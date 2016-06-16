@@ -42,6 +42,11 @@ if [ -f $target/sbin/mkinitrd ]; then
     use_mkinitrd
 fi
 
+if [ -f $target/etc/lvm/lvm.conf ]; then
+     sed -i -e 's/use_lvmetad = 1/use_lvmetad = 0/' $target/etc/lvm/lvm.conf
+     ainsl -av /etc/dracut.conf.d/fai.conf 'add_dracutmodules+=" lvm "'
+fi
+
 # call dracut for CentOS 7
 if [ -f $target/usr/sbin/dracut ]; then
     # add filesystem driver into initrd
