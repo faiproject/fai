@@ -54,6 +54,11 @@ if [ -f $target/usr/sbin/dracut ]; then
     $ROOTCMD dracut -v --kver $version --force
 fi
 
-# for CentOS 6 we do not need to call dracut
+# call dracut for CentOS 6
+if [ -f $target/sbin/dracut ]; then
+    # add filesystem driver into initrd
+    ainsl -av /etc/dracut.conf.d/fai.conf 'filesystems+="ext4"'
+    $ROOTCMD dracut -v $version
+fi
 
 exit $error
