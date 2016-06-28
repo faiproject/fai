@@ -5,7 +5,7 @@
 # bootinfo -- get boot information via DHCP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2014 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2016 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -39,10 +39,7 @@ netdevice_info() {
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
 
-    # some network driver do not echo eth0,..; they are not detected
-    netdevices_all=$(dmesg| perl -ne 'print $&,"\n" if m/\beth[0-9]+\b/')
-    tmp=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep "^eth")
-    netdevices_all="$netdevices_all $tmp"
+    netdevices_all=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | egrep "^eth|^en")
     netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq| tr '\n' ' ')
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

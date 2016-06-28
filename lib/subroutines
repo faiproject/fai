@@ -320,7 +320,6 @@ task_setup() {
         }
 
         # start secure shell daemon for remote access
-        mkdir -p /var/run/sshd # ubuntu fix for 9.10
         if [ "$flag_sshd" -a -x /usr/sbin/sshd ]; then
             pgrep -x sshd >/dev/null || /usr/sbin/sshd
         fi
@@ -567,40 +566,6 @@ task_faiend() {
         mount -o remount,ro $dir
     done
 
-    # if we run from CD or USB stick and did not any installation
-    if [ -d /lib/live/mount/medium -a X$FAI_ACTION = Xsysinfo ]; then
-	reboot -dfi
-    fi
-
-    # check if we are running from CD, live-boot
-    cddev=$(mount |grep /lib/live/mount/medium | awk '{print $1}')
-    if [[ $cddev =~ '/dev/sr' ]]; then
-        echo 1 > /proc/sys/dev/cdrom/autoeject
-        cat > /tmp/rebootCD <<'EOF'
-#! /bin/bash
- device=$1
-eject -m /dev/$device 2>/dev/null >/dev/null
-echo "Remove CDROM and press <RETURN> to continue reboot"
-read
-eject -t /dev/$device 2>/dev/null >/dev/null
-EOF
-
-        #reboot or halt?
-        if [ "$flag_halt" -gt "0" ]; then
-            echo "exec halt -dfp" >> /tmp/rebootCD
-        else
-            echo "exec reboot -df" >> /tmp/rebootCD
-        fi
-        chmod +x /tmp/rebootCD
-	[ -d $target/tmp ] && mv /tmp/rebootCD $target/tmp/rebootCD
-
-        sync
-        cdromdevice=$(awk '/ name:/ {print $3}' /proc/sys/dev/cdrom/info)
-
-        chroot $target /tmp/rebootCD $cdromdevice
-        # never reached, because chroot will reboot the machine
-        die "Internal error when calling /tmp/rebootCD." >&2
-    fi
     umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
     umount -arf 2>/dev/null
 
@@ -610,7 +575,6 @@ EOF
     else
         exec reboot -df
     fi
-
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_install() {

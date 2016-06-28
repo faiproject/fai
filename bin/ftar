@@ -5,7 +5,7 @@
 # ftar -- extract tar files using FAI classes
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2001-2015 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2001-2016 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -65,7 +65,7 @@ usage() {
     cat <<EOF
 ftar, extract tar files using classes.
 
-   Copyright (C) 2001-2015 by Thomas Lange
+   Copyright (C) 2001-2016 by Thomas Lange
 
 Usage: ftar [OPTION] ... SOURCE
 
@@ -91,6 +91,10 @@ removedir=0
 tardone=0
 single=0
 ignore=0
+
+if [ -n "$classes" ]; then
+    [ -f $LOGDIR/FAI_CLASSES ] && classes=$(< $LOGDIR/FAI_CLASSES)
+fi
 
 while getopts 1hDdrvs:t:c:i opt ; do
         case "$opt" in
@@ -118,9 +122,7 @@ else
     xattrs=
 fi
 
-[ -f $ENV{LOGDIR}/FAI_CLASSES ] && classes=$(< $ENV{LOGDIR}/FAI_CLASSES)
 # last class has highest priority
-
 # reverse order of classes
 for class in $classes; do
     revclasses="$class $revclasses"

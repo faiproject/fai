@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2015 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2016 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2015 Thomas Lange
+	Copyright (C) 1999-2016 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -384,7 +384,7 @@ EOF
     echo 'hostonly="no"' > $NFSROOT/etc/dracut.conf.d/20-generic-image.conf
     cat <<EOF > $NFSROOT/etc/dracut.conf.d/01-omit.conf
 omit_dracutmodules+=" btrfs lvm resume usrmount mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd "
-filesystems="aufs nfs lockd ext4"
+filesystems="nfs lockd ext4"
 EOF
 
     local fname=$(readlink -f $cfdir/apt/sources.list)
@@ -409,8 +409,8 @@ EOF
     set_root_pw
 
     # set timezone in nfsroot
-    cp -H /etc/timezone  etc/timezone
-    cp -H /etc/localtime etc/localtime
+    cp -fH /etc/timezone  etc/timezone
+    cp -a /etc/localtime etc/localtime
     ln -sf /proc/mounts etc/mtab
 
     [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
@@ -498,6 +498,7 @@ umount_dirs() {
 
     if [ -n "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
+	rmdir $MNTPOINT || true
     fi
     # show directories still mounted on nfsroot
     mount | grep " on $NFSROOT " || true

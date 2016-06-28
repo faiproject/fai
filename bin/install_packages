@@ -5,7 +5,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2015, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2016, Thomas Lange, lange@informatik.uni-koeln.de
 # (c) 2003-2004, Henning Glawe, glaweh@physik.fu-berlin.de
 # (c) 2004     , Jonas Hoffmann, jhoffman@physik.fu-berlin.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
@@ -79,6 +79,7 @@ our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi 
    "clean-internal" => "apt-get clean",
          "aptitude" => "aptitude -R $aptopt install",
        "aptitude-r" => "aptitude -r $aptopt install",
+              "apt" => "apt $aptopt install",
              "cupt" => "cupt -R $aptopt install",
            "cupt-r" => "cupt $aptopt install",
            "unpack" => "cd $downloaddir; aptitude download",
@@ -133,7 +134,7 @@ foreach (@classes) {
 }
 
 # check if any Debian related commands/types are used in package_config
-my @debiantypes= qw/taskinst cupt cupt-r aptitude aptitude-r install remove dselect-upgrade smarti/;
+my @debiantypes= qw/taskinst cupt cupt-r apt aptitude aptitude-r install remove dselect-upgrade smarti/;
 foreach my $dt (@debiantypes) {
   $types{$dt} and $hasdebian=1;
 }
@@ -191,7 +192,7 @@ foreach $atype (@commands) {
     next;
   }
 
-  if ($atype eq "install" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
+  if ($atype eq "install" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "apt" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
 
     mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
     getsources(); # retrieve sources
@@ -522,6 +523,7 @@ $maxpl=9999;
 %command = (
           "install" => "apt-get $qopt -d $ENV{aptoptions} -y --fix-missing install",
          "taskinst" => "aptitude -d $ENV{aptoptions} -y install $devnull",
+              "apt" => "apt -d $ENV{aptoptions} -y install $devnull",
          "aptitude" => "aptitude -R -d $ENV{aptoptions} -y install $devnull",
        "aptitude-r" => "aptitude -r -d $ENV{aptoptions} -y install $devnull",
              "cupt" => "cupt -R --download-only $ENV{aptoptions} -y install $devnull",

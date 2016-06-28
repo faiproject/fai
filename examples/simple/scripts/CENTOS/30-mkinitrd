@@ -42,6 +42,11 @@ if [ -f $target/sbin/mkinitrd ]; then
     use_mkinitrd
 fi
 
+if [ -f $target/etc/lvm/lvm.conf ]; then
+     sed -i -e 's/use_lvmetad = 1/use_lvmetad = 0/' $target/etc/lvm/lvm.conf
+     ainsl -av /etc/dracut.conf.d/fai.conf 'add_dracutmodules+=" lvm "'
+fi
+
 # call dracut for CentOS 7
 if [ -f $target/usr/sbin/dracut ]; then
     # add filesystem driver into initrd
@@ -49,6 +54,11 @@ if [ -f $target/usr/sbin/dracut ]; then
     $ROOTCMD dracut -v --kver $version --force
 fi
 
-# for CentOS 6 we do not need to call dracut
+# call dracut for CentOS 6
+if [ -f $target/sbin/dracut ]; then
+    # add filesystem driver into initrd
+    ainsl -av /etc/dracut.conf.d/fai.conf 'filesystems+="ext4"'
+    $ROOTCMD dracut -v $version
+fi
 
 exit $error
