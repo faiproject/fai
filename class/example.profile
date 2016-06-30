@@ -34,12 +34,12 @@ downloaded from the internet.
 Classes: INSTALL FAIBASE CENTOS CENTOS7_64 XORG
 
 Name: Ubuntu
-Description: Ubuntu 14.04 desktop installation
+Description: Ubuntu 16.04 desktop installation
 Short: Unity desktop
 Long: We use the Debian nfsroot for installing the Ubuntu OS.
 You should have a fast network connection, because most packages are
 downloaded from the internet.
-Classes: INSTALL FAIBASE DEMO DEBIAN UBUNTU TRUSTY TRUSTY64 XORG
+Classes: INSTALL FAIBASE DEMO DEBIAN UBUNTU XENIAL XENIAL64 XORG
 
 Name: Inventory
 Description: Show hardware info
