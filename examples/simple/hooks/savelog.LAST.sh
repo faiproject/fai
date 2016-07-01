@@ -10,7 +10,8 @@ errfile=$LOGDIR/error.log
 globalerrorpatterns="error
 fail
 warn
-bad
+ bad
+bad 
 no space
 syntax
 Couldn't stat
