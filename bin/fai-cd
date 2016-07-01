@@ -59,7 +59,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2015 Thomas Lange
+	fai-cd Copyright (C) 2004-2016 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -131,7 +131,9 @@ EOF
     fi
     mv $ONFSROOT/boot/initrd.img* $ONFSROOT/tmp
     hide_dirs
+    mountpoint -q $ONFSROOT/proc || mount --bind /proc $ONFSROOT/proc
     chroot $ONFSROOT dracut --add 'fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
+    umount $ONFSROOT/proc
     unhide_dirs
     rm -f $ONFSROOT/etc/dracut.conf.d/02-omit.conf
 
