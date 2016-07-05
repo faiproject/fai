@@ -52,14 +52,3 @@ Description: Show defailed system information
 Short: Show detailed hardware and system  information
 Long: Execute a lot of commands for collecting system information
 Classes: SYSINFO
-
-Name: dummy
-Description: A dummy profile
-Short: This is the short one liner text for the dummy menu, Shown at the bottom of the menu
-Long: Here you can add more lines to describe details of you
-profile. A profile is only a list of FAI classes. Those classes can
-then define the disk partitioning scheme, the list of packages to be
-installed, the variables to defined and other things.
-
-In the end, a profile is just a list of FAI classes combined with some description.
-Classes: A B C E
