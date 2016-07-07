@@ -1465,6 +1465,7 @@ sub restore_partition_table {
 sub btrfs_options {
   # check if --force is available for mkfs.btrfs
   my $opt = `mkfs.btrfs 2>&1`;
+  return "" unless $opt;
   my $btrfsopt = $opt =~ '--force' ? '-f' : '';
   return $btrfsopt;
 }
