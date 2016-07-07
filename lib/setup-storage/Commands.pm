@@ -1083,7 +1083,6 @@ sub rebuild_preserved_partitions {
     $post .= ",rebuilt_$dn" if
       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
     my $cmd = "true";
-    $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
     &FAI::push_command($cmd, "prep1_$dn", $post);
   }
 }
@@ -1320,7 +1319,6 @@ sub setup_partitions {
     &FAI::push_command( "parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B",
       $pre, "prep2_$dn");
     my $cmd = "true";
-    $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
     &FAI::push_command($cmd, "prep2_$dn", "exist_$dn");
 
     # (re-)set all flags
