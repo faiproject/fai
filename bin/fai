@@ -117,9 +117,7 @@ fai_init() {
 	fi
         pgrep rpc.statd > /dev/null || rpc.statd # idmapd needs this
 
-        if ! grep -wq devpts /proc/mounts; then
-            mount -t devpts devpts /dev/pts
-        fi
+        mountpoint -q /dev/pts || mount -t devpts devpts /dev/pts
         cat /proc/kmsg >/dev/tty4 &
 
         # fix IP address lifetime
