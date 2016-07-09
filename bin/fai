@@ -56,6 +56,8 @@ fai_init() {
     set -o pipefail
 
     umask 022
+    . /usr/lib/fai/subroutines
+
     mkdir -p /var/run/fai
     [ -f $FAI_ETC_DIR/fai.conf ] && . $FAI_ETC_DIR/fai.conf
     : ${FAI:=/var/lib/fai/config} # default value
@@ -64,14 +66,12 @@ fai_init() {
     [ -n "$cspace" ] && FAI_CONFIG_SRC=$cspace
     unset cspace
 
-    if [ -d /media/mirror ]; then   # we are booting from fai cd or USB stick
+    # this test is not perfect. There may be false positives
+    if [ -d /media/mirror ]; then   # we are booting from fai CD or USB stick
         romountopt=
         FAI_DEBMIRROR="--bind /media/mirror"
         MNTPOINT=/media/mirror
     fi
-
-    # read subroutine definitions
-    . /usr/lib/fai/subroutines
 
     [ -f "$stamp" ] && {
        echo -n "$0 already running or was aborted before. PID: " >&2
@@ -108,7 +108,7 @@ fai_init() {
                 test -f /etc/init/udevtrigger.conf && udevadm trigger --action=add && udevadm settle
             fi
         fi
-        mkdir -p /var/run/sshd /var/run/network /dev/shm/network # when using initrd kernels
+        mkdir -p /var/run/sshd /var/run/network # when using initrd kernels
         ifup lo
         [ -x /sbin/portmap ] && /sbin/portmap
 	if [ -x /sbin/rpcbind ]; then
@@ -131,14 +131,13 @@ fai_init() {
 
         # start secure shell daemon for remote access
         [ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+	save_dmesg
     fi
 
     # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
     [ -z "$classes" ] && classes="DEFAULT $(uname -s | tr a-z A-Z) $HOSTNAME LAST"
 
     prcopyleft
-
-    [ $do_init_tasks -eq 1 ] && save_dmesg
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -243,6 +242,8 @@ if [ $(id -u) != "0" ]; then
     fdie 1 "Run this program as root." >&2
 fi
 
+export start_seconds=$(cut -d . -f 1 /proc/uptime)
+
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
         fdie 3 "Please specify a target directory. Aborted" >&2
@@ -307,10 +308,7 @@ if [ $do_init_tasks -eq 1 ]; then
     unset hname myip
 
     renewclass=1 # always renew class list when installing
-    mkdir -p /var/lib/discover /var/discover /etc/sysconfig
 fi
-
-export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
 [ -n "$newhostname" ] && export HOSTNAME=$newhostname
 
@@ -319,6 +317,7 @@ if [ $do_init_tasks -eq 1 ]; then
     export LOGDIR=/tmp/fai
     mkdir -p $LOGDIR
 else
+    # this is for dirinstall, softupdate, ..
     export fai_rundate=$(date +'%Y%m%d_%H%M%S')
     export LOGDIR=/var/log/fai/$HOSTNAME/$action-$fai_rundate
     mkdir -p $LOGDIR
