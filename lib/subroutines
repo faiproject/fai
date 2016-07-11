@@ -484,10 +484,12 @@ task_mountdisks() {
 
     [ ! -f $LOGDIR/fstab ] && die "No $LOGDIR/fstab created."
     # mount swap space
-    local sd
-    for sd in $SWAPLIST; do
-        swapon -p1 $sd && [ "$verbose" ] && echo "Enable swap device $sd"
-    done
+    if [ $do_init_tasks -eq 1 ]; then
+	local sd
+	for sd in $SWAPLIST; do
+            swapon -p1 $sd && [ "$verbose" ] && echo "Enable swap device $sd"
+	done
+    fi
     mount2dir $FAI_ROOT $LOGDIR/fstab
     if [ "$?" -ne 0 ]; then
         sendmon "TASKERROR mountdisks 885"
