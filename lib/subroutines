@@ -359,14 +359,16 @@ task_action() {
     echo "FAI_ACTION: $FAI_ACTION"
     case $FAI_ACTION in
         install)
-            if [ $do_init_tasks -eq 0 ]; then
+            if [ $target = "/" ]; then
                 echo "Cowardly refusing to run a FAI installation on a running system."
                 return
             fi
             echo Performing FAI installation. All data may be overwritten!
-            echo -ne "\a"; sleep 1
-            echo -ne "\a"; sleep 1
-            echo  -e "\a"; sleep 5
+	    if [ $do_init_tasks -eq 1 ] ; then
+		echo -ne "\a"; sleep 1
+		echo -ne "\a"; sleep 1
+		echo  -e "\a"; sleep 5
+	    fi
             task install
             task faiend
             ;;
