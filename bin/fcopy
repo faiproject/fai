@@ -487,7 +487,7 @@ if ($opt_r) {
   my %ignoredirs;
   map $ignoredirs{$_}=1,@ignoredirs;
   File::Find::find({
-    wanted => sub { $has_subdirs{$File::Find::dir} |= -d},
+    wanted => sub { $has_subdirs{$File::Find::dir} |= !($opt_H && -l) && -d},
     preprocess => sub { grep ! (-d and exists($ignoredirs{$_})),@_}}, @ARGV);
 
   foreach (keys %has_subdirs) {
