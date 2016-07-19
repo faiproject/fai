@@ -1,1 +1,48 @@
-get-config-dir-http
+#!/bin/bash
+
+#*********************************************************************
+#
+# get-config-dir-http -- get a tarball of the config dir
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2000-2015 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+#
+#*********************************************************************
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#*********************************************************************
+
+### BEGIN SUBROUTINE INFO
+# Provides-Var:
+# Requires-Var:  $FAI_CONFIG_SRC $FAI
+# Suggests-Var:
+# Short-Description: get config space via http
+### END SUBROUTINE INFO
+
+fdir=/var/lib/fai
+
+mkramdisk $fdir
+cd $fdir
+
+# determine basename of tar file to download (later used as class name)
+file=${FAI_CONFIG_SRC##*/}
+base=${file%%.*}
+
+# now download tarball of config space
+echo -n "Getting configuration space tarball from $FAI_CONFIG_SRC ..."
+env HOME=/root curl -f -O --retry 3 $FAI_CONFIG_SRC
+ret=$?
+if [ $? -eq 0 ]; then
+    echo "done"
+else
+    echo "curl error $ret while downloading $FAI_CONFIG_SRC."
+    task_error 882 $ret
+fi
+
+# extraxt the downloaded file using ftar. Therefore define a class
+# with the basename of the file
+echo "Extracting config space from $file"
+ftar -c $base -t $FAI -s $fdir .
