@@ -23,6 +23,7 @@ fi
 $ROOTCMD grub-mkdevicemap --no-floppy
 GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
 
+
 # Check if RAID is used for the boot device
 if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
     raiddev=${BOOT_DEVICE#/dev/}
@@ -31,6 +32,17 @@ if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
 	echo Install grub on /dev/$device
 	$ROOTCMD grub-install --no-floppy "/dev/$device"
     done
+
+elif [[ $GROOT =~ 'hostdisk' ]]; then
+    cat > $target/boot/grub/device.map <<EOF
+(hd0)   $BOOT_DEVICE
+EOF
+    $ROOTCMD grub-install --no-floppy --modules=part_msdos $BOOT_DEVICE
+    if [ $? -eq 0 ]; then
+        echo "Grub installed on hostdisk $BOOT_DEVICE"
+    fi
+    rm $target/boot/grub/device.map
+
 else
     $ROOTCMD grub-install --no-floppy "$GROOT"
     if [ $? -eq 0 ]; then
