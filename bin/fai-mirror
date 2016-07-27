@@ -80,7 +80,6 @@ initialize() {
     # TODO: root is only needed when FAI_DEBMIRROR is defined. Then we
     # must mount a directory
 
-    debdist=$(echo "$FAI_DEBOOTSTRAP" | awk '{print $1}')
     aptcache=$mirrordir/aptcache   # holds the package cache data
     archivedir=$aptcache/var/cache/apt/archives
     statefile=$aptcache/statefile
@@ -105,10 +104,6 @@ initialize() {
     if [ -n "$arch" ]; then
         aptoptions="$aptoptions -o APT::Architecture=$arch" # add architecture
     fi
-
-    # not needed
-    # -o APT::Get::ReInstall
-    # ."-o APT::Get::Download-Only=true -o Aptitude::Cmd-Line::Download-Only=true "
 
     # we only need some empty dirs
     set -e
@@ -245,10 +240,8 @@ export MAXPACKAGES
 initialize
 
 # if we are using nfs mounts for Debian mirror, this may fail here, since inside a chroot environment different dir are used
-
 # if sources.list includes file AND FAI_DEBMIRROR is defined we have to mount
 # otherwise mounting is not needed. call task_mirror
-
 if [ "$FAI_DEBMIRROR" ]; then
     mkdir -p $MNTPOINT
     mount -r $FAI_DEBMIRROR $MNTPOINT || exit 9
