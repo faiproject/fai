@@ -1086,15 +1086,17 @@ task_instsoft() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
 
+    mkramdisk -au # umount ramdisk
     if [ $do_init_tasks -eq 1 ] ; then
         # show some local information
         df -PTh | egrep ':|^/|^Filesystem'
         # show rx and tx bytes of network device
         grep . /sys/class/net/*/statistics/*x_bytes | perl -ane 'm#/sys/class/net/(.+)/statistics/(.+):(\d+)# && ($3) && ($1 ne lo) && printf "%s %s %.2f Mbytes\n",$1,$2,$3/1000000 '
         swapoff -a
+    else
+        df -PTh | egrep "^Filesystem|$target"
     fi
 
-    mkramdisk -au # umount ramdisk
     # undo fake of all programs made by fai
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
