@@ -1,0 +1,167 @@
+#! /bin/bash
+
+# fai-diskimage - create a disk image for booting a VM
+
+# This script is part of FAI (Fully Automatic Installation)
+#
+# Copyright (C) 2016 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+
+# this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
+# should unshare be used ?
+
+set -e
+
+die() {
+
+    local e=$1   # first parameter is the exit code
+    shift
+
+    echo "ERROR: $@" >&2   # print error message
+    exit $e
+}
+
+cleanup() {
+
+    local dirs dir
+    for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
+	dirs+=" $dir"
+    done
+    umount $dirs
+    losetup -d $loop
+    rm -rf $mnt
+}
+
+usage() {
+
+    echo "Usage: $0 imagename
+
+Create a disk image imagename.raw using FAI and a list of FAI classes.
+
+   -h|--help      	    print help
+   -v|--verbose   	    be verbose
+   -C|--convert   	    convert raw image to qcow2
+   -c|--class <class,...>   define list of FAI classes
+   -S|--size  <size>        size of raw image (suffixes k M G T are supported)
+   -s|--cspace  <uri>       location of the config space
+   -u|--hostname <name>     set hostname to
+"
+    exit $1
+}
+
+check_commands() {
+
+    local error=0
+    if ! type qemu-img > /dev/null 2>&1; then
+	echo "qmeu-img not found. Install the package qemu-utils."
+	error=1
+    fi
+    if ! type setup-storage > /dev/null 2>&1; then
+	echo "setup-storage not found. Install the package fai-setup-storage."
+	error=1
+    fi
+    if [ $error -eq 1 ]; then
+	die 5 "Aborted."
+    fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+call="$0 $*"
+TEMP=$(getopt -o S:s:u:hvc:C --long cspace:,hostname:,class:,size:,convert,help,verbose -n "$0" -- "$@")
+if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
+# Note the quotes around `$TEMP': they are essential!
+eval set -- "$TEMP"
+unset TEMP
+
+verbose=0
+convert=0
+
+while true ; do
+    case "$1" in
+        -h|--help)
+            usage 0 ;;
+        -v|--verbose)
+            export verbose=1
+            shift ;;
+        -C|--convert)
+            export convert=1
+            shift ;;
+        -c|--class)
+            export classes=$2
+            shift 2 ;;
+        -S|--size)
+            size=$2
+            shift 2 ;;
+        -s|--cspace)
+            cspace=$2
+            shift 2 ;;
+        -u|--hostname)
+            export hname=$2
+            shift 2 ;;
+        --)
+            shift
+            break ;;
+         *)
+            die 1 "$0: command line parsing error ! $@" >&2 ;;
+    esac
+done
+
+# check options, set defaults
+
+[ "$1" ] || usage
+image=$1
+if [ $image != ${image%.*} ]; then
+    die 4 "Do no add suffix to image name."
+fi
+rawname="$image.raw"
+qcowname="$image.qcow2"
+
+if [ -z "$classes" ]; then
+    die 7 "No classes are defined"
+fi
+
+: ${cspace:=/srv/fai/config}
+# if cspace starts with /, add prefix file://
+uri=${cspace/#\//file:///}
+
+: ${size:=800M}
+: ${hname:=debian.example.com}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+check_commands
+
+# check root
+if [ $(id -u) != "0" ]; then
+    die 1 "Run this program as root."
+fi
+
+# create empty disk image, loop setup, temp mount point
+rm -f $rawname
+qemu-img create $rawname $size
+loop=$(losetup -f --show $rawname)
+loopdev=${loop/\/dev\//}
+export disklist=$loopdev
+mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
+
+# set cleanup trap
+
+LC_ALL=C fai -u $hname -s $uri -c$classes install $mnt
+
+# do not umount for debugging purpose
+# sleep 6666 | true
+
+cleanup
+
+set +e
+# convert if needed
+if [ $convert -eq 1 ]; then
+    [ $verbose -eq 1 ] && echo "Creating $qcowname."
+    qemu-img convert -c -f raw $rawname -O qcow2 $qcowname
+    rm $rawname
+    rawname=$qcowname
+fi
+echo -n "Size of disk image and filename: "; du -h $rawname
+echo "Image created by: $call"
+exit 0
