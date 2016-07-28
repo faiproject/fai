@@ -89,7 +89,11 @@ sub copy_one {
 
   # $prefix/$source must be a directory
   if (-f $ps) { ewarn("$ps is a file, but must be a directory containing templates.");return };
-  unless (-d $ps) { ewarn("Nonexisting directory $ps. No files copied.") if $debug;return }
+  unless (-d $ps) {
+    ewarn("Nonexisting directory $ps. No files copied.") if $debug;
+    $error = 1; # we could not copy anything
+    return;
+  }
 
   # use the last class for which a file exists
   foreach (@classes) { $class = $_,last if -f "$ps/$_" || ($opt_H && -l "$ps/$_"); }
