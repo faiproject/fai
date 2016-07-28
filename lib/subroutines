@@ -1007,7 +1007,9 @@ task_repository () {
     fi
 
     # apt specific things
-    fcopy -BMv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
+    if ! fcopy -BMv /etc/apt/sources.list; then
+	[ -f $FAI_ETC_DIR/apt/sources.list ] && cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
+    fi
     if ! fcopy -BMv /etc/apt/preferences; then
         [ -f $FAI_ETC_DIR/apt/preferences ] && cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
     fi
