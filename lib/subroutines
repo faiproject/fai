@@ -199,7 +199,7 @@ task() {
     if [ -f $LOGDIR/skip.$taskname ]; then
         # skip task
         rm $LOGDIR/skip.$taskname # TODO: remove skip files at the very end
-        [ "$verbose" ] && echo "Skipping task_$taskname"
+        [ X$verbose = X1 ] && echo "Skipping task_$taskname"
         sendmon "TASKSKIP $taskname"
     else
         echo "Calling task_$taskname"
@@ -457,7 +457,7 @@ task_defvar() {
     cd $FAI/class
     for class in ${classes:-} ; do
         if [ -f $class.var -a -r $class.var ]; then
-            [ "$verbose" ] && echo "Executing $class.var"
+            [ X$verbose = X1 ] && echo "Executing $class.var"
             # show only lines with ++, we cannot use a pipe, since it would call
             # _devfar in a subprocess. Then, variables are not defined
             _defvar $class.var > $svar 2>&1
@@ -489,7 +489,7 @@ task_mountdisks() {
     if [ $do_init_tasks -eq 1 ]; then
 	local sd
 	for sd in $SWAPLIST; do
-            swapon -p1 $sd && [ "$verbose" ] && echo "Enable swap device $sd"
+            swapon -p1 $sd && [ X$verbose = X1 ] && echo "Enable swap device $sd"
 	done
     fi
     mount2dir $FAI_ROOT $LOGDIR/fstab
@@ -1058,7 +1058,7 @@ task_updatebase() {
 
     # maybe the base system is not up to date
 
-    if [ "$verbose" ]; then
+    if [ X$verbose = X1 ]; then
         updatebase </dev/null |& tee -a $LOGDIR/software.log
         task_error 474 ${PIPESTATUS[0]}
     else
@@ -1073,7 +1073,7 @@ task_instsoft() {
     if [ "$debug" ]; then
         install_packages | tee -a $LOGDIR/software.log
         task_error 471 ${PIPESTATUS[0]}
-    elif [ "$verbose" ]; then
+    elif [ X$verbose = X1 ]; then
         install_packages </dev/null |& tee -a $LOGDIR/software.log
         task_error 471 ${PIPESTATUS[0]}
     else

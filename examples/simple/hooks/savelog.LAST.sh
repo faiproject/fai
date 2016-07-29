@@ -176,7 +176,7 @@ if [ -s $errfile ]; then
 fi
 
 grep -i "$errorpatterns" *.log | grep -vi "$ignorepatterns" > $errfile
-if [ "$verbose" ]; then
+if [ X$verbose =X1 ]; then
     egrep -v '^software.log:' $errfile > $LOGDIR/tempfile
     mv $LOGDIR/tempfile $errfile
 fi

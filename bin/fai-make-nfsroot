@@ -129,7 +129,7 @@ fi
 cfdir=$(readlink -f $cfdir) # canonicalize path
 [ ! -d "$cfdir" ] && die 6 "$cfdir is not a directory"
 
-[ "$verbose" ] && echo "Using configuration files from $cfdir"
+[ X$verbose = X1 ] && echo "Using configuration files from $cfdir"
 . $cfdir/fai.conf
 : ${FAI:=/var/lib/fai/config} # default value
 : ${MNTPOINT:=/media/mirror}  # default value
@@ -171,7 +171,7 @@ bad_exit() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_verbose() {
 
-    if [ "$verbose" ]; then
+    if [ X$verbose = X1 ]; then
         "$@"
         return $?
     else
@@ -187,7 +187,7 @@ setclasses() {
     iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
     distro=$(. $NFSROOT/etc/os-release; echo ${ID} ${ID}_${VERSION_ID} | tr '[:lower:].' '[:upper:]_')
     export classes="NFSROOT $iarch $distro"
-    [ "$verbose" ] && echo Classes are set to $classes
+    [ X$verbose = X1 ] && echo Classes are set to $classes
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
@@ -252,14 +252,14 @@ call_debootstrap() {
         echo "ERROR: debootstrap did not complete successfully."
         echo "This is mostly caused by a broken mirror."
         echo "Please check your mirror or use an official mirror."
-        [ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
+        [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
         exit 10
     fi
 
     if [ ! -f $NFSROOT/usr/bin/apt-get ]; then
         echo "No apt-get executable available inside the NFSROOT."
         echo "Maybe debootstrap did not finish successfully. Aborting."
-        [ "$verbose" ] || echo "Call fai-make-nfsroot -v for better debugging."
+        [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
         exit 11
     fi
 }
@@ -348,7 +348,7 @@ create_nfsroot() {
 
     setclasses
     if [ -n "$FAI_DEBMIRROR" ]; then
-        [ "$verbose" ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
+        [ X$verbose = X1 ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
         mount -o ro,noatime $FAI_DEBMIRROR $NFSROOT/$MNTPOINT || \
                 die 1 "Can't mount $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
@@ -402,7 +402,7 @@ EOF
 	echo "Acquire::http::Proxy \"$APTPROXY\";" > $NFSROOT/etc/apt/apt.conf.d/02proxy
     fi
 
-    [ "$verbose" ] && echo "Upgrading $NFSROOT"
+    [ X$verbose = X1 ] && echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose upgrade_nfsroot
 
     LC_ALL=C add_packages_nfsroot
@@ -524,7 +524,7 @@ setup_tftp(){
     if [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ]; then
 	cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
     fi
-    if [ "$verbose" ]; then
+    if [ X$verbose = X1 ]; then
 	echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
     fi
 }
@@ -592,7 +592,7 @@ trap "bad_exit" ERR
 
 # repeat message, so it will appear in the log file
 rm -f  /var/log/fai/fai-make-nfsroot.log
-[ "$verbose" ] && echo "Using configuration files from $cfdir" > /var/log/fai/fai-make-nfsroot.log
+[ X$verbose = X1 ] && echo "Using configuration files from $cfdir" > /var/log/fai/fai-make-nfsroot.log
 
 {
 if [ -d $NFSROOT ] && [ "$force" -ne 1 ] ; then
@@ -609,7 +609,7 @@ echo "Creating FAI nfsroot in $NFSROOT"
 
 if [ $sshpreserve = 1 ]; then
     [ -d $NFSROOT/root/.ssh ] || die 8 "Cannot preserve non-existing $NFSROOT/root/.ssh."
-    [ "$verbose" ] && echo "Preserving root/.ssh directory from inside the nfsroot."
+    [ X$verbose = X1 ] && echo "Preserving root/.ssh directory from inside the nfsroot."
     # save old .ssh directory
     tmptar=$(mktemp) || die 12 "Cannot create tmp file"
     # should we set the umask before? Does it influence the other parts?
