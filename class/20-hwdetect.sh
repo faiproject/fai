@@ -17,7 +17,7 @@ case $(uname -r) in
 esac
 
 for mod in $kernelmodules; do
-    [ "$verbose" ] && echo Loading kernel module $mod
+    [ X$verbose =X1 ] && echo Loading kernel module $mod
     modprobe -a $mod 1>/dev/null 2>&1
 done
 
