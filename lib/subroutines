@@ -989,29 +989,33 @@ task_repository () {
         fi
     done
 
+    if [ X$verbose = X1 ]; then
+	v=-v
+    fi
+
     [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
 
     # some generale network files are needed on the client
     # resolv.conf is needed, /etc/hosts is useful in /target
     # use a file from the config space or from /etc inside the nfsroot
-    if ! fcopy -BMv /etc/resolv.conf ; then
+    if ! fcopy -BM $v /etc/resolv.conf ; then
         if [ "$(readlink -f /etc/resolv.conf)" = "$(readlink -f $FAI_ROOT/etc/resolv.conf)" ] ; then
             :
 	    # no need for copy since both are pointing to the same file
         else
-            [ -f /etc/resolv.conf ] && cp -v /etc/resolv.conf $FAI_ROOT/etc
+            [ -f /etc/resolv.conf ] && cp $v /etc/resolv.conf $FAI_ROOT/etc
         fi
     fi
-    if ! fcopy -Mv /etc/hosts ; then
-	[ X$FAI_ROOT = X/ ] || cp -bvS.orig /etc/hosts $FAI_ROOT/etc
+    if ! fcopy -M $v /etc/hosts ; then
+	[ X$FAI_ROOT = X/ ] || cp $v -bS.orig /etc/hosts $FAI_ROOT/etc
     fi
 
     # apt specific things
-    if ! fcopy -BMv /etc/apt/sources.list; then
-	[ -f $FAI_ETC_DIR/apt/sources.list ] && cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
+    if ! fcopy -BM $v /etc/apt/sources.list; then
+	[ -f $FAI_ETC_DIR/apt/sources.list ] && cp $v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
     fi
-    if ! fcopy -BMv /etc/apt/preferences; then
-        [ -f $FAI_ETC_DIR/apt/preferences ] && cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
+    if ! fcopy -BM $v /etc/apt/preferences; then
+        [ -f $FAI_ETC_DIR/apt/preferences ] && cp $v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
     fi
     fcopy -BMir /etc/apt # copy all other apt config files from the config space
 
