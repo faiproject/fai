@@ -486,6 +486,10 @@ sub get_current_raid {
   # the id of the RAID
   my $id;
 
+  # container
+  my $container;
+  my $container_devices;
+
   # parse the output line by line
   foreach my $line (@mdadm_print) {
     print MDADM_EX "$line";
@@ -495,17 +499,49 @@ sub get_current_raid {
       foreach (split (" ", $line)) {
         $FAI::current_raid_config{$id}{mode} = $1 if ($_ =~ /^level=(\S+)/);
       }
-    } elsif ($line =~ /^\s*devices=(\S+)$/) {
-      defined($id) or
-        &FAI::internal_error("mdadm ARRAY line not yet seen -- unexpected mdadm output:\n"
-        . join("", @mdadm_print));
-      foreach my $d (split (",", $1)) {
-        push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($d);
 
-        # add entry in device tree
-        push @{ $FAI::current_dev_children{abs_path($d)} }, "/dev/md$id";
+    # WORK-AROUND
+    } elsif ($line =~ /^ARRAY metadata=([a-z]+) UUID=([a-z0-9:]+)/) {
+      $container = $2;
+
+    # WORK-AROUND
+    } elsif ($line =~ /^ARRAY \/dev\/md(\/\w+\d+) container=([a-z0-9:]+) member=([0-9]+) UUID=([a-z0-9:]+)/) {
+      if ($1 =~ /\w+\d+/) {
+        $id = $1 . "_0";
+      } else {
+        $id = $1 . "0";
       }
 
+      if (defined($container) and defined($container_devices) and "$2" eq "$container") {
+        $FAI::current_raid_config{$id}{mode} = "raid1";
+        foreach my $d (split (",", $container_devices)) {
+          push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($d);
+
+          # add entry in device tree
+          push @{ $FAI::current_dev_children{abs_path($d)} }, "/dev/md$id";
+        }
+      }
+      undef($id);
+      undef($container);
+      undef($container_devices);
+
+    } elsif ($line =~ /^\s*devices=(\S+)$/) {
+      if (defined($id)) {
+        foreach my $d (split (",", $1)) {
+          push @{ $FAI::current_raid_config{$id}{devices} }, abs_path($d);
+
+          # add entry in device tree
+          push @{ $FAI::current_dev_children{abs_path($d)} }, "/dev/md$id";
+        }
+
+      # WORK-AROUND
+      } elsif (defined($container)) {
+        $container_devices = $1;
+
+      } else {
+        &FAI::internal_error("mdadm ARRAY line not yet seen -- unexpected mdadm output:\n"
+        . join("", @mdadm_print));
+      }
       undef($id);
     }
   }
