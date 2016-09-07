@@ -814,8 +814,10 @@ task_confdir() {
         faimond=0
     else
         faimond=1
-        MAC=$(< /sys/class/net/$NIC1/address)
-        PXE="01-"${MAC//:/-}
+	if [ -n "$NIC1" ]; then
+	    MAC=$(< /sys/class/net/$NIC1/address)
+            PXE="01-"${MAC//:/-}
+	fi
 
         : ${FAI_SENDID:=host} # set default if undefined
         case "$FAI_SENDID" in
