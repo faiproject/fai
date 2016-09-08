@@ -6,7 +6,7 @@ else
     return
 fi
 
-grep -q INSTALL $LOGDIR/FAI_CLASSES || return
+grep -q INSTALL $LOGDIR/FAI_CLASSES || return 0
 [ "$flag_menu" ] || return 0
 
 out=$(tty)
