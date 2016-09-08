@@ -145,7 +145,7 @@ loopdev=${loop/\/dev\//}
 export disklist=$loopdev
 mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
 
-# set cleanup trap
+trap "cleanup" ERR
 
 LC_ALL=C fai -u $hname -s $uri -c$classes install $mnt
 
@@ -153,6 +153,7 @@ LC_ALL=C fai -u $hname -s $uri -c$classes install $mnt
 # sleep 6666 | true
 
 cleanup
+trap - ERR
 
 set +e
 # convert if needed
