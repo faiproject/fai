@@ -27,9 +27,16 @@ cleanup() {
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
 	dirs+=" $dir"
     done
-    umount $dirs
+    [ -n "$dirs" ] && umount $dirs
     losetup -d $loop
     rm -rf $mnt
+    if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
+	if pgrep -F /var/run/fai/FAI_INSTALLATION_IN_PROGRESS; then
+	    :
+	else
+	    rm /var/run/fai/FAI_INSTALLATION_IN_PROGRESS
+	fi
+    fi
 }
 
 usage() {
