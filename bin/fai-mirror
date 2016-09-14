@@ -5,7 +5,7 @@
 # fai-mirror -- create and manage a partial mirror for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2015, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2016, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -94,7 +94,6 @@ initialize() {
       -o Dir::Log=$aptcache/var/log/apt \
       -o Dir::State::extended_states=$aptcache/var/lib/apt/lists/extended_states \
       -o Dir::State::status=$statefile \
-      -o APT::Get::Force-Yes=true \
       -o Dir::Cache=$aptcache/var/cache/apt \
       -o Dir::State=$aptcache/var/cache/apt \
       -o Dir::Cache::Archives=$archivedir \
@@ -145,7 +144,7 @@ add_base_packages() {
     echo "Adding packages of $cfdir/NFSROOT."
     if [ -f $NFSROOT/var/tmp/packages.nfsroot ]; then
         plist=$(< $NFSROOT/var/tmp/packages.nfsroot)
-        apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+        apt-get $qflag -d $aptoptions -y --fix-missing install $plist
     else
         echo "WARNING: $NFSROOT/var/tmp/packages.nfsroot does not exists." >&2
         echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
@@ -158,7 +157,7 @@ add_base_packages() {
     if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
         plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
         apt-get $qflag $aptoptions update >/dev/null
-        apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+        apt-get $qflag -d $aptoptions -y --fix-missing install $plist
     else
         echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists." >&2
         echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
