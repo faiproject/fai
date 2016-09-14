@@ -322,7 +322,11 @@ sub build_btrfs_commands {
       $FAI::configs{$config}{volumes}{$volume}{mount_options} = $FAI::configs{$c}{partitions}{$p}{mount_options};
       $FAI::configs{$c}{partitions}{$p}{mount_options} = '-';
       $FAI::configs{$config}{volumes}{$volume}{fstabkey} = $FAI::configs{$c}{fstabkey};
-      $FAI::configs{$config}{volumes}{$volume}{devices}{$device . $p} = {};
+      if ($device =~ m|^/dev/nvme|) {
+        $FAI::configs{$config}{volumes}{$volume}{devices}{$device . "p" . $p} = {};
+      } else {
+        $FAI::configs{$config}{volumes}{$volume}{devices}{$device . $p} = {};
+      }
       $FAI::configs{$config}{opts_all} = {};
       $single_vol_index++;
     }
@@ -332,7 +336,7 @@ sub build_btrfs_commands {
     next unless ($config eq "BTRFS");
 
     #create BTRFS RAIDs
-    foreach my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
+    foreach my $id (keys %{ $FAI::configs{$config}{volumes} }) {
     #reference to current btrfs volume
     my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
 
@@ -351,6 +355,9 @@ sub build_btrfs_commands {
       my $tmp = $_;
       $tmp =~ s/\d//;
       $pre_req = "${pre_req}pt_complete_${tmp}," unless ($pre_req =~ m/pt_complete_$tmp/);
+    }
+    if (scalar @devs == 1) {
+      $pre_req = "exist_" . $devs[0];
     }
     # creates the BTRFS volume/RAID
     if ($raidlevel eq 'single') {
