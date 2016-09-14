@@ -171,7 +171,7 @@ sub find_boot_mnt_point {
       }
     } elsif ($c eq "BTRFS") {
       foreach my $b (keys %{ $config{$c}->{volumes}}) {
-        my $this_mp = $config{$c}->{volumes}->{mountpoint};
+        my $this_mp = $config{$c}->{volumes}->{$b}->{mountpoint};
         next if (!defined($this_mp));
         return $this_mp if ($this_mp eq "/boot");
         $mnt_point = $this_mp if ($this_mp eq "/");
@@ -303,6 +303,9 @@ sub generate_fstab {
 
         # skip entries without a mountpoint
         next if ( $config->{$c}->{volumes}->{$v}->{mountpoint} eq "-");
+
+        $FAI::disk_var{BOOT_DEVICE} = (keys $config->{$c}->{volumes}->{$v}->{devices})[0]
+          if ( $config->{$c}->{volumes}->{$v}->{mountpoint} eq $boot_mnt_point);
 
         # get an array of devices that are part of the BTRFS RAID configuration
         my @device_names = keys %{ $config->{$c}->{volumes}->{$v}->{devices}};
