@@ -360,7 +360,7 @@ sub execute_command_internal {
     `$command 1> $stdout_filename 2> $stderr_filename`;
     $exit_code = ($?>>8);
   } else {
-    print "would run command $command; to have it executed, use -X \n";
+    print "DRY-RUN $command\n";
     return "";
   }
 
