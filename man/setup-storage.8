@@ -330,11 +330,30 @@ luks    /local00        /dev/sdb7       ext3    defaults,errors=remount-ro  crea
 Configure /dev/sdb with 2 primary partitions, one extended partition, and 3
 logical partitions.
 .IP \(bu
-Encrypt the swap space, /tmp, and /local00. As described in the CAVEATS section,
-the encryption keys will be stored in a temporary directory only.
+Encrypt the swap space, /tmp, and /local00. As described in the
+CAVEATS section, the encryption keys will be stored in a temporary
+directory only.
+.IP \(bu
+Do not forget to install the cryptsetup package on a system using
+thus scheme.
 .IP \(bu
 The initial password for the encrypted device can also be set in
 the configuration file by using the syntax - luks:"secret"
+.IP \(bu
+With a working RAID+LVM configuration, an encryption layer can be
+added between the RAID and LVM device layers by adding the following
+cryptsetup configuration. In this case, the encrypted device will be
+called 'crypt_format_md1' and will be used as the underlying physical
+device (PV) in LVM.
+
+.sp
+.nf
+.ta 10n 20n 30n 40n 50n
+disk_config cryptsetup
+luks    -        /dev/md1       -       -
+.sp
+.fi
+.PP
 
 .TP
 tmpfs example
