@@ -5,6 +5,9 @@ if [ X$FAI_ACTION = Xinstall -o X$FAI_ACTION = X ]; then
 else
     return
 fi
+if [ X$action = Xdirinstall ]; then
+    return
+fi
 
 grep -q INSTALL $LOGDIR/FAI_CLASSES || return 0
 [ "$flag_menu" ] || return 0
