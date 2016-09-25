@@ -164,6 +164,7 @@ sub handle_oldstyle_encrypt_device {
     mount_options => $partition->{mount_options},
     filesystem => $partition->{filesystem},
     createopts => $partition->{createopts},
+    lukscreateopts => $partition->{lukscreateopts},
     tuneopts => $partition->{tuneopts}
   };
 
@@ -243,21 +244,30 @@ sub build_cryptsetup_commands {
 
       if ($mode =~ /^luks(:"([^"]+)")?$/) {
         my $keyfile = "$FAI::DATADIR/$enc_dev_short_name";
+        my $luksoption = $1;
+        my $passphrase = $2;
 
         # generate a key for encryption
         &FAI::push_command(
           "head -c 2048 /dev/urandom | od | tee $keyfile",
           "", "keyfile_$real_dev" );
+
+        my $lukscreateopts = $vol->{lukscreateopts} // "";
+        if ($lukscreateopts !~ /(^|\s)-c\s+\S+/) {
+          $lukscreateopts .= " -c aes-cbc-essiv:sha256";
+        }
+        if ($lukscreateopts !~ /(^|\s)-s\s+\d+/) {
+          $lukscreateopts .= " -s 256";
+        }
         # encrypt
         &FAI::push_command(
-          "yes YES | cryptsetup luksFormat $real_dev $keyfile -c aes-cbc-essiv:sha256 -s 256",
+          "yes YES | cryptsetup luksFormat $real_dev $keyfile $lukscreateopts",
           "$pre_dep,keyfile_$real_dev", "crypt_format_$real_dev" );
         &FAI::push_command(
           "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
           "crypt_format_$real_dev", "exist_$enc_dev_name" );
 
-        if (defined($1)) {
-          my $passphrase = $2;
+        if (defined($luksoption)) {
 
           # add user-defined key
           &FAI::push_command(
