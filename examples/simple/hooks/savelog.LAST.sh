@@ -148,6 +148,7 @@ fail to add MMCONFIG information
 can't initialize iptables table
 can't initialize ip6tables table
 Authentication warning overridden
+41-warning.sh
 update-alternatives: warning: skip creation of
 update-rc.d: warning: start and stop actions are no longer supported"
 
