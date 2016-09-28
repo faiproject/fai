@@ -82,7 +82,7 @@ eval set -- "$TEMP"
 unset TEMP
 
 verbose=0
-convert=0
+convert=1
 
 while true ; do
     case "$1" in
@@ -119,11 +119,21 @@ image=$1
 iname=${image%.*}
 ext=${image##*.}
 rawname="$iname.raw"
-qcowname="$iname.qcow2"
 case $ext in
     raw)   convert=0 ;;
-    qcow2) convert=1 ;;
-    *) die 8 "Unknown suffix .$ext in name of disk image. Please use .raw or .qcow2"
+    qcow2) copt="-c -O qcow2 "
+	   qcowname="$iname.qcow2"
+	   ;;
+    vdi) copt="-O vdi"
+	 qcowname="$iname.vdi"
+	   ;;
+    vmdk) copt="-O vmdk"
+	  qcowname="$iname.vmdk"
+	  ;;
+    vhdx) copt="-O vhdx"
+	  qcowname="$iname.vhdx"
+	  ;;
+    *) die 8 "Unknown suffix .$ext in name of disk image. Please use raw, qcow2, vdi, vmdk or vhdx."
 esac
 
 if [ -z "$classes" ]; then
@@ -168,7 +178,7 @@ set +e
 # convert if needed
 if [ $convert -eq 1 ]; then
     [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname."
-    qemu-img convert -c -f raw $rawname -O qcow2 $qcowname
+    qemu-img convert -f raw $rawname $copt $qcowname
     rm $rawname
 fi
 echo -n "Size of disk image and filename: "; du -h $image
