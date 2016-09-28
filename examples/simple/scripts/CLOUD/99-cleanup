@@ -9,5 +9,6 @@ rm -f $target/etc/resolv.conf $target/etc/udev/rules.d/70-persistent-net.rules $
 shred --remove $target/etc/ssh/ssh_host_*
 
 # FIXME: DHCP RFC3442 is used incorrect in Azure
-sed -ie 's,rfc3442-classless-static-routes,disabled-\0,' $target/etc/dhcp/dhclient.conf
-
+if [ -f $target/etc/dhcp/dhclient.conf ]; then
+    sed -ie 's,rfc3442-classless-static-routes,disabled-\0,' $target/etc/dhcp/dhclient.conf
+fi
