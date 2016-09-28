@@ -48,7 +48,6 @@ This can be used for a virtual machine or a cloud instance.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
-   -C|--convert   	    convert raw image to qcow2
    -c|--class <class,...>   define list of FAI classes
    -S|--size  <size>        size of raw image (suffixes k M G T are supported)
    -s|--cspace  <uri>       location of the config space
@@ -76,7 +75,7 @@ check_commands() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 call="$0 $*"
-TEMP=$(getopt -o S:s:u:hvc:C --long cspace:,hostname:,class:,size:,convert,help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o S:s:u:hvc: --long cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -91,9 +90,6 @@ while true ; do
             usage 0 ;;
         -v|--verbose)
             export verbose=1
-            shift ;;
-        -C|--convert)
-            export convert=1
             shift ;;
         -c|--class)
             export classes=$2
@@ -119,11 +115,16 @@ done
 
 [ "$1" ] || usage
 image=$1
-if [ $image != ${image%.*} ]; then
-    die 4 "Do no add suffix to image name."
-fi
-rawname="$image.raw"
-qcowname="$image.qcow2"
+
+iname=${image%.*}
+ext=${image##*.}
+rawname="$iname.raw"
+qcowname="$iname.qcow2"
+case $ext in
+    raw)   convert=0 ;;
+    qcow2) convert=1 ;;
+    *) die 8 "Unknown suffix .$ext in name of disk image. Please use .raw or .qcow2"
+esac
 
 if [ -z "$classes" ]; then
     die 7 "No classes are defined"
@@ -169,8 +170,7 @@ if [ $convert -eq 1 ]; then
     [ $verbose -eq 1 ] && echo "Creating $qcowname."
     qemu-img convert -c -f raw $rawname -O qcow2 $qcowname
     rm $rawname
-    rawname=$qcowname
 fi
-echo -n "Size of disk image and filename: "; du -h $rawname
+echo -n "Size of disk image and filename: "; du -h $image
 echo "Image created by: $call"
 exit 0
