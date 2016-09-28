@@ -11,6 +11,11 @@ set -o pipefail
 
 # setup network
 ifup eth0
+# regenerate ssh_host keys
+ls /etc/ssh/ssh_host_* > /dev/null
+if [ $? -ne 0 ]; then
+    dpkg-reconfigure -fnoninteractive openssh-server
+fi
 sleep 8
 [ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
 
