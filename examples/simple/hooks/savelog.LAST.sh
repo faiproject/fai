@@ -150,6 +150,9 @@ can't initialize ip6tables table
 Authentication warning overridden
 41-warning.sh
 update-alternatives: warning: skip creation of
+loop: module verification failed: signature
+Warning: apt-key output should not be parsed
+WARNING: Failed to connect to lvmetad. Falling back to device scanning
 update-rc.d: warning: start and stop actions are no longer supported"
 
 # add pattern on some conditions
