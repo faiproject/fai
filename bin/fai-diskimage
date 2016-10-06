@@ -77,7 +77,7 @@ check_commands() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 call="$0 $*"
-TEMP=$(getopt -o S:s:u:hvc: --long cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o DS:s:u:hvc: --long debug,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -85,11 +85,15 @@ unset TEMP
 
 verbose=0
 convert=1
+debug=0
 
 while true ; do
     case "$1" in
         -h|--help)
             usage 0 ;;
+        -D|--debug)
+            debug=1
+            shift ;;
         -v|--verbose)
             export verbose=1
             shift ;;
@@ -171,7 +175,13 @@ trap "cleanup" ERR
 LC_ALL=C fai -u $hname -s $uri -c$classes install $mnt
 
 # do not umount for debugging purpose
-# sleep 6666 | true
+if [ $debug -eq 1 ]; then
+    echo "==================================================================="
+    echo "Your chroot is mounted on $mnt. $0 now halted."
+    echo "After debugging, call kill -CONT $$, to continue the process."
+    echo "==================================================================="
+    kill -STOP $$ || true
+fi
 
 cleanup
 trap - ERR
