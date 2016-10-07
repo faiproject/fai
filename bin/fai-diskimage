@@ -23,11 +23,18 @@ die() {
 
 cleanup() {
 
+    set +e
     local dirs dir
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
-	dirs+=" $dir"
+	# try umount several times, because some postinst jobs may still run and use the filesystems
+	for i in {1..8}; do
+            umount $dir >/dev/null 2>&1
+            [ $? -eq 0 ] && break
+            [ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
+	    sleep $i
+	done
     done
-    [ -n "$dirs" ] && umount $dirs
+    set -e
     losetup -d $loop
     rm -rf $mnt
     if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
@@ -50,6 +57,7 @@ supported: .qcow2, .vdi, .vhdx, .vmdk.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
+   -D|--debug   	    enter debugging
    -c|--class <class,...>   define list of FAI classes
    -S|--size  <size>        size of raw image (suffixes k M G T are supported)
    -s|--cspace  <uri>       location of the config space
@@ -177,7 +185,8 @@ LC_ALL=C fai -u $hname -s $uri -c$classes install $mnt
 # do not umount for debugging purpose
 if [ $debug -eq 1 ]; then
     echo "==================================================================="
-    echo "Your chroot is mounted on $mnt. $0 now halted."
+    echo "The chroot is mounted on $mnt."
+    echo "${0##*/} now halted."
     echo "After debugging, call kill -CONT $$, to continue the process."
     echo "==================================================================="
     kill -STOP $$ || true
