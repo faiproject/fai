@@ -5,7 +5,7 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-Sun, 28 Sep 2016
+Sun, 9 Oct 2016
 :Date: a date
 :Revision: 5.2
 
@@ -1669,18 +1669,32 @@ image. After the installation you can boot the disk image and have a
 running system. The disk image can also be converted to qcow2 format.
 
 ----
- faiserver# fai-diskimage -u cloud3 -S 2G -cDEBIAN,AMD64,FAIBASE,DEMO,GRUB_PC,CLOUD disk
+ faiserver# FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ faiserver# fai-diskimage -u cloud3 -S 2G -cDEBIAN,JESSIE64,AMD64,FAIBASE,GRUB_PC,CLOUD,GCE disk
 ----
 Creates the file disk.raw for a host called cloud3, with a small set
 of software packages.
 
 ----
  # FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
- # cl=DEFAULT,DHCPC,DEBIAN,AMD64,FAIBASE,DEMO,GRUB_PC,UBUNTU,XENIAL,XENIAL64,XORG
+ # cl=DEFAULT,DHCPC,DEBIAN,AMD64,FAIBASE,GRUB_PC,UBUNTU,XENIAL,XENIAL64,XORG
  # fai-diskimage -v -C -u foobar -S5G -c$cl ubuntu
 ----
 Creates a disk image called ubuntu.qcow2 for a Ubuntu 16.04 desktop
 with hostname set to foobar.
+
+
+You do not neet to setup the nfsroot when only using
+fai-diskimage. But you need a basefile in your configuration
+space. You can download a Debian base image from
+http://fai-project.org/download/basefile and copy this into your
+config space. If you already have set up the nfsroot you can copy the
+Debian basefile from the nfsroot into your config space by using this
+command:
+----
+ $ cp /srv/fai/nfsroot/var/tmp/base.tar.xz
+ $ /srv/fai/config/basefiles/DEBIAN.tar.xz
+----
 
 === [[sysinfo]]FAI rescue system
 
