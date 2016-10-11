@@ -53,6 +53,7 @@ kolab-webadmin
 kolabadmin
 gstreamer0.10-plugins-really-bad
 liberrors.so
+liberrors-samba
 gsambad
 libad
 libtest-nowarnings-perl
