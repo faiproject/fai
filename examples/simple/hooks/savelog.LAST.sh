@@ -64,8 +64,7 @@ libroxen-errormessage
 liberror-perl
 libgpg-error-dev
 libgpg-error0
-^fstab.\+errors=remount
-Opts: errors=remount-ro
+Opts:.\+errors=remount
 [RT]X packets:
 WARNING: unexpected IO-APIC
 warned about = ( )
