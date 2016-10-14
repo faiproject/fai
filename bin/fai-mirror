@@ -5,7 +5,7 @@
 # fai-mirror -- create and manage a partial mirror for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2015, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2016, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -80,7 +80,6 @@ initialize() {
     # TODO: root is only needed when FAI_DEBMIRROR is defined. Then we
     # must mount a directory
 
-    debdist=$(echo "$FAI_DEBOOTSTRAP" | awk '{print $1}')
     aptcache=$mirrordir/aptcache   # holds the package cache data
     archivedir=$aptcache/var/cache/apt/archives
     statefile=$aptcache/statefile
@@ -95,7 +94,6 @@ initialize() {
       -o Dir::Log=$aptcache/var/log/apt \
       -o Dir::State::extended_states=$aptcache/var/lib/apt/lists/extended_states \
       -o Dir::State::status=$statefile \
-      -o APT::Get::Force-Yes=true \
       -o Dir::Cache=$aptcache/var/cache/apt \
       -o Dir::State=$aptcache/var/cache/apt \
       -o Dir::Cache::Archives=$archivedir \
@@ -105,10 +103,6 @@ initialize() {
     if [ -n "$arch" ]; then
         aptoptions="$aptoptions -o APT::Architecture=$arch" # add architecture
     fi
-
-    # not needed
-    # -o APT::Get::ReInstall
-    # ."-o APT::Get::Download-Only=true -o Aptitude::Cmd-Line::Download-Only=true "
 
     # we only need some empty dirs
     set -e
@@ -150,7 +144,7 @@ add_base_packages() {
     echo "Adding packages of $cfdir/NFSROOT."
     if [ -f $NFSROOT/var/tmp/packages.nfsroot ]; then
         plist=$(< $NFSROOT/var/tmp/packages.nfsroot)
-        apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+        apt-get $qflag -d $aptoptions -y --fix-missing install $plist
     else
         echo "WARNING: $NFSROOT/var/tmp/packages.nfsroot does not exists." >&2
         echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
@@ -163,7 +157,7 @@ add_base_packages() {
     if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
         plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
         apt-get $qflag $aptoptions update >/dev/null
-        apt-get $qflag -d $aptoptions -y --force-yes --fix-missing install $plist
+        apt-get $qflag -d $aptoptions -y --fix-missing install $plist
     else
         echo "WARNING: $NFSROOT/var/tmp/base-pkgs.lis does not exists." >&2
         echo "Can't add those packages. Maybe the nfsroot is not yet created." >&2
@@ -245,10 +239,8 @@ export MAXPACKAGES
 initialize
 
 # if we are using nfs mounts for Debian mirror, this may fail here, since inside a chroot environment different dir are used
-
 # if sources.list includes file AND FAI_DEBMIRROR is defined we have to mount
 # otherwise mounting is not needed. call task_mirror
-
 if [ "$FAI_DEBMIRROR" ]; then
     mkdir -p $MNTPOINT
     mount -r $FAI_DEBMIRROR $MNTPOINT || exit 9

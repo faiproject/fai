@@ -11,7 +11,7 @@ for module in $MODULESLIST; do
 done
 
 fcopy -Mv /etc/hostname || echo $HOSTNAME > $target/etc/hostname
-ainsl -av /etc/mailname ${HOSTNAME}
+ainsl -a /etc/mailname ${HOSTNAME}
 if [ ! -e $target/etc/adjtime ]; then
     printf "0.0 0 0.0\n0\nUTC" > $target/etc/adjtime
 fi
@@ -36,9 +36,13 @@ ln -fs /proc/mounts $target/etc/mtab
 
 rm -f $target/etc/dpkg/dpkg.cfg.d/fai
 
-[ $FAI_ACTION = "install" -a -f /etc/fai/fai.conf ] && cp /etc/fai/fai.conf $target/etc/fai/fai.conf
-ainsl -av /etc/fai/fai.conf "FAI_CONFIG_SRC=$FAI_CONFIG_SRC"
+if [ $FAI_ACTION = "install" -o $FAI_ACTION = "dirinstall" ] ; then
+  [ -f /etc/fai/fai.conf ] && cp /etc/fai/fai.conf $target/etc/fai/fai.conf
+fi
+
+ainsl -a /etc/fai/fai.conf "FAI_CONFIG_SRC=$FAI_CONFIG_SRC"
 
 fcopy -Miv /etc/fai/fai.conf
+fcopy -iv /etc/rc.local
 
 exit $error

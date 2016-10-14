@@ -53,6 +53,7 @@ kolab-webadmin
 kolabadmin
 gstreamer0.10-plugins-really-bad
 liberrors.so
+liberrors-samba
 gsambad
 libad
 libtest-nowarnings-perl
@@ -63,8 +64,7 @@ libroxen-errormessage
 liberror-perl
 libgpg-error-dev
 libgpg-error0
-^fstab.\+errors=remount
-Opts: errors=remount-ro
+Opts:.\+errors=remount
 [RT]X packets:
 WARNING: unexpected IO-APIC
 warned about = ( )
@@ -148,7 +148,11 @@ fail to add MMCONFIG information
 can't initialize iptables table
 can't initialize ip6tables table
 Authentication warning overridden
+41-warning.sh
 update-alternatives: warning: skip creation of
+loop: module verification failed: signature
+Warning: apt-key output should not be parsed
+WARNING: Failed to connect to lvmetad. Falling back to device scanning
 update-rc.d: warning: start and stop actions are no longer supported"
 
 # add pattern on some conditions
@@ -176,7 +180,7 @@ if [ -s $errfile ]; then
 fi
 
 grep -i "$errorpatterns" *.log | grep -vi "$ignorepatterns" > $errfile
-if [ "$verbose" ]; then
+if [ X$verbose = X1 ]; then
     egrep -v '^software.log:' $errfile > $LOGDIR/tempfile
     mv $LOGDIR/tempfile $errfile
 fi

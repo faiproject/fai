@@ -132,9 +132,6 @@ sub init_disk_config {
 
   $disk = &FAI::resolve_disk_shortname($disk);
 
-  &FAI::in_path("losetup") or die "losetup not found in PATH\n"
-    if ((&FAI::loopback_dev($disk))[0]);
-
   # prepend PHY_
   $FAI::device = "PHY_$disk";
 
@@ -815,7 +812,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{CRYPT}->{volumes}->{$vol_id};
           $FAI::partition_pointer_dev_name = "CRYPT$vol_id";
         }
-        mountpoint devices filesystem mount_options lv_or_fsopts
+        mountpoint devices filesystem mount_options lukscreate_or_lvopts
         | /^tmpfs\s+/
         {
           ($FAI::device eq "TMPFS") or die "tmpfs entry invalid in this context\n";
@@ -1114,6 +1111,12 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer->{btrfscreateopts} = $1;
         }
         | createtuneopt(s?)
+
+   lukscreate_or_lvopts: /lukscreateopts="([^"]*)"/ lv_or_fsopts(s?)
+        {
+          $FAI::partition_pointer->{lukscreateopts} = $1;
+        }
+        | lv_or_fsopts(s?)
 
     lv_or_fsopts: /lvcreateopts="([^"]*)"/ createtuneopt(s?)
         {

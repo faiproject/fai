@@ -19,13 +19,14 @@ cdimage=/files/scratch/fai-cd.iso # default name for CD image
 diskdir=/tmp     # directory where the disk images will be created, a RAM disk is recommended
 usernet=0
 newdisk=0
-
+macprefix=52:54:00:11:23
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_disk() {
 
   # boot from disk
-  set -x
-  kvm $gopt -boot order=c $net $disk
+    [ -n "$1" ] && disk=$1
+    set -x
+    kvm $gopt -boot order=c $net $disk
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
@@ -54,8 +55,8 @@ usage() {
   cat <<EOF
 
  fai-kvm [options] pxe   # start a host booting using PXE from NIC
- fai-kvm [options] disk  # start a host booting from first disk
- fai-kvm [options] cd [imagename] # start a host booting from a ISO image
+ fai-kvm [options] disk [imagename]  # start a host booting from first disk
+ fai-kvm [options] cd   [imagename]  # start a host booting from a ISO image
 
  -n          create a new empty disk image, which is used as a local disk
  -N          recreate a new empty disk image, even if one already exists
@@ -94,7 +95,7 @@ done
 shift $(($OPTIND - 1))
 
 if [ -z "$1" ]; then
-    echo Missing argument. pxe or cd
+    echo Missing argument. pxe, cd or disk
     usage
     exit 1
 fi
@@ -110,7 +111,7 @@ diskfile=$diskdir/faitest-disk-$user
 # xA:xx:xx:xx:xx:xx
 # xE:xx:xx:xx:xx:xx
 
-mac=52:54:00:11:23:$hex
+mac=$macprefix:$hex
 
 if [ $usernet = 1 ]; then
     net=""

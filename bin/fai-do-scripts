@@ -5,7 +5,7 @@
 # fai-do-scripts - call configuration scripts for every defined class
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2010 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2016 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -72,6 +72,14 @@ call_conf() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+vecho() {
+
+    if [ X$verbose = X1 ]; then
+	echo $*
+    fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 do_script() {
 
     # execute scripts and save their output in log files
@@ -111,7 +119,7 @@ do_script() {
     case $filetype in
 
         *"POSIX shell script"*|*"executable shell script"*|*"/bash script"*|*"Bourne shell script"*|*"Bourne-Again shell script"*|*"zsh script"*)
-            echo "Executing   $shelldebug shell: $file"
+            vecho "Executing   $shelldebug shell: $file"
             echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
             $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
             savemaxstatus $?
@@ -119,7 +127,7 @@ do_script() {
         ;;
 
         *"cf-agent"*)
-            echo "Executing cf-agent: $file"
+            vecho "Executing cf-agent: $file"
             echo "=====   cf-agent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
             ./$file $cfagentdebug -KI -D${cfclasses} >> $LOGDIR/cfagent.log 2>&1
             savemaxstatus $?
@@ -127,7 +135,7 @@ do_script() {
         ;;
 
         *"cfagent"*)
-            echo "Executing cfagent: $file"
+            vecho "Executing cfagent: $file"
             echo "=====   cfagent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
             ./$file $cfagentdebug -qKI -D${cfclasses} >> $LOGDIR/cfagent.log 2>&1
             savemaxstatus $?
@@ -135,7 +143,7 @@ do_script() {
         ;;
 
         *"cfengine script"*)
-            echo "Executing cfengine: $file"
+            vecho "Executing cfengine: $file"
             echo "=====   cfengine: $file   =====" >> $LOGDIR/cfengine.log 2>&1
             ./$file -K -v -f $file -D${cfclasses} >> $LOGDIR/cfengine.log 2>&1
             savemaxstatus $?
@@ -143,7 +151,7 @@ do_script() {
         ;;
 
         *[Pp]erl*script*)
-            echo "Executing    perl: $file"
+            vecho "Executing    perl: $file"
             echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
             ./$file >> $LOGDIR/perl.log 2>&1
             savemaxstatus $?
@@ -151,7 +159,7 @@ do_script() {
         ;;
 
         *"expect script"*)
-            echo "Executing  expect: $file"
+            vecho "Executing  expect: $file"
             echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
             ./$file >> $LOGDIR/expect.log 2>&1
             savemaxstatus $?
@@ -159,7 +167,7 @@ do_script() {
         ;;
 
         *[Pp]ython*script*)
-            echo "Executing  python: $file"
+            vecho "Executing  python: $file"
             echo "=====   python: $file   =====" >> $LOGDIR/python.log 2>&1
             ./$file >> $LOGDIR/python.log 2>&1
             savemaxstatus $?
@@ -167,7 +175,7 @@ do_script() {
         ;;
 
         *[Rr]uby*script*)
-            echo "Executing ruby: $file"
+            vecho "Executing ruby: $file"
             echo "=====   ruby: $file   =====" >> $LOGDIR/ruby.log 2>&1
             ./$file >> $LOGDIR/ruby.log 2>&1
             savemaxstatus $?

@@ -2,15 +2,26 @@
 
 # if package locales will be installed, then install it early, before
 #  other packages
-
-if [ $FAI_ACTION != "install" ]; then
+if [ $FAI_ACTION != "install" -a $FAI_ACTION != "dirinstall" ]; then
    exit 0
 fi
 
 fcopy -Bi /etc/apt/apt.conf.d/force_confdef
-ainsl -av /etc/ucf.conf "^conf_force_conffold=YES"
+ainsl -a  /etc/ucf.conf "^conf_force_conffold=YES"
 
+# in case the locales are already included inside the base file (Ubuntu)
+if [ -f $target/usr/sbin/locale-gen ]; then
+    rm $target/etc/locale.gen
+    $ROOTCMD dpkg-reconfigure -fnoninteractive locales
+    exit
+fi
+
+# if we want to install locales, install them now
 install_packages -l 2>/dev/null | egrep  -q  ' locales|locales '
 if [ $? -eq 0 ]; then
-   $ROOTCMD apt-get -y install locales
+    if [ X$verbose = X1 ]; then
+	$ROOTCMD apt-get -y install locales
+    else
+	$ROOTCMD apt-get -y install locales > /dev/null
+    fi
 fi

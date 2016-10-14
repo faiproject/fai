@@ -164,6 +164,7 @@ sub handle_oldstyle_encrypt_device {
     mount_options => $partition->{mount_options},
     filesystem => $partition->{filesystem},
     createopts => $partition->{createopts},
+    lukscreateopts => $partition->{lukscreateopts},
     tuneopts => $partition->{tuneopts}
   };
 
@@ -243,21 +244,30 @@ sub build_cryptsetup_commands {
 
       if ($mode =~ /^luks(:"([^"]+)")?$/) {
         my $keyfile = "$FAI::DATADIR/$enc_dev_short_name";
+        my $luksoption = $1;
+        my $passphrase = $2;
 
         # generate a key for encryption
         &FAI::push_command(
           "head -c 2048 /dev/urandom | od | tee $keyfile",
           "", "keyfile_$real_dev" );
+
+        my $lukscreateopts = $vol->{lukscreateopts} // "";
+        if ($lukscreateopts !~ /(^|\s)-c\s+\S+/) {
+          $lukscreateopts .= " -c aes-cbc-essiv:sha256";
+        }
+        if ($lukscreateopts !~ /(^|\s)-s\s+\d+/) {
+          $lukscreateopts .= " -s 256";
+        }
         # encrypt
         &FAI::push_command(
-          "yes YES | cryptsetup luksFormat $real_dev $keyfile -c aes-cbc-essiv:sha256 -s 256",
+          "yes YES | cryptsetup luksFormat $real_dev $keyfile $lukscreateopts",
           "$pre_dep,keyfile_$real_dev", "crypt_format_$real_dev" );
         &FAI::push_command(
           "cryptsetup luksOpen $real_dev $enc_dev_short_name --key-file $keyfile",
           "crypt_format_$real_dev", "exist_$enc_dev_name" );
 
-        if (defined($1)) {
-          my $passphrase = $2;
+        if (defined($luksoption)) {
 
           # add user-defined key
           &FAI::push_command(
@@ -322,7 +332,11 @@ sub build_btrfs_commands {
       $FAI::configs{$config}{volumes}{$volume}{mount_options} = $FAI::configs{$c}{partitions}{$p}{mount_options};
       $FAI::configs{$c}{partitions}{$p}{mount_options} = '-';
       $FAI::configs{$config}{volumes}{$volume}{fstabkey} = $FAI::configs{$c}{fstabkey};
-      $FAI::configs{$config}{volumes}{$volume}{devices}{$device . $p} = {};
+      if ($device =~ m|^/dev/nvme|) {
+        $FAI::configs{$config}{volumes}{$volume}{devices}{$device . "p" . $p} = {};
+      } else {
+        $FAI::configs{$config}{volumes}{$volume}{devices}{$device . $p} = {};
+      }
       $FAI::configs{$config}{opts_all} = {};
       $single_vol_index++;
     }
@@ -332,7 +346,7 @@ sub build_btrfs_commands {
     next unless ($config eq "BTRFS");
 
     #create BTRFS RAIDs
-    foreach my $id (&numsort(keys %{ $FAI::configs{$config}{volumes} })) {
+    foreach my $id (keys %{ $FAI::configs{$config}{volumes} }) {
     #reference to current btrfs volume
     my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
 
@@ -351,6 +365,9 @@ sub build_btrfs_commands {
       my $tmp = $_;
       $tmp =~ s/\d//;
       $pre_req = "${pre_req}pt_complete_${tmp}," unless ($pre_req =~ m/pt_complete_$tmp/);
+    }
+    if (scalar @devs == 1) {
+      $pre_req = "exist_" . $devs[0];
     }
     # creates the BTRFS volume/RAID
     if ($raidlevel eq 'single') {
@@ -1083,7 +1100,6 @@ sub rebuild_preserved_partitions {
     $post .= ",rebuilt_$dn" if
       $FAI::configs{$config}{partitions}{$part_id}{size}{resize};
     my $cmd = "true";
-    $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
     &FAI::push_command($cmd, "prep1_$dn", $post);
   }
 }
@@ -1320,7 +1336,6 @@ sub setup_partitions {
     &FAI::push_command( "parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B",
       $pre, "prep2_$dn");
     my $cmd = "true";
-    $cmd = "losetup -o $start $dn $disk" if ((&FAI::loopback_dev($disk))[0]);
     &FAI::push_command($cmd, "prep2_$dn", "exist_$dn");
 
     # (re-)set all flags
@@ -1465,6 +1480,7 @@ sub restore_partition_table {
 sub btrfs_options {
   # check if --force is available for mkfs.btrfs
   my $opt = `mkfs.btrfs 2>&1`;
+  return "" unless $opt;
   my $btrfsopt = $opt =~ '--force' ? '-f' : '';
   return $btrfsopt;
 }

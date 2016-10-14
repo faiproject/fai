@@ -49,7 +49,7 @@ add_data() {
     # add debconf data
     local file=$1
 
-    [ "$verbose" ] && echo "Adding debconf data from $debconfdir/$file"
+    [ X$verbose = X1 ] && echo "Adding debconf data from $debconfdir/$file"
     $ROOTCMD debconf-set-selections $v < $debconfdir/$file 2>> $LOGDIR/debconf.log
     cat $debconfdir/$file >> $LOGDIR/debconf.data
 }
@@ -72,7 +72,7 @@ reconfigure_packages() {
      for p in $packages; do
          # test if package is installed
          if [ -f $target/var/lib/dpkg/info/$p.list ]; then
-            [ "$verbose" ] && echo "Reconfiguring package $p"
+            [ X$verbose = X1 ] && echo "Reconfiguring package $p"
             DEBCONF_DB_OVERRIDE="File{$tmpdb readonly:true}" DEBIAN_FRONTEND=noninteractive $ROOTCMD /usr/sbin/dpkg-reconfigure $p
          else
             [ "$debug" ] && echo "Package $p is not yet installed. Skipping reconfiguration."

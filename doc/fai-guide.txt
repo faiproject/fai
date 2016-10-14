@@ -5,9 +5,9 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-Sun, 30 Jun 2016
+Sun, 9 Oct 2016
 :Date: a date
-:Revision: 5.0
+:Revision: 5.2
 
 :faiver:  5.0
 :nfsrootsize: 690
@@ -36,11 +36,11 @@ configuration and how to deal with errors.
 
 ----
      +-----------------------------------------------------------------------+
-     | This manual describes FAI 5.0 but most things are also valid for 4.x. |
+     | This manual describes FAI 5.x but most things are also valid for 4.x. |
      +-----------------------------------------------------------------------+
 ----
 
-(c) 2000-2015 Thomas Lange
+(c) 2000-2016 Thomas Lange
 
 
 .Copyright
@@ -533,8 +533,8 @@ This will also install the packages for DHCP, TFTP and NFS server daemons.
   _sources.list_ file which is used when building the nfsroot. Then,
   enable the log user for FAI.
 ----
-# sed -e 's/^#deb/deb/' /etc/fai/apt/sources.list
-# sed -e 's/#LOGUSER/LOGUSER/' /etc/fai/fai.conf
+# sed -i -e 's/^#deb/deb/' /etc/fai/apt/sources.list
+# sed -i -e 's/#LOGUSER/LOGUSER/' /etc/fai/fai.conf
 ----
 
 * By default, FAI uses http://httpredir.debian.org as package
@@ -1106,7 +1106,7 @@ possible to use scripts of different languages (shell, cfengine,
 Perl, Python, Ruby, expect,..) for one class.
 
 Thoses scripts write their output to different log files, depending on
-the type of scipt. For e.g. all shell scripts write their log to
+the type of script. For e.g. all shell scripts write their log to
 `shell.log`.
 
 
@@ -1659,6 +1659,43 @@ stick by just writing the content of the ISO file to your USB stick
 This is no live CD of the install server.
 
 
+=== [[diskimage]]Creating VM disk images using FAI
+
+Using the command `fai-diskimage(8)` you can create Linux machine disk
+images, which can be used with a virtual machine like KVM, VMware,
+VirtualBox or a cloud service like OpenStack, GCE, EC2 and others. The
+installation process performs the normal FAI tasks on a raw disk
+image. After the installation you can boot the disk image and have a
+running system. The disk image can also be converted to qcow2 format.
+
+----
+ faiserver# FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ faiserver# fai-diskimage -u cloud3 -S 2G -cDEBIAN,JESSIE64,AMD64,FAIBASE,GRUB_PC,CLOUD,GCE disk
+----
+Creates the file disk.raw for a host called cloud3, with a small set
+of software packages.
+
+----
+ # FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ # cl=DEFAULT,DHCPC,DEBIAN,AMD64,FAIBASE,GRUB_PC,UBUNTU,XENIAL,XENIAL64,XORG
+ # fai-diskimage -v -C -u foobar -S5G -c$cl ubuntu
+----
+Creates a disk image called ubuntu.qcow2 for a Ubuntu 16.04 desktop
+with hostname set to foobar.
+
+
+You do not neet to setup the nfsroot when only using
+fai-diskimage. But you need a basefile in your configuration
+space. You can download a Debian base image from
+http://fai-project.org/download/basefile and copy this into your
+config space. If you already have set up the nfsroot you can copy the
+Debian basefile from the nfsroot into your config space by using this
+command:
+----
+ $ cp /srv/fai/nfsroot/var/tmp/base.tar.xz
+ $ /srv/fai/config/basefiles/DEBIAN.tar.xz
+----
+
 === [[sysinfo]]FAI rescue system
 
 If you set the variable +$FAI_ACTION+ to _sysinfo_ (for e.g. by using
@@ -1943,7 +1980,7 @@ the variable +$classes+ and saved to '/tmp/fai/FAI_CLASSES'.
 defvar::
 Sources all files '$FAI/class/*.var' for every defined class. If a
 hook has written some variable definitions to the file
-'/tmp/fai/additional.var', this file is also sourced.
+'$LOGDIR/additional.var', this file is also sourced.
 
 action::
 Depending on the value of +$FAI_ACTION+ this subroutine decides which
@@ -2210,7 +2247,7 @@ supported, so is kernel 4.x. When using Debian jessie, you may use a
 kernel from backports or have a look at
 https://lists.uni-koeln.de/pipermail/linux-fai/2016-March/011283.html
 
-- How to use the nfsrooot as system for diskless clients?
+- How to use the nfsroot as system for diskless clients?
 +
 http://wiki.fai-project.org/wiki/Use_nfsroot_for_diskless_clients
 

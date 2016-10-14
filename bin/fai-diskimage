@@ -1,0 +1,207 @@
+#! /bin/bash
+
+# fai-diskimage - create a disk image for booting a VM
+
+# This script is part of FAI (Fully Automatic Installation)
+#
+# Copyright (C) 2016 Thomas Lange, lange@informatik.uni-koeln.de
+# Universitaet zu Koeln
+
+# this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
+# should unshare be used ?
+
+set -e
+
+die() {
+
+    local e=$1   # first parameter is the exit code
+    shift
+
+    echo "ERROR: $@" >&2   # print error message
+    exit $e
+}
+
+cleanup() {
+
+    set +e
+    local dirs dir
+    for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
+	# try umount several times, because some postinst jobs may still run and use the filesystems
+	for i in {1..8}; do
+            umount $dir >/dev/null 2>&1
+            [ $? -eq 0 ] && break
+            [ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
+	    sleep $i
+	done
+    done
+    set -e
+    losetup -d $loop
+    rm -rf $mnt
+    if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
+	if pgrep -F /var/run/fai/FAI_INSTALLATION_IN_PROGRESS; then
+	    :
+	else
+	    rm /var/run/fai/FAI_INSTALLATION_IN_PROGRESS
+	fi
+    fi
+}
+
+usage() {
+
+    echo "Usage: $0 name.raw
+
+Create a disk image name.raw using FAI and a list of FAI classes.
+This can be used for a virtual machine or a cloud instance. If you
+use another suffix the image will be converted. Following formats are
+supported: .qcow2, .vdi, .vhdx, .vmdk.
+
+   -h|--help      	    print help
+   -v|--verbose   	    be verbose
+   -D|--debug   	    enter debugging
+   -c|--class <class,...>   define list of FAI classes
+   -S|--size  <size>        size of raw image (suffixes k M G T are supported)
+   -s|--cspace  <uri>       location of the config space
+   -u|--hostname <name>     set hostname to name
+"
+    exit $1
+}
+
+check_commands() {
+
+    local error=0
+    if ! type qemu-img > /dev/null 2>&1; then
+	echo "qmeu-img not found. Install the package qemu-utils."
+	error=1
+    fi
+    if ! type setup-storage > /dev/null 2>&1; then
+	echo "setup-storage not found. Install the package fai-setup-storage."
+	error=1
+    fi
+    if [ $error -eq 1 ]; then
+	die 5 "Aborted."
+    fi
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+call="$0 $*"
+TEMP=$(getopt -o DS:s:u:hvc: --long debug,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
+if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
+# Note the quotes around `$TEMP': they are essential!
+eval set -- "$TEMP"
+unset TEMP
+
+verbose=0
+convert=1
+debug=0
+
+while true ; do
+    case "$1" in
+        -h|--help)
+            usage 0 ;;
+        -D|--debug)
+            debug=1
+            shift ;;
+        -v|--verbose)
+            export verbose=1
+            shift ;;
+        -c|--class)
+            export classes=$2
+            shift 2 ;;
+        -S|--size)
+            size=$2
+            shift 2 ;;
+        -s|--cspace)
+            cspace=$2
+            shift 2 ;;
+        -u|--hostname)
+            export hname=$2
+            shift 2 ;;
+        --)
+            shift
+            break ;;
+         *)
+            die 1 "$0: command line parsing error ! $@" >&2 ;;
+    esac
+done
+
+# check options, set defaults
+
+[ "$1" ] || usage
+image=$1
+
+iname=${image%.*}
+ext=${image##*.}
+rawname="$iname.raw"
+case $ext in
+    raw)   convert=0 ;;
+    qcow2) copt="-c -O qcow2 "
+	   qcowname="$iname.qcow2"
+	   ;;
+    vdi) copt="-O vdi"
+	 qcowname="$iname.vdi"
+	   ;;
+    vmdk) copt="-O vmdk"
+	  qcowname="$iname.vmdk"
+	  ;;
+    vhdx) copt="-O vhdx"
+	  qcowname="$iname.vhdx"
+	  ;;
+    *) die 8 "Unknown suffix .$ext in name of disk image. Please use raw, qcow2, vdi, vmdk or vhdx."
+esac
+
+if [ -z "$classes" ]; then
+    die 7 "No classes are defined"
+fi
+
+: ${cspace:=/srv/fai/config}
+# if cspace starts with /, add prefix file://
+uri=${cspace/#\//file:///}
+
+: ${size:=800M}
+: ${hname:=debian.example.com}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+check_commands
+
+# check root
+if [ $(id -u) != "0" ]; then
+    die 1 "Run this program as root."
+fi
+
+# create empty disk image, loop setup, temp mount point
+rm -f $rawname
+qemu-img create $rawname $size
+loop=$(losetup -f --show $rawname)
+loopdev=${loop/\/dev\//}
+export disklist=$loopdev
+mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
+
+trap "cleanup" ERR
+
+LC_ALL=C fai -u $hname -s $uri -c$classes install $mnt
+
+# do not umount for debugging purpose
+if [ $debug -eq 1 ]; then
+    echo "==================================================================="
+    echo "The chroot is mounted on $mnt."
+    echo "${0##*/} now halted."
+    echo "After debugging, call kill -CONT $$, to continue the process."
+    echo "==================================================================="
+    kill -STOP $$ || true
+fi
+
+cleanup
+trap - ERR
+
+set +e
+# convert if needed
+if [ $convert -eq 1 ]; then
+    [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname."
+    qemu-img convert -f raw $rawname $copt $qcowname
+    rm $rawname
+fi
+echo -n "Size of disk image and filename: "; du -h $image
+echo "Image created by: $call"
+exit 0

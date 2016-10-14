@@ -5,7 +5,7 @@
 # fai-class - determine all classes a host belongs to
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2002-2015 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2002-2016 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -32,7 +32,7 @@ verbosemsg() {
 
     # a very nice subroutine
     # write message if the verbose flag is set
-    [ "$verbose" ] && echo "$@"
+    [ X$verbose = X1 ] && echo "$@"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 debugmsg() {
@@ -74,7 +74,7 @@ usage() {
 
     ex=$1
     cat <<-EOF
-        fai-class  Copyright (C) 2002-2015 Thomas Lange
+        fai-class  Copyright (C) 2002-2016 Thomas Lange
 
         Usage: fai-class [OPTION] DIRECTORY CLASSFILE
         Define classes using files and scripts in DIRECTORY
@@ -196,7 +196,10 @@ if [ -f $LOGDIR/additional-classes ]; then
         rm -f $LOGDIR/additional-classes
     fi
 fi
-read HOSTNAME < /proc/sys/kernel/hostname
+if [ -z "$HOSTNAME" ]; then
+     read HOSTNAME < /proc/sys/kernel/hostname
+fi
+
 # add all classes which are listed in a file with the hostname
 if [ -f "$HOSTNAME" ]; then
         verbosemsg "Using classes from file $classdir/$HOSTNAME"

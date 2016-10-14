@@ -37,7 +37,7 @@ die() {
     [ -f $LOGDIR/skip.savelog ] || call_hook savelog
     [ -f $LOGDIR/skip.savelog ] || task_savelog
     echo "$@"
-    if [ X$FAI_ACTION = Xinstall ]; then
+    if [ $do_init_tasks -eq 1 ] ; then
         exec bash -i
     else
         exit 99
@@ -199,7 +199,7 @@ task() {
     if [ -f $LOGDIR/skip.$taskname ]; then
         # skip task
         rm $LOGDIR/skip.$taskname # TODO: remove skip files at the very end
-        [ "$verbose" ] && echo "Skipping task_$taskname"
+        [ X$verbose = X1 ] && echo "Skipping task_$taskname"
         sendmon "TASKSKIP $taskname"
     else
         echo "Calling task_$taskname"
@@ -359,14 +359,16 @@ task_action() {
     echo "FAI_ACTION: $FAI_ACTION"
     case $FAI_ACTION in
         install)
-            if [ $do_init_tasks -eq 0 ]; then
+            if [ $target = "/" ]; then
                 echo "Cowardly refusing to run a FAI installation on a running system."
                 return
             fi
             echo Performing FAI installation. All data may be overwritten!
-            echo -ne "\a"; sleep 1
-            echo -ne "\a"; sleep 1
-            echo  -e "\a"; sleep 5
+	    if [ $do_init_tasks -eq 1 ] ; then
+		echo -ne "\a"; sleep 1
+		echo -ne "\a"; sleep 1
+		echo  -e "\a"; sleep 5
+	    fi
             task install
             task faiend
             ;;
@@ -438,7 +440,6 @@ task_defclass() {
     cfclasses=$(echo ${classes:-})
     cfclasses=${cfclasses// /.}
     [ "${debug:-}" ] && echo "cfclasses: $cfclasses"
-    # define a bash hash with all class names. Without this, ifclass does not work
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 _defvar() {
@@ -456,7 +457,7 @@ task_defvar() {
     cd $FAI/class
     for class in ${classes:-} ; do
         if [ -f $class.var -a -r $class.var ]; then
-            [ "$verbose" ] && echo "Executing $class.var"
+            [ X$verbose = X1 ] && echo "Executing $class.var"
             # show only lines with ++, we cannot use a pipe, since it would call
             # _devfar in a subprocess. Then, variables are not defined
             _defvar $class.var > $svar 2>&1
@@ -485,10 +486,12 @@ task_mountdisks() {
 
     [ ! -f $LOGDIR/fstab ] && die "No $LOGDIR/fstab created."
     # mount swap space
-    local sd
-    for sd in $SWAPLIST; do
-        swapon -p1 $sd && [ "$verbose" ] && echo "Enable swap device $sd"
-    done
+    if [ $do_init_tasks -eq 1 ]; then
+	local sd
+	for sd in $SWAPLIST; do
+            swapon -p1 $sd && [ X$verbose = X1 ] && echo "Enable swap device $sd"
+	done
+    fi
     mount2dir $FAI_ROOT $LOGDIR/fstab
     if [ "$?" -ne 0 ]; then
         sendmon "TASKERROR mountdisks 885"
@@ -787,11 +790,15 @@ task_confdir() {
     # determine the name of the default network interface
     # try several times if dhclient needs some more time
     local i=0
+    NIC1=$(ip route | awk '/^default/ {print $5}')
     while [ ! "$NIC1" -a $i -lt 8 ]; do
         sleep 2
 	NIC1=$(ip route | awk '/^default/ {print $5}')
         (( i += 1 ))
     done
+    if [ -z "$NIC1" ]; then
+	NIC1=$(ip route | awk '/ dev / {print $3}')
+    fi
     export NIC1
 
     if [ -z "$SERVER" ]; then
@@ -810,8 +817,10 @@ task_confdir() {
         faimond=0
     else
         faimond=1
-        MAC=$(< /sys/class/net/$NIC1/address)
-        PXE="01-"${MAC//:/-}
+	if [ -n "$NIC1" ]; then
+	    MAC=$(< /sys/class/net/$NIC1/address)
+            PXE="01-"${MAC//:/-}
+	fi
 
         : ${FAI_SENDID:=host} # set default if undefined
         case "$FAI_SENDID" in
@@ -857,7 +866,7 @@ task_partition() {
         echo "setup-storage is now the default tool for partitioning."
     fi
 
-    [ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X 2>&1 | tee $LOGDIR/format.log
+    [ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X |& tee $LOGDIR/format.log
 
     # partitioning tool must create $LOGDIR/disk_var.sh file
     if [ ! -s $LOGDIR/disk_var.sh ]; then
@@ -918,7 +927,7 @@ task_extrbase() {
         # if no base file was extracted, call debootstrap
         if [ ! -d $FAI_ROOT/etc ]; then
             echo "No base file found. Calling debootstrap."
-            [ -z "$FAI_DEBOOTSTRAP" ] && die "$FAI_DEBOOTSTRAP undefined. Aborting"
+            [ -z "$FAI_DEBOOTSTRAP" ] && die "\$FAI_DEBOOTSTRAP undefined. Aborting"
             call_debootstrap $FAI_DEBOOTSTRAP
             task_error 801 $?
         fi
@@ -985,27 +994,33 @@ task_repository () {
         fi
     done
 
+    if [ X$verbose = X1 ]; then
+	v=-v
+    fi
+
     [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
 
     # some generale network files are needed on the client
     # resolv.conf is needed, /etc/hosts is useful in /target
     # use a file from the config space or from /etc inside the nfsroot
-    if ! fcopy -BMv /etc/resolv.conf ; then
+    if ! fcopy -BM $v /etc/resolv.conf ; then
         if [ "$(readlink -f /etc/resolv.conf)" = "$(readlink -f $FAI_ROOT/etc/resolv.conf)" ] ; then
             :
 	    # no need for copy since both are pointing to the same file
         else
-            [ -f /etc/resolv.conf ] && cp -v /etc/resolv.conf $FAI_ROOT/etc
+            [ -f /etc/resolv.conf ] && cp $v /etc/resolv.conf $FAI_ROOT/etc
         fi
     fi
-    if ! fcopy -BMv /etc/hosts ; then
-	[ X$FAI_ROOT = X/ ] || cp -v /etc/hosts $FAI_ROOT/etc
+    if ! fcopy -M $v /etc/hosts ; then
+	[ X$FAI_ROOT = X/ ] || cp $v -bS.orig /etc/hosts $FAI_ROOT/etc
     fi
 
     # apt specific things
-    fcopy -BMv /etc/apt/sources.list || cp -v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
-    if ! fcopy -BMv /etc/apt/preferences; then
-        [ -f $FAI_ETC_DIR/apt/preferences ] && cp -v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
+    if ! fcopy -BM $v /etc/apt/sources.list; then
+	[ -f $FAI_ETC_DIR/apt/sources.list ] && cp $v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
+    fi
+    if ! fcopy -BM $v /etc/apt/preferences; then
+        [ -f $FAI_ETC_DIR/apt/preferences ] && cp $v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
     fi
     fcopy -BMir /etc/apt # copy all other apt config files from the config space
 
@@ -1052,8 +1067,8 @@ task_updatebase() {
 
     # maybe the base system is not up to date
 
-    if [ "$verbose" ]; then
-        updatebase </dev/null 2>&1 | tee -a $LOGDIR/software.log
+    if [ X$verbose = X1 ]; then
+        updatebase </dev/null |& tee -a $LOGDIR/software.log
         task_error 474 ${PIPESTATUS[0]}
     else
         updatebase </dev/null >> $LOGDIR/software.log 2>&1
@@ -1063,12 +1078,14 @@ task_updatebase() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_instsoft() {
 
-    echo "Installing software may take a while"
+    if [ X$verbose = X1 ]; then
+	echo "Installing software may take a while"
+    fi
     if [ "$debug" ]; then
         install_packages | tee -a $LOGDIR/software.log
         task_error 471 ${PIPESTATUS[0]}
-    elif [ "$verbose" ]; then
-        install_packages </dev/null 2>&1 | tee -a $LOGDIR/software.log
+    elif [ X$verbose = X1 ]; then
+        install_packages </dev/null |& tee -a $LOGDIR/software.log
         task_error 471 ${PIPESTATUS[0]}
     else
         install_packages </dev/null >> $LOGDIR/software.log 2>&1
@@ -1082,20 +1099,22 @@ task_instsoft() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
 
+    mkramdisk -au # umount ramdisk
     if [ $do_init_tasks -eq 1 ] ; then
         # show some local information
         df -PTh | egrep ':|^/|^Filesystem'
         # show rx and tx bytes of network device
         grep . /sys/class/net/*/statistics/*x_bytes | perl -ane 'm#/sys/class/net/(.+)/statistics/(.+):(\d+)# && ($3) && ($1 ne lo) && printf "%s %s %.2f Mbytes\n",$1,$2,$3/1000000 '
         swapoff -a
+    else
+        df -PTh | egrep "^Filesystem|$target"
     fi
 
-    mkramdisk -au # umount ramdisk
     # undo fake of all programs made by fai
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
     date
-    echo "The $FAI_ACTION took $[$(cut -d . -f 1 /proc/uptime)-$start_seconds] seconds."
+    echo "The $FAI_ACTION took $(($(cut -d . -f 1 /proc/uptime)-$start_seconds)) seconds."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {

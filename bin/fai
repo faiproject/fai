@@ -56,6 +56,8 @@ fai_init() {
     set -o pipefail
 
     umask 022
+    . /usr/lib/fai/subroutines
+
     mkdir -p /var/run/fai
     [ -f $FAI_ETC_DIR/fai.conf ] && . $FAI_ETC_DIR/fai.conf
     : ${FAI:=/var/lib/fai/config} # default value
@@ -64,14 +66,12 @@ fai_init() {
     [ -n "$cspace" ] && FAI_CONFIG_SRC=$cspace
     unset cspace
 
-    if [ -d /media/mirror ]; then   # we are booting from fai cd or USB stick
+    # this test is not perfect. There may be false positives
+    if [ -d /media/mirror ]; then   # we are booting from fai CD or USB stick
         romountopt=
         FAI_DEBMIRROR="--bind /media/mirror"
         MNTPOINT=/media/mirror
     fi
-
-    # read subroutine definitions
-    . /usr/lib/fai/subroutines
 
     [ -f "$stamp" ] && {
        echo -n "$0 already running or was aborted before. PID: " >&2
@@ -100,7 +100,6 @@ fai_init() {
     if [ $do_init_tasks -eq 1 ]; then
         eval_cmdline
         define_fai_flags
-        [ -d /sys/kernel ] || mount -t sysfs sysfs /sys
         # we really need to start udev
         if [ -x /etc/init.d/udev ]; then
             if [ X$UPSTART_JOB != Xfai ]; then
@@ -109,7 +108,7 @@ fai_init() {
                 test -f /etc/init/udevtrigger.conf && udevadm trigger --action=add && udevadm settle
             fi
         fi
-        mkdir -p /var/run/sshd /var/run/network /dev/shm/network # when using initrd kernels
+        mkdir -p /var/run/sshd /var/run/network # when using initrd kernels
         ifup lo
         [ -x /sbin/portmap ] && /sbin/portmap
 	if [ -x /sbin/rpcbind ]; then
@@ -117,9 +116,6 @@ fai_init() {
 	fi
         pgrep rpc.statd > /dev/null || rpc.statd # idmapd needs this
 
-        if ! grep -wq devpts /proc/mounts; then
-            mount -t devpts devpts /dev/pts
-        fi
         cat /proc/kmsg >/dev/tty4 &
 
         # fix IP address lifetime
@@ -135,14 +131,13 @@ fai_init() {
 
         # start secure shell daemon for remote access
         [ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+	save_dmesg
     fi
 
     # since HOSTNAME may change define classes now, so we can call hooks before fai-class is called
     [ -z "$classes" ] && classes="DEFAULT $(uname -s | tr a-z A-Z) $HOSTNAME LAST"
 
     prcopyleft
-
-    [ $do_init_tasks -eq 1 ] && save_dmesg
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
@@ -213,6 +208,7 @@ while true ; do
             fi
             export cmdlineclasses=$2
             cmdlineclasses=${cmdlineclasses//,/ }
+            export classes=$cmdlineclasses
             shift 2 ;;
         -s|--cspace)
             cspace=$2
@@ -246,6 +242,8 @@ export FAI_ETC_DIR
 if [ $(id -u) != "0" ]; then
     fdie 1 "Run this program as root." >&2
 fi
+
+export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
 if [ X$action = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
@@ -311,11 +309,7 @@ if [ $do_init_tasks -eq 1 ]; then
     unset hname myip
 
     renewclass=1 # always renew class list when installing
-    mkdir -p /var/lib/discover /var/discover /etc/sysconfig
 fi
-
-[ -f /proc/version ] || mount -n -t proc proc /proc # ubuntu initrd does not mount /proc
-export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
 [ -n "$newhostname" ] && export HOSTNAME=$newhostname
 
@@ -324,8 +318,12 @@ if [ $do_init_tasks -eq 1 ]; then
     export LOGDIR=/tmp/fai
     mkdir -p $LOGDIR
 else
+    # this is for dirinstall, softupdate, ..
     export fai_rundate=$(date +'%Y%m%d_%H%M%S')
     export LOGDIR=/var/log/fai/$HOSTNAME/$action-$fai_rundate
+    if [ -d $LOGDIR ]; then
+	fdie 13 "$LOGDIR already exists. MAybe another process is running. Aborting"
+    fi
     mkdir -p $LOGDIR
     ln -snf $action-$fai_rundate $LOGDIR/../last-$action
     ln -snf $action-$fai_rundate $LOGDIR/../last
@@ -338,7 +336,6 @@ fai_init
 if [ $do_init_tasks -ne 1 ]; then
     echo "Starting FAI execution - $fai_rundate" | tee -a $LOGDIR/fai.log
 fi
-
 [ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log
 unset newhostname
 
@@ -346,10 +343,9 @@ fstart > >( tee -a $LOGDIR/fai.log )  2>&1
 
 [ "$action" ] && export FAI_ACTION=$action
 unset action
-task action 2>&1 | tee -a $LOGDIR/fai.log
+task action |& tee -a $LOGDIR/fai.log
 final_exit_code=${PIPESTATUS[0]}
 
 [ -L "/var/run/fai/current_config" ] && rm -f "/var/run/fai/current_config"
 
-echo "End of $0"
 exit $final_exit_code
