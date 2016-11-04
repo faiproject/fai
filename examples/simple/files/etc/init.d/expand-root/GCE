@@ -1,0 +1,40 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:       expand-root
+# Required-Start: 
+# Required-Stop:  
+# Should-Start:   
+# Should-Stop:    
+# Default-Start:  2 3 4 5
+# Default-Stop:   
+# Description:    Expand the filesystem of the mounted root volume/partition to its maximum possible size
+### END INIT INFO
+
+prog=$(basename $0)
+logger="logger -t $prog"
+
+growpart="growpart"
+
+hash $growpart 2> /dev/null || {
+	$logger "$growpart was not found on PATH. Unable to expand size."
+	exit 1
+}
+
+root_device_path="/dev/sda"
+root_index="1"
+
+# Growpart can fail if the partition is already resized.
+$growpart $root_device_path $root_index || {
+	$logger "growpart failed. Unable to expand size."
+}
+
+device_path="${root_device_path}${root_index}"
+filesystem=$(blkid -s TYPE -o value ${device_path})
+
+case $filesystem in
+	xfs)  xfs_growfs / ;;
+	ext2) resize2fs $device_path ;;
+	ext3) resize2fs $device_path ;;
+	ext4) resize2fs $device_path ;;
+	*)    $logger "The filesystem $filesystem was not recognized. Unable to expand size." ;;
+esac
