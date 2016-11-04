@@ -67,9 +67,10 @@ $| = 1;
 
 
 # @commands is the order of the commands that are executed
-our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r aptitude aptitude-r install unpack remove dselect-upgrade/;
+our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r aptitude aptitude-r install install-norec unpack remove dselect-upgrade/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
+    "install-norec" => "apt-get $aptopt --fix-missing install --no-install-recommends",
     "inst-internal" => "apt-get $aptopt --fix-missing -s install",
            "remove" => "apt-get $aptopt --purge remove",
   "dselect-upgrade" => "apt-get $aptopt dselect-upgrade",
@@ -134,7 +135,7 @@ foreach (@classes) {
 }
 
 # check if any Debian related commands/types are used in package_config
-my @debiantypes= qw/taskinst cupt cupt-r apt aptitude aptitude-r install remove dselect-upgrade smarti/;
+my @debiantypes= qw/taskinst cupt cupt-r apt aptitude aptitude-r install install-norec remove dselect-upgrade smarti/;
 foreach my $dt (@debiantypes) {
   $types{$dt} and $hasdebian=1;
 }
@@ -192,7 +193,7 @@ foreach $atype (@commands) {
     next;
   }
 
-  if ($atype eq "install" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "apt" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
+  if ($atype eq "install" || $atype eq "install-norec" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "apt" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
 
     mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
     getsources(); # retrieve sources
@@ -520,9 +521,10 @@ undef @commands;
 undef %command;
 
 $maxpl=9999;
-@commands = qw/taskinst cupt cupt-r aptitude aptitude-r install unpack/;
+@commands = qw/taskinst cupt cupt-r aptitude aptitude-r install install-norec unpack/;
 %command = (
           "install" => "apt-get $qopt -d $ENV{aptoptions} -y --fix-missing install",
+    "install-norec" => "apt-get $qopt -d $ENV{aptoptions} -y --fix-missing install --no-install-recommends",
          "taskinst" => "aptitude -d $ENV{aptoptions} -y install $devnull",
               "apt" => "apt -d $ENV{aptoptions} -y install $devnull",
          "aptitude" => "aptitude -R -d $ENV{aptoptions} -y install $devnull",
