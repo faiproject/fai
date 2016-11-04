@@ -48,7 +48,11 @@ curl -fs 'http://127.0.0.1:3142/acng-report.html?doImport=Start+Import&calcSize=
 
 # setup the FAI server, including creating the nfsroot, use my own proxy
 export APTPROXY="http://127.0.0.1:3142"
-fai-setup -fvB /var/tmp/base.tar.xz 2>&1
+if [ -f /var/tmp/base.tar.xz ]; then
+    fai-setup -fvB /var/tmp/base.tar.xz 2>&1
+else
+    fai-setup -fv 2>&1
+fi
 if [ $? -eq 0 ]; then
     rm /var/tmp/base.tar.xz
     echo ""
