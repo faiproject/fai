@@ -35,7 +35,7 @@ use strict;
 use Getopt::Std;
 
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_p,$opt_s);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
@@ -57,7 +57,6 @@ my $maxpl;  # maximum length of package list
 my $cache;  # instance of AptPkg::Cache
 my @known;   # list of all known packages
 my $execerrors; # counts execution errors
-my $use_aptpkg=0;
 my $aptopt='-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew';
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 my $debsourcesdir='/var/lib/fai/packages';
@@ -106,8 +105,6 @@ our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi 
 );
 
 getopts('dhHvlLm:p:nNs');
-
-$opt_N || check_aptpkg(); # do not use AptPkg when -N is given
 
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
@@ -448,22 +445,6 @@ $maxpl=9999;
    "dpkgc-internal" => 'true',
 );
 
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub check_aptpkg {
-
-  # check if the Perl module is available
-  if (eval "require AptPkg::Config") {
-    $use_aptpkg=1;
-    eval "require AptPkg::System";
-    eval "require AptPkg::Cache";
-
-    $_config = $AptPkg::Config::_config;
-    $_system = $AptPkg::System::_system;
-    eval 'import AptPkg::Config $_config';
-    eval 'import AptPkg::System $_system';
-    eval 'import AptPkg::Cache';
-  }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub showcommands {
