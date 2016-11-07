@@ -60,6 +60,7 @@ my $execerrors; # counts execution errors
 my $aptopt='-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew';
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 my $debsourcesdir='/var/lib/fai/packages';
+my @ls;
 
 $| = 1;
 
@@ -197,7 +198,13 @@ foreach $atype (@commands) {
     # pass only maxpl packages to apt-get
     while (@known) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
-      # print "SL $shortlist\n";
+      print "SL $shortlist\n";
+
+      # we can skip a package it's already processed,
+      if ($maxpl == 1 && $shortlist) {
+	@ls=<$ENV{FAI_ARCHIVE_DIR}/${shortlist}_*deb>;
+	next if @ls;
+      }
       execute("$rootcmd $command{$atype} $shortlist") if $shortlist;
       execute("$rootcmd $command{'clean-internal'}") if $hasdebian;
       execute("$rootcmd $command{'unpack-internal'}") if ($atype eq "unpack"); # unpack and rm deb files
