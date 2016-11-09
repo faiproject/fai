@@ -58,6 +58,7 @@ supported: .qcow2, .vdi, .vhdx, .vmdk.
    -h|--help      	    print help
    -v|--verbose   	    be verbose
    -D|--debug   	    enter debugging
+   -N|--new                 execute scripts class/[0-9]* for defining classes
    -c|--class <class,...>   define list of FAI classes
    -S|--size  <size>        size of raw image (suffixes k M G T are supported)
    -s|--cspace  <uri>       location of the config space
@@ -85,7 +86,7 @@ check_commands() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 call="$0 $*"
-TEMP=$(getopt -o DS:s:u:hvc: --long debug,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o NDS:s:u:hvc: --long new,debug,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -108,6 +109,9 @@ while true ; do
         -c|--class)
             export classes=$2
             shift 2 ;;
+        -N|--new)
+            renew="-N"
+            shift ;;
         -S|--size)
             size=$2
             shift 2 ;;
@@ -180,7 +184,7 @@ mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
 
 trap "cleanup" ERR
 
-LC_ALL=C fai -u $hname -s $uri -c$classes install $mnt
+LC_ALL=C fai $renew -u $hname -s $uri -c$classes install $mnt
 
 # do not umount for debugging purpose
 if [ $debug -eq 1 ]; then
