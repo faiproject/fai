@@ -5,7 +5,7 @@ if [ X$FAI_ACTION = Xinstall -o X$FAI_ACTION = X ]; then
 else
     return
 fi
-if [ X$FAI_ACTION = Xdirinstall ]; then
+if [ X$action = Xdirinstall ]; then
     return
 fi
 
