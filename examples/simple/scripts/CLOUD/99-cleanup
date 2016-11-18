@@ -1,7 +1,9 @@
 #! /bin/bash
 
 fcopy /etc/init.d/expand-root
-$ROOTCMD insserv --default expand-root
+if [ -f $target/files/etc/init.d/expand-root ]; then
+    $ROOTCMD insserv --default expand-root
+fi
 
 sed -i "s/PermitRootLogin yes/PermitRootLogin without-password/" $target/etc/ssh/sshd_config
 ainsl /etc/ssh/sshd_config 'ClientAliveInterval 120'
