@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-diskimage 8 "October 2016" "FAI 5.2"
+.TH fai-diskimage 8 "November 2016" "FAI 5.3"
 
 .SH NAME
 fai-diskimage \- create a disk image for booting a VM
@@ -25,6 +25,10 @@ signal for resuming the fai-diskimage script.
 .B -h, --help
 Print help
 .TP
+.B -N, --new
+This option will be passed to the fai call. It then executes the
+scripts in class/[0-9]* for defining classes.
+.TP
 .B -S, --size \fISIZE\fR
 Set size of raw image (suffixes k M G T are supported)
 .TP
@@ -42,7 +46,7 @@ Be verbose
 .SH EXAMPLES
 
  # export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
- # fai-diskimage -u cloud3 -S2G -cDEBIAN,JESSIE64,AMD64,FAIBASE,GRUB_PC,CLOUD,GCE disk.raw
+ # fai-diskimage -vNu cloud3 -S2G -cJESSIE64,GCE disk.raw
 
 Creates a Debian system with a small set of software packages without
 graphical desktop. The disk image disk.raw will be of size 2 GB and
@@ -50,8 +54,8 @@ the host ist called cloud3.
 
 
  # export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
- # cl=DEFAULT,DHCPC,DEBIAN,AMD64,FAIBASE,DEMO,GRUB_PC,UBUNTU,XENIAL,XENIAL64,XORG
- # fai-diskimage -v -u cloudhost -S5G -c$cl ubuntu.qcow2
+ # cl=DHCPC,UBUNTU,XENIAL,XENIAL64,XORG
+ # fai-diskimage -vNu cloudhost -S5G -c$cl ubuntu.qcow2
 
 Creates a disk image of size 5GB called ubuntu.qcow2 for a Ubuntu 16.04 desktop.
 
@@ -66,6 +70,10 @@ the fai-doc package.
 fai-diskimage is not limited to creating images for virtual
 machines. The raw images can also be copies (via dd) onto a real disk
 for booting bare metal hosts.
+
+You can start fai-diskimage in a clean shell environment by calling:
+
+ # env -i /usr/sbin/fai-diskimage -vNu cloudhost -S5G -cJESSIE64,GCE disk.raw
 
 .SH SEE ALSO
 .br

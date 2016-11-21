@@ -100,6 +100,9 @@ initialize() {
       -o Dir::Etc=$aptcache/etc/apt/ \
       -o Dir::State::Lists=$aptcache/var/lib/apt/lists/"
 
+    # used by install_packages
+    export FAI_ARCHIVE_DIR=$archivedir
+
     if [ -n "$arch" ]; then
         aptoptions="$aptoptions -o APT::Architecture=$arch" # add architecture
     fi
@@ -228,7 +231,6 @@ export NFSROOT
 [ -n "$1" ] && mirrordir=$1
 [ -z "$mirrordir" ] && die 2 "Please give the absolute path to the mirror."
 { echo $mirrordir | egrep -q '^/'; } || die 4 "Mirrordir must start with a slash /."
-[ -d $mirrordir/pool -o -d $mirrordir/dists ] && die 3 "Please first remove $mirrordir/pool and $mirrordir/dists"
 
 [ -d $FAI_CONFIGDIR/package_config ] || die 6 "Can't find package config files in $FAI_CONFIGDIR."
 
@@ -247,7 +249,7 @@ if [ "$FAI_DEBMIRROR" ]; then
 fi
 
 # TODO: use -p to preserve sources.list
-sed -e 's/file:/copy:/' $cfdir/apt/sources.list >> $aptcache/etc/apt/sources.list
+sed -e 's/file:/copy:/' $cfdir/apt/sources.list > $aptcache/etc/apt/sources.list
 if [ "$(ls -A $cfdir/apt/sources.list.d/ 2>/dev/null)" ]; then
     sed -e 's/file:/copy:/' $cfdir/apt/sources.list.d/* >> $aptcache/etc/apt/sources.list
 fi
@@ -261,7 +263,7 @@ apt-get $qflag $aptoptions update >/dev/null
 set-classes
 [ $add -eq 1 ] && add_base_packages
 echo "Downloading packages for classes:" $classes
-FAI=$FAI_CONFIGDIR install_packages -N -d $vflag
+FAI=$FAI_CONFIGDIR install_packages -d $vflag
 umount_dirs
 trap "" EXIT ERR
 [ $add -eq 0 ] && delete_base_packages
