@@ -24,6 +24,7 @@ not found
 couldn't
 can't
 E: Sorry, broken packages
+^E: 
 operator expected
 ambiguous redirect
 No previous regular expression
