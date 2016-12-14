@@ -71,7 +71,7 @@ check_commands() {
 
     local error=0
     if ! type qemu-img > /dev/null 2>&1; then
-	echo "qmeu-img not found. Install the package qemu-utils."
+	echo "qemu-img not found. Install the package qemu-utils."
 	error=1
     fi
     if ! type setup-storage > /dev/null 2>&1; then
@@ -176,8 +176,8 @@ fi
 
 # currently fai-diskimage can't be used if the host contains logical volumes
 set +e
-if [ -f /sbin/lvs ]; then
-    lvs 2>&1 | grep -q 'No volume groups found'
+if [ -f /sbin/dmsetup ]; then
+    dmsetup ls 2>&1 | grep -q 'No devices found'
     if [ $? -eq 1 ]; then
 	die 9 "Currently fai-diskimage can't be run if the host uses logical volumes."
     fi

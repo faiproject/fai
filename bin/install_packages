@@ -34,8 +34,9 @@ $0=~ s#.+/##; # remove path from program name
 use strict;
 use Getopt::Std;
 
+my $debug=0;
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_p,$opt_s);
+our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
@@ -61,6 +62,10 @@ my $aptopt='-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-con
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 my $debsourcesdir='/var/lib/fai/packages';
 my @ls;
+my %pname;   # hash of all available packages
+my %install; # key is package names, value says if we want to install it
+my %pmap;    # map package name from the list (including +-/=) to real package names
+my @newlist; # list of packages, but unknown packages removed
 
 $| = 1;
 
@@ -153,6 +158,8 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
     execute("cd $FAI_ROOT/$directory; curl -# -O $url") unless $listonly;
   }
 }
+
+-f "$FAI_ROOT/var/lib/dpkg/available" && create_debian_pkg_list();
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # begin of the big foreach loop
@@ -368,15 +375,18 @@ sub installable {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub mkpackagelist {
 
-  # CURRENTLY no packages are removed from the list of known packages, @unknown is removed
+  # CURRENTLY no packages are removed from the list of known packages
 
   my @complete = @_; # copy original list
-
-  # create two list of packages
-  # @unknown contains the unknown packages
   # @known contains the known packages
 
-  @known = @complete;
+  # on Debian system, clean list of packages
+  if ( ! $opt_N && -f "$FAI_ROOT/var/lib/dpkg/available" ) {
+    @known = clean_pkg_list(@complete);
+  } else {
+    @known = @complete;
+  }
+
   writepackages();
   return;
 }
@@ -472,3 +482,86 @@ sub showcommands {
   exit 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub create_debian_pkg_list {
+  # build a hash of all known package names
+  open(IN,"egrep '^Package: ' $FAI_ROOT/var/lib/dpkg/available |") || die;
+  while (<IN>) {
+    m/^Package: (\S+)/;
+    $pname{$1} = 1;
+  }
+  close(IN);
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub insert_pkg {
+
+  # if package name is known, insert package into data structure, return success
+  # insert orig package name and modified name into %pmap
+  # %pmap maps orig name (including +-=) to real package names
+  # save status install/remove of each package in %install
+
+  my ($orig, $pack, $install, $msg) = @_;
+
+  if ($pname{$pack}) {
+    print "$msg\n" if $debug;
+    push @newlist, $orig;
+    $pmap{$orig} = "$pack";
+    $install{$pack} = $install;
+    return 1;
+  }
+  return 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub clean_pkg_list {
+
+  # clean up the list of packages, remove unknown packages,
+  # "merge" things like: pkgA pkgA-
+
+  my @inlist = @_;
+  my $pack;
+  my @unknown;
+  my @final; # final list of packages
+
+  foreach my $n (@inlist) {
+    $pack = $n;
+
+    # plain package name is known, this also matches g++, memtest86+, ...
+    insert_pkg($n, $pack, 1, "$n found") && next;
+
+    # handle packagename-
+    if ( $pack =~ s/-$//) {
+      insert_pkg($n, $pack, 0, "$pack - removed") && next;
+    }
+
+    # handle packagename+, where packagename itself does not include a +
+    if ( $pack =~ s/\+$//) {
+      insert_pkg($n, $pack, 1, "$pack + added") && next;
+    }
+
+    # remove /distribution or =version from package name
+    if ( $pack =~ s#[/=].+##) {
+      insert_pkg($n, $pack, 1, "$n using $pack found") && next;
+    }
+
+    # else package is unknown
+    push @unknown, $n;
+  }
+
+  warn "WARNING: These unknown packages are removed from the installation list: " . join(' ', @unknown) . "\n" if @unknown;
+
+  print "-"x30,"\n" if $debug;
+  print join ' ' ,"ORIG:", @inlist, "\n" if $debug;
+  print join ' ' ,"INSTALL:", @newlist, "\n" if $debug;
+
+
+  # create new list of packages (incl. +-/=) that should be installed or removed
+  foreach (@newlist) {
+
+    push @final, $_ if ($install{$pmap{$_}} == 0 && $_ =~/-$/); # pkg names with - that should be not installed
+    next if ($install{$pmap{$_}} == 1 && $_ =~/-$/);
+    next unless $install{$pmap{$_}}; # do not include package that are marked as do not install
+    push @final, $_;
+  }
+
+  print join ' ' ,"DO INST:", @final, "\n" if $debug;
+  return @final;
+}

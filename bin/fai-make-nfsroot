@@ -187,7 +187,9 @@ setclasses() {
     iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
     distro=$(. $NFSROOT/etc/os-release; echo ${ID} ${ID}_${VERSION_ID} | tr '[:lower:].' '[:upper:]_')
     export classes="NFSROOT $iarch $distro"
-    [ X$verbose = X1 ] && echo Classes are set to $classes
+    if [ X$verbose = X1 ] ; then
+      echo Classes are set to $classes
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
@@ -472,6 +474,7 @@ add_packages_nfsroot() {
     local err
 
     setclasses
+    $ROOTCMD apt-cache dumpavail > $NFSROOT/var/lib/dpkg/available
     install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
     echo "Adding additional packages to $NFSROOT:"
     cat $NFSROOT/var/tmp/packages.nfsroot
@@ -481,6 +484,7 @@ add_packages_nfsroot() {
     if [ $err -ne 0 ]; then
 	die 12 "install_packages had exit code: $err"
     fi
+    rm $NFSROOT/var/lib/dpkg/available
     set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
