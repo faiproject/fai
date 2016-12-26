@@ -444,6 +444,7 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           # check, whether raid tools are available
           &FAI::in_path("mdadm") or die "mdadm not found in PATH\n";
+          $FAI::uses_raid = 1;
           $FAI::device = "RAID";
           $FAI::configs{$FAI::device}{fstabkey} = "device";
           $FAI::configs{$FAI::device}{opts_all} = {};
@@ -474,6 +475,7 @@ $FAI::Parser = Parse::RecDescent->new(
           &FAI::in_path("lvcreate") or die "LVM tools not found in PATH\n";
           # initialise $FAI::device to inform the following lines about the LVM
           # being configured
+          $FAI::uses_lvm = 1;
           $FAI::device = "VG_";
           $FAI::configs{"VG_--ANY--"}{fstabkey} = "device";
           $FAI::configs{"VG_--ANY--"}{opts_all} = {};
