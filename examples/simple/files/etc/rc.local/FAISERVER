@@ -10,7 +10,8 @@ GREEN='\E[32m'
 set -o pipefail
 
 # setup network
-ifup eth0
+nic=$(grep iface /etc/network/interfaces| awk '{print $2}'|egrep -v ^lo)
+ifup $nic
 # regenerate ssh_host keys
 ls /etc/ssh/ssh_host_* > /dev/null
 if [ $? -ne 0 ]; then
@@ -19,10 +20,10 @@ fi
 sleep 8
 [ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
 
-echo "=================================" >/dev/console
-echo "Setting up the FAI install server" >/dev/console
-echo "This will take a few minutes" >/dev/console
-echo "=================================" >/dev/console
+echo "================================="
+echo "Setting up the FAI install server"
+echo "This will take a few minutes"
+echo "=================================" 
 
 . /etc/fai/fai.conf
 . /etc/fai/nfsroot.conf
@@ -49,24 +50,24 @@ curl -fs 'http://127.0.0.1:3142/acng-report.html?doImport=Start+Import&calcSize=
 # setup the FAI server, including creating the nfsroot, use my own proxy
 export APTPROXY="http://127.0.0.1:3142"
 if [ -f /var/tmp/base.tar.xz ]; then
-    fai-setup -fvB /var/tmp/base.tar.xz 2>&1
+    fai-setup -fvB /var/tmp/base.tar.xz > /var/log/fai/fai-setup.log 2>&1
 else
-    fai-setup -fv 2>&1
+    fai-setup -fv > /var/log/fai/fai-setup.log 2>&1
 fi
 if [ $? -eq 0 ]; then
     rm /var/tmp/base.tar.xz
     echo ""
-    echo "================================================" >/dev/console
-    echo -e "Setting up the FAI server was ${GREEN}successful${NORMAL}" >/dev/console
-    echo "================================================" >/dev/console
+    echo "================================================" 
+    echo -e "Setting up the FAI server was ${GREEN}successful${NORMAL}"
+    echo "================================================" 
     echo ""
     sleep 10
 else
     echo ""
-    echo "==================================================" >/dev/console
-    echo -e "${RED}ERROR${NORMAL}: Setting up the FAI install server ${RED}FAILED${NORMAL}!" >/dev/console
-    echo "Read /var/log/fai/fai-setup.log for more debugging" >/dev/console
-    echo "==================================================" >/dev/console
+    echo "=================================================="
+    echo -e "${RED}ERROR${NORMAL}: Setting up the FAI install server ${RED}FAILED${NORMAL}!"
+    echo "Read /var/log/fai/fai-setup.log for more debugging"
+    echo "=================================================="
     echo ""
     sleep 10
     exit 99
@@ -82,7 +83,7 @@ EOF
 fai-chboot -o default
 
 # create a template for booting the installation
-fai-chboot -Iv -f verbose,sshd,createvt,menu -u nfs://faiserver/srv/fai/config stretch.tmpl
+fai-chboot -Iv -f verbose,sshd,createvt,menu -u nfs://faiserver/srv/fai/config jessie.tmpl
 
 # Since we do not know the MAC address, our DHCP cannot provide the hostname.
 # Therefore we do explicitly set the hostname
