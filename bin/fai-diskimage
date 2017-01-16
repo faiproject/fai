@@ -4,7 +4,7 @@
 
 # This script is part of FAI (Fully Automatic Installation)
 #
-# Copyright (C) 2016 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2016-2017 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 
 # this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
@@ -173,16 +173,6 @@ check_commands
 if [ $(id -u) != "0" ]; then
     die 1 "Run this program as root."
 fi
-
-# currently fai-diskimage can't be used if the host contains logical volumes
-set +e
-if [ -f /sbin/dmsetup ]; then
-    dmsetup ls 2>&1 | grep -q 'No devices found'
-    if [ $? -eq 1 ]; then
-	die 9 "Currently fai-diskimage can't be run if the host uses logical volumes."
-    fi
-fi
-set -e
 
 # create empty disk image, loop setup, temp mount point
 rm -f $rawname
