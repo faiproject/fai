@@ -164,10 +164,10 @@ defined($FAI::udev_settle) or die "Failed to find determine a proper way to tell
 &FAI::get_current_disks;
 
 # see whether there are any existing LVMs
-&FAI::in_path("pvdisplay") and &FAI::get_current_lvm;
+$FAI::uses_lvm and &FAI::in_path("pvdisplay") and &FAI::get_current_lvm;
 
 # see whether there are any existing RAID devices
-&FAI::in_path("mdadm") and &FAI::get_current_raid;
+$FAI::uses_raid and &FAI::in_path("mdadm") and &FAI::get_current_raid;
 
 # mark devices as preserve, where not all already done so and check that only
 # defined devices are marked preserve
@@ -214,9 +214,9 @@ $FAI::debug and print Dumper \%FAI::dev_children;
 # generate the command script
 &FAI::get_parted_version;
 &FAI::build_disk_commands;
-&FAI::build_raid_commands;
+$FAI::uses_raid and &FAI::build_raid_commands;
 &FAI::build_btrfs_commands;
-&FAI::build_lvm_commands;
+$FAI::uses_lvm and &FAI::build_lvm_commands;
 &FAI::build_cryptsetup_commands;
 &FAI::order_commands;
 
