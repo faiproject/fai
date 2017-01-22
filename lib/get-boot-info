@@ -5,7 +5,7 @@
 # bootinfo -- get boot information via DHCP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2017 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -75,6 +75,7 @@ setnet() {
     done
 
     read IPADDR NETMASK BROADCAST dummy<<<$(ifdata -p $dev)
+    CIDR=$(ip -o -f inet addr show| awk '{print $4}'| grep $IPADDR)
     GATEWAYS=$(ip route | awk '/^default/ {print $3}')
 
     cat >> $bootlog <<-EOF
@@ -86,6 +87,7 @@ setnet() {
 	NETMASK=$NETMASK
 	GATEWAYS=$GATEWAYS
 	BROADCAST=$BROADCAST
+	CIDR=$CIDR
 EOF
 
     if [ -n "$DOMAIN" ]; then
