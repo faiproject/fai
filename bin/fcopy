@@ -314,9 +314,6 @@ sub set_mode {
   # get mtime,uid,gid,mode from destination file
   my ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
   # compare time,uid,gid and mode of source file and target file
-  # if different: change the values
-  return if ($stime == $dtime && (($ddefmodes[0] == $defmodes[0]) &&
-      ($ddefmodes[1] == $defmodes[1]) && ($ddefmodes[2] == $defmodes[2])));
 
   if ($modeset) { # use -m values
     ($owner,$group,$mode) = @opt_modes;
@@ -325,6 +322,10 @@ sub set_mode {
   } else { # use values from source file
     ($owner,$group,$mode) = @defmodes;
   }
+
+  # if different: change the values
+  return if ($stime == $dtime && (($ddefmodes[0] == $owner) &&
+      ($ddefmodes[1] == $group) && ($ddefmodes[2] == $mode)));
 
   ($uid,$gid) = name2num($owner,$group);
   warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
