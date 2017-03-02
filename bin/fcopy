@@ -36,6 +36,7 @@ use File::Path;
 use File::Basename;
 use File::Spec;
 use File::Temp qw/tempfile/;
+use File::lchown qw/lchown lutimes/;
 use Getopt::Std;
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -308,11 +309,20 @@ sub set_mode {
     $stime = (stat("$sourcefile/$class"))[9];
   } else {
     # get mtime,uid,gid,mode from source file
-    ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+    if ($opt_H) {
+      ($stime,@defmodes) = (lstat("$sourcefile/$class"))[9,4,5,2];
+    } else {
+      ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+    }
   }
 
   # get mtime,uid,gid,mode from destination file
-  my ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
+  my ($dtime,@ddefmodes);
+  if ($opt_H) {
+    ($dtime,@ddefmodes) = (lstat("$destfile"))[9,4,5,2];
+  } else {
+    ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
+  }
   # compare time,uid,gid and mode of source file and target file
 
   if ($modeset) { # use -m values
@@ -324,16 +334,25 @@ sub set_mode {
   }
 
   # if different: change the values
+  # setting modes on a symlink is not portable, so ignore it
+  my $issymlink = $opt_H && -l $destfile;
   return if ($stime == $dtime && (($ddefmodes[0] == $owner) &&
-      ($ddefmodes[1] == $group) && ($ddefmodes[2] == $mode)));
+      ($ddefmodes[1] == $group) && ($issymlink || ($ddefmodes[2] == $mode))));
 
   ($uid,$gid) = name2num($owner,$group);
   warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
   return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
-  chown ($uid,$gid,     $destfile) || ewarn("chown $owner $group $destfile failed. $!");
-  chmod ($mode,         $destfile) || ewarn("chmod $mode $destfile failed. $!");
-  unless ($preinst) {
+  if ($issymlink) {
+    lchown  ($uid,$gid,     $destfile) || ewarn("lchown $owner $group $destfile failed. $!");
+    unless ($preinst) {
+      lutimes ($stime,$stime, $destfile) || ewarn("lutimes for $destfile failed. $!");
+    }
+  } else {
+    chown ($uid,$gid,     $destfile) || ewarn("chown $owner $group $destfile failed. $!");
+    chmod ($mode,         $destfile) || ewarn("chmod $mode $destfile failed. $!");
+    unless ($preinst) {
       utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
+    }
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
