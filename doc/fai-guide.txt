@@ -1752,23 +1752,25 @@ demohost# rwmount /target/home
 === [[nonfs]]FAI without NFS
 
 To boot into FAI and begin the installation sequence
-without using the NFS protocol. You boot the client machine using PXE as
+without using the NFS protocol, you boot the client machine using PXE as
 usual and then retrieve an image containing the nfsroot via http.
 
-To create an image, use fai-cd's -S argument
+To create an image, use fai-cd's -S argument and -M to avoid setting up
+a partial mirror within the image.
 
 ----
-faiserver# fai-cd -S squash.img
+faiserver# fai-cd -M -S squash.img
 ----
 
 Move this image to a directory from which it can be requested via http
 (usually a directory served by the webserver)
 
 To now request the squashfs image, add the following to your kernel
-command line, e.g. in your pxelinux configuration file for the client.
+command line, e.g. in your pxelinux configuration file for the client
+with fai-chboot.
 
 ----
-root=live:http://faiserver/cskoeln/squash.img
+root=live:http://faiserver/cskoeln/squash.img FAI_CONFIG_SRC=file:///var/lib/fai/config
 ----
 
 Replace faiserver with the domain name or IP of the machine your
