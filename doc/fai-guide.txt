@@ -858,6 +858,7 @@ There are different possibilities to define classes:
 
 . Some default classes are defined for every host:     DEFAULT, LAST and its host name.
 . Classes may be listed within a file.
+. Classes may be defined through dependencies
 . Classes may be dynamically defined by scripts.
 
 The last option is a very nice feature, since these scripts will
@@ -900,6 +901,29 @@ hosts.
 
 The order of the classes is important because it defines the priority
 of the classes from low to high.
+
+A class can built upon other classes using class dependencies. They are
+implemented via _fai-deps_ (8). To activate class dependencies, you have to add
+a hook _$FAI/hooks/defclass.DEFAULT_:
+
+----
+#!/bin/bash
+
+skiptask defclass
+
+task_defclass
+
+fai-deps
+----
+
+Now you can have one class pull in other classes: _$FAI/class/WORDPRESS.deps_
+
+----
+VHOST
+MARIADB
+----
+
+Here you have a class WORDPRESS that depends on the classes VHOST and MARIADB.
 
 === [[classvariables]]Defining variables
 
@@ -1203,6 +1227,27 @@ scriptname=$(basename $0 .DEFAULT)
 # here follows the actions for class DEFAULT
 .
 .
+----
+
+If you want to execute a hook after a task, here is how to do that: create
+a DEFAULT-hook that first calls _skiptask_, then executes the task manually and 
+place your desired action at the end. The following example executes 
+_fai-deps_ (8) after the task _defclass_:
+
+----
+defclass.DEFAULT:
+
+#! /bin/sh
+
+# task defclass will not be executed by fai ...
+skiptask defclass
+
+# ... but manually: note, that to call a task manually, you have to prefix it
+# with task_
+task_defclass
+
+# now execute your own stuff:
+fai-deps
 ----
 
 Some examples for what hooks could be used:
