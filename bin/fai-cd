@@ -47,6 +47,7 @@ hidevartmp=0
 rel=0
 target=0
 autodiscover=0
+tmpdir=""
 # arguments to be passed on to internal fai-cd call
 arguments="-MB"
 
@@ -353,7 +354,7 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
+while getopts "AenkfhHg:JbSBMm:C:d:t:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
         C)  cdir="$OPTARG" ; arguments+=" -C $cdir";;
@@ -369,6 +370,7 @@ while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
 	d)  config_space="$OPTARG"; configset=1 ; arguments+=" -d $config_space";;
+	t)  tmpdir="$OPTARG" ;;
         ?)  usage ;;
     esac
 done
@@ -462,7 +464,11 @@ if [ $bootonly -eq 0 -o $configset -eq 1 ]; then
     [ -d $FAI_CONFIGDIR/class ] || die 16 "Config space $FAI_CONFIGDIR seems to be empty."
 fi
 
-tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
+if [ -n "$tmpdir" ]; then
+    tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
+else
+    tmp=$(mktemp -p "$tmpdir" -d fai-cd.XXXXXX) || exit 13
+fi
 
 trap "cleanup_liveos_mounts" EXIT ERR
 
