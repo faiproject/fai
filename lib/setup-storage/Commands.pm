@@ -332,7 +332,7 @@ sub build_btrfs_commands {
       $FAI::configs{$config}{volumes}{$volume}{mount_options} = $FAI::configs{$c}{partitions}{$p}{mount_options};
       $FAI::configs{$c}{partitions}{$p}{mount_options} = '-';
       $FAI::configs{$config}{volumes}{$volume}{fstabkey} = $FAI::configs{$c}{fstabkey};
-      if ($device =~ m:^/dev/nvme|^/dev/loop:) {
+      if ($device =~ m:^/dev/nvme|^/dev/loop|^/dev/mmcblk:) {
         $FAI::configs{$config}{volumes}{$volume}{devices}{$device . "p" . $p} = {};
       } else {
         $FAI::configs{$config}{volumes}{$volume}{devices}{$device . $p} = {};
