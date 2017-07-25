@@ -85,19 +85,19 @@ create_ext3fs_image() {
     # along with it, a temporary folder is created to mount the ext3fs.img
     mkdir -p $tmp/$liveos/mounted-ext3fs
 
+    # hide some directories before copying the nfsroot
+    customize_nfsroot
     calculate_required_size
 
     # creates an empty file
     dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1MB count=$count 2>/dev/null ||
         die 9 "dd failed. Maybe no enough free space in $tmp"
 
-    mkfs.ext4 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
+    mkfs.ext4 -m1 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
 
     # the resulting ext3fs.img is mounted
     mount -o loop,noatime $tmp/$liveos/ext3fs.img $tmp/$liveos/mounted-ext3fs
 
-    # hide some directories before copying the nfsroot
-    customize_nfsroot
     echo "Copying the nfsroot to CD image"
     # copy the contents of the nfsroot into it
     cp -Ppr $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
