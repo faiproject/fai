@@ -36,6 +36,7 @@ set -e
 
 boot_image="boot/grub/eltorito.img"
 count=0
+space=0
 config_space=""
 configset=0
 forceremoval=0
@@ -59,7 +60,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2016 Thomas Lange
+	fai-cd Copyright (C) 2004-2017 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -224,7 +225,8 @@ calculate_required_size() {
     fi
 
     # not dividing by 1024 to get the exact, this allows us to get some additional space
-    count=$(($size/850))
+    # add some addition space
+    count=$(($size/850 + $space))
 }
 
 provide_memtest_boot_option() {
@@ -353,7 +355,7 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
+while getopts "AenkfhHg:Jbs:SBMm:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
         C)  cdir="$OPTARG" ; arguments+=" -C $cdir";;
@@ -366,6 +368,7 @@ while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
         b)  burn=1 ; arguments+=" -b";;
+        s)  space="$OPTARG" ;;
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
 	d)  config_space="$OPTARG"; configset=1 ; arguments+=" -d $config_space";;
