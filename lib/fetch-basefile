@@ -28,6 +28,7 @@ url=$FAI_BASEFILEURL
 error=0
 found=0
 mount=0
+declare -a baselist
 
 while getopts m opt ; do
     case "$opt" in
@@ -38,15 +39,8 @@ done
 
 # get list of all files at URL
 flist=$(lftp -e 'cls;exit' $url 2>/dev/null)
-
-# create a hash like thing
-# key (here variable name) is the basename of the file found
-# value is the complete filename
-for f in $flist; do
-  # echo file found: $f
-    base=${f%%.*}   # basename is the class name
-    eval "found_$base=$f"
-done
+# create an array of all lines
+baselist=($flist)
 
 # reverse order of classes
 for c in $classes; do
@@ -55,8 +49,8 @@ done
 
 # now search for each class, if a basename matches
 for c in $revclasses; do
-    id="found_$c"  # prepare for indirect variable name
-    if [ X${!id} != X ]; then
+    for f in ${baselist[@]}; do
+	if [ "$c" = "$f" ]; then
       # hash lookup succeeded
         found=1
         [ $mount = 1 ] && mount_ramdisk
@@ -74,6 +68,7 @@ for c in $revclasses; do
         lftp -e "get $url/${!id};exit" # fails if file already exists. this is nice.
         error=$?
         break
+	fi
     fi
 done
 
