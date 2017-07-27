@@ -51,25 +51,26 @@ done
 for c in $revclasses; do
     for f in ${baselist[@]}; do
 	if [ "$c" = "$f" ]; then
-      # hash lookup succeeded
-        found=1
-        [ $mount = 1 ] && mount_ramdisk
-        # Create folder in case it is not part of the configuration space
-        mkdir -p $FAI/basefiles || echo "Could not create folder $FAI/basefiles" >&2
-        cd $FAI/basefiles || exit 3
-        if [ -f ${!id} ]; then
-            echo "${!id} already exists" >&2
-            error=1
-            break
-        fi
+	    # hash lookup succeeded
+            found=1
+            [ $mount = 1 ] && mount_ramdisk
+            # Create folder in case it is not part of the configuration space
+            mkdir -p $FAI/basefiles || echo "Could not create folder $FAI/basefiles" >&2
+            cd $FAI/basefiles || exit 3
+            if [ -f ${!id} ]; then
+		echo "${!id} already exists" >&2
+		error=1
+		break
+            fi
 
-        echo "Downloading $url/${!id}"
-      #  wget -nv $url/${!id}    # creates a new file with suffix .1, .2,.. if file already exists. Bad.
-        lftp -e "get $url/${!id};exit" # fails if file already exists. this is nice.
-        error=$?
-        break
+            echo "Downloading $url/${!id}"
+	    #  wget -nv $url/${!id}    # creates a new file with suffix .1, .2,.. if file already exists. Bad.
+            lftp -e "get $url/${!id};exit" # fails if file already exists. this is nice.
+            error=$?
+            break
 	fi
     fi
+    done
 done
 
 if [ X$found = X0 ]; then
