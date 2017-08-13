@@ -25,10 +25,12 @@ EXCLUDE_SQUEEZE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_WHEEZY=info,tasksel,tasksel-data
 EXCLUDE_JESSIE=tasksel,tasksel-data
 EXCLUDE_STRETCH=tasksel,tasksel-data
+EXCLUDE_BUSTER=tasksel,tasksel-data
 
 EXCLUDE_TRUSTY=dhcp3-client,dhcp3-common,info
 EXCLUDE_XENIAL=tasksel,tasksel-data
 
+# we need aptitude in the base file, since users may want to use it for installing packages
 INCLUDE_DEBIAN=aptitude
 
 
@@ -192,6 +194,7 @@ prtdists() {
     WHEEZY32     WHEEZY64
     JESSIE32     JESSIE64
     STRETCH32    STRETCH64
+    BUSTER32     BUSTER64
 "
 }
 
@@ -200,7 +203,7 @@ usage() {
     cat <<EOF
 mk-basefile, create minimal base files for a Linux distritubtion
 
-   Copyright (C) 2011-2016 by Thomas Lange
+   Copyright (C) 2011-2017 by Thomas Lange
 
 Usage: mk-basefile [OPTION] ... DISTRIBUTION
 
@@ -263,7 +266,7 @@ case "$target" in
     SLC7_64) slc amd64 7 ;;
     TRUSTY*|XENIAL*)
         debgeneric $target $MIRROR_UBUNTU ;;
-    SQUEEZE*|WHEEZY*|JESSIE*|STRETCH*)
+    SQUEEZE*|WHEEZY*|JESSIE*|STRETCH*|BUSTER*)
         debgeneric $target $MIRROR_DEBIAN ;;
     *) echo "Unknown distribution. Aborting."
        prtdists
