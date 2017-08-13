@@ -564,8 +564,6 @@ task_faiend() {
     cd /
     sync
 
-    killall -q sshd udevd rsyslogd
-
     for dir in $(mount | grep $target | egrep -v "$target/tmp|media/mirror|proc|tmpfs"| awk '{print $3}' | sort -r); do
         mount -o remount,ro $dir
     done
@@ -579,6 +577,7 @@ task_faiend() {
 	done
     fi
 
+    killall -q sshd udevd rsyslogd
     umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
     umount -arf 2>/dev/null
 
