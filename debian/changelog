@@ -1,8 +1,135 @@
-fai (5.2~beta19) UNRELEASED; urgency=low
+fai (5.3.6) unstable; urgency=low
+
+  [ Thomas Lange ]
+  * install_packages: fix subroutine name, Closes: #860783
+    thanks to John Heim for the bug report and fix
+
+  [ Ian Kelling ]
+  * fai-guide.txt: document improvements
+  * fai-cd.8: document improvements
+  * README.build-sources: small build docs fix
+  * fai-cd: fix wrong variable name, Closes: #860229
+
+ -- Thomas Lange <lange@debian.org>  Thu, 20 Apr 2017 10:40:03 +0000
+
+fai (5.3.5) unstable; urgency=low
+
+  [ Manuel Hachtkemper ]
+  * LAST/50-misc: ignore dmsetup errors
+  * 40-parse-profiles.sh, 41-warning.sh: return with 0
+
+  [ Edgar Fuß]
+  * fcopy: move code, Closes: #484666
+  * fcopy: add code for handling symlinks correctly, Closes: #853856
+
+  [ Jan Luca Naumann ]
+  * fai-make-nfsroot: fix wrong path, Closes: #854550
+
+  [ Ian Kelling ]
+  * mk-basefile: make sure root directory has mode 755, Closes: #854654
+
+  [ Thomas Lange ]
+  * install_packages: add handling of packagename:arch, Closes: #855799
+  * control: fcopy needs libfile-lchown-perl
+  * Makefile: fix build error because of missing lchown.pm
+
+ -- Thomas Lange <lange@debian.org>  Wed, 22 Mar 2017 20:17:17 +0100
+
+fai (5.3.4) unstable; urgency=low
+
+  * 30-interface: use new nic names also for the fixed IP setup, use CIDR
+    instead of ip address, netmask, broadcast
+  * get-boot-info: set CIDR
+  * fai-diskimage: remove test if LVM is used on the host
+
+ -- Thomas Lange <lange@debian.org>  Tue, 24 Jan 2017 13:54:01 +0100
+
+fai (5.3.3) unstable; urgency=low
+
+  * move default config to stretch
+  * setup-storage: do execute raid/lvm parts only if needed
+    Closes: #845428
+  * LAST/50-misc: do raid/lvm test only if installation is run on client
+  * fai-cd: add -p to grub-mkimage call
+  * disk_config/CLOUD: fix option name
+  * control: change build dependeny, Closes: #850356
+
+ -- Thomas Lange <lange@debian.org>  Mon, 09 Jan 2017 16:02:41 +0100
+
+fai (5.3.2) unstable; urgency=low
+
+  [ Thomas Lange ]
+  * install_packages: readd -N, new code for removing unknown package
+    names and handling multiple occurrences of a package with suffix + -
+  * fai-make-nfsroot: create /var/lib/dpkg/available during package
+    installation
+  * fai-mirror: call install_packages with -N
+
+  [ Emmanuel Kasper ]
+  * fai-diskimage: improve LVM test
+
+ -- Thomas Lange <lange@debian.org>  Mon, 12 Dec 2016 15:01:47 +0100
+
+fai (5.3.1) unstable; urgency=low
+
+  [ Thomas Lange ]
+  * fai-monitor-gui: ignore lines matching ^VARIABLE
+  * CENTOS: disable selinux
+  * savelog.LAST.sh: add ignore pattern
+  * remove unsafe-io config at the end
+  * UBUNTU/90-apt: fix setting locale
+
+  [ Andrew bezella ]
+  * fai-make-nfsroot: improve test
+
+  [ dpoon ]
+  * fai-disk-info
+
+ -- Thomas Lange <lange@debian.org>  Tue, 06 Dec 2016 16:06:00 +0100
+
+fai (5.3) unstable; urgency=high
+
+  [ Thomas Lange ]
+  * install_packages: add new keyword install-norec,
+    calling apt-get without recommends, remove option -N
+    remove check for packages names using AptPkg::Cache
+  * control: add Depends, Breaks, Closes: #842083
+  * fai-diskimage: add -N, which is passed to the fai call,
+    Closes: #843209, do not run if host uses LVM
+  * fai: allow -N and -c at the same time
+  * package_config/DEBIAN: add locales-all for class CLOUD
+  * packages_config/*: use install-norec instead of aptitude
+  * disk_config/CLOUD: use only one partition
+  * init.d/expand-root: new script used at first time boot up
+  * class/*/GCE: improve class GCE, add expand-root
+  * fai-mirror: remove test that prevents it to call multiple times
+  * fai, config space: remove $action and use $FAI_ACTION from the very
+    beginning
+  * class/[01-classes,02-classes]: new scripts for defining classes from
+    $cmdlineclasses
+  * subroutines: save dmesg only if running on a client host
+  * 10-misc: add test if localtime is a symlink, Closes: #843780
+  * setup-storage.8: add EFI/ESP example, Closes: #843593
+
+  [ Josef Lusticky ]
+  * fai-make-nfsroot: use apt-key to export gpg key for fai-project.org
+    package repository
+
+  [ Sam Hartman ]
+  * add EFI suppoort, Closes: #843639
+  * Commands.pm: Fix handling of btrfs single volume devices,
+    Closes: #843716
+
+ -- Thomas Lange <lange@debian.org>  Mon, 21 Nov 2016 13:10:38 +0100
+
+fai (5.2) unstable; urgency=low
+
+  The "FAI is entering the cloud" release.
 
   [ Thomas Lange ]
   * fai-diskimage: new script, create disk images for VM or "The Cloud"
   * fai-diskimage.8: new man page
+  * .../GCE: new class GCE for Google Compute Engine customization
   * updatebase: execute aptitude only if it's available, Closes: #831547
   * fcopy: print warning only in debug mode, Closes: #826897
   * fai-class: do not read hostname from /proc if $HOSTNAME is already
@@ -19,16 +146,22 @@ fai (5.2~beta19) UNRELEASED; urgency=low
   * move mount2dir into fai-client
   * add class/41-warning.sh
   * remove user/password in grub.cfg for fai-cd
-  * setup.DEFAULT.sh: set hostname only during initla install
+  * setup.DEFAULT.sh: set hostname only during inital install
   * mk-basefiles: add usage, add generic subroutine for Debian and Ubuntu,
-    new options -a, -k -s
+    new options -a, -k -s, cleanup exclude list
   * GRUB_PC/10-setup: special treatment if a disk image is used
+    do not set up grub during dirinstall
   * fai-kvm: when booting from disk, you can specify a disk image
   * disk_config/CLOUD: new config, new class
   * replace test [ "$verbose" ] with [ X$verbose = X1 ]
   * fai-do-scripts: be less verbose
   * sources.list: add [trusted=yes] to fai-project.org line
   * fai-mirror: remove --force-yes
+  * instsoft.DEBIAN: reconfigure locales if already installed
+  * rc.local/FAISERVER: make fai-monitor start on every boot
+  * fai-guide.txt: add section about fai-diskimage
+  * control: suggest packages for fai-server needed by fai-diskimage
+  * LAST/50-misc: create a useful sources.list if installed from CD
 
   [ Andrew bezella ]
   * get-config-dir-http: prefix the curl command with HOME=/root
@@ -44,19 +177,25 @@ fai (5.2~beta19) UNRELEASED; urgency=low
   * setup-storage: add support for Intel Matrix Storage Manager
 
   [ Kerim Güney ]
-  * setup-storage: Device name issue when using btrfs on nVME device,
+  * setup-storage: Device name issue when using btrfs on NVMe device,
     Closes: #831327
     Fix for when btrfs device was used as boot device, the variable
     necessary for the grub script would not be set.
 
   [ Paul Schulz ]
-  * setup-storage.8: add documentation for luks:
+  * setup-storage.8: add documentation for luks add cryptsetup
+
+  [ Andrew Ruthven ]
+  * setup-storage: Add lukscreateopts to disk config file.
+
+  [ Ian Kelling ]
+  * 30-interface: determine predictable network names, Closes: #834817
 
   [ Juri Grabowski ]
   * fai: add fdisk dependency for Buster and Bullseye
     Closes: #872109
 
- -- Thomas Lange <lange@debian.org>  Thu, 15 Sep 2016 04:09:52 +0200
+ -- Thomas Lange <lange@debian.org>  Fri, 18 Nov 2016 15:40:12 +0100
 
 fai (5.1.2) unstable; urgency=low
 

@@ -123,6 +123,7 @@ $ENV{flag_initial} and $FAI::reinstall = 0;
 #
 ################################################################################
 %FAI::current_lvm_config = ();
+$FAI::uses_lvm = 0;
 
 ################################################################################
 #
@@ -130,6 +131,7 @@ $ENV{flag_initial} and $FAI::reinstall = 0;
 #
 ################################################################################
 %FAI::current_raid_config = ();
+$FAI::uses_raid = 0;
 
 ################################################################################
 #
@@ -203,7 +205,7 @@ sub phys_dev {
     return (1, "/dev/$1", $2);
   }
   elsif ($dev =~
-    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d{3,}|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n1)(p(\d+))?$})
+    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d{3,}|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n1|mmcblk\d+)(p(\d+))?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $3);
@@ -285,7 +287,7 @@ sub mark_encrypted {
 sub make_device_name {
   my ($dev, $p) = @_;
   $dev .= "p" if ($dev =~
-    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d{3,}|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n1)$});
+    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d{3,}|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n1|mmcblk\d+)$});
   $dev .= $p;
   internal_error("Invalid device $dev") unless (&FAI::phys_dev($dev))[0];
   return $dev;

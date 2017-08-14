@@ -53,8 +53,8 @@ shellcheck:
 
 perlcheck:
 	@echo "Checking for perl syntax errors:"; \
-	mkdir -p perl-dummy/Linux perl-dummy/Tk ; \
-	for f in Linux/LVM.pm Tk.pm Tk/HList.pm Tk/ItemStyle.pm; do \
+	mkdir -p perl-dummy/Linux perl-dummy/File perl-dummy/Tk ; \
+	for f in File/lchown.pm Linux/LVM.pm Tk.pm Tk/HList.pm Tk/ItemStyle.pm; do \
 		echo '1;' > perl-dummy/$$f ; \
 	done; \
 	for SCRIPT in $(PERL_SCRIPTS); do \

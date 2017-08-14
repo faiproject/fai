@@ -2,7 +2,6 @@
 
 fcopy -Bvr /etc/fai
 fcopy -Bv /etc/fai/apt/sources.list /etc/dhcp/dhcpd.conf
-fcopy -v /etc/rc.local
 
 if [ $FAI_ACTION = "install" -o $FAI_ACTION = "dirinstall" ] ; then
 
@@ -30,7 +29,9 @@ if [ $FAI_ACTION = "install" -o $FAI_ACTION = "dirinstall" ] ; then
     ainsl -v /etc/apt-cacher-ng/acng.conf "ReuseConnections: 0"
 
     # copy base file for faster building of nfsroot
-    cp -p /var/tmp/base.tar.xz $target/var/tmp
+    if [ -f /var/tmp/base.tar.xz ]; then
+	cp -p /var/tmp/base.tar.xz $target/var/tmp
+    fi
 
     if [ -d /media/mirror/pool ]; then
 	mkdir $target/var/cache/apt-cacher-ng/_import
@@ -41,6 +42,6 @@ if [ $FAI_ACTION = "install" -o $FAI_ACTION = "dirinstall" ] ; then
     # copy basefiles from CD to config space
     if [ -d $FAI/basefiles ]; then
 	mkdir -p $target/srv/fai/config/basefiles
-	cp -vp $FAI/basefiles/*.tar.* $target/srv/fai/config/basefiles 2>/dev/null
+	cp -vp $FAI/basefiles/*.tar.* $target/srv/fai/config/basefiles 2>/dev/null || true
     fi
 fi

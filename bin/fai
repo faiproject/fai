@@ -174,7 +174,7 @@ fstart() {
     fi
     task setup
     task defclass
-    unset cmdlineclasses renewclass
+    unset renewclass
     [ $do_init_tasks -eq 1 ] && set_disk_info
     task defvar
     [ $do_init_tasks -eq 1 ] && load_keymap_consolechars
@@ -203,9 +203,6 @@ while true ; do
             cfdir=$2
             shift 2 ;;
         -c|--class)
-            if [ $renewclass -eq 1 ]; then
-                fdie 9 "You can't use -c|--classes and -N|--new at the same time." >&2
-            fi
             export cmdlineclasses=$2
             cmdlineclasses=${cmdlineclasses//,/ }
             export classes=$cmdlineclasses
@@ -236,7 +233,7 @@ FAI_ETC_DIR=$(readlink -f $FAI_ETC_DIR) # canonicalize path
 export FAI_ETC_DIR
 
 # override FAI_ACTION later if a command line argument is given
-[ "$1" ] && export action=$1
+[ "$1" ] && export FAI_ACTION=$1
 [ "$2" ] && export FAI_ROOT=$2 # only used for dirinstall
 
 if [ $(id -u) != "0" ]; then
@@ -245,7 +242,7 @@ fi
 
 export start_seconds=$(cut -d . -f 1 /proc/uptime)
 
-if [ X$action = Xdirinstall ]; then
+if [ X$FAI_ACTION = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
         fdie 3 "Please specify a target directory. Aborted" >&2
     fi
@@ -320,10 +317,13 @@ if [ $do_init_tasks -eq 1 ]; then
 else
     # this is for dirinstall, softupdate, ..
     export fai_rundate=$(date +'%Y%m%d_%H%M%S')
-    export LOGDIR=/var/log/fai/$HOSTNAME/$action-$fai_rundate
+    export LOGDIR=/var/log/fai/$HOSTNAME/$FAI_ACTION-$fai_rundate
+    if [ -d $LOGDIR ]; then
+	fdie 13 "$LOGDIR already exists. MAybe another process is running. Aborting"
+    fi
     mkdir -p $LOGDIR
-    ln -snf $action-$fai_rundate $LOGDIR/../last-$action
-    ln -snf $action-$fai_rundate $LOGDIR/../last
+    ln -snf $FAI_ACTION-$fai_rundate $LOGDIR/../last-$FAI_ACTION
+    ln -snf $FAI_ACTION-$fai_rundate $LOGDIR/../last
 fi
 chown root:adm $LOGDIR
 chmod 0750 $LOGDIR
@@ -338,12 +338,9 @@ unset newhostname
 
 fstart > >( tee -a $LOGDIR/fai.log )  2>&1
 
-[ "$action" ] && export FAI_ACTION=$action
-unset action
 task action |& tee -a $LOGDIR/fai.log
 final_exit_code=${PIPESTATUS[0]}
 
 [ -L "/var/run/fai/current_config" ] && rm -f "/var/run/fai/current_config"
 
-echo "End of $0"
 exit $final_exit_code

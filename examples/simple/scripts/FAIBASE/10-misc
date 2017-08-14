@@ -5,7 +5,11 @@
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
 echo $TIMEZONE    > $target/etc/timezone
-cp -f /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
+if [ -L $target/etc/localtime ]; then
+    ln -sf /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
+else
+    cp -f /usr/share/zoneinfo/${TIMEZONE} $target/etc/localtime
+fi
 
 if [ -n "$IPADDR" ]; then
     ifclass DHCPC || ainsl -s /etc/hosts "$IPADDR $HOSTNAME.$DOMAIN $HOSTNAME"

@@ -1,4 +1,4 @@
-.TH setup-storage 8 "October 23, 2011" "Debian GNU/Linux"
+.TH setup-storage 8 "November 18, 2016" "Debian GNU/Linux"
 .SH NAME
 \fBsetup-storage\fP
 \- automatically prepare storage devices
@@ -330,11 +330,30 @@ luks    /local00        /dev/sdb7       ext3    defaults,errors=remount-ro  crea
 Configure /dev/sdb with 2 primary partitions, one extended partition, and 3
 logical partitions.
 .IP \(bu
-Encrypt the swap space, /tmp, and /local00. As described in the CAVEATS section,
-the encryption keys will be stored in a temporary directory only.
+Encrypt the swap space, /tmp, and /local00. As described in the
+CAVEATS section, the encryption keys will be stored in a temporary
+directory only.
+.IP \(bu
+Do not forget to install the cryptsetup package on a system using
+thus scheme.
 .IP \(bu
 The initial password for the encrypted device can also be set in
 the configuration file by using the syntax - luks:"secret"
+.IP \(bu
+With a working RAID+LVM configuration, an encryption layer can be
+added between the RAID and LVM device layers by adding the following
+cryptsetup configuration. In this case, the encrypted device will be
+called 'crypt_format_md1' and will be used as the underlying physical
+device (PV) in LVM.
+
+.sp
+.nf
+.ta 10n 20n 30n 40n 50n
+disk_config cryptsetup
+luks    -        /dev/md1       -       -
+.sp
+.fi
+.PP
 
 .TP
 tmpfs example
@@ -417,6 +436,24 @@ Mount an ext3 filesystem on /dev/sdb1 with an external journal on /dev/sda5
 Mount an ext4 filesystem on /dev/sdb2 with an external journal on /dev/sda6
 .IP \(bu
 Mount an XFS filesystem on /dev/sdb3 using /dev/sda7 as the log device
+
+.TP
+Example using a GPT partition table and EFI/ESP partition
+.sp
+.nf
+.ta 10n 20n 30n 40n 60n
+disk_config disk1 disklabel:gpt fstabkey:uuid bootable:1
+primary   /boot/efi  200     vfat    rw
+primary   /          1G-     ext4    rw
+.sp
+.fi
+.PP
+.IP \(bu
+Creating a ESP partition is very simple. Use a GPT partition table,
+create a vfat partitoon which is aslo bootable. That's it.
+
+
+
 .SH SYNTAX
 This section describes the syntax of disk_config files
 
@@ -613,7 +650,7 @@ option ::= /* empty */
 .br
 
 
-volume ::= <type> <mountpoint> <size> <filesystem> <mount_options> <fs_options>
+volume ::= <type> <mountpoint> <size> <filesystem> <mount_options> <luks_options> <fs_options>
 .br
            | vg <name> <size> <fs_options>
 .br
@@ -733,6 +770,13 @@ filesystem ::= -
                /* mkfs.xxx must exist */
 .br
 
+luks_options ::= (lukscreateoptions=".*")
+.br
+                 /* options to supply to cryptsetup when creating a LUKS
+                  * encrypted filesystem. If no ciper (-c) is specified, then
+                  * aes-cbc-essiv:sha2 is used. If no key size (-s) is
+                  * specified then 256 is used. */
+.br
 
 fs_options ::= (createopts=".*"|tuneopts=".*"|(pv|vg|lv|md)createopts=".*")*
 .br

@@ -1,0 +1,67 @@
+#! /bin/bash
+# support for GRUB version 2
+
+error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
+
+# This script assumes that the disk has a GPT partition table and
+# that the extended system partition (ESP) is mounted on /boot/efi.
+# When building a disk image, we don't change the NVRAM to point at
+# the boot image we made available, because the disk image is likely
+# not installed on the current system.  As a result, we force
+# installation into the removable media paths as well as the standard
+# debian path.
+
+set -a
+
+# do not set up grub during dirinstall
+if [ "$FAI_ACTION" = "dirinstall" ] ; then
+    exit 0
+fi
+# during softupdate use this file
+[ -r $LOGDIR/disk_var.sh ] && . $LOGDIR/disk_var.sh
+
+if [ -z "$BOOT_DEVICE" ]; then
+    exit 189
+fi
+
+# disable os-prober because of #788062
+ainsl /etc/default/grub 'GRUB_DISABLE_OS_PROBER=true'
+
+# skip the rest, if not an initial installation
+if [ $FAI_ACTION != "install" ]; then
+    $ROOTCMD update-grub
+    exit $error
+fi
+
+$ROOTCMD grub-mkdevicemap --no-floppy
+GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
+
+
+# Check if RAID is used for the boot device
+if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
+    raiddev=${BOOT_DEVICE#/dev/}
+    # install grub on all members of RAID
+    for device in `LC_ALL=C perl -ne 'if(/^'$raiddev'\s.+raid\d+\s(.+)/){ $_=$1; s/\d+\[\d+\]//g; print }' /proc/mdstat`; do
+	echo Install grub on /dev/$device
+	$ROOTCMD grub-install --no-floppy --force-extra-removable "/dev/$device"
+    done
+
+elif [[ $GROOT =~ 'hostdisk' ]]; then
+    cat > $target/boot/grub/device.map <<EOF
+(hd0)   $BOOT_DEVICE
+EOF
+    $ROOTCMD grub-install --no-floppy --force-extra-removable --modules=part_gpt --no-nvram $BOOT_DEVICE
+    if [ $? -eq 0 ]; then
+        echo "Grub installed on hostdisk $BOOT_DEVICE"
+    fi
+    rm $target/boot/grub/device.map
+
+else
+    $ROOTCMD grub-install --no-floppy --modules=part_gpt "$GROOT"
+    if [ $? -eq 0 ]; then
+        echo "Grub installed on $BOOT_DEVICE = $GROOT"
+    fi
+fi
+$ROOTCMD update-grub
+
+exit $error

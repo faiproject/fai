@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2017 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -36,6 +36,7 @@ set -e
 
 boot_image="boot/grub/eltorito.img"
 count=0
+space=0
 config_space=""
 configset=0
 forceremoval=0
@@ -59,7 +60,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2016 Thomas Lange
+	fai-cd Copyright (C) 2004-2017 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -85,19 +86,19 @@ create_ext3fs_image() {
     # along with it, a temporary folder is created to mount the ext3fs.img
     mkdir -p $tmp/$liveos/mounted-ext3fs
 
+    # hide some directories before copying the nfsroot
+    customize_nfsroot
     calculate_required_size
 
     # creates an empty file
     dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1MB count=$count 2>/dev/null ||
         die 9 "dd failed. Maybe no enough free space in $tmp"
 
-    mkfs.ext4 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
+    mkfs.ext4 -m1 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
 
     # the resulting ext3fs.img is mounted
     mount -o loop,noatime $tmp/$liveos/ext3fs.img $tmp/$liveos/mounted-ext3fs
 
-    # hide some directories before copying the nfsroot
-    customize_nfsroot
     echo "Copying the nfsroot to CD image"
     # copy the contents of the nfsroot into it
     cp -Ppr $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
@@ -166,7 +167,7 @@ create_grub2_image() {
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
         MODULEBASE=$NFSROOT/usr/lib/grub
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
-        chroot $NFSROOT /usr/bin/grub-mkimage -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
+        chroot $NFSROOT /usr/bin/grub-mkimage -p /boot/grub -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
         cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
         MODULEBASE=$NFSROOT/usr/lib/grub
     else
@@ -180,7 +181,7 @@ create_grub2_image() {
         mkdir -p $GRUBDIR
         dpkg -x $grubPackage $GRUBDIR
         cd $GRUBDIR
-        ./usr/bin/grub-mkimage -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
+        ./usr/bin/grub-mkimage -p /boot/grub -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
         MODULEBASE=$GRUBDIR/usr/lib/grub
     fi
 
@@ -224,7 +225,8 @@ calculate_required_size() {
     fi
 
     # not dividing by 1024 to get the exact, this allows us to get some additional space
-    count=$(($size/900))
+    # add some addition space
+    count=$(($size/850 + $space))
 }
 
 provide_memtest_boot_option() {
@@ -288,7 +290,7 @@ unhide_dirs() {
 		umount  $target/$d 2>/dev/null
             fi
 	else
-            if [ -d $nfsrootdir/$d ]; then
+            if [ -d $ONFSROOT/$d ]; then
 		[ "$debug" ] && echo "disclosing $d"
 		umount $ONFSROOT/$d 2>/dev/null
             fi
@@ -353,7 +355,7 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
+while getopts "AenkfhHg:Jbs:SBMm:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
         C)  cdir="$OPTARG" ; arguments+=" -C $cdir";;
@@ -366,6 +368,7 @@ while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
         b)  burn=1 ; arguments+=" -b";;
+        s)  space="$OPTARG" ;;
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
 	d)  config_space="$OPTARG"; configset=1 ; arguments+=" -d $config_space";;

@@ -53,7 +53,7 @@ fai-cd \- make a bootable CD-ROM or USB stick that performs an FAI
 This command creates a bootable ISO CD-ROM image that performs the
 fully automatic installation from CD-ROM without an install server. The
 ISO image will be written to FILE. To create the image, the
-command needs the NFSROOT, the configuration space and a partial
+command needs the NFSROOT, the configuration space and optionally a partial
 mirror, which is created by fai-mirror. The ISO image will contain a compressed
 squashfs filesystem. This hybrid CD image can also
 be written to an USB stick using dd(1).
@@ -82,10 +82,12 @@ Use CFDIR as the configuration directory. Default is /etc/fai. You can
 also set the environment variable FAI_ETC_DIR.
 .TP
 .BI "\-d " URL
-Set the location of the config space to URL (this sets
-FAI_CONFIG_SRC). Set it to "" to create an ISO image without a config space. If not set, the
-value of FAI_CONFIGDIR will be used. Currently no file: is allowed
-here, instead set FAI_CONFIGDIR in fai.conf(5).
+Do not include the config space in the image and set the location of the
+config space to URL. This sets FAI_CONFIG_SRC in the grub config, which
+is obtained from the FAI configuration dir (see -C). Set it to "" to not
+set FAI_CONFIG_SRC. If not set, the config space is taken from
+FAI_CONFIGDIR and copied to /var/lib/fai/config in the image. Currently
+no file: is allowed here, instead set FAI_CONFIGDIR in fai.conf(5).
 .TP
 .BI \-e
 Exclude the directory /var/tmp from the nfsroot. You may put the
@@ -113,15 +115,23 @@ and locales are hidden and will not be put onto the CD or the USB stick.
 Use xz compression when calling mksquashfs. Default is gzip.
 .TP
 .BI "\-M "
-Do not add the package mirror to the CD.
+Do not add the package mirror to the CD. Packages that would be fetched
+from the mirror are obtained from the normal sources configured
+elsewhere, usually remote repositories.
 .TP
 .BI "\-m " DIRECTORY
 Use DIRECTORY as partial FAI mirror. This option is mandatory, unless
 you use -M or -B.
 .TP
+.BI "\-s " blocks
+Add additional disk space to the image. Increases the size by the
+number of 1M blocks specified.
+.TP
 .BI \-S
-Create a squashfs image file, instead of a complete iso. This image
-file can be used to fetch the nfsroot through various ways over the network.
+Create a squashfs image file instead of a complete iso. The image
+contains the nfsroot and can be fetched through various ways over the
+network. For an example, see the section "FAI without NFS" in the FAI
+Guide.
 .SH EXAMPLES
 .br
 After you've created a mirror with fai-mirror in /media/mirror, you

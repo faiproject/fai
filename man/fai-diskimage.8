@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-diskimage 8 "August 2016" "FAI 5"
+.TH fai-diskimage 8 "November 2016" "FAI 5.3"
 
 .SH NAME
 fai-diskimage \- create a disk image for booting a VM
@@ -7,26 +7,35 @@ fai-diskimage \- create a disk image for booting a VM
 .B fai-diskimage \fIimagename\fR
 .SH DESCRIPTION
 .B fai-diskimage
-creates imagename.raw and runs the Fully Automatic Installation on it
-using the list of FAI classes. In the end you have a bootable disk
-image that can be used with Qemu/KVM, VirtualBox, VMware, Xen or by your cloud infrastructure.
+creates a disk image that can be used with Qemu/KVM, VirtualBox,
+VMware, Xen or by your cloud infrastructure. It runs the Fully
+Automatic Installation using a list of FAI classes. In the end you
+have a bootable disk image.
 .SH OPTIONS
-.TP
-.B -C, --convert
-Convert raw image to qcow2
 .TP
 .B \-c, --class \fICLASS\fR[,\fICLASS\fR]
 Define list of FAI classes
 .TP
+.B -D, --debug
+Enter debugging after the FAI process has finished. Therefore the
+fai-diskimage script is stopped and you may enter the chroot for
+debugging purpose. When finished, leave the chroot and send a CONT
+signal for resuming the fai-diskimage script.
+.TP
 .B -h, --help
 Print help
+.TP
+.B -N, --new
+This option will be passed to the fai call. It then executes the
+scripts in class/[0-9]* for defining classes.
 .TP
 .B -S, --size \fISIZE\fR
 Set size of raw image (suffixes k M G T are supported)
 .TP
 .B -s, \--cspace \fIURI\fR
-Location of the config space. If location starts with /, add prefix
-file://. See fai.conf(5) for all supported protocols
+Location of the config space. If location starts with /, the prefix
+file:// will be added. See fai.conf(5) for all supported
+protocols. Default is /srv/fai/config.
 .TP
 .B -u, --hostname \fIname\fR
 Set hostname to name
@@ -36,9 +45,36 @@ Be verbose
 
 .SH EXAMPLES
 
-fai-diskimage -u cloud3 -S 2G -cDEBIAN,AMD64,FAIBASE,GRUB_PC,CLOUD disk
+ # export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ # fai-diskimage -vNu cloud3 -S2G -cJESSIE64,GCE disk.raw
 
-Creates the file disk.raw.
+Creates a Debian system with a small set of software packages without
+graphical desktop. The disk image disk.raw will be of size 2 GB and
+the host ist called cloud3.
+
+
+ # export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ # cl=DHCPC,UBUNTU,XENIAL,XENIAL64,XORG
+ # fai-diskimage -vNu cloudhost -S5G -c$cl ubuntu.qcow2
+
+Creates a disk image of size 5GB called ubuntu.qcow2 for a Ubuntu 16.04 desktop.
+
+.SH NOTES
+Before creating an image, make sure you have the configuration space
+available. Create the config space for FAI by using the examples from
+the fai-doc package.
+
+ # mkdir -p /srv/fai/config
+ # cp -a /usr/share/doc/fai-doc/examples/simple /srv/fai/config
+
+fai-diskimage is not limited to creating images for virtual
+machines. The raw images can also be copies (via dd) onto a real disk
+for booting bare metal hosts.
+
+You can start fai-diskimage in a clean shell environment by calling:
+
+ # env -i /usr/sbin/fai-diskimage -vNu cloudhost -S5G -cJESSIE64,GCE disk.raw
+
 .SH SEE ALSO
 .br
 This program is part of FAI (Fully Automatic Installation).  See the FAI manual

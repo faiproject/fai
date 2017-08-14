@@ -120,6 +120,7 @@ rwmount() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
 
+    [ $do_init_tasks -eq 0 ] && return
     if [ -x /usr/sbin/logtail ] ; then
       logtail -f /var/log/kern.log -o /var/lib/fai/kern.log.offset >> $LOGDIR/dmesg.log
     else
@@ -781,7 +782,9 @@ task_confdir() {
 
         printk=${printk:-6}
         echo $printk > /proc/sys/kernel/printk
-        rsyslogd
+        if [ -x /usr/sbin/rsyslogd ]; then
+            /usr/sbin/rsyslogd
+        fi
 
         create_resolv_conf
     fi

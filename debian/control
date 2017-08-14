@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Thomas Lange <lange@debian.org>
 Uploaders: Michael Prokop <mika@debian.org>
 Standards-Version: 3.9.8
-Build-Depends-Indep: asciidoc, w3m, dblatex, docbook-xsl, libparse-recdescent-perl
+Build-Depends-Indep: asciidoc-dblatex, w3m, dblatex, docbook-xsl, libparse-recdescent-perl
 Build-Depends: debhelper (>= 7), libgraph-perl
 Vcs-Git: git://github.com/faiproject/fai.git
 Vcs-Browser: https://github.com/faiproject/fai
@@ -12,9 +12,11 @@ Homepage: http://fai-project.org
 
 Package: fai-client
 Architecture: all
-Depends: perl, file, libapt-pkg-perl, iproute2 | iproute, debconf-utils, ${misc:Depends}
+Depends: perl, file, libapt-pkg-perl, libfile-lchown-perl, iproute2 | iproute, debconf-utils, ${misc:Depends}
 Recommends: libgraph-perl, fdisk | util-linux (<< 2.29.2-3~)
 Suggests: logtail
+Breaks: fai-nfsroot (<< 5.2)
+Replaces: fai-nfsroot (<< 5.2)
 Description: Fully Automatic Installation client package
  FAI is a non-interactive system to install, customize and manage
  Linux systems and software configurations on computers as well as
@@ -41,7 +43,7 @@ Package: fai-server
 Architecture: all
 Depends: fai-client, debootstrap, xz-utils, ${misc:Depends}
 Recommends: nfs-kernel-server, isc-dhcp-server, tftpd-hpa | atftpd, openssh-server, openssh-client, openbsd-inetd | inet-superserver, libproc-daemon-perl
-Suggests: debmirror, reprepro, xorriso, squashfs-tools, binutils, grub2, aptitude, perl-tk
+Suggests: debmirror, reprepro, xorriso, squashfs-tools, binutils, grub2, aptitude, perl-tk, qemu-utils, fai-setup-storage
 Description: Fully Automatic Installation server package
  FAI is a non-interactive system to install, customize and manage
  Linux systems and software configurations on computers as well as
@@ -73,7 +75,7 @@ Description: Fully Automatic Installation quickstart package
 
 Package: fai-nfsroot
 Architecture: all
-Depends: fai-client, fai-setup-storage, pxelinux| syslinux-common, ${misc:Depends}
+Depends: fai-client (>=5.2), fai-setup-storage, pxelinux| syslinux-common, ${misc:Depends}
 Description: Fully Automatic Installation nfsroot package
  FAI is a non-interactive system to install, customize and manage
  Linux systems and software configurations on computers as well as

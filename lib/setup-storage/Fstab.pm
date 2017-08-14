@@ -304,7 +304,7 @@ sub generate_fstab {
         # skip entries without a mountpoint
         next if ( $config->{$c}->{volumes}->{$v}->{mountpoint} eq "-");
 
-        $FAI::disk_var{BOOT_DEVICE} = (keys $config->{$c}->{volumes}->{$v}->{devices})[0]
+        $FAI::disk_var{BOOT_DEVICE} = (keys %{$config->{$c}->{volumes}->{$v}->{devices}})[0]
           if ( $config->{$c}->{volumes}->{$v}->{mountpoint} eq $boot_mnt_point);
 
         # get an array of devices that are part of the BTRFS RAID configuration

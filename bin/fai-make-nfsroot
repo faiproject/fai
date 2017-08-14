@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2017 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2016 Thomas Lange
+	Copyright (C) 1999-2017 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -187,7 +187,9 @@ setclasses() {
     iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
     distro=$(. $NFSROOT/etc/os-release; echo ${ID} ${ID}_${VERSION_ID} | tr '[:lower:].' '[:upper:]_')
     export classes="NFSROOT $iarch $distro"
-    [ X$verbose = X1 ] && echo Classes are set to $classes
+    if [ X$verbose = X1 ] ; then
+      echo Classes are set to $classes
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setup_ssh() {
@@ -383,7 +385,7 @@ EOF
     echo 'add_dracutmodules+=" livenet "' > $NFSROOT/etc/dracut.conf.d/13-add-cd-support.conf
     echo 'hostonly="no"' > $NFSROOT/etc/dracut.conf.d/20-generic-image.conf
     cat <<EOF > $NFSROOT/etc/dracut.conf.d/01-omit.conf
-omit_dracutmodules+=" btrfs lvm resume usrmount mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd "
+omit_dracutmodules+=" btrfs crypt dash lvm resume usrmount modsign mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd "
 filesystems="nfs lockd ext4"
 EOF
 
@@ -454,8 +456,8 @@ upgrade_nfsroot() {
     fi
 
     # if we have the keyring on the host, install the key of the fai-project.org package repository
-    if [ -f /usr/share/keyrings/debian-keyring.gpg ]; then
-	HOME=/root gpg --keyring /usr/share/keyrings/debian-keyring.gpg --export 074BCDE4 | chroot $NFSROOT apt-key add -
+    if [ -n "$(apt-key list | grep 074BCDE4)" ]; then
+        HOME=/root apt-key export 074BCDE4 | chroot $NFSROOT apt-key add -
     fi
 
     $ROOTCMD apt-get update
@@ -472,15 +474,17 @@ add_packages_nfsroot() {
     local err
 
     setclasses
+    $ROOTCMD apt-cache dumpavail > $NFSROOT/var/lib/dpkg/available
     install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
     echo "Adding additional packages to $NFSROOT:"
     cat $NFSROOT/var/tmp/packages.nfsroot
     set +e
-    call_verbose install_packages -N $v -p$cfdir
+    call_verbose install_packages $v -p$cfdir
     err=$?
     if [ $err -ne 0 ]; then
 	die 12 "install_packages had exit code: $err"
     fi
+    rm $NFSROOT/var/lib/dpkg/available
     set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -498,7 +502,7 @@ umount_dirs() {
 
     if [ -n "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
-	rmdir $MNTPOINT || true
+	rmdir $NFSROOT/$MNTPOINT || true
     fi
     # show directories still mounted on nfsroot
     mount | grep " on $NFSROOT " || true
@@ -509,10 +513,11 @@ setup_tftp(){
     # tftp environment
     local pxebin
 
-    # wheezy/jessie pathes
+    # wheezy path
     if [ -f $NFSROOT/usr/lib/PXELINUX/pxelinux.0 ]; then
         pxebin=$NFSROOT/usr/lib/PXELINUX/pxelinux.0
     else
+	# jessie/stretch path
         pxebin=$NFSROOT/usr/lib/syslinux/pxelinux.0
     fi
 

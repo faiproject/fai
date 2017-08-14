@@ -5,11 +5,10 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-Sun, 30 Jun 2016
+Mon, 16 Jan 2017
 :Date: a date
-:Revision: 5.0
+:Revision: 5.3
 
-:faiver:  5.0
 :nfsrootsize: 690
 :mirrorsize: 56
 
@@ -36,11 +35,11 @@ configuration and how to deal with errors.
 
 ----
      +-----------------------------------------------------------------------+
-     | This manual describes FAI 5.0 but most things are also valid for 4.x. |
+     | This manual describes FAI 5.3 but most things are also valid for 4.x. |
      +-----------------------------------------------------------------------+
 ----
 
-(c) 2000-2015 Thomas Lange
+(c) 2000-2017 Thomas Lange
 
 
 .Copyright
@@ -537,7 +536,7 @@ This will also install the packages for DHCP, TFTP and NFS server daemons.
 # sed -i -e 's/#LOGUSER/LOGUSER/' /etc/fai/fai.conf
 ----
 
-* By default, FAI uses http://httpredir.debian.org as package
+* By default, FAI uses http://deb.debian.org as package
   mirror, which should attempt to find a fast package repository for you. footnote:[If you want to use a faster mirror, adjust the URL
   in _/etc/fai/apt/sources.list_ and +FAI_DEBOOTSTRAP+ in _/etc/fai/nfsroot.conf_ before calling fai-setup.]
 Now, we can run `fai-setup(8)` footnote:[This will call `fai-make-nfsroot(8)` internally.]
@@ -554,13 +553,12 @@ The log file is written to /var/log/fai/fai-setup.log.
   the FAI web page at http://fai-project.org/logs/fai-setup.log.
 
 ----
-FAI packages inside the nfsroot:
-fai-client         4.3.2
-fai-nfsroot        4.3.2
-fai-setup-storage  4.3.2
-FAI related packages inside the nfsroot:
-dracut             040+1-1
-dracut-network     040+1-1
+FAI packages and related packages inside the nfsroot:
+dracut             044+189-2
+dracut-network     044+189-2
+fai-client         5.3.3~bpo8+2
+fai-nfsroot        5.3.3~bpo8+2
+fai-setup-storage  5.3.3~bpo8+2
 Waiting for background jobs to finish
 fai-make-nfsroot finished properly.
 Log file written to /var/log/fai/fai-make-nfsroot.log
@@ -1032,6 +1030,9 @@ the package will be removed, not installed. All package names are
 checked for misspellings.  Any package which does not exist, will be
 removed from the list of packages to install. So be careful not to
 misspell any package names.
+
+install-norec::
+Like install but without installing the recommended packages.
 
 remove::
 Remove all packages that are specified in the following lines. Append
@@ -1659,6 +1660,43 @@ stick by just writing the content of the ISO file to your USB stick
 This is no live CD of the install server.
 
 
+=== [[diskimage]]Creating VM disk images using FAI
+
+Using the command `fai-diskimage(8)` you can create Linux machine disk
+images, which can be used with a virtual machine like KVM, VMware,
+VirtualBox or a cloud service like OpenStack, GCE, EC2 and others. The
+installation process performs the normal FAI tasks on a raw disk
+image. After the installation you can boot the disk image and have a
+running system. The disk image can also be converted to qcow2 format.
+
+----
+ faiserver# export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ faiserver# fai-diskimage -u cloud3 -S 2G -cDEBIAN,JESSIE64,AMD64,FAIBASE,GRUB_PC,CLOUD,GCE disk.raw
+----
+Creates the file disk.raw for a host called cloud3, with a small set
+of software packages.
+
+----
+ # export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ # cl=DEFAULT,DHCPC,DEBIAN,AMD64,FAIBASE,GRUB_PC,UBUNTU,XENIAL,XENIAL64,XORG
+ # fai-diskimage -v -u foobar -S5G -c$cl ubuntu.qcow2
+----
+Creates a disk image called ubuntu.qcow2 for a Ubuntu 16.04 desktop
+with hostname set to foobar.
+
+
+You do not neet to setup the nfsroot when only using
+fai-diskimage. But you need a basefile in your configuration
+space. You can download a Debian base image from
+http://fai-project.org/download/basefile and copy this into your
+config space. If you already have set up the nfsroot you can copy the
+Debian basefile from the nfsroot into your config space by using this
+command:
+----
+ $ cp /srv/fai/nfsroot/var/tmp/base.tar.xz
+ $ /srv/fai/config/basefiles/JESSIE64.tar.xz
+----
+
 === [[sysinfo]]FAI rescue system
 
 If you set the variable +$FAI_ACTION+ to _sysinfo_ (for e.g. by using
@@ -1714,23 +1752,25 @@ demohost# rwmount /target/home
 === [[nonfs]]FAI without NFS
 
 To boot into FAI and begin the installation sequence
-without using the NFS protocol. You boot the client machine using PXE as
+without using the NFS protocol, you boot the client machine using PXE as
 usual and then retrieve an image containing the nfsroot via http.
 
-To create an image, use fai-cd's -S argument
+To create an image, use fai-cd's -S argument and -M to avoid setting up
+a partial mirror within the image.
 
 ----
-faiserver# fai-cd -S squash.img
+faiserver# fai-cd -M -S squash.img
 ----
 
 Move this image to a directory from which it can be requested via http
 (usually a directory served by the webserver)
 
 To now request the squashfs image, add the following to your kernel
-command line, e.g. in your pxelinux configuration file for the client.
+command line, e.g. in your pxelinux configuration file for the client
+with fai-chboot.
 
 ----
-root=live:http://faiserver/cskoeln/squash.img
+root=live:http://faiserver/cskoeln/squash.img FAI_CONFIG_SRC=file:///var/lib/fai/config
 ----
 
 Replace faiserver with the domain name or IP of the machine your
@@ -2321,7 +2361,7 @@ fai-chboot -U http://faiserver/fai -IFv .......
 
 == [[troubleshoot]]Troubleshooting
 
-=== [[booterror]]Booterrors
+=== [[booterror]]Boot errors
 
 The following error message indicates that your install client doesn't
 get an answer from a DHCP server. Check your cables or start the

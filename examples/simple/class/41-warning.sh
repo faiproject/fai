@@ -3,7 +3,10 @@
 if [ X$FAI_ACTION = Xinstall -o X$FAI_ACTION = X ]; then
     :
 else
-    return
+    return 0
+fi
+if [ X$action = Xdirinstall ]; then
+    return 0
 fi
 
 grep -q INSTALL $LOGDIR/FAI_CLASSES || return 0

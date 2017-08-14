@@ -444,6 +444,7 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           # check, whether raid tools are available
           &FAI::in_path("mdadm") or die "mdadm not found in PATH\n";
+          $FAI::uses_raid = 1;
           $FAI::device = "RAID";
           $FAI::configs{$FAI::device}{fstabkey} = "device";
           $FAI::configs{$FAI::device}{opts_all} = {};
@@ -474,6 +475,7 @@ $FAI::Parser = Parse::RecDescent->new(
           &FAI::in_path("lvcreate") or die "LVM tools not found in PATH\n";
           # initialise $FAI::device to inform the following lines about the LVM
           # being configured
+          $FAI::uses_lvm = 1;
           $FAI::device = "VG_";
           $FAI::configs{"VG_--ANY--"}{fstabkey} = "device";
           $FAI::configs{"VG_--ANY--"}{opts_all} = {};
@@ -812,7 +814,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer = (\%FAI::configs)->{CRYPT}->{volumes}->{$vol_id};
           $FAI::partition_pointer_dev_name = "CRYPT$vol_id";
         }
-        mountpoint devices filesystem mount_options lv_or_fsopts
+        mountpoint devices filesystem mount_options lukscreate_or_lvopts
         | /^tmpfs\s+/
         {
           ($FAI::device eq "TMPFS") or die "tmpfs entry invalid in this context\n";
@@ -996,7 +998,23 @@ $FAI::Parser = Parse::RecDescent->new(
                 $dev = "/dev/$dev";
               }
             }
-            my @candidates = glob($dev);
+            my @candidates;
+
+            # resolve /dev/disk/by-id symlinks
+            # those symlinks point to the actual device node
+            # partitions, which may not exist yet, are addressed
+            # by /dev/disk/by-id/${disk}-part${partno}
+            if ($dev =~ m{^(/dev/disk/by-id/.*?)(?:-part(\d+))?$}) {
+              my $part_no = $2;
+              my @real_candidates = map { Cwd::abs_path($_) } glob($1);
+              if (defined $part_no) {
+                @candidates = map { &FAI::make_device_name($_, $part_no) } @real_candidates;
+              } else {
+                @candidates = @real_candidates;
+              }
+            } else {
+              @candidates = glob($dev);
+            }
 
             # options are only valid for RAID
             defined ($opts) and ($FAI::device ne "RAID") and die "Option $opts invalid in a non-RAID context\n";
@@ -1111,6 +1129,12 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer->{btrfscreateopts} = $1;
         }
         | createtuneopt(s?)
+
+   lukscreate_or_lvopts: /lukscreateopts="([^"]*)"/ lv_or_fsopts(s?)
+        {
+          $FAI::partition_pointer->{lukscreateopts} = $1;
+        }
+        | lv_or_fsopts(s?)
 
     lv_or_fsopts: /lvcreateopts="([^"]*)"/ createtuneopt(s?)
         {
