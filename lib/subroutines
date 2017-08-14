@@ -560,9 +560,12 @@ task_faiend() {
     sendmon "TASKEND reboot 0"
 
     cd /
-    for dir in $(mount | grep $target | egrep -v "$target/tmp|media/mirror|proc|tmpfs"| awk '{print $3}' | sort -r); do
-        umount $dir
-    done
+    if [ "$target" != '/' ]; then
+	# do not umount during softupdate
+	for dir in $(mount | grep $target | egrep -v "$target/tmp|media/mirror|proc|tmpfs"| awk '{print $3}' | sort -r); do
+            umount $dir
+	done
+    fi
 
     # remove device mapper devices
     grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
