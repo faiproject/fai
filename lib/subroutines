@@ -158,7 +158,7 @@ cleanup_devicemapper() {
     # remove device mapper devices
     grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
     if [ $? -eq 0 ]; then
-	dmdevices=$(grep 'Executing: vgcreate' $LOGDIR/format.log | awk '{print $3}')
+	dmdevices=$(awk '/Executing: vgcreate/ {print $3}' $LOGDIR/format.log)
 	for d in $dmdevices; do
 	    dmsetup remove /dev/$d/*
 	done
