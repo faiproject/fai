@@ -142,6 +142,29 @@ jobsrunning() {
     ps r | egrep -qv "ps r|TIME COMMAND|rcS"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+umount_target() {
+
+    if [ "$target" != '/' ]; then
+	# do not umount during softupdate
+	umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts $FAI_ROOT/dev 2>/dev/null
+	for dir in $(mount | grep $target | egrep -v "media/mirror|tmpfs"| awk '{print $3}' | sort -r); do
+            mountpoint -q $dir && umount $dir
+	done
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+cleanup_devicemapper() {
+
+    # remove device mapper devices
+    grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
+    if [ $? -eq 0 ]; then
+	dmdevices=$(grep 'Executing: vgcreate' $LOGDIR/format.log | awk '{print $3}')
+	for d in $dmdevices; do
+	    dmsetup remove /dev/$d/*
+	done
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
     # can be an extern script
@@ -558,23 +581,8 @@ task_faiend() {
     sendmon "TASKEND faiend 0"
 
     cd /
-    if [ "$target" != '/' ]; then
-	# do not umount during softupdate
-	umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts $FAI_ROOT/dev 2>/dev/null
-	for dir in $(mount | grep $target | egrep -v "media/mirror|tmpfs"| awk '{print $3}' | sort -r); do
-            umount $dir
-	done
-    fi
-
-    # remove device mapper devices
-    grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
-    if [ $? -eq 0 ]; then
-	dmdevices=$(grep 'Executing: vgcreate' $LOGDIR/format.log | awk '{print $3}')
-	for d in $dmdevices; do
-	    dmsetup remove /dev/$d/*
-	done
-    fi
-
+    umount_target
+    cleanup_devicemapper
     [ $do_init_tasks -eq 0 ] && return 0
     killall -q sshd udevd rsyslogd
     umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
@@ -879,6 +887,12 @@ task_partition() {
     fi
 
     [ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X |& tee $LOGDIR/format.log
+
+    # if we've created device mapper devices, do cleanup on error
+    grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
+    if [ $? -eq 0 ]; then
+	trap "umount_target;cleanup_devicemapper" QUIT EXIT
+    fi
 
     # partitioning tool must create $LOGDIR/disk_var.sh file
     if [ ! -s $LOGDIR/disk_var.sh ]; then
