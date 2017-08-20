@@ -1,4 +1,3 @@
-
 #! /bin/bash
 
 # parse *.profile and build a curses menu, so the user can select a profile
