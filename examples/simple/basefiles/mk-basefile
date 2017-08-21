@@ -98,9 +98,9 @@ EOM
 cleanup-deb() {
 
     chroot $xtmp apt-get clean
-    rm -f $xtmp/etc/hostname $xtmp/etc/resolv.conf $xtmp/etc/machine-id
-    rm $xtmp/var/lib/apt/lists/*_*
-    rm -f $xtmp/etc/udev/rules.d/70-persistent-net.rules
+    rm -f $xtmp/etc/hostname $xtmp/etc/resolv.conf $xtmp/etc/machine-id \
+          $xtmp/var/lib/apt/lists/*_* $xtmp/usr/bin/qemu-*-static \
+          $xtmp/etc/udev/rules.d/70-persistent-net.rules
 }
 
 
@@ -161,19 +161,25 @@ debgeneric() {
     local DIST=$1
     shift
     local mirror=$1
+    shift
+    local arch=$1
 
-    if [[ $DIST =~ 64 ]]; then
-        arch=amd64
-    else
-        arch=i386
-    fi
+    dist=${DIST%%??}
+    local exc="EXCLUDE_$dist"
+    dist=${dist,,}
 
-    DIST=${DIST%%??}
-    dist=${DIST,,}
-
-    local exc="EXCLUDE_$DIST"
     check
-    debootstrap --arch $arch --exclude=${!exc} --include=${INCLUDE_DEBIAN} $dist $xtmp $mirror
+    if [ -n "$arch" ]; then
+	qemu-debootstrap --arch $arch --exclude=${!exc} --include=${INCLUDE_DEBIAN} $dist $xtmp $mirror
+	target="$target_${arch^^}"
+    else
+	if [[ $DIST =~ 64 ]]; then
+            arch=amd64
+	else
+            arch=i386
+	fi
+	debootstrap --arch $arch --exclude=${!exc} --include=${INCLUDE_DEBIAN} $dist $xtmp $mirror
+    fi
     cleanup-deb
     tarit
 }
@@ -209,6 +215,7 @@ Usage: mk-basefile [OPTION] ... DISTRIBUTION
 
    -s                   Show list of supported linux distributions
    -a                   Add xtattrs, acl and selinux properties to the tar file.
+   -f ARCH              Build for foreign architecture ARCH.
    -d DIR               Use DIR for creating the temporary subtree structure.
    -z                   Use gzip for compressing the tar file.
    -J                   Use xz for compressing the tar file.
@@ -229,10 +236,11 @@ zip=cat
 attributes=
 cleanup=1
 
-while getopts ashzJd:k opt ; do
+while getopts ashzJd:kf: opt ; do
     case "$opt" in
         a) attributes="--xattrs --selinux --acl" ;;
         d) export TMPDIR=$OPTARG ;;
+        f) export ARCH=$OPTARG ;;
         z) zip="gzip -9"; ext=tar.gz ;;
         J) zip="xz -8" ext=tar.xz ;;
         k) cleanup=0 ;;
@@ -267,7 +275,7 @@ case "$target" in
     TRUSTY*|XENIAL*)
         debgeneric $target $MIRROR_UBUNTU ;;
     SQUEEZE*|WHEEZY*|JESSIE*|STRETCH*|BUSTER*)
-        debgeneric $target $MIRROR_DEBIAN ;;
+        debgeneric $target $MIRROR_DEBIAN $ARCH;;
     *) echo "Unknown distribution. Aborting."
        prtdists
        exit 99 ;;
