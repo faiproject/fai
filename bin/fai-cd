@@ -76,8 +76,20 @@ die() {
     local e=$1   # first parameter is the exit code
     shift
 
-    echo "ERROR: $@" >&2   # print error message
+    echo -e "ERROR: $@" >&2   # print error message
     exit $e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+check_programs() {
+
+    local msg
+    [ $squash_only -eq 1 -o -x "$(which xorriso)" ] || msg+="xorriso not found. Please install package."
+    [ -x "$(which mksquashfs)" ] || msg+="\nmksquashfs not found. Please install the package squashfs-tools."
+    [ -x "$(which strings)" ] || msg+="\ncommand strings not found. Please install package binutils."
+
+    if [ -n "$msg" ]; then
+	die 8 "$msg"
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_ext3fs_image() {
@@ -416,9 +428,7 @@ if [ $bootonly -eq 0 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
 
-[ $squash_only -eq 1 -o -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
-[ -x "$(which mksquashfs)" ] || die 8 "mksquashfs not found. Please install the package squashfs-tools."
-[ -x "$(which strings)" ] || die 8 "command strings not found. Please install package binutils."
+check_programs
 
 # use FAI_ETC_DIR from environment variable
 if [ -n "$FAI_ETC_DIR" -a -z "$cdir" ]; then
