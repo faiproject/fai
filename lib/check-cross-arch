@@ -1,0 +1,58 @@
+#! /bin/bash
+
+# check-cross-arch - check if qemu is needed for the target directory
+#
+# This script is part of FAI (Fully Automatic Installation)
+# Copyright (C) 2017 Thomas Lange, lange@informatik.uni-koeln.de
+
+
+target=$1
+
+# is there already a qemu-*static binary?
+if [ -n "$(ls $target/usr/bin/qemu-*-static* 2>/dev/null)" ]; then
+    echo qemu user static already available
+    exit 1
+fi
+
+
+info=$(file /bin/ls)
+myarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*')
+if [ -z "$myarch" ]; then
+    if [[ "$info" =~  "ELF 32-bit LSB shared object, Intel 80386" ]]; then
+	myarch=i386
+    fi
+fi
+
+# where is the ls command
+if [ -f $target/bin/ls ]; then
+    _ls=$target/bin/ls
+elif [ -f $target/usr/bin/ls ]; then
+    _ls=$target/usr/bin/ls
+else
+    echo "Cannot find ls command in $target"
+    exit 3
+fi
+
+info=$(file $_ls)
+targetarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*')
+if [ -z "$targetarch" ]; then
+    if [[ "$info" =~  "ELF 32-bit LSB shared object, Intel 80386" ]]; then
+	targetarch=i386
+    fi
+fi
+
+cross=1
+# debugging echo myarch: $myarch targetarch: $targetarch
+if [ $myarch = $targetarch ]; then
+    cross=0
+elif [ $targetarch = $(dpkg --print-foreign-architectures) ]; then
+    cross=0
+fi
+
+
+if [ $cross -eq 1 ]; then
+     [ X$verbose = X1 ] && echo "Using qemu-$targetarch-static for cross architecture chroot."
+     cp /usr/bin/qemu-$targetarch-static $target/usr/bin
+fi
+
+exit $cross
