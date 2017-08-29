@@ -101,5 +101,9 @@ install:
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
 	cp -a utils $(DOCDIR)/examples
+	# Systemd
+	mkdir -p $(DESTDIR)/usr/lib/systemd/system
+	install -m644 conf/systemd/* $(DESTDIR)/usr/lib/systemd/system
+
 
 .PHONY: clean veryclean
