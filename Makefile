@@ -94,7 +94,6 @@ install:
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
-	install -m644 conf/upstart-fai.conf $(DESTDIR)/etc/init/fai.conf
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
 	cp -a pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
 	cp -a pixmaps/small/*.gif $(DESTDIR)/usr/share/fai/pixmaps/small
