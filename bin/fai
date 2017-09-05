@@ -102,11 +102,7 @@ fai_init() {
         define_fai_flags
         # we really need to start udev
         if [ -x /etc/init.d/udev ]; then
-            if [ X$UPSTART_JOB != Xfai ]; then
-                /etc/init.d/udev start
-            else
-                test -f /etc/init/udevtrigger.conf && udevadm trigger --action=add && udevadm settle
-            fi
+            test -f /etc/init/udevtrigger.conf && udevadm trigger --action=add && udevadm settle
         fi
         mkdir -p /var/run/sshd /var/run/network # when using initrd kernels
         ifup lo
@@ -278,7 +274,7 @@ fi
 
 # are we called as an init substitute ?
 export do_init_tasks=0
-[ "$0" = "/etc/init.d/rcS" ] || [ X$UPSTART_JOB = Xfai ] && do_init_tasks=1
+[ "$0" = "/etc/init.d/rcS" ] && do_init_tasks=1
 if [ $do_init_tasks -eq 1 ]; then
 
     # if hostname was set on the kernel command line (mostly when booting from CD)
