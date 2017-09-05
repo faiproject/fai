@@ -11,7 +11,15 @@ ainsl /etc/ssh/sshd_config 'ClientAliveInterval 120'
 ainsl -a /etc/modprobe.d/blacklist.conf 'blacklist pcspkr'
 ainsl -a /etc/modprobe.d/blacklist.conf 'blacklist floppy'
 
-rm -f $target/etc/resolv.conf $target/etc/udev/rules.d/70-persistent-net.rules $target/lib/udev/write_net_rules
+rm -f $target/etc/resolv.conf \
+      $target/etc/udev/rules.d/70-persistent-net.rules \
+      $target/lib/udev/write_net_rules \
+      $target/etc/mailname \
+      $target/etc/machine-id \
+      $target/var/lib/dbus/machine-id
+
+touch $target/etc/machine-id
+
 shred --remove $target/etc/ssh/ssh_host_*
 
 # FIXME: DHCP RFC3442 is used incorrect in Azure
