@@ -394,7 +394,7 @@ sub get_current_disks {
 ################################################################################
 #
 # @brief Collect the current LVM configuration
-#
+# use enviroment variable SS_IGNORE_VG to ignore a list of volume groups
 ################################################################################
 sub get_current_lvm {
 
