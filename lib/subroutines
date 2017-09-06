@@ -155,12 +155,13 @@ umount_target() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 cleanup_devicemapper() {
 
+    local vgroup v
     # remove device mapper devices
     grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
     if [ $? -eq 0 ]; then
-	dmdevices=$(awk '/Executing: vgcreate/ {print $3}' $LOGDIR/format.log)
-	for d in $dmdevices; do
-	    dmsetup remove /dev/$d/*
+	vgroup=$(awk '/Executing: vgcreate/ {print $3}' $LOGDIR/format.log)
+	for v in $vgroup; do
+	    vgremove -f $v
 	done
     fi
 }
