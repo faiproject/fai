@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # replace {release} in a sources.list template with the value of $release
-
+# replace {apt_cdn} with the value of $apt_cdn
 
 # $1 is the class name used
 # $2 is the path to the file copied
@@ -11,7 +11,13 @@ grep -q '{' $2 || exit 0
 
 if [ -z "$release" ]; then
     echo "\$release is undefined. No substitution performed in $2."
-   exit 0
+else
+    sed -i -e "s/{release}/$release/g" $2
 fi
 
-sed -i -e "s/{release}/$release/g" $2
+if [ -z "$apt_cdn" ]; then
+    echo "\$apt_cdn not defined. not substituting in $2."
+else
+    sed -i -e "s#{apt_cdn}#$apt_cdn#g" $2
+fi
+
