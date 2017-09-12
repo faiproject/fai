@@ -28,7 +28,8 @@ elif [ -f $target/lib/systemd/system/getty@.service ]; then
     sed -i -e 's#sbin/agetty --noclear#sbin/agetty -f /etc/issue.linuxlogo --noclear#' $target/lib/systemd/system/getty@.service
 fi
 
-if [ ! -f $target/etc/machine-id -a -f $target/bin/systemd-machine-id-setup ]; then
+# recreate machine-id if the file is empty
+if [ X"$(stat -c '%s' $target/etc/machine-id 2>/dev/null)"  = X0 -a -f /bin/systemd-machine-id-setup ]; then
     $ROOTCMD systemd-machine-id-setup
 fi
 
