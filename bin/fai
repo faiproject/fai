@@ -39,6 +39,7 @@ export romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 [ -n "$STOP_ON_ERROR" ] || export STOP_ON_ERROR=700
 export faimond=0
 export renewclass=0
+export task_error=0 # tasks can set this variable to indicate an error
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fdie() {
@@ -334,8 +335,11 @@ unset newhostname
 
 fstart > >( tee -a $LOGDIR/fai.log )  2>&1
 
-task action |& tee -a $LOGDIR/fai.log
-final_exit_code=${PIPESTATUS[0]}
+task action > >( tee -a $LOGDIR/fai.log ) 2>&1
+
+if [ $task_error -gt 0 -o $? -gt 0 ]; then
+    final_exit_code=1
+fi
 
 [ -L "/var/run/fai/current_config" ] && rm -f "/var/run/fai/current_config"
 
