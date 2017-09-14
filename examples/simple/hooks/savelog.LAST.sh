@@ -118,6 +118,7 @@ asking for cache data failed
 However, I can not read the target:
 Warning: The partition table looks like it was made
 task_error=0
+task_local_error=0
 ^info: Trying to set
 warning: /usr/lib/X11/fonts
 can't read /etc/udev/rules.d/z25_persistent-net.rules
