@@ -4,6 +4,9 @@
 #
 # Thomas Lange, Uni Koeln, 2011-2017
 # based on the Makefile implementation of Michael Goetze
+#
+# Usage example: mk-basefile -J STRETCH64
+# This will create a STRETCH64.tar.xz basefile.
 
 # Supported distributions (each i386/amd64):
 # Debian GNU/Linux
@@ -23,12 +26,12 @@ MIRROR_CENTOS=http://mirror.netcologne.de/
 
 EXCLUDE_SQUEEZE=isc-dhcp-client,isc-dhcp-common,info,tasksel,tasksel-data
 EXCLUDE_WHEEZY=info,tasksel,tasksel-data
-EXCLUDE_JESSIE=tasksel,tasksel-data
-EXCLUDE_STRETCH=tasksel,tasksel-data
+EXCLUDE_JESSIE=info,tasksel,tasksel-data
+EXCLUDE_STRETCH=info,tasksel,tasksel-data
 EXCLUDE_BUSTER=tasksel,tasksel-data
 
 EXCLUDE_TRUSTY=dhcp3-client,dhcp3-common,info
-EXCLUDE_XENIAL=tasksel,tasksel-data
+EXCLUDE_XENIAL=udhcpc,dibbler-client,info,tasksel,tasksel-data
 
 # we need aptitude in the base file, since users may want to use it for installing packages
 INCLUDE_DEBIAN=aptitude
@@ -68,6 +71,7 @@ check() {
 
 mkpost-centos() {
 
+    # set local mirror for rinse post script
     [ -z "$MIRROR_CENTOS" ] && return
     cat <<EOM > $xtmp/post
 #! /bin/sh
@@ -81,6 +85,7 @@ EOM
 
 mkpost-slc() {
 
+    # set local mirror for rinse post script
     ver=$1
     [ -z "$MIRROR_SLC" ] && return
     cat <<EOM > $xtmp/post
@@ -261,6 +266,7 @@ chmod 755 $xtmp
 
 target=$1 # also the name of the output file
 
+[ -z "$target" ] && usage
 case "$target" in
     CENTOS5_32) centos i386 5 ;;
     CENTOS5_64) centos amd64 5 ;;
