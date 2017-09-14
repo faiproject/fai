@@ -53,7 +53,6 @@ supported: .qcow2, .vdi, .vhdx, .vmdk.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
-   -D|--debug   	    enter debugging
    -N|--new                 execute scripts class/[0-9]* for defining classes
    -c|--class <class,...>   define list of FAI classes
    -S|--size  <size>        size of raw image (suffixes k M G T are supported)
@@ -82,7 +81,7 @@ check_commands() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 call="$0 $*"
-TEMP=$(getopt -o NDS:s:u:hvc: --long new,debug,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o NS:s:u:hvc: --long new,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -90,15 +89,11 @@ unset TEMP
 
 verbose=0
 convert=1
-debug=0
 
 while true ; do
     case "$1" in
         -h|--help)
             usage 0 ;;
-        -D|--debug)
-            debug=1
-            shift ;;
         -v|--verbose)
             export verbose=1
             shift ;;
@@ -185,18 +180,8 @@ mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
 trap "cleanup" EXIT
 
 LC_ALL=C fai $renew -u $hname -s $uri -c$classes install $mnt
-
-# do not umount for debugging purpose
-if [ $debug -eq 1 ]; then
-    echo "==================================================================="
-    echo "The chroot is mounted on $mnt."
-    echo "${0##*/} now halted."
-    echo "After debugging, call kill -CONT $$, to continue the process."
-    echo "==================================================================="
-    kill -STOP $$ || true
-fi
-
 cleanup
+
 trap - ERR
 
 # convert if needed
