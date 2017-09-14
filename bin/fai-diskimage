@@ -10,8 +10,6 @@
 # this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
 # should unshare be used ?
 
-set -e
-
 die() {
 
     local e=$1   # first parameter is the exit code
@@ -23,7 +21,6 @@ die() {
 
 cleanup() {
 
-    set +e
     local dirs dir
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
 	# try umount several times, because some postinst jobs may still run and use the filesystems
@@ -34,7 +31,6 @@ cleanup() {
 	    sleep $i
 	done
     done
-    set -e
     losetup -d $loop
     rm -rf $mnt
     if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
@@ -186,7 +182,7 @@ loopdev=${loop/\/dev\//}
 export disklist=$loopdev
 mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
 
-trap "cleanup" ERR
+trap "cleanup" EXIT
 
 LC_ALL=C fai $renew -u $hname -s $uri -c$classes install $mnt
 
@@ -203,7 +199,6 @@ fi
 cleanup
 trap - ERR
 
-set +e
 # convert if needed
 if [ $convert -eq 1 ]; then
     [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname."
