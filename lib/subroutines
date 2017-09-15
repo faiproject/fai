@@ -961,7 +961,6 @@ task_extrbase() {
     local fs=$FAI_ROOT/etc/fstab
 
     fetch-basefile
-    echo "Unpacking distro base archive"
     # remember, ftar extracts into $FAI_ROOT by default, so / means $FAI_ROOT/
     # copy the base file class based if it exists
     [ -d $FAI/basefiles ] && ftar -1v -s $FAI/basefiles /
@@ -1098,7 +1097,7 @@ EOF
         [ ! -f $FAI/package_config/$keyfile.asc ] && continue
         echo -n "Loading APT key from $keyfile.asc "
 	[ -f $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg ] || touch $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg
-        cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key --keyring /etc/apt/trusted.gpg.d/$keyfile.asc.gpg add -
+        cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key --keyring /etc/apt/trusted.gpg.d/$keyfile.asc.gpg add - 2>/dev/null
         unset keys["$keyfile.asc"]
     done
 
