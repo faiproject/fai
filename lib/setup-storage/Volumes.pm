@@ -402,7 +402,10 @@ sub get_current_lvm {
   use Cwd qw(abs_path);
 
   # create hash of vgs to be ignored
-  my %vgignore = map { $_ , 1} split /[,\s]/,$ENV{"SS_IGNORE_VG"};
+  my %vgignore = ();
+  if (defined $ENV{"SS_IGNORE_VG"}) {
+    map { $_ , 1} split /[,\s]/,$ENV{"SS_IGNORE_VG"};
+  }
 
   # get the existing volume groups
   foreach my $vg (get_volume_group_list()) {
