@@ -5,7 +5,7 @@
 # fai-chboot -- manage configuration for network boot
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2003-2016 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2003-2017 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -34,7 +34,7 @@ use Net::hostent;
 use Getopt::Std;
 use File::Copy;
 
-our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u,$opt_U);
+our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u,$opt_U,$opt_q);
 our ($error,$pxedir,$nfsroot,$tftproot,$verbose,$append,$action,$kernelsuffix);
 our ($mac,$ipadr,$cfdir,$flags,$debug,$match,$bootprot);
 our (%hname,%hexname,%type,@allfiles,@templates,@enabled,@other,@patterns,@disabled);
@@ -235,7 +235,9 @@ sub printpxe {
   }
   close (CFG);
 
-  if ($opt_l && ! $opt_L) {
+  if ($opt_q) {
+    printf "%-16.16s $pxedir/$hex \n",$host;
+  } elsif ($opt_l && ! $opt_L) {
     if ($append =~ /FAI_ACTION=(\S+)/) {
       $append = $1;
     } else {
@@ -387,7 +389,7 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:U:oP') || usage;
+getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:U:oPq') || usage;
 $opt_h and usage;
 
 $opt_n and $opt_v = 1;
@@ -419,6 +421,7 @@ $pxedir = $opt_D || "$tftproot/pxelinux.cfg";
 (-d $pxedir) || die "PXE directory $pxedir does not exist.";
 
 $opt_l and lsdir(@ARGV);
+$opt_q and lsdir(@ARGV);
 
 if ($opt_d) {
   die "Missing host name(s). Can't disable network booting.\n" unless @ARGV;
