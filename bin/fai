@@ -335,11 +335,17 @@ unset newhostname
 
 fstart > >( tee -a $LOGDIR/fai.log )  2>&1
 
-task action > >( tee -a $LOGDIR/fai.log ) 2>&1
-
-if [ $task_error -gt 0 -o $? -gt 0 ]; then
+task action |& tee -a $LOGDIR/fai.log
+if [ ${PIPESTATUS[0]} -gt 0 ]; then
     final_exit_code=1
 fi
+if [ -f $LOGDIR/task_error ]; then
+    task_error=$(< $LOGDIR/task_error)
+    if [ $task_error -gt 0 ]; then
+	final_exit_code=1
+    fi
+fi
+
 
 [ -L "/var/run/fai/current_config" ] && rm -f "/var/run/fai/current_config"
 
