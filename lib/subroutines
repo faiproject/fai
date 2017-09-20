@@ -586,7 +586,10 @@ task_faiend() {
     cd /
     umount_target
     cleanup_devicemapper
-    [ $do_init_tasks -eq 0 ] && return 0
+    if [ $do_init_tasks -eq 0 ]; then
+	echo "Log files are saved in $LOGDIR"
+	return 0
+    fi
     killall -q sshd udevd rsyslogd
     umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
     umount -arf 2>/dev/null
