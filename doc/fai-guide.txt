@@ -80,7 +80,7 @@ Download::
 http://fai-project.org/download
 
 Entry for 'sources.list'::
-`deb http://fai-project.org/download jessie koeln`
+`deb http://fai-project.org/download stretch koeln`
 
 Manual pages::
 http://fai-project.org/doc/man/
@@ -519,7 +519,7 @@ steps are needed:
 
 ----
 # wget -O - http://fai-project.org/download/074BCDE4.asc | apt-key add -
-# echo "deb http://fai-project.org/download jessie koeln" > /etc/apt/sources.list.d/fai.list
+# echo "deb http://fai-project.org/download stretch koeln" > /etc/apt/sources.list.d/fai.list
 # apt-get update
 # aptitude install fai-quickstart
 ----
@@ -1689,13 +1689,39 @@ You do not neet to setup the nfsroot when only using
 fai-diskimage. But you need a basefile in your configuration
 space. You can download a Debian base image from
 http://fai-project.org/download/basefile and copy this into your
-config space. If you already have set up the nfsroot you can copy the
-Debian basefile from the nfsroot into your config space by using this
-command:
+config space.
 ----
- $ cp /srv/fai/nfsroot/var/tmp/base.tar.xz
- $ /srv/fai/config/basefiles/JESSIE64.tar.xz
+ $ cd /srv/fai/config/basefiles
+ $ wget http://fai-project.org/download/basefiles/STRETCH64.tar.xz
 ----
+
+
+=== [[cross-arch]]Building cross-architecture disk images for a VM
+
+Starting FAI 5.4 it's now possible to build a disk image for
+64 bit ARM architecture (aarch64) on a host running on amd64
+architecture. Here are the steps do to:
+
+----
+# apt install qemu-user-static
+# apt install fai-server fai-setup-storage fai-doc qemu-utils
+# fai-mk-configspace
+
+# export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+# fai-diskimage -vu armhost -S2G -cDEFAULT,DHCPC,DEBIAN,ARM64,STRETCH64_ARM64,FAIBASE,DEMO,CLOUD,LAST arm64.raw
+# chown your_user_id arm64.raw
+# cp /var/log/fai/armhost/last/vmlinuz* vmlinuz
+# cp /var/log/fai/armhost/last/initrd.img* initrd
+----
+
+Then you can run qemu as a normal user:
+----
+> qemu-system-aarch64 -m 1000 -M virt,gic_version=3 -cpu cortex-a57 -drive file=arm64.raw,if=virtio,index=1 -no-reboot -nographic -name ARM64 -kernel vmlinuz -initrd initrd -append "console=ttyAMA0 rw ip=dhcp root=/dev/vda1 net.ifnames=0"
+----
+
+Keep in mind, that this qemu network setup will have poor
+performance. Use tap devices for much better performance.
+
 
 === [[sysinfo]]FAI rescue system
 
