@@ -5,11 +5,11 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-Mon, 16 Jan 2017
+Mon, 21 Sep 2017
 :Date: a date
-:Revision: 5.3
+:Revision: 5.4
 
-:nfsrootsize: 690
+:nfsrootsize: 780
 :mirrorsize: 56
 
 ////
@@ -35,7 +35,7 @@ configuration and how to deal with errors.
 
 ----
      +-----------------------------------------------------------------------+
-     | This manual describes FAI 5.3 but most things are also valid for 4.x. |
+     | This manual describes FAI 5.4 but most things are also valid for 4.x. |
      +-----------------------------------------------------------------------+
 ----
 
@@ -71,19 +71,19 @@ USA
 
 
 Homepage::
-http://fai-project.org
+https://fai-project.org
 
 FAI wiki::
-http://wiki.fai-project.org
+https://wiki.fai-project.org
 
 Download::
-http://fai-project.org/download
+https://fai-project.org/download
 
 Entry for 'sources.list'::
-`deb http://fai-project.org/download stretch koeln`
+`deb https://fai-project.org/download stretch koeln`
 
 Manual pages::
-http://fai-project.org/doc/man/
+https://fai-project.org/doc/man/
 
 Mailing list::
 https://lists.uni-koeln.de/mailman/listinfo/linux-fai
@@ -96,7 +96,7 @@ Bugs::
 Use the Debian bug tracking system (BTS) http://bugs.debian.org
 
 User visible changes::
-http://fai-project.org/NEWS
+https://fai-project.org/NEWS
 
 Source tree via git::
 git clone git://github.com/faiproject/fai.git
@@ -199,7 +199,7 @@ file system, inspect the hardware or do any other task.
 * All similar configurations are shared among all install clients.
 * Log files for all installations are saved to the installation server.
 * Shell, Perl, Python, Ruby, expect and CFEngine scripts are supported during the customization step.
-* Support for many protocols like NFS, FTP, HTTP, git
+* Support for many protocols like NFS, FTP, HTTPS, git
 * Can be used as a rescue system and for hardware inventory.
 * Diskless client support.
 * Easily add your own functions via hooks or change the default behavior.
@@ -230,7 +230,7 @@ times. All install clients had a 1Gbit network card installed.
 
 Without further ado, this section will provide a quick and easy demonstration of a fully automatic installation using the FAI CD and a virtual machine.
 
-Just download the CD ISO image from http://fai-project.org/fai-cd and boot
+Just download the CD ISO image from https://fai-project.org/fai-cd and boot
 your VM using this CD. You will see a grub menu where you can select
 from different installation types.
 
@@ -518,8 +518,8 @@ steps are needed:
 * Install the package 'fai-quickstart' on your install server.
 
 ----
-# wget -O - http://fai-project.org/download/074BCDE4.asc | apt-key add -
-# echo "deb http://fai-project.org/download stretch koeln" > /etc/apt/sources.list.d/fai.list
+# wget -O - https://fai-project.org/download/074BCDE4.asc | apt-key add -
+# echo "deb https://fai-project.org/download stretch koeln" > /etc/apt/sources.list.d/fai.list
 # apt-get update
 # aptitude install fai-quickstart
 ----
@@ -550,7 +550,7 @@ The log file is written to /var/log/fai/fai-setup.log.
 
 * These are some of the lines you will see at the end of
   _fai-setup_. A complete example of 'fai-setup.log' is available on
-  the FAI web page at http://fai-project.org/logs/fai-setup.log.
+  the FAI web page at https://fai-project.org/logs/fai-setup.log.
 
 ----
 FAI packages and related packages inside the nfsroot:
@@ -807,14 +807,14 @@ tar file based on the classes defined. Thus the file has to be named 'CLASS.tar.
 _extrbase_. Use this if you want to install another distribution or
 version than that running during the installation.
 +
-This basefile can also be received based on FAI classes via HTTP or FTP
+This basefile can also be received based on FAI classes via HTTP/HTPPS or FTP
 by defining the variable FAI_BASEFILEURL. FAI will download a file
 CLASSNAME.tar.xz (or tgz, or tar.gz,...) from this URL, if CLASSNAME
 matches a FAI class.
 +
 Example:
 ----
-FAI_BASEFILEURL=http://fai-project.org/download/basefiles
+FAI_BASEFILEURL=https://fai-project.org/download/basefiles
 ----
 The folder must support directory listing. FAI will not probe for potentially matching files.
 
@@ -1444,7 +1444,7 @@ lrwxrwxrwx   1 fai fai   23 Dec  4 13:22 last -> install-20141204_131351
 drwxr-xr-x   2 fai fai 4096 Dec  4 13:22 install-20141204_131351
 ----
 
-Examples of the log files can be found at http://fai-project.org/logs.
+Examples of the log files can be found at https://fai-project.org/logs.
 
 
 === [[ireboot]]Reboot the new installed system
@@ -1647,7 +1647,7 @@ configuration space and a subset of the Debian mirror onto a
 CD-ROM. A partial package mirror is created using the command
 `fai-mirror(1)` which contains all packages that are used by the
 classes used in your configuration space.  A sample ISO image is
-available at http://fai-project.org/fai-cd.
+available at https://fai-project.org/fai-cd.
 
 Using the command `dd(1)` you can also create a bootable USB
 stick by just writing the content of the ISO file to your USB stick
@@ -1670,14 +1670,14 @@ image. After the installation you can boot the disk image and have a
 running system. The disk image can also be converted to qcow2 format.
 
 ----
- faiserver# export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ faiserver# export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
  faiserver# fai-diskimage -vu cloud3 -S2G -cDEBIAN,STRETCH64,AMD64,FAIBASE,GRUB_PC,DHCPC,CLOUD disk.raw
 ----
 Creates the file disk.raw for a host called cloud3, with a small set
 of software packages.
 
 ----
- # export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+ # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
  # cl=DHCPC,UBUNTU,XENIAL,XENIAL64,AMD64,XORG
  # fai-diskimage -Nvu foobar -S5G -c$cl ubuntu.qcow2
 ----
@@ -1688,11 +1688,11 @@ with hostname set to foobar.
 You do not neet to setup the nfsroot when only using
 fai-diskimage. But you need a basefile in your configuration
 space. You can download a Debian base image from
-http://fai-project.org/download/basefile and copy this into your
+https://fai-project.org/download/basefile and copy this into your
 config space.
 ----
  $ cd /srv/fai/config/basefiles
- $ wget http://fai-project.org/download/basefiles/STRETCH64.tar.xz
+ $ wget https://fai-project.org/download/basefiles/STRETCH64.tar.xz
 ----
 
 
@@ -1707,7 +1707,7 @@ architecture. Here are the steps do to:
 # apt install fai-server fai-setup-storage fai-doc qemu-utils
 # fai-mk-configspace
 
-# export FAI_BASEFILEURL=http://fai-project.org/download/basefiles/
+# export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
 # fai-diskimage -vu armhost -S2G -cDEFAULT,DHCPC,DEBIAN,ARM64,STRETCH64_ARM64,FAIBASE,DEMO,CLOUD,LAST arm64.raw
 # chown your_user_id arm64.raw
 # cp /var/log/fai/armhost/last/vmlinuz* vmlinuz
@@ -1817,7 +1817,7 @@ location of the package repository.
 The tool `rinse(8)` is used for creating base files for distribution
 like CentOS, openSUSE, Scientific Linux Cern or Fedora.
 Some basefiles can be downloaded from
-http://fai-project.org/download/basefiles/.
+https://fai-project.org/download/basefiles/.
 
 The script +mk-basefile+ in
 '/usr/share/doc/fai-doc/examples/simple/basefiles/' helps creating
@@ -2035,7 +2035,7 @@ beeps before the installation starts. The major work is to call other
 tasks and to save the output to '/tmp/fai/fai.log'. If you have any
 problems during installation, look at all files in '/tmp/fai/'. You
 can find examples of the log files
-at http://fai-project.org/logs/.
+at https://fai-project.org/logs/.
 
 dirinstall::
 Install into a directory, not onto a local disk. Use this for creating
@@ -2066,7 +2066,7 @@ installing different Linux distributions than the one used for
 creating the nfsroot. The default file 'base.tar.xz' is a snapshot of a
 basic Debian system created by `debootstrap(8)`
 This task uses the variable +FAI_BASEFILEURL+ for fetching the base
-file via FTP or HTTP if it's defined.
+file via FTP, HTTPS or HTTP if it's defined.
 
 debconf::
 Calls `fai-debconf(1)` to set the values for the debconf preseeding database.
@@ -2210,7 +2210,7 @@ touch /srv/fai/nfsroot/.nocolorlogo
 ----
 
 - A list of variables used by FAI can be found at
-http://wiki.fai-project.org/wiki/Variables.
+https://wiki.fai-project.org/wiki/Variables.
 
 - You can shorten some customization scripts by using one single fcopy
 command _fcopy -r /_.
@@ -2278,7 +2278,7 @@ https://lists.uni-koeln.de/pipermail/linux-fai/2016-March/011283.html
 
 - How to use the nfsroot as system for diskless clients?
 +
-http://wiki.fai-project.org/wiki/Use_nfsroot_for_diskless_clients
+https://wiki.fai-project.org/wiki/Use_nfsroot_for_diskless_clients
 
 
 - How to server multiple nfsroot directories on one FAI server?
@@ -2319,7 +2319,7 @@ On the faiserver, you can find the (remote) log files under the ~fai
 directory.
 
 Sample log files from successfully installed computers are
-available on http://fai-project.org/logs.
+available on https://fai-project.org/logs.
 These a some log files which are created by FAI.
 
 FAI_CLASSES::
