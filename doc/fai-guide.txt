@@ -202,6 +202,7 @@ file system, inspect the hardware or do any other task.
 * Support for many protocols like NFS, FTP, HTTPS, git
 * Can be used as a rescue system and for hardware inventory.
 * Diskless client support.
+* Cross-architecture support for e.g. for embedded devices
 * Easily add your own functions via hooks or change the default behavior.
 * Cloning machines using disk images is supported
 
@@ -246,7 +247,6 @@ qemu-kvm qemu-utils bridge-utils installed on the machine to
 use fai-mk-network and fai-kvm footnote:[fai-kvm needs a lot of ram
 for the vm, because of caching of /var, 2GB are OK].
 
-
 You can do that via
 
 ----
@@ -254,9 +254,12 @@ You can do that via
 ----
 
 If you intend to use VMware or VirtualBox, ensure that your client
-uses a bridged network connection. Also, It is not possible to use
+uses a bridged network connection. A detailed description is in the
+FAI wiki
+footnote:[http://wiki.fai-project.org/wiki/VirtualBox_for_your_first_FAI_installation]. Also,
+It is not possible to use
 bridged network interfaces over wireless, as most WiFi network cards
-do not support this feature.
+do not support this featur.
 
 For setting up your first own FAI server, we recommend creating a
 test network on your computer and to use KVM. For creating this
@@ -1668,37 +1671,36 @@ VirtualBox or a cloud service like OpenStack, GCE, EC2 and others. The
 installation process performs the normal FAI tasks on a raw disk
 image. After the installation you can boot the disk image and have a
 running system. The disk image can also be converted to qcow2 format.
+You do not need to setup the FAI nfsroot when only using
+fai-diskimage. But you need a basefile in your configuration
+space. Setting the variable +$FAI_BASEFILEURL+ will automatically
+download an appropriate base file into your config space.
 
+
+Here's an example how to create a raw disk image for a host called
+cloud3, with a small set of software packages:
 ----
 # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
 # fai-diskimage -vu cloud3 -S2G -cDEBIAN,STRETCH64,AMD64,FAIBASE,GRUB_PC,DHCPC,CLOUD disk.raw
 ----
-Creates the file disk.raw for a host called cloud3, with a small set
-of software packages.
 
+This command will create a disk image called ubuntu.qcow2 for a Ubuntu 16.04 desktop
+with hostname set to foobar.
 ----
 # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
 # cl=DHCPC,UBUNTU,XENIAL,XENIAL64,AMD64,XORG
 # fai-diskimage -Nvu foobar -S5G -c$cl ubuntu.qcow2
 ----
-Creates a disk image called ubuntu.qcow2 for a Ubuntu 16.04 desktop
-with hostname set to foobar.
-
-
-You do not neet to setup the nfsroot when only using
-fai-diskimage. But you need a basefile in your configuration
-space. Setting the variable +$FAI_BASEFILEURL+ will automatically
-download an appropriate base file into your config space.
 
 === [[cross-arch]]Building cross-architecture disk images
 
 Starting FAI 5.4 it's now possible to build a disk image for
-64 bit ARM architecture (aarch64) on a host running on amd64
+different architectures than the host is running. For example you can
+build an image for 64 bit ARM architecture (aarch64) on a host running on amd64
 architecture. Here are the steps do to:
 
 ----
-# apt install qemu-user-static
-# apt install fai-server fai-setup-storage fai-doc qemu-utils
+# apt install qemu-user-static fai-server fai-setup-storage fai-doc qemu-utils
 # fai-mk-configspace
 
 # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
@@ -1715,6 +1717,13 @@ Then you can run qemu as a normal user:
 
 Keep in mind, that this qemu network setup will have poor
 performance. Use tap devices for much better performance.
+
+This works similar for other architectures.
+
+
+You can find the base files for many architectures at
+https://fai-project.org/download/basefiles/, or use `mk-basefile` to
+create your own.
 
 
 === [[sysinfo]]FAI rescue system
