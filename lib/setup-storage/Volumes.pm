@@ -404,12 +404,15 @@ sub get_current_lvm {
   # create hash of vgs to be ignored
   my %vgignore = ();
   if (defined $ENV{"SS_IGNORE_VG"}) {
-    map { $_ , 1} split /[,\s]/,$ENV{"SS_IGNORE_VG"};
+    %vgignore = map { $_ , 1} split ' ',$ENV{"SS_IGNORE_VG"};
   }
 
   # get the existing volume groups
   foreach my $vg (get_volume_group_list()) {
-    next if $vgignore{$vg};    # ignore vg
+    if ($vgignore{$vg}) {
+      warn "Ignoring volume group: $vg\n";
+      next;
+    }
 
     # initialise the hash entry
     $FAI::current_lvm_config{$vg}{physical_volumes} = ();
