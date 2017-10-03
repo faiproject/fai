@@ -32,6 +32,11 @@ cleanup() {
 	done
     done
     losetup -d $loop
+    # if FAI created a volume group, we can remove it after the loop device is removed
+    if [ -f /var/run/fai/vgremove.$$ ]; then
+	. /var/run/fai/vgremove.$$ 2>/dev/null
+	rm /var/run/fai/vgremove.$$
+    fi
     rm -rf $mnt
     if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
 	if pgrep -F /var/run/fai/FAI_INSTALLATION_IN_PROGRESS; then
