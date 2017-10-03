@@ -162,6 +162,7 @@ update-rc.d: warning: start and stop actions are no longer supported"
 if [ -n $FAI_ALLOW_UNSIGNED ] ; then
    globalignorepatterns="$globalignorepatterns
 WARNING: untrusted versions
+WARNING: The following packages cannot be authenticated
 Ignoring these trust violations"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
