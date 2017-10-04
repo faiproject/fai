@@ -44,7 +44,7 @@ install:
 
 clean:
 	rm -rf images .a2x-icons
-	rm -f $(DOC).text $(DOC).html $(DOC).doc $(DOC).pdf $(DOC).xml $(DOC).ps docbook-xsl.css
+	rm -f $(DOC).text $(DOC).html $(DOC).doc $(DOC).pdf $(DOC).xml $(DOC).ps* docbook-xsl.css
 
 test:
 	asciidoc --version > /dev/null 2>&1 || exit "Please install the asciidoc package."
