@@ -2,7 +2,7 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2015
+# Author:    Thomas Lange, Uni Koeln, 2011-2017
 # License:   GPL v2 or any later version
 
 fix="-k en-us -cpu host -global isa-fdc.driveA= "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
@@ -25,8 +25,11 @@ boot_disk() {
 
   # boot from disk
     [ -n "$1" ] && disk=$1
+    case "$disk" in
+	*.raw) f=",format=raw" ;;
+    esac
     set -x
-    kvm $gopt -boot order=c $net $disk
+    kvm $gopt -boot order=c $net -drive file=$disk,if=virtio$f
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
@@ -101,6 +104,9 @@ if [ -z "$1" ]; then
 fi
 
 : ${title:=FAI-kvm-$user}
+if ! [[ $user =~ ^[0-9]+$ ]] ; then
+    die 2 "Error: Option -u needs a number"
+fi
 hex=$(echo $user 16o p | dc)
 diskfile=$diskdir/faitest-disk-$user
 

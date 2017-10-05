@@ -25,7 +25,6 @@ if [ $FAI_ACTION != "install" ]; then
     exit $error
 fi
 
-$ROOTCMD grub-mkdevicemap --no-floppy
 GROOT=$($ROOTCMD grub-probe -tdrive -d $BOOT_DEVICE)
 
 
@@ -39,14 +38,10 @@ if [[ $BOOT_DEVICE =~ '/dev/md' ]]; then
     done
 
 elif [[ $GROOT =~ 'hostdisk' ]]; then
-    cat > $target/boot/grub/device.map <<EOF
-(hd0)   $BOOT_DEVICE
-EOF
     $ROOTCMD grub-install --no-floppy --modules=part_msdos $BOOT_DEVICE
     if [ $? -eq 0 ]; then
         echo "Grub installed on hostdisk $BOOT_DEVICE"
     fi
-    rm $target/boot/grub/device.map
 
 else
     $ROOTCMD grub-install --no-floppy "$GROOT"

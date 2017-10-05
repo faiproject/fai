@@ -2,12 +2,12 @@
 
 # fetch-basefile, fetch a basefile via ftp or http using classes
 #
-# (c) Thomas Lange, 2011-2012
+# (c) Thomas Lange, 2011-2017
 #
 # Try to download a file CLASSNAME.tar.gz (or tgz, or tar.xz,...) from an URL
 # CLASSNAME must match a FAI class
 # The URL must provide a listing of all files in there
-# e.g.: FAI_BASEFILEURL=http://fai-project.org/download/basefiles
+# e.g.: FAI_BASEFILEURL=https://fai-project.org/download/basefiles
 #
 # variables needed: $classes, $FAI, $FAI_BASEFILEURL
 
@@ -28,6 +28,7 @@ url=$FAI_BASEFILEURL
 error=0
 found=0
 mount=0
+declare -a baselist
 
 while getopts m opt ; do
     case "$opt" in
@@ -38,15 +39,8 @@ done
 
 # get list of all files at URL
 flist=$(lftp -e 'cls;exit' $url 2>/dev/null)
-
-# create a hash like thing
-# key (here variable name) is the basename of the file found
-# value is the complete filename
-for f in $flist; do
-  # echo file found: $f
-    base=${f%%.*}   # basename is the class name
-    eval "found_$base=$f"
-done
+# create an array of all lines
+baselist=($flist)
 
 # reverse order of classes
 for c in $classes; do
@@ -55,26 +49,26 @@ done
 
 # now search for each class, if a basename matches
 for c in $revclasses; do
-    id="found_$c"  # prepare for indirect variable name
-    if [ X${!id} != X ]; then
-      # hash lookup succeeded
-        found=1
-        [ $mount = 1 ] && mount_ramdisk
-        # Create folder in case it is not part of the configuration space
-        mkdir -p $FAI/basefiles || echo "Could not create folder $FAI/basefiles" >&2
-        cd $FAI/basefiles || exit 3
-        if [ -f ${!id} ]; then
-            echo "${!id} already exists" >&2
-            error=1
-            break
-        fi
+    for f in ${baselist[@]}; do
+	base=${f%%.*}
+	if [ "$c" = "$base" ]; then
+            found=1
+            [ $mount = 1 ] && mount_ramdisk
+            # Create folder in case it is not part of the configuration space
+            mkdir -p $FAI/basefiles || echo "Could not create folder $FAI/basefiles" >&2
+            cd $FAI/basefiles || exit 3
+	    if [ -f $f ]; then
+		echo "$f already exists" >&2
+		error=1
+		break 2
+            fi
 
-        echo "Downloading $url/${!id}"
-      #  wget -nv $url/${!id}    # creates a new file with suffix .1, .2,.. if file already exists. Bad.
-        lftp -e "get $url/${!id};exit" # fails if file already exists. this is nice.
-        error=$?
-        break
-    fi
+            echo "Downloading $url/$f"
+            lftp -e "get $url/$f;exit" # fails if file already exists. this is nice.
+            error=$?
+            break 2
+	fi
+    done
 done
 
 if [ X$found = X0 ]; then

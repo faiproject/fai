@@ -394,15 +394,26 @@ sub get_current_disks {
 ################################################################################
 #
 # @brief Collect the current LVM configuration
-#
+# use enviroment variable SS_IGNORE_VG to ignore a list of volume groups
 ################################################################################
 sub get_current_lvm {
 
   use Linux::LVM;
   use Cwd qw(abs_path);
 
+  # create hash of vgs to be ignored
+  my %vgignore = ();
+  if (defined $ENV{"SS_IGNORE_VG"}) {
+    %vgignore = map { $_ , 1} split ' ',$ENV{"SS_IGNORE_VG"};
+  }
+
   # get the existing volume groups
   foreach my $vg (get_volume_group_list()) {
+    if ($vgignore{$vg}) {
+      warn "Ignoring volume group: $vg\n";
+      next;
+    }
+
     # initialise the hash entry
     $FAI::current_lvm_config{$vg}{physical_volumes} = ();
 

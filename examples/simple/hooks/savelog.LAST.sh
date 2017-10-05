@@ -118,6 +118,7 @@ asking for cache data failed
 However, I can not read the target:
 Warning: The partition table looks like it was made
 task_error=0
+task_local_error=0
 ^info: Trying to set
 warning: /usr/lib/X11/fonts
 can't read /etc/udev/rules.d/z25_persistent-net.rules
@@ -150,6 +151,7 @@ can't initialize iptables table
 can't initialize ip6tables table
 Authentication warning overridden
 41-warning.sh
+Download is performed unsandboxed as root as file
 update-alternatives: warning: skip creation of
 loop: module verification failed: signature
 Warning: apt-key output should not be parsed
@@ -160,6 +162,7 @@ update-rc.d: warning: start and stop actions are no longer supported"
 if [ -n $FAI_ALLOW_UNSIGNED ] ; then
    globalignorepatterns="$globalignorepatterns
 WARNING: untrusted versions
+WARNING: The following packages cannot be authenticated
 Ignoring these trust violations"
 fi
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

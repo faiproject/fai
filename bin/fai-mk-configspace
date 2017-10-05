@@ -1,0 +1,28 @@
+#! /bin/bash
+
+# create a initial config space
+
+. /etc/fai/nfsroot.conf
+
+if [ -d $FAI_CONFIGDIR/class ]; then
+    echo "You already have a config space in $FAI_CONFIGDIR"
+    exit 0
+fi
+
+if [ ! -d /usr/share/doc/fai-doc ]; then
+   echo "Cannot create the config space. Please install the package fai-doc."
+   exit 1
+fi
+
+mkdir -p $FAI_CONFIGDIR
+if [ $? -ne 0 ]; then
+    echo "Cannot create the config space in $FAI_CONFIGDIR"
+    exit 1
+fi
+
+cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR/.
+if [ $? -eq 0 ]; then
+    echo "Your initial config space is now located in $FAI_CONFIGDIR"
+else
+    echo "Copying the config space examples failed."
+fi

@@ -998,7 +998,23 @@ $FAI::Parser = Parse::RecDescent->new(
                 $dev = "/dev/$dev";
               }
             }
-            my @candidates = glob($dev);
+            my @candidates;
+
+            # resolve /dev/disk/by-id symlinks
+            # those symlinks point to the actual device node
+            # partitions, which may not exist yet, are addressed
+            # by /dev/disk/by-id/${disk}-part${partno}
+            if ($dev =~ m{^(/dev/disk/by-id/.*?)(?:-part(\d+))?$}) {
+              my $part_no = $2;
+              my @real_candidates = map { Cwd::abs_path($_) } glob($1);
+              if (defined $part_no) {
+                @candidates = map { &FAI::make_device_name($_, $part_no) } @real_candidates;
+              } else {
+                @candidates = @real_candidates;
+              }
+            } else {
+              @candidates = glob($dev);
+            }
 
             # options are only valid for RAID
             defined ($opts) and ($FAI::device ne "RAID") and die "Option $opts invalid in a non-RAID context\n";

@@ -10,8 +10,6 @@
 # this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
 # should unshare be used ?
 
-set -e
-
 die() {
 
     local e=$1   # first parameter is the exit code
@@ -23,8 +21,7 @@ die() {
 
 cleanup() {
 
-    set +e
-    local dirs dir
+    local dir
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
 	# try umount several times, because some postinst jobs may still run and use the filesystems
 	for i in {1..8}; do
@@ -34,8 +31,12 @@ cleanup() {
 	    sleep $i
 	done
     done
-    set -e
     losetup -d $loop
+    # if FAI created a volume group, we can remove it after the loop device is removed
+    if [ -f /var/run/fai/vgremove.$$ ]; then
+	. /var/run/fai/vgremove.$$ 2>/dev/null
+	rm /var/run/fai/vgremove.$$
+    fi
     rm -rf $mnt
     if [ -f /var/run/fai/FAI_INSTALLATION_IN_PROGRESS ]; then
 	if pgrep -F /var/run/fai/FAI_INSTALLATION_IN_PROGRESS; then
@@ -57,7 +58,6 @@ supported: .qcow2, .vdi, .vhdx, .vmdk.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
-   -D|--debug   	    enter debugging
    -N|--new                 execute scripts class/[0-9]* for defining classes
    -c|--class <class,...>   define list of FAI classes
    -S|--size  <size>        size of raw image (suffixes k M G T are supported)
@@ -86,7 +86,7 @@ check_commands() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 call="$0 $*"
-TEMP=$(getopt -o NDS:s:u:hvc: --long new,debug,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o NS:s:u:hvc: --long new,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -94,15 +94,11 @@ unset TEMP
 
 verbose=0
 convert=1
-debug=0
 
 while true ; do
     case "$1" in
         -h|--help)
             usage 0 ;;
-        -D|--debug)
-            debug=1
-            shift ;;
         -v|--verbose)
             export verbose=1
             shift ;;
@@ -174,6 +170,10 @@ if [ $(id -u) != "0" ]; then
     die 1 "Run this program as root."
 fi
 
+if type vgs >/dev/null 2>&1; then
+    export SS_IGNORE_VG=$(vgs --unbuffered --noheadings -o name --rows)
+fi
+
 # create empty disk image, loop setup, temp mount point
 rm -f $rawname
 qemu-img create $rawname $size
@@ -182,24 +182,14 @@ loopdev=${loop/\/dev\//}
 export disklist=$loopdev
 mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
 
-trap "cleanup" ERR
+trap "cleanup" EXIT
 
 LC_ALL=C fai $renew -u $hname -s $uri -c$classes install $mnt
-
-# do not umount for debugging purpose
-if [ $debug -eq 1 ]; then
-    echo "==================================================================="
-    echo "The chroot is mounted on $mnt."
-    echo "${0##*/} now halted."
-    echo "After debugging, call kill -CONT $$, to continue the process."
-    echo "==================================================================="
-    kill -STOP $$ || true
-fi
-
+error=$?
 cleanup
-trap - ERR
 
-set +e
+trap - EXIT
+
 # convert if needed
 if [ $convert -eq 1 ]; then
     [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname."
@@ -208,4 +198,4 @@ if [ $convert -eq 1 ]; then
 fi
 echo -n "Size of disk image and filename: "; du -h $image
 echo "Image created by: $call"
-exit 0
+exit $error

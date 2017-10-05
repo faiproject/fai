@@ -39,6 +39,7 @@ export romountopt="-o async,noatime,nolock,ro,actimeo=1800"
 [ -n "$STOP_ON_ERROR" ] || export STOP_ON_ERROR=700
 export faimond=0
 export renewclass=0
+export task_error=0 # tasks can set this variable to indicate an error
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fdie() {
@@ -102,11 +103,7 @@ fai_init() {
         define_fai_flags
         # we really need to start udev
         if [ -x /etc/init.d/udev ]; then
-            if [ X$UPSTART_JOB != Xfai ]; then
-                /etc/init.d/udev start
-            else
-                test -f /etc/init/udevtrigger.conf && udevadm trigger --action=add && udevadm settle
-            fi
+	    /etc/init.d/udev start
         fi
         mkdir -p /var/run/sshd /var/run/network # when using initrd kernels
         ifup lo
@@ -278,7 +275,7 @@ fi
 
 # are we called as an init substitute ?
 export do_init_tasks=0
-[ "$0" = "/etc/init.d/rcS" ] || [ X$UPSTART_JOB = Xfai ] && do_init_tasks=1
+[ "$0" = "/etc/init.d/rcS" ] && do_init_tasks=1
 if [ $do_init_tasks -eq 1 ]; then
 
     # if hostname was set on the kernel command line (mostly when booting from CD)
@@ -339,7 +336,16 @@ unset newhostname
 fstart > >( tee -a $LOGDIR/fai.log )  2>&1
 
 task action |& tee -a $LOGDIR/fai.log
-final_exit_code=${PIPESTATUS[0]}
+if [ ${PIPESTATUS[0]} -gt 0 ]; then
+    final_exit_code=1
+fi
+if [ -f $LOGDIR/task_error ]; then
+    task_error=$(< $LOGDIR/task_error)
+    if [ $task_error -gt 0 ]; then
+	final_exit_code=1
+    fi
+fi
+
 
 [ -L "/var/run/fai/current_config" ] && rm -f "/var/run/fai/current_config"
 

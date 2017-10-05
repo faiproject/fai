@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2017 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -36,6 +36,7 @@ set -e
 
 boot_image="boot/grub/eltorito.img"
 count=0
+space=0
 config_space=""
 configset=0
 forceremoval=0
@@ -59,7 +60,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2016 Thomas Lange
+	fai-cd Copyright (C) 2004-2017 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -75,8 +76,20 @@ die() {
     local e=$1   # first parameter is the exit code
     shift
 
-    echo "ERROR: $@" >&2   # print error message
+    echo -e "ERROR: $@" >&2   # print error message
     exit $e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+check_programs() {
+
+    local msg
+    [ $squash_only -eq 1 -o -x "$(which xorriso)" ] || msg+="xorriso not found. Please install package."
+    [ -x "$(which mksquashfs)" ] || msg+="\nmksquashfs not found. Please install the package squashfs-tools."
+    [ -x "$(which strings)" ] || msg+="\ncommand strings not found. Please install package binutils."
+
+    if [ -n "$msg" ]; then
+	die 8 "$msg"
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_ext3fs_image() {
@@ -85,19 +98,19 @@ create_ext3fs_image() {
     # along with it, a temporary folder is created to mount the ext3fs.img
     mkdir -p $tmp/$liveos/mounted-ext3fs
 
+    # hide some directories before copying the nfsroot
+    customize_nfsroot
     calculate_required_size
 
     # creates an empty file
     dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1MB count=$count 2>/dev/null ||
         die 9 "dd failed. Maybe no enough free space in $tmp"
 
-    mkfs.ext4 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
+    mkfs.ext4 -m1 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
 
     # the resulting ext3fs.img is mounted
     mount -o loop,noatime $tmp/$liveos/ext3fs.img $tmp/$liveos/mounted-ext3fs
 
-    # hide some directories before copying the nfsroot
-    customize_nfsroot
     echo "Copying the nfsroot to CD image"
     # copy the contents of the nfsroot into it
     cp -Ppr $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
@@ -224,7 +237,8 @@ calculate_required_size() {
     fi
 
     # not dividing by 1024 to get the exact, this allows us to get some additional space
-    count=$(($size/900))
+    # add some addition space
+    count=$(($size/850 + $space))
 }
 
 provide_memtest_boot_option() {
@@ -353,7 +367,7 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
+while getopts "AenkfhHg:Jbs:SBMm:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
         C)  cdir="$OPTARG" ; arguments+=" -C $cdir";;
@@ -366,6 +380,7 @@ while getopts "AenkfhHg:JbSBMm:C:d:" opt ; do
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
         b)  burn=1 ; arguments+=" -b";;
+        s)  space="$OPTARG" ;;
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
 	d)  config_space="$OPTARG"; configset=1 ; arguments+=" -d $config_space";;
@@ -413,9 +428,7 @@ if [ $bootonly -eq 0 ]; then
     [ $(id -u) != "0" ]   && die 9 "Run this program as root."
 fi
 
-[ $squash_only -eq 1 -o -x "$(which xorriso)" ] || die 8 "xorriso not found. Please install package."
-[ -x "$(which mksquashfs)" ] || die 8 "mksquashfs not found. Please install the package squashfs-tools."
-[ -x "$(which strings)" ] || die 8 "command strings not found. Please install package binutils."
+check_programs
 
 # use FAI_ETC_DIR from environment variable
 if [ -n "$FAI_ETC_DIR" -a -z "$cdir" ]; then
@@ -457,7 +470,7 @@ echo $grub_config | grep -q '/' || grub_config="$cfdir/$grub_config"
 [ -f "$grub_config" ] || die 13 "Grub menu file $grub_config not found."
 
 if [ $bootonly -eq 0 -o $configset -eq 1 ]; then
-    [ -z "$FAI_CONFIGDIR" ]  && die 14 "Variable \$FAI_CONFIG not set."
+    [ -z "$FAI_CONFIGDIR" ]  && die 14 "Variable \$FAI_CONFIGDIR not set."
     [ -d $FAI_CONFIGDIR ] || die 15 "Can't find config space $FAI_CONFIGDIR."
     [ -d $FAI_CONFIGDIR/class ] || die 16 "Config space $FAI_CONFIGDIR seems to be empty."
 fi

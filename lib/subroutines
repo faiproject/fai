@@ -5,7 +5,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2017 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -142,6 +142,34 @@ jobsrunning() {
     ps r | egrep -qv "ps r|TIME COMMAND|rcS"
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+umount_target() {
+
+    if [ "$target" != '/' ]; then
+	# do not umount during softupdate
+	umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts $FAI_ROOT/dev 2>/dev/null
+	for dir in $(mount | grep $target | egrep -v "media/mirror|tmpfs"| awk '{print $3}' | sort -r); do
+            mountpoint -q $dir && umount $dir
+	done
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+cleanup_devicemapper() {
+
+    local vgroup v
+    # remove device mapper devices
+    grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
+    if [ $? -eq 0 ]; then
+
+	# write which vg should be removed, PPID is the fai-diskimage process
+	> /var/run/fai/vgremove.$PPID
+	vgroup=$(awk '/Executing: vgcreate/ {print $3}' $LOGDIR/format.log)
+	for v in $vgroup; do
+	    vgchange -an $v
+	    echo vgremove -f $v >> /var/run/fai/vgremove.$PPID
+	done
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
     # can be an extern script
@@ -174,7 +202,9 @@ task_error() {
 
     [ X$2 = X0 ] && return
     task_error_func=${FUNCNAME[*]}
+    task_local_error=$1
     [ $1 -gt $task_error ] && task_error=$1
+    echo $1 > $LOGDIR/task_error
     [ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -194,6 +224,7 @@ task() {
 
     local taskname=$1
     shift
+    local task_local_error=0 # the error code set by every task
 
     [ -f $LOGDIR/skip.$taskname ] || call_hook $taskname "$@"
 
@@ -205,14 +236,13 @@ task() {
     else
         echo "Calling task_$taskname"
         sendmon "TASKBEGIN $taskname"
-        task_error=0   # task can set this variable to indicate an error
         task_error_func=''
         taskduration[$taskname]=$SECONDS
         task_$taskname "$@"
         [ $duration -eq 1 ] && echo "Duration of task $taskname: " $(($SECONDS-${taskduration[$taskname]}))"s"
-        sendmon "TASKEND $taskname $task_error"
-        if [ "$task_error" -ne 0 ] ; then
-          echo "Exit code task_$taskname: $task_error" >&2
+        sendmon "TASKEND $taskname $task_local_error"
+        if [ "$task_local_error" -ne 0 ] ; then
+          echo "Exit code task_$taskname: $task_local_error" >&2
         fi
     fi
 }
@@ -462,7 +492,7 @@ task_defvar() {
             # show only lines with ++, we cannot use a pipe, since it would call
             # _devfar in a subprocess. Then, variables are not defined
             _defvar $class.var > $svar 2>&1
-            grep ^++ $svar|sed -e 's/ROOTPW=.*/ROOTPW=XXXXXXXXXXXXX/'
+            grep ^++ $svar| sed -e 's/\(.*PW\)=.*$/\1=XXXXXXXXXXXXX/'
             rm $svar
         fi
     done
@@ -544,35 +574,32 @@ task_savelog() {
 task_faiend() {
 
     local dir cdromdevice
-    [ $do_init_tasks -eq 0 ] && return 0
     wait_for_jobs
     : ${flag_reboot:=0}
     : ${flag_halt:=0}
 
     # reboot/halt without prompting if FAI_FLAG reboot or halt is set
     # wait for keypress if neither flag reboot nor halt is set
-    if [ "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
+    if [ $do_init_tasks -eq 1 -a "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
         echo "Press <RETURN> to reboot (do not remove your removable medium yet)."
         read
-    else
-        sleep 10
     fi
 
     sendmon "TASKEND faiend 0"
-    echo "Rebooting $HOSTNAME now"
-    sendmon "TASKEND reboot 0"
+
     cd /
-    sync
-
+    umount_target
+    cleanup_devicemapper
+    if [ $do_init_tasks -eq 0 ]; then
+	echo "Log files are saved in $LOGDIR"
+	return 0
+    fi
     killall -q sshd udevd rsyslogd
-
-    for dir in $(mount | grep $target | egrep -v "$target/tmp|media/mirror|proc|tmpfs"| awk '{print $3}' | sort -r); do
-        mount -o remount,ro $dir
-    done
-
     umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
     umount -arf 2>/dev/null
 
+    echo "Rebooting $HOSTNAME now"
+    sendmon "TASKEND reboot 0"
     # reboot or halt?
     if [ "$flag_halt" -gt "0" ]; then
         exec halt -dfp
@@ -782,7 +809,9 @@ task_confdir() {
 
         printk=${printk:-6}
         echo $printk > /proc/sys/kernel/printk
-        rsyslogd
+        if [ -x /usr/sbin/rsyslogd ]; then
+            /usr/sbin/rsyslogd
+        fi
 
         create_resolv_conf
     fi
@@ -869,6 +898,12 @@ task_partition() {
 
     [ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X |& tee $LOGDIR/format.log
 
+    # if we've created device mapper devices, do cleanup on error
+    grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
+    if [ $? -eq 0 ]; then
+	trap "umount_target;cleanup_devicemapper" QUIT EXIT
+    fi
+
     # partitioning tool must create $LOGDIR/disk_var.sh file
     if [ ! -s $LOGDIR/disk_var.sh ]; then
         local conffile=$(grep "Using config file:" $LOGDIR/format.log | cut -d: -f2 )
@@ -895,10 +930,31 @@ task_partition() {
 
 call_debootstrap() {
 
-    local dversion=$(dpkg -l debootstrap | grep debootstrap | cut -f7 -d' ')
+    local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
     echo "Creating base system using debootstrap version $dversion"
     echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2"
-    LC_ALL=C debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2
+
+    # Check if we need cross architecture debootstrap
+    targetarch=$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch=\([^[:space:]]*\)' || true)
+    hostarch1=$(dpkg --print-architecture)
+    hostarch2=$(dpkg --print-foreign-architectures)
+
+    _debootstrap=qemu-debootstrap
+    if [ -z "$targetarch" ]; then
+	_debootstrap=debootstrap
+    else
+	if [ $targetarch = $hostarch1 -o $targetarch = $hostarch2 ]; then
+	_debootstrap=debootstrap
+	fi
+    fi
+    if [ $_debootstrap = "qemu-debootstrap" ]; then
+	if ! type -P $_debootstrap >/dev/null; then
+	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
+	fi
+    fi
+
+    echo "Calling $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
+    LC_ALL=C call_verbose $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -913,7 +969,6 @@ task_extrbase() {
     local fs=$FAI_ROOT/etc/fstab
 
     fetch-basefile
-    echo "Unpacking distro base archive"
     # remember, ftar extracts into $FAI_ROOT by default, so / means $FAI_ROOT/
     # copy the base file class based if it exists
     [ -d $FAI/basefiles ] && ftar -1v -s $FAI/basefiles /
@@ -933,6 +988,9 @@ task_extrbase() {
             task_error 801 $?
         fi
     fi
+
+    # now check if this is a cross architecture installation, and install qemu user static if needed
+    check-cross-arch $FAI_ROOT
     # now we can copy fstab
     [ -f $LOGDIR/fstab ] && cp -S.old -bp $LOGDIR/fstab $fs
     # copy crypttab, if setup-storage created one
@@ -1047,18 +1105,9 @@ EOF
         [ ! -f $FAI/package_config/$keyfile.asc ] && continue
         echo -n "Loading APT key from $keyfile.asc "
 	[ -f $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg ] || touch $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg
-        cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key --keyring /etc/apt/trusted.gpg.d/$keyfile.asc.gpg add -
+        cat $FAI/package_config/$keyfile.asc | $ROOTCMD apt-key --keyring /etc/apt/trusted.gpg.d/$keyfile.asc.gpg add - 2>/dev/null
         unset keys["$keyfile.asc"]
     done
-
-    # print which *.asc files were not loaded
-    if [ ${#keys[@]} -ne 0 ]; then
-        echo "Following apt keys are not loaded:"
-        for i in "${!keys[@]}"; do
-            echo "$i"
-        done
-        echo "You have to rename them to match a class name."
-    fi
 
     # mount Debian mirror via NFS if needed
     mount_mirror
@@ -1114,7 +1163,7 @@ task_finish() {
     # undo fake of all programs made by fai
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
-    date
+    echo -n "FAI finished at: ";date
     echo "The $FAI_ACTION took $(($(cut -d . -f 1 /proc/uptime)-$start_seconds)) seconds."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

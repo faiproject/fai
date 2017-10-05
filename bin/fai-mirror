@@ -5,7 +5,7 @@
 # fai-mirror -- create and manage a partial mirror for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2016, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2017, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -257,6 +257,10 @@ fi
 if [ -f "$aptpref" ]; then
     cp "$aptpref" $aptcache/etc/apt/preferences
 fi
+
+# use the trusted keys from the host
+cp -a /etc/apt/trusted.gpg.d $aptcache/etc/apt
+
 echo "Getting package information"
 apt-get $qflag $aptoptions update >/dev/null
 
@@ -268,12 +272,19 @@ umount_dirs
 trap "" EXIT ERR
 [ $add -eq 0 ] && delete_base_packages
 
+
+# in still undefined, use host architecture
+if [ -z "$arch" ]; then
+    arch=$(dpkg  --print-architecture)
+    arch="$arch $(dpkg --print-foreign-architectures)"
+fi
+
 # create mirror directory structure
 echo "Calling reprepro"
 mkdir $mirrordir/conf
 cat > $mirrordir/conf/distributions <<EOF   # generate config file for reprepro
 Codename: cskoeln
-Architectures: i386 amd64
+Architectures: $arch
 Components: main non-free contrib
 DebIndices: Packages Release . .xz
 Description: FAI packages from author's repository

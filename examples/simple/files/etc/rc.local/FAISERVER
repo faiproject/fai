@@ -10,7 +10,7 @@ GREEN='\E[32m'
 set -o pipefail
 
 # setup network
-nic=$(grep iface /etc/network/interfaces| awk '{print $2}'|egrep -v ^lo)
+nic=$(awk '/iface/ {print $2}' /etc/network/interfaces |egrep -v ^lo)
 ifup $nic
 # regenerate ssh_host keys
 ls /etc/ssh/ssh_host_* > /dev/null
@@ -18,7 +18,7 @@ if [ $? -ne 0 ]; then
     dpkg-reconfigure -fnoninteractive openssh-server
 fi
 sleep 8
-[ -x /etc/init.d/nscd ] && /etc/init.d/nscd restart
+[ -x /etc/init.d/nscd ] && invoke-rc.d nscd restart
 
 echo "================================="
 echo "Setting up the FAI install server"

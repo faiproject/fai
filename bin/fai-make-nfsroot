@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2017 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2016 Thomas Lange
+	Copyright (C) 1999-2017 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -239,6 +239,7 @@ set_root_pw() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
 
+    local targetarch hostarch1 hostarch2 _debootstrap
     [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
 
     # check if NFSROOT directory is mounted with bad options
@@ -246,12 +247,32 @@ call_debootstrap() {
     if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
         die 1 "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
     fi
-    local dversion=$(dpkg -l debootstrap | awk '/debootstrap/ {print $3}')
+    local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
     echo "Creating base system using debootstrap version $dversion"
-    echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
-    LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
+
+    # Check if we need cross architecture debootstrap
+    targetarch=$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch=\([^[:space:]]*\)' || true)
+    hostarch1=$(dpkg --print-architecture)
+    hostarch2=$(dpkg --print-foreign-architectures)
+
+    _debootstrap=qemu-debootstrap
+    if [ -z "$targetarch" ]; then
+	_debootstrap=debootstrap
+    else
+	if [ $targetarch = $hostarch1 -o $targetarch = $hostarch2 ]; then
+	_debootstrap=debootstrap
+	fi
+    fi
+    if [ $_debootstrap = "qemu-debootstrap" ]; then
+	if ! type -P $_debootstrap >/dev/null; then
+	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
+	fi
+    fi
+
+    echo "Calling $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
+    LC_ALL=C call_verbose $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
     if [ $? -ne 0 ]; then
-        echo "ERROR: debootstrap did not complete successfully."
+        echo "ERROR: $_debootstrap did not complete successfully."
         echo "This is mostly caused by a broken mirror."
         echo "Please check your mirror or use an official mirror."
         [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
@@ -260,7 +281,7 @@ call_debootstrap() {
 
     if [ ! -f $NFSROOT/usr/bin/apt-get ]; then
         echo "No apt-get executable available inside the NFSROOT."
-        echo "Maybe debootstrap did not finish successfully. Aborting."
+        echo "Maybe $_debootstrap did not finish successfully. Aborting."
         [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
         exit 11
     fi
@@ -359,15 +380,6 @@ create_nfsroot() {
     # liloconfig, dump needs this file
     > etc/fstab
 
-    # Work around Ubuntu's failure in installing rsyslog with
-    # "start: Unable to connect to Upstart: Failed to connect to
-    # socket /com/ubuntu/upstart: Connection refused"
-    if $ROOTCMD which dpkg-divert >/dev/null 2>&1 && [ -x $NFSROOT/sbin/initctl ] ; then
-      LC_ALL=C $ROOTCMD dpkg-divert --quiet --add --rename /sbin/initctl
-      ln -sf /bin/true $NFSROOT/sbin/initctl
-      INITCTL_DIVERT=true
-    fi
-
     # we need these option before installing the first package. So we
     # can't put this into fai-nfsroot /etc/apt/apt.conf.d/90fai
     cat >$NFSROOT/etc/apt/apt.conf.d/10fai <<EOF
@@ -385,7 +397,7 @@ EOF
     echo 'add_dracutmodules+=" livenet "' > $NFSROOT/etc/dracut.conf.d/13-add-cd-support.conf
     echo 'hostonly="no"' > $NFSROOT/etc/dracut.conf.d/20-generic-image.conf
     cat <<EOF > $NFSROOT/etc/dracut.conf.d/01-omit.conf
-omit_dracutmodules+=" btrfs lvm resume usrmount mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd "
+omit_dracutmodules+=" btrfs crypt dash lvm resume usrmount modsign mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd "
 filesystems="nfs lockd ext4"
 EOF
 
@@ -415,10 +427,7 @@ EOF
     cp -a /etc/localtime etc/localtime
     ln -sf /proc/mounts etc/mtab
 
-    [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
-    if [ -d etc/init ]; then   # if upstart is available
-        find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
-    fi
+    ln -s /usr/sbin/fai etc/init.d/rcS
 
     rm -f etc/mdadm/mdadm.conf # remove file which may contain info of the install server
     # this second rm of the same file is needed!
@@ -646,12 +655,6 @@ if [ $generic = 1 ]; then
     # remove fai.conf which comes from package fai-client
     rm -f $NFSROOT/etc/hosts $NFSROOT/etc/resolv.conf* $NFSROOT/etc/fai/fai.conf $NFSROOT/var/lib/apt/lists/*_*
     ainsl -as $NFSROOT/etc/hosts "127.0.0.1 localhost"
-fi
-
-# get rid of initctl divert again
-if [ "$INITCTL_DIVERT" = true ] ; then
-  rm -f $NFSROOT/sbin/initctl
-  LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /sbin/initctl
 fi
 
 umount_dirs
