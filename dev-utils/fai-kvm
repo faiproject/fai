@@ -5,7 +5,7 @@
 # Author:    Thomas Lange, Uni Koeln, 2011-2017
 # License:   GPL v2 or any later version
 
-fix="-k en-us -cpu host -global isa-fdc.driveA= "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
+fix="-k en-us -smp 2 -cpu host -global isa-fdc.driveA= "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
 # without it centos initrd is not created properly and results in kernel panic
 
 # for booting form CD first, then hard disk: -boot order=dc 
@@ -19,6 +19,7 @@ cdimage=/files/scratch/fai-cd.iso # default name for CD image
 diskdir=/tmp     # directory where the disk images will be created, a RAM disk is recommended
 usernet=0
 newdisk=0
+daemonize=0
 macprefix=52:54:00:11:23
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_disk() {
@@ -57,10 +58,11 @@ usage() {
 
   cat <<EOF
 
- fai-kvm [options] pxe   # start a host booting using PXE from NIC
- fai-kvm [options] disk [imagename]  # start a host booting from first disk
- fai-kvm [options] cd   [imagename]  # start a host booting from a ISO image
+ fai-kvm [options] pxe   # boot VM using PXE from NIC
+ fai-kvm [options] disk [diskimage]  # boot VM from first disk
+ fai-kvm [options] cd   [imagename]  # boot VM from a ISO image
 
+ -b          run the VM daemonized in the background, no video output
  -n          create a new empty disk image, which is used as a local disk
  -N          recreate a new empty disk image, even if one already exists
  -s <size>   size of the local disk in GB (default is ${size}GB)
@@ -73,14 +75,17 @@ usage() {
              If you have created 9 tap devies you can use the numbers 1 to 9.
  -V          do not use vga std with Bochs extensions, use the kvm default
  -U          Use kvm user networking instead of tap devices
- -t          Set title of the Qemu windows
+ -t          Set title of the Qemu window
+
+The MAC prefix is set inside the script to $macprefix:XX
 EOF
   exit 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "UhnNu:s:m:d:VD:t:" opt ; do
+while getopts "bUhnNu:s:m:d:VD:t:" opt ; do
     case "$opt" in
+        b) daemonize=1  ;;
         n) newdisk=1    ;;
         N) newdisk=2    ;;
         U) usernet=1 ;;
@@ -110,6 +115,10 @@ fi
 hex=$(echo $user 16o p | dc)
 diskfile=$diskdir/faitest-disk-$user
 
+if [ $daemonize -eq 1 ]; then
+    vga="-display none -daemonize -vnc :$user"
+fi
+
 # not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
 # If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
 # x2:xx:xx:xx:xx:xx
@@ -133,7 +142,7 @@ for i in `seq 1 $disks` ; do
     disk="$disk"
   fi
 done
-gopt="$fix $vga -m $ram -smp 2 -name $title"
+gopt="$fix $vga -m $ram -name $title"
 
 
 # create new disk images
