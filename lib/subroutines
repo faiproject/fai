@@ -170,6 +170,29 @@ cleanup_devicemapper() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mk_zerofree_list() {
+
+    # make a list of devices for zerofree which have an ext2/3/4 file  system
+    local source fstype mpoint v
+
+    if [ X$verbose = X1 ]; then
+	v=-v
+    fi
+    while read -r source fstype mpoint ; do
+
+	# skip non ext2/3/4 file systems
+	case $fstype in
+            ext*) : ;;
+	    *) continue ;;
+	esac
+
+	if [[ $mpoint =~ $target ]]; then
+	    echo "zerofree $v $source" >> /var/run/fai/zerofree.$PPID
+	fi
+
+    done < <(df --output=source,fstype,target)
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
     # can be an extern script
@@ -588,6 +611,7 @@ task_faiend() {
     sendmon "TASKEND faiend 0"
 
     cd /
+    mk_zerofree_list
     umount_target
     cleanup_devicemapper
     if [ $do_init_tasks -eq 0 ]; then

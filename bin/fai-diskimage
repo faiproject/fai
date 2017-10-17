@@ -31,6 +31,12 @@ cleanup() {
 	    sleep $i
 	done
     done
+
+    # call zerofree for ext2/3/4 devices if available
+    if [ -f /var/run/fai/zerofree.$$ -a -x ]; then
+        . /var/run/fai/zerofree.$$ 2>/dev/null
+        rm /var/run/fai/zerofree.$$
+    fi
     losetup -d $loop
     # if FAI created a volume group, we can remove it after the loop device is removed
     if [ -f /var/run/fai/vgremove.$$ ]; then
