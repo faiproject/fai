@@ -102,7 +102,8 @@ sub copy_one {
 
   # if no class matches, remove destination or move it to the backup file
   unless (defined $class) {
-    ewarn("no matching file for any class for $source defined.");
+    warn "fcopy: no matching file for any class for $source defined.\n";
+    $error = 1 unless $opt_i; # do not set $error if -i was set
     # do not copy
     if ($opt_d and -f $destfile) {
       print LOGFILE "$source\tNONE\t# removed (no matching class)\n" if $logfile;
@@ -554,5 +555,4 @@ if ($opt_r) {
 }
 
 foreach (@ARGV) { copy_one($source,$_,$target); }
-$opt_i && exit 0; # ignore any warning
 exit $error;
