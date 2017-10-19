@@ -585,7 +585,9 @@ trap "bad_exit" ERR
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
     echo "Removing all kernels from NFSROOT."
-    $ROOTCMD aptitude -y purge ~nlinux-image
+    LC_ALL=C $ROOTCMD apt-cache dumpavail > $NFSROOT/var/lib/dpkg/available
+    LC_ALL=C $ROOTCMD apt-get -qq purge linux-image\*
+    rm $NFSROOT/var/lib/dpkg/available
     exit
 }
 
