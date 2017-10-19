@@ -192,13 +192,6 @@ if [ -z "$expert" ]; then
     echo "FAI_CONFIGDIR=$FAI_CONFIGDIR" >> /var/log/fai/variables
     echo "FAI_CONFIG_SRC=nfs://${myip}$FAI_CONFIGDIR" >> /var/log/fai/variables
 
-    # if not NFS v4 entry is found add a dummy entry. Workaround for #676883
-    if ! egrep -v ^# /etc/exports | grep -q fsid=0; then
-	echo "No entry for NFS v4 found. Adding a dummy entry. This forces NFS v3 for the nfsroot."
-	mkdir -p /srv/nfs4
-	add_export_line "/srv/nfs4  $iprange(fsid=0,async,ro,no_subtree_check)"
-    fi
-
     add_export_line $FAI_CONFIGDIR  "$iprange(async,ro,no_subtree_check)"
     add_export_line $NFSROOT  "$iprange(async,ro,no_subtree_check,no_root_squash)"
     if pidof nfsd >/dev/null
