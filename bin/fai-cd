@@ -367,9 +367,10 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AenkfhHg:Jbs:SBMm:C:d:" opt ; do
+while getopts "AekfhHg:Jbs:SBMn:m:c:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
+        c)  csdir="$OPTARG" ;
         C)  cdir="$OPTARG" ; arguments+=" -C $cdir";;
         e)  hidevartmp=1 ;;
         f)  forceremoval=1 ;;
@@ -379,6 +380,7 @@ while getopts "AenkfhHg:Jbs:SBMm:C:d:" opt ; do
         J)  sqopt="-comp xz" ; arguments+=" -J";;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
+        n)  setnfsroot="$OPTARG" ;
         b)  burn=1 ; arguments+=" -b";;
         s)  space="$OPTARG" ;;
         S)  squash_only=1 ;;
@@ -451,6 +453,13 @@ fi
 . $cfdir/fai.conf
 . $cfdir/nfsroot.conf
 : ${FAI:=/var/lib/fai/config} # default value
+
+if [ -n "$setnfsroot" ]; then
+   NFSROOT=$setnfsroot # override by -n
+fi
+if [ -n "$csdir" ]; then
+    FAI_CONFIGDIR=$csdir # override by -c
+fi
 ONFSROOT=$NFSROOT # save original nfsroot
 
 if [ $autodiscover -eq 1 ]; then
