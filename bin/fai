@@ -296,9 +296,11 @@ if [ $do_init_tasks -eq 1 ]; then
     read hname < /proc/sys/kernel/hostname
     if [ -z "$HOSTNAME" -o $HOSTNAME = '(none)' -o -z "$hname" ]; then
 	myip=$(ip ad show up | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1| tr '.' '-')
-	export HOSTNAME="ip-$myip"
-	echo $HOSTNAME > /proc/sys/kernel/hostname
-	echo "Using IP for setting the host name: $HOSTNAME"
+	if [ -n "$myip" ]; then
+	    export HOSTNAME="ip-$myip"
+	    echo $HOSTNAME > /proc/sys/kernel/hostname
+	    echo "Using IP for setting the host name: $HOSTNAME"
+	fi
     fi
     unset hname myip
 
