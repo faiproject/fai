@@ -74,6 +74,19 @@ setnet() {
 	n=$(($n + 1))
     done
 
+    # determine the name of the default network interface
+    # try several times if dhclient needs some more time
+    local i=0
+    NIC1=$(ip route | awk '/^default/ {print $5}')
+    while [ ! "$NIC1" -a $i -lt 8 ]; do
+        sleep 2
+	NIC1=$(ip route | awk '/^default/ {print $5}')
+        (( i += 1 ))
+    done
+    if [ -z "$NIC1" ]; then
+	NIC1=$(ip route | awk '/ dev / {print $3}')
+    fi
+
     read IPADDR NETMASK BROADCAST dummy<<<$(ifdata -p $dev)
     CIDR=$(ip -o -f inet addr show| awk '{print $4}'| grep $IPADDR)
     GATEWAYS=$(ip route | awk '/^default/ {print $3}')
@@ -88,6 +101,7 @@ setnet() {
 	GATEWAYS=$GATEWAYS
 	BROADCAST=$BROADCAST
 	CIDR=$CIDR
+	NIC1=$NIC1
 EOF
 
     if [ -n "$DOMAIN" ]; then
