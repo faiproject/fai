@@ -176,33 +176,20 @@ create_grub2_image() {
 
     mkdir -p $tmp/boot/grub $NFSROOT/boot/grub
     if [ -f $NFSROOT/boot/grub/core.img ]; then
-        cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub
+        :
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
         chroot $NFSROOT /usr/bin/grub-mkimage -p /boot/grub -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub
     else
-        echo "no grub2 installation found in NFSROOT, using downloaded $grubPackage"
-        apt-get -y -d install --reinstall grub-pc >/dev/null
-        grubPackage=`ls -rt /var/cache/apt/archives/grub-pc*|tail -1`
-        if [ -z "$grubPackage" ]; then
-            die 22 "Downloading grub2 failed."
-        fi
-        GRUBDIR=$tmp/grubPackage
-        mkdir -p $GRUBDIR
-        dpkg -x $grubPackage $GRUBDIR
-        cd $GRUBDIR
-        ./usr/bin/grub-mkimage -p /boot/grub -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        MODULEBASE=$GRUBDIR/usr/lib/grub
+        die 11 "No grub-pc installation found in NFSROOT. Aborting."
     fi
+    cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
+    MODULEBASE=$NFSROOT/usr/lib/grub
 
     grubtarget=$tmp/boot/grub/i386-pc
     mkdir -p $grubtarget
     for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,boot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
         [[ -e $a ]] && cp $a $grubtarget
     done
-    rm -rf $GRUBDIR
     cp $grub_config $tmp/boot/grub/grub.cfg
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/grub.cfg
