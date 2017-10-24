@@ -1712,13 +1712,13 @@ architecture. Here are the steps do to:
 
 Then you can run qemu as a normal user:
 ----
-> qemu-system-aarch64 -m 1000 -M virt,gic_version=3 -cpu cortex-a57 -drive file=arm64.raw,if=virtio,index=1 -no-reboot -nographic -name ARM64 -kernel vmlinuz -initrd initrd -append "console=ttyAMA0 rw ip=dhcp root=/dev/vda1 net.ifnames=0"
+> qemu-system-aarch64 -m 1000 -M virt,gic_version=3 -cpu cortex-a57 -drive file=arm64.raw,if=virtio,index=1 -no-reboot -nographic -name ARM64 -net nic,name=eth0,model=virtio -net user,name=eth0,-kernel vmlinuz -initrd initrd -append "console=ttyAMA0 rw ip=dhcp root=/dev/vda1 net.ifnames=0"
 ----
 
-Keep in mind, that this qemu network setup will have poor
-performance. Use tap devices for much better performance.
-
 This works similar for other architectures.
+Keep in mind, that qemu network setup will have poor performance if
+not using the virtio driver as above or tap devices.
+
 
 
 You can find the base files for many architectures at
