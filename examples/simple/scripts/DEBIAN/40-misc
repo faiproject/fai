@@ -41,13 +41,10 @@ ln -fs /proc/mounts $target/etc/mtab
 
 rm -f $target/etc/dpkg/dpkg.cfg.d/fai $target/etc/dpkg/dpkg.cfg.d/unsafe-io
 
-if [ $FAI_ACTION = "install" -o $FAI_ACTION = "dirinstall" ] ; then
-  [ -f /etc/fai/fai.conf ] && cp /etc/fai/fai.conf $target/etc/fai/fai.conf
+if [ -d /etc/fai ]; then
+    ainsl -a /etc/fai/fai.conf "FAI_CONFIG_SRC=$FAI_CONFIG_SRC"
+    fcopy -Miv /etc/fai/fai.conf
 fi
-
-ainsl -a /etc/fai/fai.conf "FAI_CONFIG_SRC=$FAI_CONFIG_SRC"
-
-fcopy -Miv /etc/fai/fai.conf
 fcopy -iv /etc/rc.local
 
 exit $error
