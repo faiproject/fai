@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) Thomas Lange, 2001-2013, lange@debian.org
+# (c) Thomas Lange, 2001-2017, lange@debian.org
 
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
 
@@ -14,11 +14,11 @@ if ifclass UBUNTU; then
      $ROOTCMD addgroup --system sambashare || true
 fi
 
-# add a demo user account
-if ! $ROOTCMD getent passwd demo ; then
-    $ROOTCMD adduser --disabled-login --gecos "fai demo user" demo
-    $ROOTCMD usermod -p "$ROOTPW" demo
+# add additional user account
+if ! $ROOTCMD getent passwd $username ; then
+    $ROOTCMD adduser --disabled-login --gecos "first user" $username
+    $ROOTCMD usermod -p "$USERPW" $username
     for g in $groups; do
-	$ROOTCMD adduser demo $g
+	$ROOTCMD adduser $username $g
     done
 fi
