@@ -75,14 +75,14 @@ setnet() {
     # determine the name of the default network interface
     # try several times if dhclient needs some more time
     local i=0
-    NIC1=$(ip route | awk '/^default/ {print $5}')
+    NIC1=$(ip route | awk '/^default/ {print $5}'|head -1)
     while [ ! "$NIC1" -a $i -lt 8 ]; do
         sleep 2
-	NIC1=$(ip route | awk '/^default/ {print $5}')
+	NIC1=$(ip route | awk '/^default/ {print $5}'|head -1)
         (( i += 1 ))
     done
     if [ -z "$NIC1" ]; then
-	NIC1=$(ip route | awk '/ dev / {print $3}')
+	NIC1=$(ip route | awk '/ dev / {print $3}'|head -1)
     fi
 
     read IPADDR NETMASK BROADCAST dummy<<<$(ifdata -p $dev)
