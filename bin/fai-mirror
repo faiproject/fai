@@ -192,7 +192,7 @@ verbose=0
 add=1
 qflag=-qq
 bcount=0
-while getopts "a:bBvhx:pc:C:m:P:" opt ; do
+while getopts "a:bBvhx:pc:C:m:s:P:" opt ; do
     case "$opt" in
         a) arch=$OPTARG ;;
         B) add=0 ; ((bcount++)) ;;
@@ -203,6 +203,7 @@ while getopts "a:bBvhx:pc:C:m:P:" opt ; do
         c) cclasses="$OPTARG";;
         m) MAXPACKAGES="$OPTARG";;
         p) preserve=1;;
+	s) csdir="$OPTARG";;
         v) verbose=1; vflag=-v; qflag='';;
         P) aptpref="$OPTARG";;
         ?) die 1 "Unknown option";;
@@ -221,9 +222,11 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 . $cfdir/fai.conf
 . $cfdir/nfsroot.conf
 : ${MNTPOINT:=/media/mirror}  # default value
-
 export NFSROOT
 
+if [ -n "$csdir" ]; then
+    FAI_CONFIGDIR=$csdir # override by -s
+fi
 [ -x "$(which reprepro)" ] || die 8 "reprepro not found. Please install the package."
 [ -n "$exclasses" -a -n "$cclasses" ] && die 3 "Options -x and -c not allowed at the same time."
 
