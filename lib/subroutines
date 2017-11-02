@@ -370,7 +370,11 @@ task_setup() {
             # create two virtual terminals; acces via alt-F2 and alt-F3
             echo "Press ctrl-c to interrupt FAI and to get a shell"
             openvt -c2 /bin/bash ; openvt -c3 /bin/bash
-            trap 'echo "You can reboot with faireboot";bash' INT QUIT
+            echo "The log files are saved in /tmp/fai" > /dev/tty2
+            echo "The log files are saved in /tmp/fai" > /dev/tty3
+            trap 'echo "You can reboot with faireboot"; \
+	          echo "The log files are saved in /tmp/fai"; \
+		  cd /tmp/fai;bash' INT QUIT
         }
 
         # start secure shell daemon for remote access
