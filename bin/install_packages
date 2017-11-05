@@ -193,15 +193,14 @@ foreach $atype (@commands) {
     mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
     getsources(); # retrieve sources
     if ($opt_l) {
-      # only print the package list
-      print join ' ',@known,"\n";
-      exit 0;
+      next;
     }
     if ($opt_L) {
       # only print the package list
       execute("$rootcmd $command{'inst-internal'} @known | egrep ^Inst");
-      exit 0;
+      next;
     }
+
     # pass only maxpl packages to apt-get
     while (@known) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
@@ -231,6 +230,13 @@ foreach $atype (@commands) {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # end of the big foreach loop
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if ($opt_L) {
+  exit 0;
+}
+if ($opt_l) {
+  print join ' ',@known,"\n";
+  exit 0;
+}
 
 # remove preloaded files
 foreach my $entry (@preloadrmlist) {
