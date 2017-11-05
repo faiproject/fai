@@ -75,7 +75,6 @@ our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi 
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
     "install-norec" => "apt-get $aptopt --fix-missing install --no-install-recommends",
-    "inst-internal" => "apt-get $aptopt --fix-missing -s install",
            "remove" => "apt-get $aptopt --purge remove",
   "dselect-upgrade" => "apt-get $aptopt dselect-upgrade",
          "taskinst" => "tasksel install",
@@ -196,8 +195,8 @@ foreach $atype (@commands) {
       next;
     }
     if ($opt_L) {
-      # only print the package list
-      execute("$rootcmd $command{'inst-internal'} @known | egrep ^Inst");
+      # only print the package list, only works for install and instal-norec
+      execute("$rootcmd $command{$atype} -s @known | egrep ^Inst");
       next;
     }
 
