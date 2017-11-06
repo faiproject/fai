@@ -14,7 +14,7 @@ newnicnames() {
 	return
     fi
 
-    [ -z $NIC1 ] && return
+    [ -z "$NIC1" ] && return
 
     fields="ID_NET_NAME_FROM_DATABASE ID_NET_NAME_ONBOARD ID_NET_NAME_SLOT ID_NET_NAME_PATH"
     for field in $fields; do
@@ -29,6 +29,9 @@ newnicnames() {
     fi
 }
 
+if [ -z "$NIC1" ]; then
+    echo "ERROR: \$NIC1 is not defined. Cannot configure /etc/network/interfaces properly."
+fi
 newnicnames
 CIDR=$(ip -o -f inet addr show $NIC1 | awk '{print $4}')
 if ifclass DHCPC && [ $FAI_ACTION = "install" -o $FAI_ACTION = "dirinstall" ]; then
