@@ -2,7 +2,7 @@
 
 # autodiscover of the FAI server
 
-# (c) Thomas Lange 2015
+# (c) Thomas Lange 2015,2017
 
 . /lib/dracut-lib.sh
 
@@ -133,7 +133,7 @@ dialog --infobox "\n\n FAI server $FAI_VERSION found at $monserver\n\n  Using ro
 sleep 4
 
 root=$monserver:$NFSROOT
-netroot=nfs:$monserver:$NFSROOT:
+netroot=nfs:$monserver:$NFSROOT:nfsvers=3
 echo "root=$root"
 
 echo "FAI_VERSION=$FAI_VERSION" >> $ivar
