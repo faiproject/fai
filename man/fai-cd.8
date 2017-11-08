@@ -1,7 +1,7 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .if \n(zZ=1 .ig zZ
 .if \n(zY=1 .ig zY
-.TH fai-cd 8 "Nov 2015" "FAI 5"
+.TH fai-cd 8 "Oct 2017" "FAI 5"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -58,6 +58,12 @@ mirror, which is created by fai-mirror. The ISO image will contain a compressed
 squashfs filesystem. This hybrid CD image can also
 be written to an USB stick using dd(1).
 
+NOTE: By default, fai-cd uses the grub file from /etc/fai/grub.cfg, which is
+designed for demo purposes.  This grub menu passes the "menu" flag to the
+FAI_FLAGS parameter, which causes a menu with various installation and
+boot options to be displayed on each boot.  To avoid this, you must specify
+your own grub file using the -g flag, as described below.
+
 .SH OPTIONS
 .TP
 .BI \-A
@@ -77,9 +83,12 @@ be empty.
 After creating the ISO image burn it by calling wodim(1) (a version of
 cdrecord).
 .TP
-.BI "\-C " CFDIR
-Use CFDIR as the configuration directory. Default is /etc/fai. You can
-also set the environment variable FAI_ETC_DIR.
+.BI "\-c " DIRECTORY
+Override the value of FAI_CONFIGDIR set in nfsroot.conf.
+.TP
+.BI "\-C " DIRECTORY
+Use DIRECTORY as the configuration directory instead of the default
+/etc/fai. You can also set the environment variable FAI_ETC_DIR.
 .TP
 .BI "\-d " URL
 Do not include the config space in the image and set the location of the
@@ -123,6 +132,9 @@ elsewhere, usually remote repositories.
 Use DIRECTORY as partial FAI mirror. This option is mandatory, unless
 you use -M or -B.
 .TP
+.BI "\-n " DIRECTORY
+Override the value of NFSROOT set in nfsroot.conf.
+.TP
 .BI "\-s " blocks
 Add additional disk space to the image. Increases the size by the
 number of 1M blocks specified.
@@ -165,6 +177,10 @@ option:
 Create the autodiscover boot image:
 
    # fai-cd \-JAg /etc/fai/grub.cfg.autodiscover fai-autod.iso
+
+Specify your own grub file:
+
+   # fai-cd -g /srv/fai/config/my_extras/grub.cfg -m /srv/fai/mirror /srv/fai/iso/fai-cd.iso
 
 .SH NOTES
 Additional kernel command line options can be found in the man page of

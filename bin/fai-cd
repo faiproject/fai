@@ -176,40 +176,20 @@ create_grub2_image() {
 
     mkdir -p $tmp/boot/grub $NFSROOT/boot/grub
     if [ -f $NFSROOT/boot/grub/core.img ]; then
-        cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub
+        :
     elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
         chroot $NFSROOT /usr/bin/grub-mkimage -p /boot/grub -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-        MODULEBASE=$NFSROOT/usr/lib/grub
     else
-        echo "no grub2 installation found in NFSROOT, using downloaded $grubPackage"
-        apt-get -y -d install --reinstall grub-pc >/dev/null
-        grubPackage=`ls -rt /var/cache/apt/archives/grub-pc*|tail -1`
-        if [ -z "$grubPackage" ]; then
-            die 22 "Downloading grub2 failed."
-        fi
-        GRUBDIR=$tmp/grubPackage
-        mkdir -p $GRUBDIR
-        dpkg -x $grubPackage $GRUBDIR
-        cd $GRUBDIR
-        ./usr/bin/grub-mkimage -p /boot/grub -d usr/lib/grub/*-pc -o $tmp/boot/grub/core.img biosdisk iso9660 --format=i386-pc
-        MODULEBASE=$GRUBDIR/usr/lib/grub
+        die 11 "No grub-pc installation found in NFSROOT. Aborting."
     fi
+    cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
+    cp $NFSROOT/boot/grub/unicode.pf2 $tmp/boot/grub
 
-    # check for jessie path
-    if strings $NFSROOT/usr/lib/grub/i386-pc/kernel.img | grep -q i386-pc/%s.mod; then
-	grubtarget=$tmp/boot/grub/i386-pc
-    else
-	# wheezy
-	grubtarget=$tmp/boot/grub
-    fi
-
+    grubtarget=$tmp/boot/grub/i386-pc
     mkdir -p $grubtarget
-    for a in $MODULEBASE/*-pc/{*.mod,efiemu??.o,cdboot.img,boot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
+    for a in $NFSROOT/usr/lib/grub/*-pc/{*.mod,efiemu??.o,cdboot.img,boot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
         [[ -e $a ]] && cp $a $grubtarget
     done
-    rm -rf $GRUBDIR
     cp $grub_config $tmp/boot/grub/grub.cfg
     # insert date into grub menu
     perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/grub.cfg
@@ -249,11 +229,9 @@ provide_memtest_boot_option() {
 
     if [ -f $NFSROOT/boot/memtest86+.bin ]; then
         cp $NFSROOT/boot/memtest86+.bin $tmp/boot
-    elif [ -f /boot/memtest86+.bin ]; then
-        cp /boot/memtest86+.bin $tmp/boot
+        echo "Adding memtest86+ to grub menu"
     else
-        echo "no memtest86+.bin found, omit memtest boot option"
-        return
+        return 0
     fi
 
     cat >> $tmp/boot/grub/grub.cfg <<EOF
@@ -339,7 +317,7 @@ addmirror() {
 
     mkdir $tmp/$liveos/mounted-ext3fs/media/mirror
 
-    echo "Copying mirror to CD image"
+    echo "Copying the mirror to CD image"
     cp -Pr $mirrordir/{dists,pool} $tmp/$liveos/mounted-ext3fs/media/mirror 2>/dev/null || die $? "Not enough space left on device for the mirror"
 
     # create the sources.list for the CD
@@ -354,7 +332,7 @@ EOF
     for i in $dists ; do
         comp=$(find $mirrordir/dists/$i -maxdepth 2 -type d -name "binary-*" | \
         sed -e "s#$mirrordir/*dists/$i/##" -e 's#/binary-.*##' | uniq | tr '\n' " ")
-        echo "deb file:/media/mirror $i $comp" >> $tmp/squashfs-root/LiveOS/mounted-ext3fs/etc/apt/sources.list
+        echo "deb [allow-insecure=yes] file:/media/mirror $i $comp" >> $tmp/squashfs-root/LiveOS/mounted-ext3fs/etc/apt/sources.list
     done
 
 }
@@ -367,9 +345,10 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AenkfhHg:Jbs:SBMm:C:d:" opt ; do
+while getopts "AekfhHg:Jbs:SBMn:m:c:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
+        c)  csdir="$OPTARG" ;;
         C)  cdir="$OPTARG" ; arguments+=" -C $cdir";;
         e)  hidevartmp=1 ;;
         f)  forceremoval=1 ;;
@@ -379,6 +358,7 @@ while getopts "AenkfhHg:Jbs:SBMm:C:d:" opt ; do
         J)  sqopt="-comp xz" ; arguments+=" -J";;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
+        n)  setnfsroot="$OPTARG" ;;
         b)  burn=1 ; arguments+=" -b";;
         s)  space="$OPTARG" ;;
         S)  squash_only=1 ;;
@@ -395,10 +375,15 @@ if [ $autodiscover -eq 1 ]; then
     nomirror=1
     bootonly=1
     hidedirs="
-    net/ceph
-    net/wireless
     sound
+    net/ceph
+    fs/ceph
+    fs/ocfs2
+    fs/btrfs
+    fs/xfs
+    drivers/net/wireless
     drivers/block/drbd
+    drivers/hwmon
     drivers/staging/lustre
     drivers/scsi
     drivers/ata
@@ -446,6 +431,13 @@ fi
 . $cfdir/fai.conf
 . $cfdir/nfsroot.conf
 : ${FAI:=/var/lib/fai/config} # default value
+
+if [ -n "$setnfsroot" ]; then
+   NFSROOT=$setnfsroot # override by -n
+fi
+if [ -n "$csdir" ]; then
+    FAI_CONFIGDIR=$csdir # override by -c
+fi
 ONFSROOT=$NFSROOT # save original nfsroot
 
 if [ $autodiscover -eq 1 ]; then

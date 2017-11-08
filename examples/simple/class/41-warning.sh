@@ -13,6 +13,10 @@ grep -q INSTALL $LOGDIR/FAI_CLASSES || return 0
 [ "$flag_menu" ] || return 0
 
 out=$(tty)
+red=$(mktemp)
+echo 'screen_color = (CYAN,RED,ON)' > $red
 
-dialog --colors --clear --aspect 6 --title "FAI - Fully Automatic Installation" --trim \
+DIALOGRC=$red dialog --colors --clear --aspect 6 --title "FAI - Fully Automatic Installation" --trim \
 	        --msgbox "\n\n        If you continue,       \n   all your data on the disk   \n                               \n|\Zr\Z1       WILL BE DESTROYED     \Z0\Zn|\n\n" 0 0 1>$out
+rm $red
+unset red

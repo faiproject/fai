@@ -7,7 +7,7 @@ FAI Guide (Fully Automatic Installation)
 Thomas Lange <lange@informatik.uni-koeln.de>
 Mon, 21 Sep 2017
 :Date: a date
-:Revision: 5.4
+:Revision: 5.5
 
 :nfsrootsize: 780
 :mirrorsize: 56
@@ -35,7 +35,7 @@ configuration and how to deal with errors.
 
 ----
      +-----------------------------------------------------------------------+
-     | This manual describes FAI 5.4 but most things are also valid for 4.x. |
+     | This manual describes FAI 5.5 but most things are also valid for 4.x. |
      +-----------------------------------------------------------------------+
 ----
 
@@ -938,7 +938,7 @@ The encrypted root password for the new system. You can use
 `mkpasswd(1)` for creating the hash for a certain password.
 For example, to generate a md5 hash for the password use
 ----
-$ echo "yoursecrectpassword" | mkpasswd -Hmd5 -s
+$ echo "yoursecrectpassword" | mkpasswd -m md5 -s
 ----
 
 
@@ -1407,7 +1407,7 @@ types (shell, cfengine, ...) to be executed for one class.
 
 The default set of scripts in '$FAI/scripts' include examples for
 installing Debian and CentOS machines. They set the root password, add
-a demo user account, set the timezone, configure the network for DHCP
+a user account (set by '$username, default to demo), set the timezone, configure the network for DHCP
 or using a fixed IP address, setup grub and more.
 They should do a reasonable job for your installation. You can edit
 them or add new scripts to match your local needs.
@@ -1712,13 +1712,13 @@ architecture. Here are the steps do to:
 
 Then you can run qemu as a normal user:
 ----
-> qemu-system-aarch64 -m 1000 -M virt,gic_version=3 -cpu cortex-a57 -drive file=arm64.raw,if=virtio,index=1 -no-reboot -nographic -name ARM64 -kernel vmlinuz -initrd initrd -append "console=ttyAMA0 rw ip=dhcp root=/dev/vda1 net.ifnames=0"
+> qemu-system-aarch64 -m 1000 -M virt,gic_version=3 -cpu cortex-a57 -drive file=arm64.raw,if=virtio,index=1 -no-reboot -nographic -name ARM64 -net nic,name=eth0,model=virtio -net user,name=eth0,-kernel vmlinuz -initrd initrd -append "console=ttyAMA0 rw ip=dhcp root=/dev/vda1 net.ifnames=0"
 ----
 
-Keep in mind, that this qemu network setup will have poor
-performance. Use tap devices for much better performance.
-
 This works similar for other architectures.
+Keep in mind, that qemu network setup will have poor performance if
+not using the virtio driver as above or tap devices.
+
 
 
 You can find the base files for many architectures at
@@ -1986,9 +1986,8 @@ they are executed.
 
 confdir::
 The kernel appended parameters may define variables, the syslog daemon is
-started. The list of network devices is stored in
-+$netdevices+. Then additional parameters are fetched from a DHCP
-server. The DNS resolver configuration file is created.
+started. Network parameters are fetched from a DHCP
+server and are stored in +boot.log+. The DNS resolver configuration file is created.
 +
 The location of the configuration space is defined by the variable
 +$FAI_CONFIG_SRC+.

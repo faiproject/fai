@@ -170,6 +170,29 @@ cleanup_devicemapper() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mk_zerofree_list() {
+
+    # make a list of devices for zerofree which have an ext2/3/4 file  system
+    local source fstype mpoint v
+
+    if [ X$verbose = X1 ]; then
+	v=-v
+    fi
+    while read -r source fstype mpoint ; do
+
+	# skip non ext2/3/4 file systems
+	case $fstype in
+            ext*) : ;;
+	    *) continue ;;
+	esac
+
+	if [[ $mpoint =~ $target ]]; then
+	    echo "zerofree $v $source" >> /var/run/fai/zerofree.$PPID
+	fi
+
+    done < <(df --output=source,fstype,target)
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 wait_for_jobs() {
 
     # can be an extern script
@@ -347,7 +370,11 @@ task_setup() {
             # create two virtual terminals; acces via alt-F2 and alt-F3
             echo "Press ctrl-c to interrupt FAI and to get a shell"
             openvt -c2 /bin/bash ; openvt -c3 /bin/bash
-            trap 'echo "You can reboot with faireboot";bash' INT QUIT
+            echo "The log files are saved in /tmp/fai" > /dev/tty2
+            echo "The log files are saved in /tmp/fai" > /dev/tty3
+            trap 'echo "You can reboot with faireboot"; \
+	          echo "The log files are saved in /tmp/fai"; \
+		  cd /tmp/fai;bash' INT QUIT
         }
 
         # start secure shell daemon for remote access
@@ -395,7 +422,7 @@ task_action() {
                 return
             fi
             echo Performing FAI installation. All data may be overwritten!
-	    if [ $do_init_tasks -eq 1 ] ; then
+	    if [ $do_init_tasks -eq 1 -a X$flag_menu = X ] ; then
 		echo -ne "\a"; sleep 1
 		echo -ne "\a"; sleep 1
 		echo  -e "\a"; sleep 5
@@ -543,18 +570,17 @@ task_configure() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_tests() {
 
-    if [ -d $FAI/tests ]; then
-        fai-do-scripts $FAI/tests  # always returns 0 atm
-        # check if any test failed
-        if [ -f $LOGDIR/test.log ]; then
-            if grep -q "FAILED with " $LOGDIR/test.log; then
-                sendmon "TASKERROR tests 312"
-                task_error 312
-                return 1
-            fi
+    if [ ! -d $FAI/tests ]; then
+	return
+    fi
+    fai-do-scripts $FAI/tests  # always returns 0 atm
+    # check if any test failed
+    if [ -f $LOGDIR/test.log ]; then
+        if grep -q "FAILED with " $LOGDIR/test.log; then
+            sendmon "TASKERROR tests 312"
+            task_error 312
+            return 1
         fi
-    else
-        echo "WARNING: Subdirectory tests/ not found. No tests run." >&2
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -588,6 +614,7 @@ task_faiend() {
     sendmon "TASKEND faiend 0"
 
     cd /
+    mk_zerofree_list
     umount_target
     cleanup_devicemapper
     if [ $do_init_tasks -eq 0 ]; then
@@ -817,20 +844,6 @@ task_confdir() {
     fi
     define_fai_flags
 
-    # determine the name of the default network interface
-    # try several times if dhclient needs some more time
-    local i=0
-    NIC1=$(ip route | awk '/^default/ {print $5}')
-    while [ ! "$NIC1" -a $i -lt 8 ]; do
-        sleep 2
-	NIC1=$(ip route | awk '/^default/ {print $5}')
-        (( i += 1 ))
-    done
-    if [ -z "$NIC1" ]; then
-	NIC1=$(ip route | awk '/ dev / {print $3}')
-    fi
-    export NIC1
-
     if [ -z "$SERVER" ]; then
         # since SERVER is not set (by DHCP) we extract it from FAI_CONFIG_SRC
         # extract server name from FAI_CONFIG_SRC and delete user@ from string
@@ -932,7 +945,6 @@ call_debootstrap() {
 
     local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
     echo "Creating base system using debootstrap version $dversion"
-    echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2"
 
     # Check if we need cross architecture debootstrap
     targetarch=$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch=\([^[:space:]]*\)' || true)
@@ -953,8 +965,8 @@ call_debootstrap() {
 	fi
     fi
 
-    echo "Calling $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
-    LC_ALL=C call_verbose $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
+    echo "Calling $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2"
+    LC_ALL=C $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -1075,13 +1087,13 @@ task_repository () {
     fi
 
     # apt specific things
-    if ! fcopy -BM $v /etc/apt/sources.list; then
+    if ! fcopy -SBM $v /etc/apt/sources.list; then
 	[ -f $FAI_ETC_DIR/apt/sources.list ] && cp $v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
     fi
     if ! fcopy -BM $v /etc/apt/preferences; then
         [ -f $FAI_ETC_DIR/apt/preferences ] && cp $v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
     fi
-    fcopy -BMir /etc/apt # copy all other apt config files from the config space
+    fcopy -SBMir /etc/apt # copy all other apt config files from the config space
 
     if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
         cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
@@ -1205,10 +1217,10 @@ task_chboot() {
         if [ -n "$nexttest" ]; then
                 # for test sequences, we want the system to reinstall immediately with
                 # with different class setup
-            $frsh /usr/sbin/fai-chboot -k ADDCLASSES=$nexttest -FIv $ipaddr
+            $frsh /usr/sbin/fai-chboot -k ADDCLASSES=$nexttest -FIv $ipaddr $MAC
         else
                 # remove pxe config, so host will use default and boot from local disk
-            $frsh /usr/sbin/fai-chboot -vd $ipaddr
+            $frsh /usr/sbin/fai-chboot -vd $ipaddr $MAC
         fi
     fi
 }

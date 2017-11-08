@@ -5,7 +5,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2016 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2017 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -46,6 +46,7 @@ my $error = 0;
 my $verbose;
 my $target;
 my $source;
+my $substitute;
 my $logfile;
 my @classes;
 my $dryrun;
@@ -61,7 +62,7 @@ my $preinst;
 # getopts:
 our ($opt_s, $opt_t, $opt_r, $opt_m, $opt_M, $opt_v, $opt_d, $opt_D, $opt_i);
 our ($opt_B, $opt_c, $opt_C, $opt_h, $opt_F, $opt_l, $opt_L, $opt_P, $opt_b);
-our ($opt_I, $opt_U, $opt_n, $opt_H);
+our ($opt_I, $opt_U, $opt_n, $opt_H, $opt_S);
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub copy_one {
@@ -91,8 +92,9 @@ sub copy_one {
   # $prefix/$source must be a directory
   if (-f $ps) { ewarn("$ps is a file, but must be a directory containing templates.");return };
   unless (-d $ps) {
-    ewarn("Nonexisting directory $ps. No files copied.") if $debug;
-    $error = 1; # we could not copy anything
+    # we could not copy anything
+    warn "fcopy: Nonexisting directory $ps. No files copied.\n" if $debug;
+    $error = 1 unless $opt_i; # do not set $error if -i was set
     return;
   }
 
@@ -101,7 +103,8 @@ sub copy_one {
 
   # if no class matches, remove destination or move it to the backup file
   unless (defined $class) {
-    ewarn("no matching file for any class for $source defined.");
+    warn "fcopy: no matching file for any class for $source defined.\n";
+    $error = 1 unless $opt_i; # do not set $error if -i was set
     # do not copy
     if ($opt_d and -f $destfile) {
       print LOGFILE "$source\tNONE\t# removed (no matching class)\n" if $logfile;
@@ -128,8 +131,19 @@ sub copy_one {
     }
   }
 
-  # execute preinst script
-  if ( -x "$ps/preinst" ) {
+  if ($substitute or -f "$ps/_substitute") {
+    ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
+    warn "Enable substitution. Copying $sourcefile to $tmpfile" if $debug;
+
+    do_substitution("$ps/$class",$tmpfh);
+    close $tmpfh;
+    # if error {
+    #     ewarn("Cannot write to $tmpfile");
+    #     unlink($tmpfile);
+    #   return 0;
+    #   }
+  } elsif ( -x "$ps/preinst" ) {
+    # execute preinst script
     $preinst = 1;        # a tmpfile is used because of preinst script
     ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
     warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
@@ -221,6 +235,21 @@ sub copy_one {
     }
   }
   _unlink($tmpfile) if $preinst;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+sub do_substitution {
+
+  my ($src,$tmp) = @_;
+  my $line;
+
+  open (SRC,"< $src") || die "fcopy: can't open $src\n";
+    while ($line = <SRC>) {
+      $line =~ s/\{%(\w+)%\}/
+	if (exists $ENV{$1}) { $ENV{$1}} else {$error=1; warn "Error in substitution: Variable \$$1 undefined. File $src,line $.\n"; "\${$1}"}
+      /eg;
+      print $tmp $line;
+    }
+  close SRC;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _mkpath {
@@ -455,6 +484,7 @@ Usage: fcopy [OPTION] ... SOURCE ...
    -n                   Print the commands, but do not execute them.
    -r                   Copy recursivly but skip ignored directories.
    -s source_dir        Look for source files relative to source_dir.
+   -S                   Enable substition of variables in files.
    -t target_dir        Copy files relativ to target_dir.
    -b backup_dir        Where to save backups of overwritten files
    -v                   Create verbose output.
@@ -466,7 +496,7 @@ EOF
 # main program
 
 $|=1;
-getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:UnH') || usage;
+getopts('Ms:t:rm:vidDc:C:hF:lL:P:Bb:I:UnHS') || usage;
 $opt_h && usage;
 $opt_P and die "Option -P is not supported any more. You may want to use -F\n";
 $dryrun = $ENV{FCOPY_DRYRUN} || $opt_n || 0; # is true if in dry-run mode
@@ -474,6 +504,7 @@ $dryrun and warn "Dry-run only! Nothing is really executed.\n";
 $opt_M and $opt_m = "root,root,0644";  # set default modes
 $opt_m && check_mopt();
 $nobackup = $opt_B || $ENV{FCOPY_NOBACKUP} || 0;
+$substitute = $opt_S || $ENV{FCOPY_SUBSTITUTE} || 0;
 $verbose = $opt_v || $ENV{verbose} || 0;
 $debug   = $opt_D || $ENV{debug}   || 0;
 $source  = $opt_s || $ENV{FAI} && "$ENV{FAI}/files" || `pwd`;
@@ -526,5 +557,4 @@ if ($opt_r) {
 }
 
 foreach (@ARGV) { copy_one($source,$_,$target); }
-$opt_i && exit 0; # ignore any warning
 exit $error;

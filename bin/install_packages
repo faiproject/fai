@@ -71,11 +71,10 @@ $| = 1;
 
 
 # @commands is the order of the commands that are executed
-our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r aptitude aptitude-r install install-norec unpack remove dselect-upgrade/;
+our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r install install-norec aptitude aptitude-r unpack remove dselect-upgrade/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
     "install-norec" => "apt-get $aptopt --fix-missing install --no-install-recommends",
-    "inst-internal" => "apt-get $aptopt --fix-missing -s install",
            "remove" => "apt-get $aptopt --purge remove",
   "dselect-upgrade" => "apt-get $aptopt dselect-upgrade",
          "taskinst" => "tasksel install",
@@ -193,15 +192,14 @@ foreach $atype (@commands) {
     mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
     getsources(); # retrieve sources
     if ($opt_l) {
-      # only print the package list
-      print join ' ',@known,"\n";
-      exit 0;
+      next;
     }
     if ($opt_L) {
-      # only print the package list
-      execute("$rootcmd $command{'inst-internal'} @known | egrep ^Inst");
-      exit 0;
+      # only print the package list, only works for install and instal-norec
+      execute("$rootcmd $command{$atype} -s @known | egrep ^Inst");
+      next;
     }
+
     # pass only maxpl packages to apt-get
     while (@known) {
       my $shortlist = join(' ', splice @known,0,$maxpl);
@@ -231,6 +229,13 @@ foreach $atype (@commands) {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # end of the big foreach loop
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
+if ($opt_L) {
+  exit 0;
+}
+if ($opt_l) {
+  print join ' ',@known,"\n";
+  exit 0;
+}
 
 # remove preloaded files
 foreach my $entry (@preloadrmlist) {

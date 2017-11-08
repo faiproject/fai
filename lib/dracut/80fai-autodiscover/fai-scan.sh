@@ -2,7 +2,7 @@
 
 # autodiscover of the FAI server
 
-# (c) Thomas Lange 2015
+# (c) Thomas Lange 2015,2017
 
 . /lib/dracut-lib.sh
 
@@ -26,13 +26,13 @@ declare -a para
 scan_net() {
 
     # scan local network for FAI server
-    
+
     local iprange=$1
     shift
     local port=$1
     local iplist
     local host
-    
+
     iplist=$(nmap -n -e $nic --host-timeout 10 --open -oG - -p $port $iprange 2>/dev/null  | grep -v '#' | cut -d' ' -f2 | sort -n | uniq)
 
     # check all IPs, if a faiserver is listening there
@@ -133,11 +133,11 @@ dialog --infobox "\n\n FAI server $FAI_VERSION found at $monserver\n\n  Using ro
 sleep 4
 
 root=$monserver:$NFSROOT
-netroot=nfs:$monserver:$NFSROOT:
+netroot=nfs:$monserver:$NFSROOT:nfsvers=3
 echo "root=$root"
 
 echo "FAI_VERSION=$FAI_VERSION" >> $ivar
-echo FAI_FLAGS=$FAI_FLAGS >> $ivar
+echo "FAI_FLAGS=$FAI_FLAGS" >> $ivar
 echo "root=$monserver:$NFSROOT" >> $ivar
 echo "monserver=$monserver" >> $ivar
 echo "FAI_CONFIG_SRC=$FAI_CONFIG_SRC" >> $ivar

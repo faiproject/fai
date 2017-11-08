@@ -94,9 +94,10 @@ adjust=0
 generic=0
 force=0
 usexz=1
+full=1
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpUz opt ; do
+while getopts aghervC:B:fkKpUzsN opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
@@ -109,9 +110,11 @@ while getopts aghervC:B:fkKpUz opt ; do
         f) force=1 ;;
         k) kinstall=1 ;;
         K) kremove=1;;
+        N) nonfree=NONFREE ;;
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
+        s) full=0 ;; # do only install a smaller list of packages
         ?) exit 5 ;; # error in option parsing
     esac
 done
@@ -182,11 +185,16 @@ call_verbose() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 setclasses() {
 
-    local iarch distro
+    local iarch distro c
     # Export all the information we have about the system
     iarch=$($ROOTCMD dpkg --print-architecture|tr /a-z/ /A-Z/)
     distro=$(. $NFSROOT/etc/os-release; echo ${ID} ${ID}_${VERSION_ID} | tr '[:lower:].' '[:upper:]_')
-    export classes="NFSROOT $iarch $distro"
+
+    # do we want to install the full list of packages?
+    if [ $full = 1 ]; then
+	c=FULL
+    fi
+    export classes="NFSROOT $c $iarch $distro $nonfree"
     if [ X$verbose = X1 ] ; then
       echo Classes are set to $classes
     fi
@@ -357,6 +365,8 @@ extract_base() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_nfsroot() {
 
+    local fslist
+
     mkdir -p $NFSROOT/$FAI
     cd $NFSROOT || die 1 "Can't cd to $NFSROOT"
 
@@ -369,7 +379,6 @@ create_nfsroot() {
     # save the list of all packages in the base.tar.gz
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
 
-    setclasses
     if [ -n "$FAI_DEBMIRROR" ]; then
         [ X$verbose = X1 ] && echo "Mounting $FAI_DEBMIRROR to $NFSROOT/$MNTPOINT."
         mkdir -p $NFSROOT/$MNTPOINT
@@ -394,11 +403,17 @@ EOF
     # do not need all those filesystems inside the initrd
     mkdir $NFSROOT/etc/dracut.conf.d
     echo 'omit_dracutmodules+="dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd"' > $NFSROOT/etc/dracut.conf.d/12-no-systemd.conf
-    echo 'add_dracutmodules+=" livenet "' > $NFSROOT/etc/dracut.conf.d/13-add-cd-support.conf
+    if [ $full = 1 ];then
+	echo 'add_dracutmodules+=" livenet "' > $NFSROOT/etc/dracut.conf.d/13-add-cd-support.conf
+	fslist="nfs lockd ext4"
+    else
+	echo 'add_dracutmodules+=" dmsquash-live "' > $NFSROOT/etc/dracut.conf.d/13-add-cd-support.conf
+	fslist="ext4"
+    fi
     echo 'hostonly="no"' > $NFSROOT/etc/dracut.conf.d/20-generic-image.conf
     cat <<EOF > $NFSROOT/etc/dracut.conf.d/01-omit.conf
 omit_dracutmodules+=" btrfs crypt dash lvm resume usrmount modsign mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd "
-filesystems="nfs lockd ext4"
+filesystems="$fslist"
 EOF
 
     local fname=$(readlink -f $cfdir/apt/sources.list)
@@ -450,6 +465,8 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
 
+    local nfscommon
+
     mount -t proc   /proc  $NFSROOT/proc
     mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
@@ -465,14 +482,17 @@ upgrade_nfsroot() {
     fi
 
     # if we have the keyring on the host, install the key of the fai-project.org package repository
-    if [ -n "$(apt-key list | grep 074BCDE4)" ]; then
-        HOME=/root apt-key export 074BCDE4 | chroot $NFSROOT apt-key add -
+    if [ -n "$(apt-key list 074BCDE4 2>/dev/null)" ]; then
+        HOME=/root apt-key export 074BCDE4 | $ROOTCMD apt-key add -
+    fi
+
+    if [ $full = 1 ];then
+	nfscommon=nfs-common
     fi
 
     $ROOTCMD apt-get update
     # fai-nfsroot must be sucessfully installed before anything else
-    $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot
-    $ROOTCMD apt-get -yf --no-install-recommends install dracut-network dracut-config-generic nfs-common
+    $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-network dracut-config-generic $nfscommon
     $ROOTCMD apt-get -y dist-upgrade
     fdivert /usr/sbin/update-grub
 }
@@ -520,21 +540,11 @@ umount_dirs() {
 setup_tftp(){
 
     # tftp environment
-    local pxebin
-
-    # wheezy path
-    if [ -f $NFSROOT/usr/lib/PXELINUX/pxelinux.0 ]; then
-        pxebin=$NFSROOT/usr/lib/PXELINUX/pxelinux.0
-    else
-	# jessie/stretch path
-        pxebin=$NFSROOT/usr/lib/syslinux/pxelinux.0
-    fi
-
     rm -f $NFSROOT/boot/*.bak
     mkdir -p $TFTPROOT/pxelinux.cfg
     chmod a+r $NFSROOT/boot/initrd.img-* || die 9 "No initrd was created. Check the package name of the linux-image package in /etc/fai/NFSROOT."
     cp -p $v $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
-    cp -u $pxebin $TFTPROOT
+    cp -u $v $NFSROOT/usr/lib/PXELINUX/pxelinux.0 $TFTPROOT
     if [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ]; then
 	cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
     fi
@@ -585,7 +595,9 @@ trap "bad_exit" ERR
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
     echo "Removing all kernels from NFSROOT."
-    $ROOTCMD aptitude -y purge ~nlinux-image
+    LC_ALL=C $ROOTCMD apt-cache dumpavail > $NFSROOT/var/lib/dpkg/available
+    LC_ALL=C $ROOTCMD apt-get -qq purge linux-image\*
+    rm $NFSROOT/var/lib/dpkg/available
     exit
 }
 
