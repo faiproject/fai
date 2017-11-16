@@ -151,6 +151,7 @@ can't initialize iptables table
 can't initialize ip6tables table
 Authentication warning overridden
 41-warning.sh
+PCCT header not found
 Download is performed unsandboxed as root as file
 update-alternatives: warning: skip creation of
 loop: module verification failed: signature
