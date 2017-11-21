@@ -52,7 +52,7 @@ ibwebadmin
 kernel-patch-badram
 kolab-webadmin
 kolabadmin
-gstreamer0.10-plugins-really-bad
+gstreamer.\+-plugins-really-bad
 liberrors.so
 liberrors-samba
 gsambad
@@ -80,7 +80,7 @@ deverror.out
 (floppy), sector 0
 mount version older than kernel
 Can't locate module
-Warning only 896MB will be used.
+Warning only .\+MB will be used.
 hostname: Host name lookup failure
 I can't tell the difference.
 warning, not much extra random data, consider using the -rand option
