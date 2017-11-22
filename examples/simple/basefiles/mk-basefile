@@ -176,8 +176,12 @@ debgeneric() {
     dist=${dist,,}
 
     check
+    if [ -n "$INCLUDE_DEBIAN" ]; then
+	local inc="--include=$INCLUDE_DEBIAN"
+    fi
+
     if [ -n "$arch" ]; then
-	qemu-debootstrap --arch $arch --exclude=${!exc} --include=${INCLUDE_DEBIAN} $dist $xtmp $mirror
+	qemu-debootstrap --arch $arch --exclude=${!exc} $inc $dist $xtmp $mirror
 	target="${target}_${arch^^}"
     else
 	if [[ $DIST =~ 64 ]]; then
@@ -185,7 +189,7 @@ debgeneric() {
 	else
             arch=i386
 	fi
-	debootstrap --arch $arch --exclude=${!exc} --include=${INCLUDE_DEBIAN} $dist $xtmp $mirror
+	debootstrap --arch $arch --exclude=${!exc} $inc $dist $xtmp $mirror
     fi
     cleanup-deb
     tarit
