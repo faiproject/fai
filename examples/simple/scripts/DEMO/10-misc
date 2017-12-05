@@ -15,10 +15,12 @@ if ifclass UBUNTU; then
 fi
 
 # add additional user account
-if ! $ROOTCMD getent passwd $username ; then
-    $ROOTCMD adduser --disabled-login --gecos "$username user" $username
-    $ROOTCMD usermod -p "$USERPW" $username
-    for g in $groups; do
-	$ROOTCMD adduser $username $g
-    done
+if [ -n "$username" ]; then
+    if ! $ROOTCMD getent passwd $username ; then
+	$ROOTCMD adduser --disabled-login --gecos "$username user" $username
+	$ROOTCMD usermod -p "$USERPW" $username
+	for g in $groups; do
+	    $ROOTCMD adduser $username $g
+	done
+    fi
 fi
