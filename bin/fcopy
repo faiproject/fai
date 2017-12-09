@@ -149,7 +149,7 @@ sub copy_one {
     warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
     ewarn("copying $sourcefile for preinst processing failed !") unless
       _copy($sourcefile,$tmpfh);
-    if (runscript("preinst",$ps,$tmpfile,$class)) {
+    if (runscript($ps,"preinst",$tmpfile,$class)) {
       ewarn("preinst for $sourcefile failed; not proceeding");
       _unlink($tmpfile);
       return 0;
@@ -220,7 +220,7 @@ sub copy_one {
     }
     if (_symlink($sourcelink, $destfile)) {
       print "fcopy: symlinked $sourcefile -> $sourcelink to $destfile\n" ;
-      runscript("postinst",$ps,$destfile,$class);
+      runscript($ps,"postinst",$destfile,$class);
     } else {
       ewarn("copy symlink $sourcefile -> $sourcelink to $destfile failed. $!") ;
     }
@@ -229,7 +229,7 @@ sub copy_one {
     if (_copy($tmpfile,$destfile)) {
       print "fcopy: copied $sourcefile to $destfile\n" ;
       set_mode($ps,$destfile,$class);
-      runscript("postinst",$ps,$destfile,$class);
+      runscript($ps,"postinst",$destfile,$class);
     } else {
       ewarn("copy $sourcefile to $destfile failed. $!") ;
     }
@@ -285,21 +285,21 @@ sub _symlink {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub runscript {
 
+  my ($path,$script,$destfile,$class) = @_;
+  # run script $path/$script on $destfile, additional option is $class
   # returns 0 on success, 1 if the script failed
 
-  my ($scriptname,$sourcefile,$destfile,$class) = @_;
-
-  return 1 unless -f "$sourcefile/$scriptname";
-  unless ( -x "$sourcefile/$scriptname") {
-    warn "ERROR: $sourcefile/$scriptname is not executable\n" if $verbose;
+  return 1 unless -f "$path/$script";
+  unless ( -x "$path/$script") {
+    warn "ERROR: $path/$script is not executable\n" if $verbose;
     return 1;
   }
-  warn "executing $sourcefile/$scriptname $class $destfile\n" if $debug;
+  warn "executing $path/$script $class $destfile\n" if $debug;
   return 0 if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
-  system "$sourcefile/$scriptname $class $destfile";
+  system "$path/$script $class $destfile";
   my $rc = $?>>8;
   if ($rc) {
-    warn "ERROR: $scriptname returned code $rc\n";
+    warn "ERROR: $script returned code $rc\n";
     $error = 1;
     return 1;
   }
