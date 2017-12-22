@@ -131,24 +131,40 @@ sub copy_one {
     }
   }
 
-  if ($substitute or -f "$ps/_substitute") {
+  # global: $preinst $substiute
+  ### $ps $class $sourcefile
+  # kann lokal bleiben $tmpfh
+  # $tmpfile wird noch ausserhalb gebraucht
+
+  # do we need a tmpfile
+  if ($substitute or -f "$ps/_substitute" or -x "$ps/preinst") {
     ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
+    $preinst = 1;        # a tmpfile is used because of preinst script
+  }
+
+  if ($substitute or -f "$ps/_substitute") {
     warn "Enable substitution. Copying $sourcefile to $tmpfile" if $debug;
 
     do_substitution("$ps/$class",$tmpfh);
-    close $tmpfh;
     # if error {
     #     ewarn("Cannot write to $tmpfile");
     #     unlink($tmpfile);
     #   return 0;
     #   }
-  } elsif ( -x "$ps/preinst" ) {
-    # execute preinst script
-    $preinst = 1;        # a tmpfile is used because of preinst script
-    ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
-    warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
-    ewarn("copying $sourcefile for preinst processing failed !") unless
-      _copy($sourcefile,$tmpfh);
+  }
+
+  else {
+    # copy, but only if subst or preinst, not always
+      _copy($sourcefile,$tmpfile);
+  }
+
+  if ( -x "$ps/preinst" ) {
+    # execute preinst script, but not if we also do substitution
+    unless ($substitute or -f "$ps/_substitute") {
+      warn "preinst script found, copying $sourcefile to $tmpfile" if $debug;
+      ewarn("copying $sourcefile for preinst processing failed !") unless
+	_copy($sourcefile,$tmpfile);
+    }
     if (runscript($ps,"preinst",$tmpfile,$class)) {
       ewarn("preinst for $sourcefile failed; not proceeding");
       _unlink($tmpfile);
@@ -250,6 +266,7 @@ sub do_substitution {
       print $tmp $line;
     }
   close SRC;
+  close $tmp;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub _mkpath {
