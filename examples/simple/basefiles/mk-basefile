@@ -226,7 +226,6 @@ mk-basefile, create minimal base files for a Linux distritubtion
 Usage: mk-basefile [OPTION] ... DISTRIBUTION
 
    -s                   Show list of supported linux distributions
-   -a                   Add xtattrs, acls and selinux properties to the tar file.
    -f ARCH              Build for foreign architecture ARCH.
    -d DIR               Use DIR for creating the temporary subtree structure.
    -z                   Use gzip for compressing the tar file.
@@ -247,10 +246,11 @@ ext=tar
 zip=cat
 attributes=
 cleanup=1
+attributes="--xattrs --selinux --acls"
 
 while getopts ashzJd:kf: opt ; do
     case "$opt" in
-        a) attributes="--xattrs --selinux --acls" ;;
+        a) echo "$0: Warning. -a is ignored, because xtattrs, acls and selinux are always added." ;;
         d) export TMPDIR=$OPTARG ;;
         f) export ARCH=$OPTARG ;;
         z) zip="gzip -9"; ext=tar.gz ;;
