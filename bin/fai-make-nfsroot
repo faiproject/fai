@@ -477,13 +477,13 @@ upgrade_nfsroot() {
     if [ -d $cfdir/apt/keys ]; then
         local f
         for f in `find $cfdir/apt/keys -type f -name '*.asc'`; do
-            cat $f | $ROOTCMD apt-key add -
+            cp $f $$NFSROOT/etc/apt/trusted.gpg.d
         done
     fi
 
     # if we have the keyring on the host, install the key of the fai-project.org package repository
     if [ -n "$(apt-key list 074BCDE4 2>/dev/null)" ]; then
-        HOME=/root apt-key export 074BCDE4 | $ROOTCMD apt-key add -
+        HOME=/root apt-key export 074BCDE4 > $NFSROOT/etc/apt/trusted.gpg.d/fai-project.asc
     fi
 
     if [ $full = 1 ];then
