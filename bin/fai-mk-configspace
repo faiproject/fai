@@ -2,6 +2,42 @@
 
 # create a initial config space
 
+usage() {
+
+cat <<EOF
+
+        fai-mk-configspace - set up the FAI config space
+
+	Create the directory defined in \$FAI_CONFIGDIR and
+        copy the examples for the FAI config space into it.
+
+        Options:
+           -h|--help            display this help message
+
+EOF
+exit 0
+}
+
+
+
+TEMP=$(getopt -o h --long help -n "$0" -- "$@")
+if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
+eval set -- "$TEMP"
+unset TEMP
+
+while true ; do
+    case "$1" in
+        -h|--help)
+            usage 0 ;;
+        --)
+            shift
+            break ;;
+         *)
+            die 1 "$0: command line parsing error ! $@" >&2 ;;
+    esac
+done
+
+
 . /etc/fai/nfsroot.conf
 
 if [ -d $FAI_CONFIGDIR/class ]; then
@@ -16,7 +52,7 @@ fi
 
 mkdir -p $FAI_CONFIGDIR
 if [ $? -ne 0 ]; then
-    echo "Cannot create the config space in $FAI_CONFIGDIR"
+    echo "Cannot create the config space in $FAI_CONFIGDIR."
     exit 1
 fi
 
