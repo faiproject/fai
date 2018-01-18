@@ -158,6 +158,7 @@ loop: module verification failed: signature
 Warning: apt-key output should not be parsed
 WARNING: Failed to connect to lvmetad. Falling back to device scanning
 Warning: The home dir /var/lib/usbmux you specified
+diff: /var/lib/apparmor/profiles/.apparmor.md5sums: No such file or directory
 update-rc.d: warning: start and stop actions are no longer supported"
 
 # add pattern on some conditions
