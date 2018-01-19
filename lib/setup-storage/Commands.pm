@@ -847,7 +847,7 @@ sub cleanup_vg {
   my $post_wipe = "pvremove_$vg";
   foreach my $d (split (" ", $devices)) {
     $post_wipe .= ",pv_sigs_removed_wipe_${d}_$vg";
-    &FAI::push_command( "wipefs -a $d", "pvremove_$vg", "pv_sigs_removed_wipe_${d}_$vg");
+    &FAI::push_command( "wipefs -af $d", "pvremove_$vg", "pv_sigs_removed_wipe_${d}_$vg");
   }
   &FAI::push_command( "true", $post_wipe, "pv_sigs_removed_$vg" );
   return 1;
@@ -1143,7 +1143,7 @@ sub setup_partitions {
       scalar(@{ $FAI::current_dev_children{$c} }));
     my ($i_p_d, $d, $part_no) = &FAI::phys_dev($c);
     ($i_p_d && $d eq $disk) or &FAI::internal_error("Invalid dev children entry");
-    my $wipe_cmd = "wipefs -a $c";
+    my $wipe_cmd = "wipefs -af $c";
     foreach my $part_id (@to_preserve) {
       # get the existing id
       my $mapped_id = $FAI::configs{$config}{partitions}{$part_id}{maps_to_existing};

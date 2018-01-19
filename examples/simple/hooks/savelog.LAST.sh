@@ -52,7 +52,7 @@ ibwebadmin
 kernel-patch-badram
 kolab-webadmin
 kolabadmin
-gstreamer0.10-plugins-really-bad
+gstreamer.\+-plugins-really-bad
 liberrors.so
 liberrors-samba
 gsambad
@@ -80,7 +80,7 @@ deverror.out
 (floppy), sector 0
 mount version older than kernel
 Can't locate module
-Warning only 896MB will be used.
+Warning only .\+MB will be used.
 hostname: Host name lookup failure
 I can't tell the difference.
 warning, not much extra random data, consider using the -rand option
@@ -151,11 +151,14 @@ can't initialize iptables table
 can't initialize ip6tables table
 Authentication warning overridden
 41-warning.sh
+PCCT header not found
 Download is performed unsandboxed as root as file
 update-alternatives: warning: skip creation of
 loop: module verification failed: signature
 Warning: apt-key output should not be parsed
 WARNING: Failed to connect to lvmetad. Falling back to device scanning
+Warning: The home dir /var/lib/usbmux you specified
+diff: /var/lib/apparmor/profiles/.apparmor.md5sums: No such file or directory
 update-rc.d: warning: start and stop actions are no longer supported"
 
 # add pattern on some conditions

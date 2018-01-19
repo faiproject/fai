@@ -3,9 +3,11 @@
 error=0 ; trap "error=$((error|1))" ERR
 
 # add a $username user account
-if ! $ROOTCMD getent passwd $username ; then
-    $ROOTCMD adduser -c "$username user" $username
-    $ROOTCMD usermod -p "$USERPW" $username
+if [ -n "$username" ]; then
+    if ! $ROOTCMD getent passwd $username ; then
+	$ROOTCMD adduser -c "$username user" $username
+	$ROOTCMD usermod -p "$USERPW" $username
+    fi
 fi
 
 # enable graphical login screen, make run level 5 as default

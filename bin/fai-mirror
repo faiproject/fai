@@ -155,7 +155,7 @@ add_base_packages() {
 
     mv $aptcache/etc/apt/sources.list $aptcache   # save sources.list
     # now use different sources.list for debootstrap packages
-    echo "$FAI_DEBOOTSTRAP" | awk '{printf "deb %s %s main\n",$2,$1}' | perl -p -e 's/file:/copy:/' > $aptcache/etc/apt/sources.list
+    echo "$FAI_DEBOOTSTRAP" | awk '{printf "deb %s %s main\n",$2,$1}' | sed -e 's/file:/copy:/' > $aptcache/etc/apt/sources.list
     echo "Adding packages from $NFSROOT/var/tmp/base-pkgs.lis"
     if [ -f $NFSROOT/var/tmp/base-pkgs.lis ]; then
         plist=$(< $NFSROOT/var/tmp/base-pkgs.lis)
@@ -257,6 +257,9 @@ if [ "$(ls -A $cfdir/apt/sources.list.d/ 2>/dev/null)" ]; then
     sed -e 's/file:/copy:/' $cfdir/apt/sources.list.d/* >> $aptcache/etc/apt/sources.list
 fi
 
+# check if backports are used
+bpo=$(awk '/^deb .+-backports / {print $3}' $aptcache/etc/apt/sources.list)
+
 if [ -f "$aptpref" ]; then
     cp "$aptpref" $aptcache/etc/apt/preferences
 fi
@@ -294,9 +297,23 @@ Description: Package reprository created by fai-mirror
 Label: fai-project.org
 Origin: fai-mirror
 EOF
-# '
+
+# add entry for backports
+[ -n "$bpo" ] && cat >> $mirrordir/conf/distributions <<EOF
+
+Codename: $bpo
+Architectures: $arch
+Components: main non-free contrib
+DebIndices: Packages Release . .xz
+Description: Package reprository created by fai-mirror
+Label: fai-project.org
+Origin: fai-mirror
+EOF
 
 # maybe using reprepro pulls it's possible to move instead of copy the packages
+reprepro -b $mirrordir includedeb stretch-backports $mirrordir/aptcache/var/cache/apt/archives/*~bpo[0-9]*+[0-9-]*_*.deb
+rm -r $mirrordir/aptcache/var/cache/apt/archives/*~bpo[0-9]*+[0-9-]*_*.deb
+
 reprepro -b $mirrordir includedeb cskoeln $mirrordir/aptcache/var/cache/apt/archives/*.deb
 rm -r $mirrordir/aptcache/var/cache/apt/archives/*.deb
 

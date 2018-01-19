@@ -332,7 +332,7 @@ create_base() {
     else
         echo "Creating base.tar.xz"
     fi
-    tar --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+    tar --xattrs --acls --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
     if [ $usexz -eq 1 ]; then
         nice xz -q $NFSROOT/var/tmp/base.tar &
     else
@@ -350,12 +350,12 @@ extract_base() {
       printf "Extracting $basetgz: "
       case $basetgz in
           *tar.gz|*.tgz)
-              tar -C $NFSROOT -zxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
+              tar --xattrs --acls --xattrs-include=* -C $NFSROOT -zxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
               cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.gz
               ;;
 
             *tar.xz|*.txz)
-              tar -C $NFSROOT -Jxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
+              tar --xattrs --acls --xattrs-include=* -C $NFSROOT -Jxpf "$basetgz" || die 1 "Error while extracting ${basetgz} in ${NFSROOT}."
               cp -p "$basetgz" $NFSROOT/var/tmp/base.tar.xz
               ;;
           esac
@@ -477,13 +477,13 @@ upgrade_nfsroot() {
     if [ -d $cfdir/apt/keys ]; then
         local f
         for f in `find $cfdir/apt/keys -type f -name '*.asc'`; do
-            cat $f | $ROOTCMD apt-key add -
+            cp $f $$NFSROOT/etc/apt/trusted.gpg.d
         done
     fi
 
     # if we have the keyring on the host, install the key of the fai-project.org package repository
     if [ -n "$(apt-key list 074BCDE4 2>/dev/null)" ]; then
-        HOME=/root apt-key export 074BCDE4 | $ROOTCMD apt-key add -
+        HOME=/root apt-key export 074BCDE4 > $NFSROOT/etc/apt/trusted.gpg.d/fai-project.asc
     fi
 
     if [ $full = 1 ];then
