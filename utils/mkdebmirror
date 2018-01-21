@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001-2012
+# Thomas Lange, lange@informatik.uni-koeln.de, (c) 2001-2018
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 update_from() {
@@ -8,7 +8,7 @@ update_from() {
     # update local mirror from a host
     host=$1
     shift
-    defopt="--i18n --diff=none $allopt --host=$host --dist=$dist $sect"
+    defopt="--method=http --rsync-extra=none --diff=none $allopt --host=$host --dist=$dist $sect"
 
     echo "------------------ create mirror for debian ------------------"
     debmirror $excl $destdir/debian $defopt $*
@@ -19,11 +19,11 @@ update_from() {
 # here you have to adjust the hostnames of the mirror and the names of the distributions
 
 # excluding dbg_ packages saves a lot of disk space. About 33G for squeeze,wheezy in amd64,i386
-excl=--exclude='-dbg_'
+excl="--exclude=-dbg_ --exclude=debian-installer-netboot-images --include=libc6-dbg"
 
 debug="$@"
 arch=amd64
-dist=stretch
+dist=stretch,stretch-backports
 
 destdir=/files/scratch/debmirror
 sect="--section main,contrib,non-free"
@@ -38,4 +38,4 @@ update_from deb.debian.org --getcontents $*
 
 # even one should not mirror the security site, but I will do it.
 echo "------------------ create mirror for debian-security ------------------"
-debmirror $excl $destdir/debian-security $allopt --host=deb.debian.org -r debian-security $sect -d stretch/updates $*
+debmirror --method=http $excl $destdir/debian-security $allopt --host=deb.debian.org -r debian-security $sect -d stretch/updates $*

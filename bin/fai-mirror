@@ -5,7 +5,7 @@
 # fai-mirror -- create and manage a partial mirror for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2017, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2018, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -299,7 +299,8 @@ Origin: fai-mirror
 EOF
 
 # add entry for backports
-[ -n "$bpo" ] && cat >> $mirrordir/conf/distributions <<EOF
+if [ -n "$bpo" ]; then
+     cat >> $mirrordir/conf/distributions <<EOF
 
 Codename: $bpo
 Architectures: $arch
@@ -311,11 +312,12 @@ Origin: fai-mirror
 EOF
 
 # maybe using reprepro pulls it's possible to move instead of copy the packages
-reprepro -b $mirrordir includedeb stretch-backports $mirrordir/aptcache/var/cache/apt/archives/*~bpo[0-9]*+[0-9-]*_*.deb
-rm -r $mirrordir/aptcache/var/cache/apt/archives/*~bpo[0-9]*+[0-9-]*_*.deb
+     reprepro -b $mirrordir includedeb stretch-backports $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
+     rm -f $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
+fi
 
-reprepro -b $mirrordir includedeb cskoeln $mirrordir/aptcache/var/cache/apt/archives/*.deb
-rm -r $mirrordir/aptcache/var/cache/apt/archives/*.deb
+reprepro -b $mirrordir includedeb cskoeln $archivedir/*.deb
+rm -r $archivedir/*.deb
 
 echo "$0 finished."
 echo -n "Mirror size and location: ";du -sh --exclude aptcache --exclude db $mirrordir
