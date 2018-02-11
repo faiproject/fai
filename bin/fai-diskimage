@@ -4,7 +4,7 @@
 
 # This script is part of FAI (Fully Automatic Installation)
 #
-# Copyright (C) 2016-2017 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2016-2018 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 
 # this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
@@ -60,7 +60,7 @@ usage() {
 Create a disk image name.raw using FAI and a list of FAI classes.
 This can be used for a virtual machine or a cloud instance. If you
 use another suffix the image will be converted. Following formats are
-supported: .qcow2, .vdi, .vhdx, .vmdk.
+supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
@@ -141,6 +141,14 @@ ext=${image##*.}
 rawname="$iname.raw"
 case $ext in
     raw)   convert=0 ;;
+    xz) convert=2
+	rawname=$iname
+	cmd="xz -1"
+	;;
+    zst) convert=2
+	 rawname=$iname
+	 cmd="zstd --rm -q -15"
+	 ;;
     qcow2) copt="-c -O qcow2 "
 	   qcowname="$iname.qcow2"
 	   ;;
@@ -201,6 +209,10 @@ if [ $convert -eq 1 ]; then
     [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname."
     qemu-img convert -f raw $rawname $copt $qcowname
     rm $rawname
+fi
+if [ $convert -eq 2 ]; then
+    [ $verbose -eq 1 ] && echo "Converting $rawname to $rawname.$ext."
+    $cmd $rawname
 fi
 echo -n "Size of disk image and filename: "; du -h $image
 echo "Image created by: $call"
