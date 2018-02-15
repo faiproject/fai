@@ -148,7 +148,14 @@ case $ext in
 	;;
     zst) convert=2
 	 rawname=$iname
-	 cmd="zstd --rm -q -15"
+	 # check if zstd support threads
+	 flagtest=$(zstd -h | grep threads)
+	 if [ -z "$flagtest" ]; then
+	     cmd="zstd --rm -q -9"
+	 else
+	     cmd="zstd --rm -q -9 -T0"
+	 fi
+	 unset flagtest
 	 ;;
     qcow2) copt="-c -O qcow2 "
 	   qcowname="$iname.qcow2"
