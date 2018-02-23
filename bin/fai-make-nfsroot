@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2017 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2018 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2017 Thomas Lange
+	Copyright (C) 1999-2018 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -97,7 +97,7 @@ usexz=1
 full=1
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpUzsN opt ; do
+while getopts aghervC:B:fkKpPUzsN opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
@@ -114,6 +114,7 @@ while getopts aghervC:B:fkKpUzsN opt ; do
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
+        P) sshpreserve=2 ;;
         s) full=0 ;; # do only install a smaller list of packages
         ?) exit 5 ;; # error in option parsing
     esac
@@ -209,7 +210,7 @@ setup_ssh() {
     sed -i -e '/PermitRootLogin/d' $NFSROOT/etc/ssh/sshd_config
     ainsl $NFSROOT/etc/ssh/sshd_config 'PermitRootLogin yes'
 
-    if [ $sshpreserve = 1 ]; then
+    if [ $sshpreserve -ge 1 ]; then
         tar -C $NFSROOT -xf $tmptar
         rm $tmptar
         return 0
@@ -633,14 +634,18 @@ fi
 
 echo "Creating FAI nfsroot in $NFSROOT"
 
-if [ $sshpreserve = 1 ]; then
-    [ -d $NFSROOT/root/.ssh ] || die 8 "Cannot preserve non-existing $NFSROOT/root/.ssh."
-    [ X$verbose = X1 ] && echo "Preserving root/.ssh directory from inside the nfsroot."
-    # save old .ssh directory
+if [ $sshpreserve -ge 1 ]; then
+    [ -d $NFSROOT/root/.ssh ] || echo "Cannot preserve non-existing $NFSROOT/root/.ssh."
     tmptar=$(mktemp) || die 12 "Cannot create tmp file"
-    # should we set the umask before? Does it influence the other parts?
-    tar -C $NFSROOT -cf $tmptar root/.ssh
+    pdirs="root/.ssh"
 fi
+if [ $sshpreserve -eq 2 ]; then
+    pdirs="root/.ssh etc/ssh/ssh_host_*"
+fi
+[ X$verbose = X1 ] && echo "Preserving $pdirs from inside the nfsroot."
+cd $NFSROOT # needed for * in $pdirs to work
+tar -C $NFSROOT -cf $tmptar $pdirs
+cd -
 
 if [ -d $NFSROOT/proc ]; then
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
