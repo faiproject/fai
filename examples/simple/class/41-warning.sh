@@ -18,5 +18,11 @@ echo 'screen_color = (CYAN,RED,ON)' > $red
 
 DIALOGRC=$red dialog --colors --clear --aspect 6 --title "FAI - Fully Automatic Installation" --trim \
 	        --msgbox "\n\n        If you continue,       \n   all your data on the disk   \n                               \n|\Zr\Z1       WILL BE DESTROYED     \Z0\Zn|\n\n" 0 0 1>$out
+
+# stop on any error, or if ESC was hit
+if [ $? -ne 0 ]; then
+    task_error 999
+fi
+
 rm $red
 unset red
