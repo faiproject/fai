@@ -638,14 +638,14 @@ if [ $sshpreserve -ge 1 ]; then
     [ -d $NFSROOT/root/.ssh ] || echo "Cannot preserve non-existing $NFSROOT/root/.ssh."
     tmptar=$(mktemp) || die 12 "Cannot create tmp file"
     pdirs="root/.ssh"
+    if [ $sshpreserve -eq 2 ]; then
+	pdirs="root/.ssh etc/ssh/ssh_host_*"
+    fi
+    [ X$verbose = X1 ] && echo "Preserving $pdirs from inside the nfsroot."
+    cd $NFSROOT # needed for * in $pdirs to work
+    tar -C $NFSROOT -cf $tmptar $pdirs
+    cd -
 fi
-if [ $sshpreserve -eq 2 ]; then
-    pdirs="root/.ssh etc/ssh/ssh_host_*"
-fi
-[ X$verbose = X1 ] && echo "Preserving $pdirs from inside the nfsroot."
-cd $NFSROOT # needed for * in $pdirs to work
-tar -C $NFSROOT -cf $tmptar $pdirs
-cd -
 
 if [ -d $NFSROOT/proc ]; then
     umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
