@@ -103,15 +103,15 @@ setup_fai_account() {
             cat $sshdir/id_rsa.pub >> $sshdir/authorized_keys
         }
 
-        [ -f $sshdir/id_dsa ] || {
-            ssh-keygen -t dsa -N '' -f $sshdir/id_dsa -C "$LOGUSER@$HOSTNAME"
-            cat $sshdir/id_dsa.pub >> $sshdir/authorized_keys
+        [ -f $sshdir/id_ed25519 ] || {
+            ssh-keygen -t ed25519 -N '' -f $sshdir/id_ed25519 -C "$LOGUSER@$HOSTNAME"
+            cat $sshdir/id_ed25519.pub >> $sshdir/authorized_keys
         }
 
         #Adding servers keys to known_hosts list of LOGUSER.
         #So that installed clients can ssh $LOGUSER@$HOSTNAME without password
         if [ ! -f $sshdir/known_hosts ]; then
-            [ -f /etc/ssh/ssh_host_dsa_key.pub ] && DSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_dsa_key.pub)
+            [ -f /etc/ssh/ssh_host_ed25519_key.pub ] && ED25519SERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_ed25519_key.pub)
             [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_rsa_key.pub )
             # determine all IP addresses, and their host names
             ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
@@ -119,7 +119,7 @@ setup_fai_account() {
                 hname=$(getent hosts $ip| tr -s ' ' ',')
                 : ${hname:=$ip}
                 echo "Adding $hname to known_hosts."
-                [ -z "$DSASERVER" ] || echo "$hname $DSASERVER" >> $sshdir/known_hosts
+                [ -z "$ED25519SERVER" ] || echo "$hname $ED25519SERVER" >> $sshdir/known_hosts
                 [ -z "$RSASERVER" ] || echo "$hname $RSASERVER" >> $sshdir/known_hosts
             done
             echo "$sshdir/known_hosts created."
