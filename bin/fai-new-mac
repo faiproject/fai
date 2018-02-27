@@ -1,7 +1,7 @@
 #! /usr/bin/perl
 
 # print only new MAC addresses, which are not yet known
-# (c) Thomas Lange, 2007-2012
+# (c) Thomas Lange, 2007-2018
 
 # fai-new-mac -tad
 # tcpdump -pnlqte udp and src port bootpc and broadcast | fai-new-mac
@@ -34,9 +34,9 @@ sub read_known_macs {
 
 sub read_arp {
 
-  open (ARP,"arp -an|") || die "Can't read arp list. $!\n";
+  open (ARP,"ip neigh list|") || die "Can't read arp list. $!\n";
   while (<ARP>) {
-    append_new_mac($1,"MAC found in ARP list") if /at (([0-9a-f]{1,2}:){5}[0-9a-f]{1,2}) \[ether\] on /i
+    append_new_mac($1,"MAC found in ARP list") if /laddr (([0-9a-f]{2}:){6}) /i
   }
   close ARP;
 }
