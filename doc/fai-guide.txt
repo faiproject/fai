@@ -1111,6 +1111,29 @@ name.
 If you specify a package that does not exist this package will be
 removed automatically from the installation list only if the command _install_ is used.
 
+The concept of classes priority allows a higher priority class (one
+that comes later in the sequence of classes) to override the selection
+of packages of a lower priority class.  For this to work correctly,
+the higher priority class must use the same _PACKAGE_ command (e.g.
+_PACKAGE install-norec_ instead of just _PACKAGE install_) as the one
+used by the class it is trying to override.  This is useful to suppress
+installation of a package, for example, to avoid installing the 'linuxlogo'
+package installed by class FAIBASE:
+
+---
+# example of how to override:
+#
+# On FAIBASE we have:
+#    PACKAGE install-norec
+#    linuxlogo
+#
+# We want to _not_ install linuxlogo, and it is in a
+# install-norec section, so we must also use install-norec.
+
+PACKAGE install-norec
+linuxlogo-
+---
+
 === [[cscripts]] Customization scripts
 
 The command `fai-do-scripts(1)` is called to execute all scripts in
