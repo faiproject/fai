@@ -100,6 +100,7 @@ install:
 	cp -a pixmaps/small/*.gif $(DESTDIR)/usr/share/fai/pixmaps/small
 	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
+	rm $(DOCDIR)/example/simple/.git
 	cp -a utils $(DOCDIR)/examples
 
 .PHONY: clean veryclean
