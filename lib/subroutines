@@ -5,7 +5,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2017 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2018 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -1104,20 +1104,11 @@ EOF
 	rm -f $FAI_ROOT/etc/apt/apt.conf.d/10fai
     fi
 
-    # add apt keys for signed repositories
-
-    declare -A keys
-    # remember all available *.asc files
-    for f in `cd $FAI/package_config; ls *.asc 2>/dev/null`; do
-        keys["$f"]=1
-    done
-
     # add apt keys for all classes
     for keyfile in ${classes:-}; do
         [ ! -f $FAI/package_config/$keyfile.asc ] && continue
         echo -n "Copying APT key from $keyfile.asc "
         cp $FAI/package_config/$keyfile.asc $FAI_ROOT/etc/apt/trusted.gpg.d/
-        unset keys["$keyfile.asc"]
     done
 
     # mount Debian mirror via NFS if needed
