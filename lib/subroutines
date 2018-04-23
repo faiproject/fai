@@ -948,16 +948,21 @@ call_debootstrap() {
     # Check if we need cross architecture debootstrap
     targetarch=$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch=\([^[:space:]]*\)' || true)
     hostarch1=$(dpkg --print-architecture)
-    hostarch2=$(dpkg --print-foreign-architectures)
 
     _debootstrap=qemu-debootstrap
     if [ -z "$targetarch" ]; then
 	_debootstrap=debootstrap
     else
-	if [ $targetarch = $hostarch1 -o $targetarch = $hostarch2 ]; then
+	if [ $targetarch = $hostarch1 ]; then
 	_debootstrap=debootstrap
 	fi
-    fi
+    for arch in $(dpkg --print-foreign-architectures)
+    do
+        if [ $targetarch = $arch ]; then
+	        _debootstrap=debootstrap
+            break
+        fi
+    done
     if [ $_debootstrap = "qemu-debootstrap" ]; then
 	if ! type -P $_debootstrap >/dev/null; then
 	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."

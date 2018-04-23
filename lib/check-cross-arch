@@ -45,9 +45,15 @@ cross=1
 # debugging echo myarch: $myarch targetarch: $targetarch
 if [ $myarch = $targetarch ]; then
     cross=0
-elif [ $targetarch = $(dpkg --print-foreign-architectures) ]; then
-    cross=0
 fi
+
+for arch in $(dpkg --print-foreign-architectures)
+do
+    if [ $myarch = $arch ]; then
+        cross=0
+        break
+    fi
+done
 
 
 if [ $cross -eq 1 ]; then
