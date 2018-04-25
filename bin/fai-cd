@@ -295,7 +295,10 @@ cleanup_liveos_mounts() {
     unhide_dirs
     rm -rf $tmp
     if [ $autodiscover -eq 1 ]; then
-	mv $ONFSROOT/tmp/initrd.img* $ONFSROOT/boot 2>/dev/null
+        local initrdfiles=($ONFSROOT/tmp/initrd.img*)
+        if [[ -e $initrdfiles ]]; then
+	    mv "${initrdfiles[@]}" $ONFSROOT/boot 2>/dev/null
+        fi
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
