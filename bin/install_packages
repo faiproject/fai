@@ -352,33 +352,6 @@ sub dselectupgrade {
   unlink $tempfile;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub installable {
-
-  # ckeck, wether package can be installed.
-  # return false for packages which only exist in
-  # dpkg status files
-
-  my $package  = shift;
-  # print "Checking wether $package is installable...\n";
-
-  # version list of package
-  my $vlist = $cache->{$package}{VersionList};
-
-  # for each version
-  foreach my $version (@$vlist) {
-    # list of package files
-    my $flist = $version->{FileList};
-    foreach my $fitem (@$flist) {
-      # if the file is a package index (not a dpkg status file)
-      # the package is installable
-      return 1 if ($fitem->{File}{IndexType} eq "Debian Package Index");
-    }
-  }
-
-  # no package index file found for the current package
-  return 0;
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub mkpackagelist {
 
   # CURRENTLY no packages are removed from the list of known packages
