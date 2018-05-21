@@ -178,7 +178,7 @@ sub init_part_config {
   # only supported on msdos disk labels.
   ($FAI::device =~ /^PHY_(.+)$/ && ($type ne "logical"
       || $FAI::configs{$FAI::device}{disklabel} eq "msdos")) or
-    die "Syntax error: invalid partition type";
+    die "Syntax error: invalid partition type. A logical partition is only supported with msdos disk labels.";
 
   # the disk
   my $disk = $1;
