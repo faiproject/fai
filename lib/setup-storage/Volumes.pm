@@ -73,6 +73,9 @@ sub find_all_phys_devs {
     } elsif ($config eq "TMPFS") {
       # no devices
       next;
+    } elsif ($config eq "NFS") {
+      # no devices
+      next;
     } else {
       &FAI::internal_error("Unexpected key $config");
     }
@@ -694,6 +697,9 @@ sub propagate_and_check_preserve {
       next;
     } elsif ($config eq "TMPFS") {
       # We don't do preserve for tmpfs
+      next;
+    } elsif ($config eq "NFS") {
+      # We don't do preserve for nfs
       next;
     } else {
       &FAI::internal_error("Unexpected key $config");

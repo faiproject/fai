@@ -492,6 +492,12 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::configs{$FAI::device}{fstabkey} = "device";
           $FAI::configs{$FAI::device}{volumes} = {};
         }
+        | /^nfs/
+        {
+          $FAI::device = "NFS";
+          $FAI::configs{$FAI::device}{fstabkey} = "device";
+          $FAI::configs{$FAI::device}{volumes} = {};
+        }
         | /^disk(\d+)/
         {
           # check, whether parted is available
@@ -836,6 +842,29 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer_dev_name = "TMPFS$vol_id";
         }
         mountpoint tmpfs_size mount_options
+        | /^nfs\s+([^\s]+)\s+/
+        {
+          ($FAI::device eq "NFS") or die "nfs entry invalid in this context\n";
+          defined ($FAI::configs{NFS}) or &FAI::internal_error("NFS entry missing");
+
+          my $vol_id = 0;
+          foreach my $ex_vol_id (&FAI::numsort(keys %{ $FAI::configs{NFS}{volumes} })) {
+            defined ($FAI::configs{NFS}{volumes}{$ex_vol_id}{device}) or last;
+            $vol_id++;
+          }
+
+          my $nfssource = $1;
+          $nfssource =~ s/HOSTNAME/$ENV{'HOSTNAME'}/g;
+          $FAI::configs{NFS}{volumes}{$vol_id}{device} = $nfssource;
+          $FAI::configs{NFS}{volumes}{$vol_id}{filesystem} = "nfs";
+
+          # We don't do preserve for nfs
+          $FAI::configs{NFS}{volumes}{$vol_id}{preserve} = 0;
+
+          $FAI::partition_pointer = (\%FAI::configs)->{NFS}->{volumes}->{$vol_id};
+          $FAI::partition_pointer_dev_name = "NFS$vol_id";
+        }
+        mountpoint mount_options
         | type mountpoint size filesystem mount_options lv_or_fsopts
         | <error>
 
@@ -1249,6 +1278,15 @@ sub check_config {
       (scalar(keys %{ $FAI::configs{$config}{volumes} }) > 0) or
         die "Empty BTRFS configuration\n";
     } elsif ($config eq "CRYPT") {
+      foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
+        my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
+        next if ($this_mp eq "-");
+        defined($all_mount_pts{$this_mp}) and die
+          "Mount point $this_mp used twice\n";
+        ($this_mp eq "none") or $all_mount_pts{$this_mp} = 1;
+      }
+      next;
+    } elsif ($config eq "NFS") {
       foreach my $p (keys %{ $FAI::configs{$config}{volumes} }) {
         my $this_mp = $FAI::configs{$config}{volumes}{$p}{mountpoint};
         next if ($this_mp eq "-");

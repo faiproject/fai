@@ -427,7 +427,7 @@ sub build_raid_commands {
 
   foreach my $config (keys %FAI::configs) { # loop through all configs
     # no encrypted, tmpfs, LVM or physical devices here
-    next if ($config eq "BTRFS" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
+    next if ($config eq "BTRFS" || $config eq "CRYPT" || $config eq "TMPFS" || $config eq "NFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
     ($config eq "RAID") or &FAI::internal_error("Invalid config $config");
 
     # create all raid devices
@@ -908,7 +908,7 @@ sub build_lvm_commands {
   foreach my $config (keys %FAI::configs) {
 
     # no physical devices, RAID, encrypted or tmpfs here
-    next if ($config eq "BTRFS" || $config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS");
+    next if ($config eq "BTRFS" || $config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config eq "NFS");
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group
@@ -1375,7 +1375,7 @@ sub build_disk_commands {
   # loop through all configs
   foreach my $config ( keys %FAI::configs ) {
     # no RAID, encrypted, tmpfs or LVM devices here
-    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $FAI::configs{$config}{vg});
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config eq "NFS" || $config =~ /^VG_./ || $FAI::configs{$config}{vg});
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
     my $disk = $1; # the device to be configured
 

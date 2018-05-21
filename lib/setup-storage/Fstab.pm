@@ -188,6 +188,9 @@ sub find_boot_mnt_point {
     } elsif ($c eq "TMPFS") {
       # not usable for /boot
       next;
+    } elsif ($c eq "NFS") {
+      # not usable for /boot
+      next;
     } else {
       &FAI::internal_error("Unexpected key $c");
     }
@@ -352,6 +355,16 @@ sub generate_fstab {
 	}
 
         push @fstab, create_fstab_line($c_ref, "tmpfs", "tmpfs");
+      }
+    } elsif ($c eq "NFS") {
+      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+        my $c_ref = $config->{$c}->{volumes}->{$v};
+
+        next if ($c_ref->{mountpoint} eq "-");
+
+        my $device_name = &FAI::enc_name($c_ref->{device});
+
+        push @fstab, create_fstab_line($c_ref, $device_name, "nfs");
       }
     } else {
       &FAI::internal_error("Unexpected key $c");
