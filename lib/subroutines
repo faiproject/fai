@@ -1108,12 +1108,10 @@ EOF
 
     # add apt keys for all classes
     for keyfile in ${classes:-}; do
-        keyfile_name=""
-        [ -f $FAI/package_config/$keyfile.gpg ] && keyfile_name=$keyfile.gpg
-        [ -f $FAI/package_config/$keyfile.asc ] && keyfile_name=$keyfile.asc
-        [ -z $keyfile_name ] && continue
-        echo -n "Copying APT key from $keyfile_name "
-        cp $FAI/package_config/$keyfile_name $FAI_ROOT/etc/apt/trusted.gpg.d/
+        [ ! -f $FAI/package_config/$keyfile.asc ] && continue
+        echo -n "Copying APT key from $keyfile.asc to $keyfile.asc.gpg "
+        [ -f $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg ] || touch $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg
+        gpg --batch -o $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg --dearmor $FAI/package_config/$keyfile.asc
     done
 
     # mount Debian mirror via NFS if needed
