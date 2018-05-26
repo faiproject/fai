@@ -80,6 +80,17 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+error_space() {
+
+    local e=$1
+    shift
+    local msg=$1
+    echo "Not enough space left on image for the $msg" >&2
+    df -h $tmp/$liveos/mounted-ext3fs >&2
+    echo "You can add more space to the image by using the option -s. See man fai-cd for details." >&2
+    die $e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 check_programs() {
 
     local msg
@@ -113,14 +124,14 @@ create_ext3fs_image() {
 
     echo "Copying the nfsroot to CD image"
     # copy the contents of the nfsroot into it
-    cp -Ppr $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
+    cp -Ppr $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || error_space $? "nfsroot"
     rm -f $tmp/$liveos/mounted-ext3fs/etc/resolv.conf
 
     # find $tmp/$liveos/mounted-ext3fs # for debugging
     # copy config space into nfsroot-copy unless -d is given
     if [ $configset -eq 0 ]; then
         echo "Copying the config space to CD image"
-        cp -Ppr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ || die $? "Not enough space left on device for the config directory"
+        cp -Ppr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ || error_space $? "config directory"
     fi
     # add the partial mirror to the CD
     addmirror
@@ -321,7 +332,7 @@ addmirror() {
     mkdir $tmp/$liveos/mounted-ext3fs/media/mirror
 
     echo "Copying the mirror to CD image"
-    cp -Pr $mirrordir/{dists,pool} $tmp/$liveos/mounted-ext3fs/media/mirror 2>/dev/null || die $? "Not enough space left on device for the mirror"
+    cp -Pr $mirrordir/{dists,pool} $tmp/$liveos/mounted-ext3fs/media/mirror 2>/dev/null || error_space $? "mirror"
 
     # create the sources.list for the CD
     cat > $tmp/$liveos/mounted-ext3fs/etc/apt/sources.list <<EOF
