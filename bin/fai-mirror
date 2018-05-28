@@ -274,7 +274,11 @@ apt-get $qflag $aptoptions update >/dev/null
 set-classes
 [ $add -eq 1 ] && add_base_packages
 echo "Downloading packages for classes:" $classes
-FAI=$FAI_CONFIGDIR install_packages -N -d $vflag
+if FAI=$FAI_CONFIGDIR install_packages -N -d $vflag; then
+    :
+else
+    die 9 "ERROR when downloading packages. Use fai-mirror -v for details."
+fi
 umount_dirs
 trap "" EXIT ERR
 [ $add -eq 0 ] && delete_base_packages
