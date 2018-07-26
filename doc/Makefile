@@ -43,7 +43,7 @@ install:
 	cp -p setup-storage-call-graph.txt setup-storage-overview.txt $(DOC2DIR)
 
 clean:
-	rm -rf images .a2x-icons
+	rm -rf images .a2x-icons grohtml-*.png
 	rm -f $(DOC).text $(DOC).html $(DOC).doc $(DOC).pdf $(DOC).xml $(DOC).ps* docbook-xsl.css
 
 test:
