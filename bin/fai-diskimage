@@ -60,7 +60,7 @@ usage() {
 Create a disk image name.raw using FAI and a list of FAI classes.
 This can be used for a virtual machine or a cloud instance. If you
 use another suffix the image will be converted. Following formats are
-supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk.
+supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk, .simg.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
@@ -144,19 +144,26 @@ case $ext in
     xz) convert=2
 	rawname=$iname
 	export XZ_OPT=${XZ_OPT-"-1 -T0"}
-	cmd="xz"
+	cmd="xz $rawname"
 	;;
     zst) convert=2
 	 rawname=$iname
 	 # check if zstd support threads
 	 flagtest=$(zstd -h | grep threads)
 	 if [ -z "$flagtest" ]; then
-	     cmd="zstd --rm -q -9"
+	     cmd="zstd --rm -q -9 $rawname"
 	 else
-	     cmd="zstd --rm -q -9 -T0"
+	     cmd="zstd --rm -q -9 -T0 $rawname"
 	 fi
 	 unset flagtest
 	 ;;
+    simg) convert=2
+	  cmd="img2simg $rawname $iname.simg"
+	  if ! type img2simg > /dev/null 2>&1; then
+	      echo "img2simg not found. Install the package img2simg."
+	      error=1
+	  fi
+	  ;;
     qcow2) copt="-c -O qcow2 "
 	   qcowname="$iname.qcow2"
 	   ;;
@@ -220,7 +227,7 @@ if [ $convert -eq 1 ]; then
 fi
 if [ $convert -eq 2 ]; then
     [ $verbose -eq 1 ] && echo "Converting $rawname to $rawname.$ext."
-    $cmd $rawname
+    $cmd
 fi
 echo -n "Size of disk image and filename: "; du -h $image
 echo "Image created by: $call"
