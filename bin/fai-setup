@@ -114,7 +114,7 @@ setup_fai_account() {
             [ -f /etc/ssh/ssh_host_ed25519_key.pub ] && ED25519SERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_ed25519_key.pub)
             [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_rsa_key.pub )
             # determine all IP addresses, and their host names
-            ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
+            ips=$(ip addr show up| grep -P -o '(?<=inet )[^/]+' | grep -v 127.0.0.1)
             for ip in $ips; do
                 hname=$(getent hosts $ip| tr -s ' ' ',')
                 : ${hname:=$ip}
@@ -186,7 +186,7 @@ if [ -z "$expert" ]; then
     else
 	opt="dev $SERVERINTERFACE"
     fi
-    iprange=$(ip addr show $SERVERINTERFACE | grep -w 'inet'|grep -v 127.0.0.1| cut -d t -f 2 | cut -d ' ' -f 2 |head -1)
+    iprange=$(ip ad show $SERVERINTERFACE | grep -P -o '(?<=inet )\S+' |grep -v 127.0.0.1| head -1)
     myip=$(ip a s $dev|sed -ne '/127.0.0.1/!{s/^[ \t]*inet[ \t]*\([0-9.]\+\)\/.*$/\1/p}'|head -1)
 
     echo "FAI_CONFIGDIR=$FAI_CONFIGDIR" >> /var/log/fai/variables
