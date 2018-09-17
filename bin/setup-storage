@@ -59,8 +59,8 @@ $|=1;
 use Getopt::Std;
 $main::VERSION = $version;
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L); # the variables for getopt
-(&getopts('Xf:hdsD:L:') && !$opt_h) || die <<EOF;
+our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L,$opt_y); # the variables for getopt
+(&getopts('Xf:hdsD:L:y') && !$opt_h) || die <<EOF;
 setup-storage version $version
 
 USAGE: [-X]                     no test, your harddisks will be formated
@@ -71,6 +71,7 @@ USAGE: [-X]                     no test, your harddisks will be formated
        [-D<disks>]              override disklist variable by space-separated <disks>
        [-L<logdir>]             use <logdir> instead of LOGDIR variable
        [-h]                     print this help message
+       [-y]                     print disk variables as YAML file into disk_var.yml
 EOF
 
 # include all subparts, which are part of the FAI perl package
@@ -264,6 +265,25 @@ if ($FAI::no_dry_run) {
     or die "Unable to write to file $FAI::DATADIR/disk_var.sh\n";
   print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
   close DISK_VAR;
+
+  if ($opt_y) {
+    open(DISK_YML, ">$FAI::DATADIR/disk_var.yml")
+      or die "Unable to write to file $FAI::DATADIR/disk_var.yml\n";
+
+    print DISK_YML "---\n# disk_var.sh as YAML\n";
+    foreach (keys %FAI::disk_var) {
+      $FAI::disk_var{$_} =~ s/"//g;
+      if ( $FAI::disk_var{$_} =~ m/\s/ ) {
+	# print an array
+	print DISK_YML "$_:\n";
+	my $a = join("\n  - ", split(/ /,$FAI::disk_var{$_}));
+	print DISK_YML "  - $a\n";
+      } else {
+	print DISK_YML "$_: $FAI::disk_var{$_}\n";
+      }
+    }
+    close DISK_YML;
+  }
 }
 
 # print crypttab
