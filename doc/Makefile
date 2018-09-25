@@ -16,10 +16,12 @@ images:
 html: $(DOC).txt images
 	asciidoc -a toc2 -a toclevels=3 --theme=flask $(DOC).txt
 
+.NOTPARALLEL:	pdf
 pdf: $(DOC).txt	images
 	a2x $(OPT) -L --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
 	rm -f $(DOC).xml $(DOC).fo
 
+.NOTPARALLEL:	ps
 ps: $(DOC).txt images
 	a2x $(OPT) -L --icons -a toc -a toclevels=3 -f ps $(DOC).txt
 	rm -f $(DOC).xml $(DOC).fo
