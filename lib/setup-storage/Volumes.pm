@@ -402,6 +402,7 @@ sub get_current_disks {
 sub get_current_lvm {
 
   use Linux::LVM;
+  Linux::LVM->units('H');
   use Cwd qw(abs_path);
 
   # create hash of vgs to be ignored
