@@ -508,7 +508,7 @@ sub get_current_raid {
   # parse the output line by line
   foreach my $line (@mdadm_print) {
     print MDADM_EX "$line";
-    if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+)\s+/) {
+    if ($line =~ /^ARRAY \/dev\/md[\/]?([\w-]+)\s+/) {
       $id = $1;
 
       foreach (split (" ", $line)) {
