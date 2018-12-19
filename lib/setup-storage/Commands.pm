@@ -254,7 +254,7 @@ sub build_cryptsetup_commands {
 
         my $lukscreateopts = $vol->{lukscreateopts} // "";
         if ($lukscreateopts !~ /(^|\s)-c\s+\S+/) {
-          $lukscreateopts .= " -c aes-cbc-essiv:sha256";
+          $lukscreateopts .= " -c aes-xts-plain64";
         }
         if ($lukscreateopts !~ /(^|\s)-s\s+\d+/) {
           $lukscreateopts .= " -s 256";
