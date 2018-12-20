@@ -74,6 +74,11 @@ sub create_fstab_line {
   $FAI::disk_var{SWAPLIST} .= " " . $dev_name
     if ($d_ref->{filesystem} eq "swap");
 
+  $FAI::disk_var{ESP_DEVICE} = $dev_name
+    if ($d_ref->{mountpoint} eq "/boot/efi");
+  $FAI::disk_var{ESP_DEVICE} = $dev_name
+    if ($d_ref->{mountpoint} eq "/boot" && $d_ref->{filesystem} eq "vfat");
+
   my $ret = "\n$comment_line";
   # join the columns of one line with tabs
   $ret .= join ("\t", @fstab_line);
