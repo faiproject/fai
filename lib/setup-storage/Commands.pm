@@ -253,12 +253,6 @@ sub build_cryptsetup_commands {
           "", "keyfile_$real_dev" );
 
         my $lukscreateopts = $vol->{lukscreateopts} // "";
-        if ($lukscreateopts !~ /(^|\s)-c\s+\S+/) {
-          $lukscreateopts .= " -c aes-xts-plain64";
-        }
-        if ($lukscreateopts !~ /(^|\s)-s\s+\d+/) {
-          $lukscreateopts .= " -s 256";
-        }
         # encrypt
         &FAI::push_command(
           "yes YES | cryptsetup luksFormat $real_dev $keyfile $lukscreateopts",
