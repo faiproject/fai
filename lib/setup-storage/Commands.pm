@@ -253,6 +253,7 @@ sub build_cryptsetup_commands {
           "", "keyfile_$real_dev" );
 
         my $lukscreateopts = $vol->{lukscreateopts} // "";
+
         # encrypt
         &FAI::push_command(
           "yes YES | cryptsetup luksFormat $real_dev $keyfile $lukscreateopts",
@@ -276,7 +277,7 @@ sub build_cryptsetup_commands {
         }
 
         # add entries to crypttab
-        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks";
+        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks,discard";
       } elsif ($mode eq "tmp" || $mode eq "swap") {
         &FAI::push_command(
           "cryptsetup --key-file=/dev/urandom create $enc_dev_short_name $real_dev",
