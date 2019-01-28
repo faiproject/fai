@@ -52,6 +52,9 @@ get_dhcp_info() {
     if [ -n "$netdevices_up" ]; then
 	dhclient -lf /dev/null -cf /usr/share/fai/dhclient-fai.conf -sf /usr/share/fai/dhclient-fai-script $netdevices >>$bootlog 2> $LOGDIR/dhclient.log
 	setnet
+	if [ -f /run/dhclient.pid ]; then
+	    kill `cat /run/dhclient.pid`
+	fi
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
