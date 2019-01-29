@@ -497,6 +497,9 @@ upgrade_nfsroot() {
     # fai-nfsroot must be sucessfully installed before anything else
     $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-network dracut-config-generic $nfscommon
     $ROOTCMD apt-get -y dist-upgrade
+    # patch dracut. Do not fail if network is not available
+    local fn=$(find $NFSROOT/usr/lib/dracut/modules.d/ -name net-genrules.sh)
+    sed -i -e 's/exit 1/exit 0/' $fn
     fdivert /usr/sbin/update-grub
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
