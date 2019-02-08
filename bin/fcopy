@@ -332,27 +332,27 @@ sub set_mode {
   # use the values from the source file
   my ($sourcefile,$destfile,$class) = @_;
   my ($uid,$gid,$owner,$group,$mode);
-  my ($stime,@defmodes);
+  my ($stime,@smodes);
 
   # get mtime,uid,gid,mode from source file or from -m
   if ($modeset) { # use -m values
-    @defmodes = @opt_modes;
+    @smodes = @opt_modes;
     $stime = (stat("$sourcefile/$class"))[9];
   } else {
     # get mtime,uid,gid,mode from source file
     if ($opt_H) {
-      ($stime,@defmodes) = (lstat("$sourcefile/$class"))[9,4,5,2];
+      ($stime,@smodes) = (lstat("$sourcefile/$class"))[9,4,5,2];
     } else {
-      ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+      ($stime,@smodes) = (stat("$sourcefile/$class"))[9,4,5,2];
     }
   }
 
   # get mtime,uid,gid,mode from destination file
-  my ($dtime,@ddefmodes);
+  my ($dtime,@dmodes);
   if ($opt_H) {
-    ($dtime,@ddefmodes) = (lstat("$destfile"))[9,4,5,2];
+    ($dtime,@dmodes) = (lstat("$destfile"))[9,4,5,2];
   } else {
-    ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
+    ($dtime,@dmodes) = (stat("$destfile"))[9,4,5,2];
   }
   # compare time,uid,gid and mode of source file and target file
 
@@ -361,14 +361,14 @@ sub set_mode {
   } elsif (-f "$sourcefile/file-modes"){
     ($owner,$group,$mode) = read_file_mode("$sourcefile/file-modes",$class);
   } else { # use values from source file
-    ($owner,$group,$mode) = @defmodes;
+    ($owner,$group,$mode) = @smodes;
   }
 
   # if different: change the values
   # setting modes on a symlink is not portable, so ignore it
   my $issymlink = $opt_H && -l $destfile;
-  return if ($stime == $dtime && (($ddefmodes[0] == $owner) &&
-      ($ddefmodes[1] == $group) && ($issymlink || ($ddefmodes[2] == $mode))));
+  return if ($stime == $dtime && (($dmodes[0] == $owner) &&
+      ($dmodes[1] == $group) && ($issymlink || ($dmodes[2] == $mode))));
 
   ($uid,$gid) = name2num($owner,$group);
   warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
