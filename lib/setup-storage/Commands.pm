@@ -1299,6 +1299,10 @@ sub setup_partitions {
     if (defined $part->{mountpoint} && $part->{mountpoint} eq "/boot") {
       $boot_disk=$disk;
     }
+    # override $boot_disk if /boot/efi exists
+    if (defined $part->{mountpoint} && $part->{mountpoint} eq "/boot/efi") {
+      $boot_disk=$disk;
+    }
 
     # the type of the partition defaults to primary
     my $part_type = "primary";
@@ -1349,9 +1353,10 @@ sub setup_partitions {
     $prev_id = $part_id;
   }
 
+  # set bootable flag for gpt-bios and gpt
   &FAI::push_command("parted $boot_disk set 1 boot on",
     "pt_complete_$disk", "gpt_bios_fake_bootable")
-    if($FAI::configs{$config}{disklabel} eq "gpt-bios" and $boot_disk);
+    if($FAI::configs{$config}{disklabel} =~ /^gpt/ and $boot_disk);
 
   ($prev_id > -1) or &FAI::internal_error("No partitions created");
   $partition_table_deps{$disk} = "cleared2_$disk,exist_"
