@@ -367,22 +367,22 @@ sub build_btrfs_commands {
       $pre_req = "exist_" . $devs[0];
     }
     # creates the BTRFS volume/RAID
-     if ($raidlevel eq 'single') {
+    if ($raidlevel eq 'single') {
       if (exists $mkfs_done{join(" ", @devs)}) {
         &FAI::push_command("true",
-          "$pre_req",
-          "btrfs_built_raid_$id");
+			   "$pre_req",
+			   "btrfs_built_raid_$id");
       } else {
         print "Adding mkfs command for '", join(", ", @devs), "'.\n";
         &FAI::push_command("mkfs.btrfs -d single $createopts ".join(" ",@devs),
-          "$pre_req",
-          "btrfs_built_raid_$id");
-          $mkfs_done{join(" ", @devs)} = '1';
+			   "$pre_req",
+			   "btrfs_built_raid_$id");
+	$mkfs_done{join(" ", @devs)} = '1';
       }
     } else {
       &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ".join(" ",@devs),
-        "$pre_req",
-        "btrfs_built_raid_$id");
+			 "$pre_req",
+			 "btrfs_built_raid_$id");
     }
 
     # initial mount, required to create the initial subvolume
