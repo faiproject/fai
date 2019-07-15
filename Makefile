@@ -98,7 +98,7 @@ install:
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
 	cp -a pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
 	cp -a pixmaps/small/*.gif $(DESTDIR)/usr/share/fai/pixmaps/small
-	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
+	sed -i 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
 	rm -f $(DOCDIR)/examples/simple/.git
 	cp -a utils $(DOCDIR)/examples
