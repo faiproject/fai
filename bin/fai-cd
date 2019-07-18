@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2018 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2019 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -60,7 +60,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2018 Thomas Lange
+	fai-cd Copyright (C) 2004-2019 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -96,7 +96,7 @@ check_programs() {
     local msg
     [ $squash_only -eq 1 -o -x "$(which xorriso)" ] || msg+="xorriso not found. Please install package."
     [ -x "$(which mksquashfs)" ] || msg+="\nmksquashfs not found. Please install the package squashfs-tools."
-    [ -x "$(which strings)" ] || msg+="\ncommand strings not found. Please install package binutils."
+    [ -x "$(which parted)" ] || msg+="\ncommand parted not found. Please install package parted."
 
     if [ -n "$msg" ]; then
 	die 8 "$msg"
@@ -320,6 +320,7 @@ mkiso() {
         -V "$vname" -A "$aname" \
         -no-emul-boot -boot-info-table --embedded-boot ${embed_image} -partition_offset 16 -no-pad -o $isoname \
         -R $tmp --sort-weight 0 / --sort-weight 1 /boot || die 12 "xorriso failed."
+    parted $isoname set 1 boot on
     echo -n "ISO image size and filename: "; du -h $isoname
 
     unhide_dirs
