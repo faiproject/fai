@@ -298,19 +298,19 @@ call_hook() {
             echo "WARNING: The suffix .source is deprecated. Use .sh instead." >&2
             # continue
         fi
-        if [ -x $hfile ]; then
-            echo "Calling hook: $hook.$cl"
-            sendmon "HOOK $hook.$cl"
-            # execute the hook
-            $hfile $dflag "$@"
-            check_status $hook.$cl $?
-        fi
         if [ -x $hfile.sh ]; then
             echo "Source hook: $hook.$cl.sh"
             sendmon "HOOK $hook.$cl.sh"
             # source this hook
             . $hfile.sh $dflag "$@"
             check_status $hook.$cl.sh $?
+        fi
+        if [ -x $hfile ]; then
+            echo "Calling hook: $hook.$cl"
+            sendmon "HOOK $hook.$cl"
+            # execute the hook
+            $hfile $dflag "$@"
+            check_status $hook.$cl $?
         fi
         # deprecated
 	if [ -x $hfile.source ]; then
