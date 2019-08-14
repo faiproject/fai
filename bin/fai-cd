@@ -48,6 +48,7 @@ hidevartmp=0
 rel=0
 target=0
 autodiscover=0
+vname="FAI_CD"
 # arguments to be passed on to internal fai-cd call
 arguments="-MB"
 
@@ -360,7 +361,7 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AekfhHg:Jbs:SBMn:m:c:C:d:" opt ; do
+while getopts "AekfhHg:Jbs:SBMn:m:v:c:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
         c)  csdir="$OPTARG" ;;
@@ -378,6 +379,7 @@ while getopts "AekfhHg:Jbs:SBMn:m:c:C:d:" opt ; do
         s)  space="$OPTARG" ;;
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
+        v)  vname="$OPTARG" ;;
 	d)  config_space="$OPTARG"; configset=1 ; arguments+=" -d $config_space";;
         ?)  usage ;;
     esac
@@ -502,7 +504,6 @@ fi
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|awk '/fai-client/ {print $3}')
 isoversion=$(printf "FAI %-6s build $(date '+%Y %b %d - %R')" "$faiversion")
-vname="FAI_CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
 create_grub2_image
