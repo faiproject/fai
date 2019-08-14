@@ -321,8 +321,9 @@ EOF
      rm -f $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
 fi
 
-reprepro -b $mirrordir includedeb cskoeln $archivedir/*.deb
-rm -r $archivedir/*.deb
+# allow package without the .deb suffix. At least they must start with a char and contain an underscore or hyphen
+reprepro --ignore=extension -b $mirrordir includedeb cskoeln $archivedir/[a-zA-z]*[_-]*
+rm -r $archivedir/[a-zA-z]*[_-]*
 
 echo "$0 finished."
 echo -n "Mirror size and location: ";du -sh --exclude aptcache --exclude db $mirrordir
