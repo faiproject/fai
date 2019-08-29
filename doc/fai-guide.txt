@@ -5,9 +5,9 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-Mon, 21 Sep 2017
+Mon, 29 Aug 2019
 :Date: a date
-:Revision: 5.5
+:Revision: 5.9
 
 :nfsrootsize: 780
 :mirrorsize: 56
@@ -39,7 +39,7 @@ configuration and how to deal with errors.
      +-----------------------------------------------------------------------+
 ----
 
-(c) 2000-2017 Thomas Lange
+(c) 2000-2019 Thomas Lange
 
 
 .Copyright
@@ -80,7 +80,7 @@ Download::
 https://fai-project.org/download
 
 Entry for 'sources.list'::
-`deb https://fai-project.org/download stretch koeln`
+`deb https://fai-project.org/download buster koeln`
 
 Manual pages::
 https://fai-project.org/doc/man/
@@ -528,7 +528,7 @@ steps are needed:
 
 ----
 # wget -O - https://fai-project.org/download/2BF8D9FE074BCDE4.asc | apt-key add -
-# echo "deb http://fai-project.org/download stretch koeln" > /etc/apt/sources.list.d/fai.list
+# echo "deb http://fai-project.org/download buster koeln" > /etc/apt/sources.list.d/fai.list
 # apt-get update
 # aptitude install fai-quickstart
 ----
@@ -734,10 +734,10 @@ Here's the command for starting the installation for the host demohost.
 
 ----
 $ fai-chboot -IFv -u nfs://faiserver/srv/fai/config demohost
-Booting kernel vmlinuz-3.16.0-4-amd64
- append initrd=initrd.img-3.16.0-4-amd64 ip=dhcp
-   FAI_FLAGS=verbose,sshd,createvt
-   FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config
+
+Booting kernel vmlinuz-4.19.0-5-amd64
+ append initrd=initrd.img-4.19.0-5-amd64 ip=dhcp
+   FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config
 
 demohost has 192.168.33.100 in hex C0A82164
 Writing file /srv/tftp/fai/pxelinux.cfg/C0A82164 for demohost
@@ -1601,8 +1601,8 @@ Example of a pxelinux.cfg file:
 default fai-generated
 
 label fai-generated
-kernel vmlinuz-3.16.0-4-amd64
-append initrd=initrd.img-3.16.0-4-amd64 ip=dhcp  root=/srv/fai/nfsroot aufs  FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
+kernel vmlinuz-4.19.0-5-amd64
+append initrd=initrd.img-4.19.0-5-amd64 ip=dhcp root=/srv/fai/nfsroot:vers=3 rootovl FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
 ----
 
 See '/usr/share/doc/syslinux/pxelinux.doc' for more detailed
@@ -1796,20 +1796,18 @@ according to this information. Here's an example:
 
 ----
 demohost:~# df
-Filesystem      1K-blocks      Used Available Use% Mounted on
-rootfs            4099064    414088   3645296  11% /
-192.168.33.250:/srv/fai/nfsroot
-                  3905600    410976   3454944  11% /live/image
-tmpfs              193464      3112    190352   2% /live/cow
-aufs              4099064    414088   3645296  11% /
 
-192.168.33.250:/srv/fai/config
-                  3905600    410976   3454944  11% /var/lib/fai/config
-/dev/sda1          241116     74519    154149  33% /target
-/dev/sda9         4364212    139888   4179988   4% /target/home
-/dev/sda7          553376     16840    536536   4% /target/tmp
-/dev/sda8         2221628    275936   1832840  14% /target/usr
-/dev/sda6          577096    172924    374856  32% /target/var
+Filesystem                    1K-blocks     Used Available Use% Mounted on
+devtmpfs                        1950880        0   1950880   0% /dev
+tmpfs                           1971656      336   1971320   1% /run
+overlay                         1971656      148   1971508   1% /
+tmpfs                           1971656      148   1971508   1% /live/cow
+192.168.33.250:/srv/fai/nfsroot
+                                15416320 12121088    919552  93% /live/image
+faiserver:/srv/fai/config       15416320 12121088    919552  93% /var/lib/fai/config
+/dev/mapper/vg1-root            7828376  1599880   5811116  22% /target
+/dev/vda1                        198337    49976    138121  27% /target/boot
+/dev/mapper/vg1-home            1503280     4620   1404248   1% /target/home
 ----
 
 *This method can be used as a rescue environment!* If you need a file
