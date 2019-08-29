@@ -3,7 +3,7 @@
 # check-cross-arch - check if qemu is needed for the target directory
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2017 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2017-2019 Thomas Lange, lange@informatik.uni-koeln.de
 
 
 target=$1
@@ -57,7 +57,13 @@ done
 
 if [ $cross -eq 1 ]; then
      [ X$verbose = X1 ] && echo "Using qemu-$targetarch-static for cross architecture chroot."
-     cp /usr/bin/qemu-$targetarch-static $target/usr/bin
+
+     # if the flag F is set, we do not need the static executable inside $target
+     if egrep -q --color '^flags: .*F.*' /proc/sys/fs/binfmt_misc/qemu-$targetarch; then
+	 :
+     else
+	 cp /usr/bin/qemu-$targetarch-static $target/usr/bin
+     fi
 fi
 
 exit $cross
