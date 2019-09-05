@@ -7,7 +7,7 @@ FAI Guide (Fully Automatic Installation)
 Thomas Lange <lange@informatik.uni-koeln.de>
 Mon, 29 Aug 2019
 :Date: a date
-:Revision: 5.9
+:Revision: 5.8
 
 :nfsrootsize: 780
 :mirrorsize: 56
@@ -247,30 +247,25 @@ installing FAI on your computer.
 
 === [[cdserver]]My first server installation
 
-
-Please note, if you intend to use QEMU/KVM then you need to have
-qemu-kvm qemu-utils bridge-utils installed on the machine to
-use fai-mk-network and fai-kvm footnote:[fai-kvm needs a lot of RAM
-for the vm, because of caching of /var, 2GB are OK].
-
-You can do that via
-
-----
-# apt-get install qemu-kvm qemu-utils bridge-utils
-----
+We will create a private network and start two virtual machines. One
+will become your own FAI server, the other will be an install client.
 
 If you intend to use VMware or VirtualBox, ensure that your client
 uses a bridged network connection. A detailed description is in the
 FAI wiki
-footnote:[https://wiki.fai-project.org/wiki/VirtualBox_for_your_first_FAI_installation]. Also,
+footnote:[https://wiki.fai-project.org/index.php/VirtualBox_for_your_first_FAI_installation]. Also,
 it is not possible to use
 bridged network interfaces over wireless, as most WiFi network cards
 do not support this feature.
 
-For setting up your first own FAI server, we recommend creating a
-test network on your computer and to use KVM. For creating this
-private network there's the script `fai-mk-network` (in the package
-fai-server). It sets up a software bridge with several tap devices
+When using Qemu/KVM and the `fai-kvm` wrapper you can create the
+network using the command `fai-mk-network`. First install some packages
+
+----
+# apt-get install qemu-system-gui qemu-kvm qemu-utils bridge-utils
+----
+
+The next command sets up a private network with a software bridge with several tap devices
 that belong to the user +<username>+.
 ----
 fai-mk-network <username>
@@ -288,10 +283,10 @@ Start the first virtual host, which will become the FAI server
 footnote:[This installation will consume about 2GB of space in
 +/tmp+.]:
 ----
-fai-kvm -Vn -s20 -u 1 cd fai-cd.iso
+fai-kvm -Vn -s20 -u 1 cd faicd64-small.iso
 ----
 
-In the grub menu select +faiserver, fixed IP+. This will install a host called
+In the grub menu select +faiserver, using internal DHCP and a fixed IP+. This will install a host called
 faiserver with IP 192.168.33.250 which contains all software needed
 for a FAI server. It will also set up a local package cache (using
 apt-cacher-ng). Once the installation is finished, reboot the
@@ -2250,7 +2245,7 @@ touch /srv/fai/nfsroot/.nocolorlogo
 ----
 
 - A list of variables used by FAI can be found at
-https://wiki.fai-project.org/wiki/Variables.
+https://wiki.fai-project.org/index.php/Variables.
 
 - You can shorten some customization scripts by using one single fcopy
 command _fcopy -r /_.
@@ -2318,7 +2313,7 @@ https://lists.uni-koeln.de/pipermail/linux-fai/2016-March/011283.html
 
 - How to use the nfsroot as system for diskless clients?
 +
-https://wiki.fai-project.org/wiki/Use_nfsroot_for_diskless_clients
+https://wiki.fai-project.org/index.php/Use_nfsroot_for_diskless_clients
 
 
 - How to serve multiple nfsroot directories on one FAI server?
