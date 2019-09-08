@@ -172,6 +172,7 @@ add_base_packages() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set-classes() {
 
+    local addclasses
     # if -c is given, ignore -x
     if [ -n "$cclasses" ]; then
         export classes=${cclasses//,/ }
@@ -259,7 +260,7 @@ if [ "$(ls -A $cfdir/apt/sources.list.d/ 2>/dev/null)" ]; then
 fi
 
 # check if backports are used
-bpo=$(egrep '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports')
+bponame=$(egrep '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports')
 
 if [ -f "$aptpref" ]; then
     cp "$aptpref" $aptcache/etc/apt/preferences
@@ -304,10 +305,10 @@ Origin: fai-mirror
 EOF
 
 # add entry for backports
-if [ -n "$bpo" ]; then
+if [ -n "$bponame" ]; then
      cat >> $mirrordir/conf/distributions <<EOF
 
-Codename: $bpo
+Codename: $bponame
 Architectures: $arch
 Components: main non-free contrib
 DebIndices: Packages Release . .xz
@@ -317,7 +318,7 @@ Origin: fai-mirror
 EOF
 
 # maybe using reprepro pulls it's possible to move instead of copy the packages
-     reprepro -b $mirrordir includedeb $bpo $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
+     reprepro -b $mirrordir includedeb $bponame $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
      rm -f $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
 fi
 
