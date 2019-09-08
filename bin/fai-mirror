@@ -259,9 +259,6 @@ if [ "$(ls -A $cfdir/apt/sources.list.d/ 2>/dev/null)" ]; then
     sed -e 's/file:/copy:/' $cfdir/apt/sources.list.d/* >> $aptcache/etc/apt/sources.list
 fi
 
-# check if backports are used
-bponame=$(egrep '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports')
-
 if [ -f "$aptpref" ]; then
     cp "$aptpref" $aptcache/etc/apt/preferences
 fi
@@ -304,6 +301,8 @@ Label: fai-project.org
 Origin: fai-mirror
 EOF
 
+# check if backports are used
+bponame=$(egrep '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports')
 # add entry for backports
 if [ -n "$bponame" ]; then
      cat >> $mirrordir/conf/distributions <<EOF
