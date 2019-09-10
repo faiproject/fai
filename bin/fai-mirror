@@ -188,13 +188,73 @@ set-classes() {
     set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mk_class_var_list() {
+
+    # create a list of files named class/*.var that contain a definition of a  variable that is
+    # used in package_config/<classes>
+
+    # we assume, that variables used in package_config are defined in class/*.var.
+    # For all classes search if there's a variables used in package_config/CLASS
+    # For all variables found look which files class/CLASS.var define these variables.
+
+    local -a variables=()
+    local filelist classlist sourefiles
+    local c i f
+
+    #filelist: all files in package_config which are also a defined class
+    for c in $classes; do
+	if [ -f $FAI_CONFIGDIR/package_config/$c ]; then
+	    filelist+=" $c"
+	fi
+    done
+
+    if [ -z "$filelist" ]; then
+	   return
+    fi
+
+    # make the list of variables that are used
+    # regex: $abc or ${abc}
+    variables=($(cd $FAI_CONFIGDIR/package_config;grep -h -P -o '\$[A-Za-z0-9_]+|\$\{[A-Za-z0-9_]+\}' $filelist|sort|uniq))
+
+    # debug
+    #for v in ${variables[@]}; do
+    #    echo Variable found: $v
+    #done
+
+    # create a regex like varname= for all variables
+    for i in ${!variables[@]}; do
+	variables[i]=$(echo ${variables[i]} | tr -d /{}$/)
+	variables[i]+="="
+    done
+
+    # classlist: make list of files in class, which are also a class
+    for c in $classes; do
+	if [ -f $FAI_CONFIGDIR/class/$c.var ]; then
+	    classlist+=" $FAI_CONFIGDIR/class/$c.var"
+	fi
+    done
+    # look for variable definition in this list
+    for f in $classlist; do
+	for i in ${!variables[@]}; do
+	    if grep -q -P "${variables[i]}" $f; then
+		sourefiles+=" $f"
+		break
+	    fi
+	done
+    done
+
+    # these files contain a variable definition which is needed
+    echo $sourefiles
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 preserve=0
 verbose=0
 add=1
 qflag=-qq
 bcount=0
-while getopts "a:bBvhx:pc:C:m:s:P:" opt ; do
+setvariables=0
+while getopts "a:bBvhx:pc:C:m:s:P:V" opt ; do
     case "$opt" in
         a) arch=$OPTARG ;;
         B) add=0 ; ((bcount++)) ;;
@@ -207,6 +267,7 @@ while getopts "a:bBvhx:pc:C:m:s:P:" opt ; do
         p) preserve=1;;
 	s) csdir="$OPTARG";;
         v) verbose=1; vflag=-v; qflag='';;
+        V) setvariables=1 ;;
         P) aptpref="$OPTARG";;
         ?) die 1 "Unknown option";;
     esac
@@ -243,6 +304,17 @@ fi
 : ${MAXPACKAGES:=1}
 export MAXPACKAGES
 
+set-classes
+if [ "$setvariables" -eq 1 ]; then
+    flist=$(mk_class_var_list)
+    set -a
+    for f in $flist; do
+	echo Sourcing variable definitions in $f
+	source $flist
+    done
+    set +a
+fi
+
 initialize
 
 # if we are using nfs mounts for Debian mirror, this may fail here, since inside a chroot environment different dir are used
@@ -269,7 +341,6 @@ cp -a /etc/apt/trusted.gpg.d $aptcache/etc/apt
 echo "Getting package information"
 apt-get $qflag $aptoptions update >/dev/null
 
-set-classes
 [ $add -eq 1 ] && add_base_packages
 echo "Downloading packages for classes:" $classes
 if FAI=$FAI_CONFIGDIR install_packages -N -d $vflag; then
