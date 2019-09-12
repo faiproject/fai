@@ -1099,8 +1099,13 @@ EOF
 
     # add apt keys for all classes
     for keyfile in ${classes:-}; do
+        if [  -f $FAI/package_config/$keyfile.gpg ]; then
+	    echo "Copying APT key $keyfile.gpg to target"
+	    cp -v --preserve=timestamp $FAI/package_config/$keyfile.gpg $FAI_ROOT/etc/apt/trusted.gpg.d/
+	    continue
+        fi
         [ ! -f $FAI/package_config/$keyfile.asc ] && continue
-        echo -n "Copying APT key from $keyfile.asc to $keyfile.asc.gpg "
+        echo "Copying APT key from $keyfile.asc to $keyfile.asc.gpg "
         rm -f $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg
         gpg --batch -o $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg --dearmor $FAI/package_config/$keyfile.asc
     done
