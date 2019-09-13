@@ -36,8 +36,14 @@ use File::Path;
 use File::Basename;
 use File::Spec;
 use File::Temp qw/tempfile/;
-use File::lchown qw/lchown lutimes/;
 use Getopt::Std;
+
+# load module only if available
+our $haslchown = eval {
+  require File::lchown;
+  File::lchown->import (qw/lchown lutimes/);
+  1;
+};
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Global variables
@@ -373,7 +379,7 @@ sub set_mode {
   ($uid,$gid) = name2num($owner,$group);
   warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
   return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
-  if ($issymlink) {
+  if ($issymlink && $haslchown) {
     lchown  ($uid,$gid,     $destfile) || ewarn("lchown $owner $group $destfile failed. $!");
     unless ($preinst) {
       lutimes ($stime,$stime, $destfile) || ewarn("lutimes for $destfile failed. $!");
