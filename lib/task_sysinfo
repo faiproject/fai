@@ -14,7 +14,7 @@ cd /sys/class/dmi/id
 grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv '123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
 cd - >/dev/null
 
-if [ -x "$(which lshw)" ]; then
+if command -v lshw >&/dev/null; then
     lshwtmp=$(mktemp)
     lshw -short -quiet -C system,memory,processor,display,storage,disk | tee $lshwtmp
     echo
@@ -29,7 +29,7 @@ echo "NUMA configuration:"
 numactl -H
 
 echo
-if [ -x "$(which hwinfo)" ]; then
+if command -v hwinfo >&/dev/null; then
     hwinfo --short --cpu --sys
     hwinfo --short --smp
     hwinfo --short --bios
@@ -56,7 +56,7 @@ echo "Now more detailed information"
 echo '=================================================='
 
 lspci
-[ -x "$(which sfdisk)" ] && sfdisk -d
+command -v sfdisk >&/dev/null && sfdisk -d
 
 #[ -f /proc/scsi/scsi ] && cat /proc/scsi/scsi
 
@@ -76,8 +76,8 @@ find /dev/disk/by-id ! -type d -printf "%-40f\t->  %l\n" | grep -v part | sort -
 echo
 cat /proc/partitions
 
-[ -x "$(which lsblk)" ] && lsblk -i
-[ -x "$(which blkid)" ] && blkid
+command -v lsblk >&/dev/null && lsblk -i
+command -v blkid >&/dev/null && blkid
 
 # very detailed
 for disk in $disklist; do

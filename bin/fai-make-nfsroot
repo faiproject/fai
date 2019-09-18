@@ -276,7 +276,7 @@ call_debootstrap() {
 	fi
     fi
     if [ $_debootstrap = "qemu-debootstrap" ]; then
-	if ! type -P $_debootstrap >/dev/null; then
+	if ! command -v $_debootstrap >&/dev/null; then
 	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
 	fi
     fi
@@ -327,7 +327,7 @@ add_etc_hosts_entries() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    [ ! -x "$(which debootstrap)" ] && die 1 "Can't find debootstrap command. Aborting."
+    command -v debootstrap >&/dev/null || die 1 "Can't find debootstrap command. Aborting."
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
