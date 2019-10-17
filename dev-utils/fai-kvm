@@ -2,7 +2,7 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2017
+# Author:    Thomas Lange, Uni Koeln, 2011-2019
 # License:   GPL v2 or any later version
 
 fix="-k en-us -smp 2 -cpu host -global isa-fdc.driveA= "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
@@ -24,26 +24,28 @@ boot_disk() {
 
   # boot from disk
     [ -n "$1" ] && disk=$1
+    shift
     case "$disk" in
 	*.raw) f=",format=raw" ;;
     esac
     set -x
-    kvm $gopt -boot order=c $net -drive file=$disk,if=virtio$f
+    kvm $gopt -boot order=c $net -drive file=$disk,if=virtio$f $*
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
 
   # PXE boot
   set -x
-  kvm $gopt -boot order=nc $net $disk
+  kvm $gopt -boot order=nc $net $disk $*
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_cd() {
 
   [ -n "$1" ] && cdimage=$1
+  shift
   # boot fai-cd
   set -x
-  kvm $gopt -boot order=cd $net $disk -cdrom $cdimage
+  kvm $gopt -boot order=cd $net $disk -cdrom $cdimage $*
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -56,9 +58,11 @@ usage() {
 
   cat <<EOF
 
- fai-kvm [options] pxe   # boot VM using PXE from NIC
+ fai-kvm [options] pxe               # boot VM using PXE from NIC
  fai-kvm [options] disk [diskimage]  # boot VM from first disk
- fai-kvm [options] cd   [imagename]  # boot VM from a ISO image
+ fai-kvm [options] cd   [imagename]  # boot VM from an ISO image
+
+ fai-kvm [options] pxe|cd|disk [imagename] -- [more options for kvm]
 
  -b          run the VM daemonized in the background, no video output
  -n          create a new empty disk image, which is used as a local disk
@@ -66,7 +70,7 @@ usage() {
  -s <size>   size of the local disk in GB (default is ${size}GB)
  -d <num>    number of local disks (default is 1)
  -D <path>   directory, where the disk image files are created (default: $diskdir)
- -m <mem>    RAM size  inMB (defaults is ${ram}MB)
+ -m <mem>    RAM size in MB (defaults is ${ram}MB)
  -u <num>    user number. This will become part of the MAC address of the interface
              of the VM and is the number of the tap device number. It is also used
              for the file name of the disk files. Each VM must have a unique number.
@@ -75,6 +79,7 @@ usage() {
  -U          Use kvm user networking instead of tap devices
  -t          Set title of the Qemu window
 
+You can add more options for kvm after --
 The MAC prefix is set inside the script to $macprefix:XX
 EOF
   exit 0
@@ -155,12 +160,33 @@ if [ X$newdisk != X0 ]; then
   done
 fi
 
-case "$1" in
-    pxe) boot_pxe ;;
-    cd) boot_cd $2 ;;
-    disk) boot_disk $2 ;;
+# Loop through parameters until '--' to pass the remainder to kvm.
+# The preceding parameters are stored in $param1 & $param2
+# param1 = cd|pxe|pxe ; param2 = diskimage | imagename
+param1=""
+param2=""
+while [[ $# -gt 0 ]]; do
+  if [ "$1" = "--" ]; then
+	  shift
+	  break
+  fi
+  param1="$param2"
+  param2="$1"
+  shift
+done
+
+# if we only have one parameter before '--'
+if [ -z "$param1" ]; then
+  param1="$param2"
+  param2=""
+fi
+
+case "$param1" in
+    pxe) boot_pxe $* ;;
+    cd) boot_cd $param2 $* ;;
+    disk) boot_disk $param2 $* ;;
     *)
-        echo "Missing argument." >&2
+        echo "Wrong argument. Use one of pxe, cd, disk." >&2
         usage
         ;;
 esac

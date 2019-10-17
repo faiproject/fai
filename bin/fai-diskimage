@@ -4,7 +4,7 @@
 
 # This script is part of FAI (Fully Automatic Installation)
 #
-# Copyright (C) 2016-2017 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2016-2018 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 
 # this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
@@ -25,7 +25,7 @@ cleanup() {
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
 	# try umount several times, because some postinst jobs may still run and use the filesystems
 	for i in {1..8}; do
-            umount $dir >/dev/null 2>&1
+            umount $dir >&/dev/null
             [ $? -eq 0 ] && break
             [ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
 	    sleep $i
@@ -60,7 +60,7 @@ usage() {
 Create a disk image name.raw using FAI and a list of FAI classes.
 This can be used for a virtual machine or a cloud instance. If you
 use another suffix the image will be converted. Following formats are
-supported: .qcow2, .vdi, .vhdx, .vmdk.
+supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk, .simg.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
@@ -76,11 +76,11 @@ supported: .qcow2, .vdi, .vhdx, .vmdk.
 check_commands() {
 
     local error=0
-    if ! type qemu-img > /dev/null 2>&1; then
+    if ! command -v qemu-img >&/dev/null; then
 	echo "qemu-img not found. Install the package qemu-utils."
 	error=1
     fi
-    if ! type setup-storage > /dev/null 2>&1; then
+    if ! command -v setup-storage >&/dev/null; then
 	echo "setup-storage not found. Install the package fai-setup-storage."
 	error=1
     fi
@@ -141,6 +141,29 @@ ext=${image##*.}
 rawname="$iname.raw"
 case $ext in
     raw)   convert=0 ;;
+    xz) convert=2
+	rawname=$iname
+	export XZ_OPT=${XZ_OPT-"-1 -T0"}
+	cmd="xz $rawname"
+	;;
+    zst) convert=2
+	 rawname=$iname
+	 # check if zstd support threads
+	 flagtest=$(zstd -h | grep threads)
+	 if [ -z "$flagtest" ]; then
+	     cmd="zstd --rm -q -9 $rawname"
+	 else
+	     cmd="zstd --rm -q -9 -T0 $rawname"
+	 fi
+	 unset flagtest
+	 ;;
+    simg) convert=2
+	  cmd="img2simg $rawname $iname.simg"
+	  if ! command -v img2simg >&/dev/null; then
+	      echo "img2simg not found. Install the package img2simg."
+	      error=1
+	  fi
+	  ;;
     qcow2) copt="-c -O qcow2 "
 	   qcowname="$iname.qcow2"
 	   ;;
@@ -176,7 +199,7 @@ if [ $(id -u) != "0" ]; then
     die 1 "Run this program as root."
 fi
 
-if type vgs >/dev/null 2>&1; then
+if command -v vgs >&/dev/null; then
     export SS_IGNORE_VG=$(vgs --unbuffered --noheadings -o name --rows)
 fi
 
@@ -201,6 +224,10 @@ if [ $convert -eq 1 ]; then
     [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname."
     qemu-img convert -f raw $rawname $copt $qcowname
     rm $rawname
+fi
+if [ $convert -eq 2 ]; then
+    [ $verbose -eq 1 ] && echo "Converting $rawname to $rawname.$ext."
+    $cmd
 fi
 echo -n "Size of disk image and filename: "; du -h $image
 echo "Image created by: $call"

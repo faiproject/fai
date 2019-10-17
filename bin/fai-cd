@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2017 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2019 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -48,6 +48,7 @@ hidevartmp=0
 rel=0
 target=0
 autodiscover=0
+vname="FAI_CD"
 # arguments to be passed on to internal fai-cd call
 arguments="-MB"
 
@@ -60,7 +61,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2017 Thomas Lange
+	fai-cd Copyright (C) 2004-2019 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -80,12 +81,23 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+error_space() {
+
+    local e=$1
+    shift
+    local msg=$1
+    echo "Not enough space left on image for the $msg" >&2
+    df -h $tmp/$liveos/mounted-ext3fs >&2
+    echo "You can add more space to the image by using the option -s. See man fai-cd for details." >&2
+    die $e
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 check_programs() {
 
     local msg
-    [ $squash_only -eq 1 -o -x "$(which xorriso)" ] || msg+="xorriso not found. Please install package."
-    [ -x "$(which mksquashfs)" ] || msg+="\nmksquashfs not found. Please install the package squashfs-tools."
-    [ -x "$(which strings)" ] || msg+="\ncommand strings not found. Please install package binutils."
+    [ $squash_only -eq 0 ] && ! command -v xorriso >&/dev/null && msg+="xorriso not found. Please install package."
+    command -v mksquashfs >&/dev/null || msg+="\nmksquashfs not found. Please install the package squashfs-tools."
+    command -v parted >&/dev/null || msg+="\ncommand parted not found. Please install package parted."
 
     if [ -n "$msg" ]; then
 	die 8 "$msg"
@@ -113,14 +125,14 @@ create_ext3fs_image() {
 
     echo "Copying the nfsroot to CD image"
     # copy the contents of the nfsroot into it
-    cp -Ppr $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || die $? "Not enough space left on device for the nfsroot"
+    cp -Ppr $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || error_space $? "nfsroot"
     rm -f $tmp/$liveos/mounted-ext3fs/etc/resolv.conf
 
     # find $tmp/$liveos/mounted-ext3fs # for debugging
     # copy config space into nfsroot-copy unless -d is given
     if [ $configset -eq 0 ]; then
         echo "Copying the config space to CD image"
-        cp -Ppr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ || die $? "Not enough space left on device for the config directory"
+        cp -Ppr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ || error_space $? "config directory"
     fi
     # add the partial mirror to the CD
     addmirror
@@ -295,7 +307,10 @@ cleanup_liveos_mounts() {
     unhide_dirs
     rm -rf $tmp
     if [ $autodiscover -eq 1 ]; then
-	mv $ONFSROOT/tmp/initrd.img* $ONFSROOT/boot 2>/dev/null
+        local initrdfiles=($ONFSROOT/tmp/initrd.img*)
+        if [[ -e $initrdfiles ]]; then
+	    mv "${initrdfiles[@]}" $ONFSROOT/boot 2>/dev/null
+        fi
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -306,6 +321,7 @@ mkiso() {
         -V "$vname" -A "$aname" \
         -no-emul-boot -boot-info-table --embedded-boot ${embed_image} -partition_offset 16 -no-pad -o $isoname \
         -R $tmp --sort-weight 0 / --sort-weight 1 /boot || die 12 "xorriso failed."
+    parted $isoname set 1 boot on
     echo -n "ISO image size and filename: "; du -h $isoname
 
     unhide_dirs
@@ -318,7 +334,7 @@ addmirror() {
     mkdir $tmp/$liveos/mounted-ext3fs/media/mirror
 
     echo "Copying the mirror to CD image"
-    cp -Pr $mirrordir/{dists,pool} $tmp/$liveos/mounted-ext3fs/media/mirror 2>/dev/null || die $? "Not enough space left on device for the mirror"
+    cp -Pr $mirrordir/{dists,pool} $tmp/$liveos/mounted-ext3fs/media/mirror 2>/dev/null || error_space $? "mirror"
 
     # create the sources.list for the CD
     cat > $tmp/$liveos/mounted-ext3fs/etc/apt/sources.list <<EOF
@@ -332,7 +348,7 @@ EOF
     for i in $dists ; do
         comp=$(find $mirrordir/dists/$i -maxdepth 2 -type d -name "binary-*" | \
         sed -e "s#$mirrordir/*dists/$i/##" -e 's#/binary-.*##' | uniq | tr '\n' " ")
-        echo "deb [allow-insecure=yes] file:/media/mirror $i $comp" >> $tmp/squashfs-root/LiveOS/mounted-ext3fs/etc/apt/sources.list
+        echo "deb [trusted=yes] file:/media/mirror $i $comp" >> $tmp/squashfs-root/LiveOS/mounted-ext3fs/etc/apt/sources.list
     done
 
 }
@@ -345,7 +361,7 @@ burniso() {
 # main program
 
 # Parse commandline options
-while getopts "AekfhHg:Jbs:SBMn:m:c:C:d:" opt ; do
+while getopts "AekfhHg:Jbs:SBMn:m:V:c:C:d:" opt ; do
     case "$opt" in
 	A)  autodiscover=1 ;;
         c)  csdir="$OPTARG" ;;
@@ -363,6 +379,7 @@ while getopts "AekfhHg:Jbs:SBMn:m:c:C:d:" opt ; do
         s)  space="$OPTARG" ;;
         S)  squash_only=1 ;;
         B)  bootonly=1 ;;
+        V)  vname="$OPTARG" ;;
 	d)  config_space="$OPTARG"; configset=1 ; arguments+=" -d $config_space";;
         ?)  usage ;;
     esac
@@ -487,7 +504,6 @@ fi
 kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
 faiversion=$(dpkg --root=$NFSROOT -l fai-client|awk '/fai-client/ {print $3}')
 isoversion=$(printf "FAI %-6s build $(date '+%Y %b %d - %R')" "$faiversion")
-vname="FAI_CD"
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
 create_grub2_image

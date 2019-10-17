@@ -71,8 +71,9 @@ Perform syntax check of disk_config file only and exit.
 .TP
 \fB\-D\fP \fIdisks\fP
 Specify the list of disk drives to be configured using
-\fBsetup-storage\fP. Overrides
-.IR disklist. Do not forget to quote this space separated list.
+\fBsetup-storage\fP. Overrides the variable
+\fIdisklist\fP.
+Do not forget to quote this space separated list.
 
 .TP
 \fB\-L\fP \fIdirectory\fP
@@ -82,6 +83,10 @@ Use the specified directory instead of
 .TP
 \fB\-h\fP
 Display the synopsis and version info and exit.
+
+.TP
+\fB\-y\fP
+Print disk variables as YAML file into disk_var.yml
 .SH ENVIRONMENT
 \fBsetup-storage\fP
 will use the following environment variables:
@@ -379,6 +384,20 @@ options.
 Mount a tmpfs on /scratch with a maximum size of 3 GiB.
 
 .TP
+nfs example
+.sp
+.nf
+.ta 10n 20n 30n 40n 50n
+disk_config nfs
+nfs 11.22.33.44:/export/vm-root/HOSTNAME	/	defaults
+.sp
+.fi
+.PP
+.IP \(bu
+A diskless client setup. Mount the whole OS file system via NFS from
+an NFS server onto /.
+
+.TP
 Simple BTRFS example
 .sp
 .nf
@@ -455,7 +474,7 @@ primary   /          1G-     ext4    rw
 .PP
 .IP \(bu
 Creating a ESP partition is very simple. Use a GPT partition table,
-create a vfat partitoon which is aslo bootable. That's it.
+create a vfat partition which is also bootable. That's it.
 
 
 
@@ -775,11 +794,11 @@ filesystem ::= -
                /* mkfs.xxx must exist */
 .br
 
-luks_options ::= (lukscreateoptions=".*")
+luks_options ::= (lukscreateopts=".*")
 .br
                  /* options to supply to cryptsetup when creating a LUKS
                   * encrypted filesystem. If no ciper (-c) is specified, then
-                  * aes-cbc-essiv:sha2 is used. If no key size (-s) is
+                  * aes-xts-plain64 is used. If no key size (-s) is
                   * specified then 256 is used. */
 .br
 
@@ -819,8 +838,8 @@ alignment constraints. setup-storage sets the alignment as follows: If align-at
 is set, align accordingly. Otherwise, if any partition on the particular disk is
 to be preserved, default to cylinder alignment. Else use sector alignment.
 .IP \(bu
-If you use a raw partition, you sloud add -F to the createopts,
-otherwise mkfs.ext4 hangs du to a warning message. See man mfs.ext4
+If you use a raw partition, you should add -F to the createopts,
+otherwise mkfs.ext4 hangs due to a warning message. See man mfs.ext4
 for more info on -F.
 An example config using a raw disk looks like this: raw-disk / 4GB ext4 rw createopts="-F"
 .SH SEE ALSO

@@ -74,6 +74,11 @@ sub create_fstab_line {
   $FAI::disk_var{SWAPLIST} .= " " . $dev_name
     if ($d_ref->{filesystem} eq "swap");
 
+  $FAI::disk_var{ESP_DEVICE} = $dev_name
+    if ($d_ref->{mountpoint} eq "/boot/efi");
+  $FAI::disk_var{ESP_DEVICE} = $dev_name
+    if ($d_ref->{mountpoint} eq "/boot" && $d_ref->{filesystem} eq "vfat");
+
   my $ret = "\n$comment_line";
   # join the columns of one line with tabs
   $ret .= join ("\t", @fstab_line);
@@ -186,6 +191,9 @@ sub find_boot_mnt_point {
         $mnt_point = $this_mp if ($this_mp eq "/");
       }
     } elsif ($c eq "TMPFS") {
+      # not usable for /boot
+      next;
+    } elsif ($c eq "NFS") {
       # not usable for /boot
       next;
     } else {
@@ -352,6 +360,16 @@ sub generate_fstab {
 	}
 
         push @fstab, create_fstab_line($c_ref, "tmpfs", "tmpfs");
+      }
+    } elsif ($c eq "NFS") {
+      foreach my $v (keys %{ $config->{$c}->{volumes} }) {
+        my $c_ref = $config->{$c}->{volumes}->{$v};
+
+        next if ($c_ref->{mountpoint} eq "-");
+
+        my $device_name = &FAI::enc_name($c_ref->{device});
+
+        push @fstab, create_fstab_line($c_ref, $device_name, "nfs");
       }
     } else {
       &FAI::internal_error("Unexpected key $c");

@@ -5,7 +5,7 @@
 # fai-chboot -- manage configuration for network boot
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2003-2017 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2003-2019 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -352,21 +352,21 @@ sub tcopy {
     ($ipadr,$srchex) = host2hex($srchost);
 
     if (-e "$pxedir/$srchex") {
-      $srcfile = "$pxedir/$srchex";
+      $srcfile = "$srchex";
     } elsif (-e "$pxedir/$srchex.disable") {
-      $srcfile = "$pxedir/$srchex.disable";
+      $srcfile = "$srchex.disable";
     } elsif (-e "$pxedir/$srchost" ) {
-      $srcfile = "$pxedir/$srchost";
+      $srcfile = "$srchost";
     } elsif (-e "$pxedir/$srchost.tmpl" ) {
-      $srcfile = "$pxedir/$srchost.tmpl";
+      $srcfile = "$srchost.tmpl";
     } else {
       warn "Source file for $srchost ($srchex) not available\n";
       return;
     }
   } elsif ( -e "$pxedir/$srchost") {
-      $srcfile = "$pxedir/$srchost";
+      $srcfile = "$srchost";
   } elsif ( -e "$pxedir/$srchost.tmpl") {
-      $srcfile = "$pxedir/$srchost.tmpl";
+      $srcfile = "$srchost.tmpl";
   } else {
       warn "Source file for $srchost not available\n";
       return;
@@ -377,15 +377,15 @@ sub tcopy {
       return;
     }
     print "copy pxe config from $srchost to template $desthost\n" if $verbose;
-    docopy($srcfile,$pxedir,$desthost,$desthost,$ipadr);
+    docopy("$pxedir/$srcfile",$pxedir,$desthost,$desthost,$ipadr);
   } else {
     ($ipadr,$desthex) = host2hex($desthost);
     if (-f "$pxedir/$desthex.disable") {
       unlink "$pxedir/$desthex.disable";
       print "removed old $pxedir/$desthex.disable\n";
     }
-    print "copy pxe config from $srchost to $desthost ($desthex)\n" if $verbose;
-    docopy($srcfile,$pxedir,$desthex,$desthost,$ipadr);
+    print "copy pxe config from $srchost to $desthost, filenames: $srcfile -> $desthex\n" if $verbose;
+    docopy("$pxedir/$srcfile",$pxedir,$desthex,$desthost,$ipadr);
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

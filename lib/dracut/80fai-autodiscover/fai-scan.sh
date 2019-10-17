@@ -70,7 +70,7 @@ getvar() {
     fi
 }
 
-iprange=$(ip addr show up | grep -w 'inet'|grep -v 127.0.0.1| cut -d t -f 2 | cut -d ' ' -f 2 |head -1)
+iprange=$(ip addr show up | grep -P -o '(?<=inet )\S+' | grep -v 127.0.0.1 |head -1)
 echo "Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)"
 
 while [ 1 ]; do

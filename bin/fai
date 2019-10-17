@@ -32,9 +32,9 @@
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/lib/fai:/usr/sbin:/usr/bin:/sbin:/bin
 # some variables
-export FAI_VERSION=FAIVERSIONSTRING
+export FAI_VERSION="FAIVERSIONSTRING"
 stamp=/var/run/fai/FAI_INSTALLATION_IN_PROGRESS
-export romountopt="-o async,noatime,nolock,ro,actimeo=1800"
+export romountopt=${romountopt:-"-o async,noatime,nolock,ro,actimeo=1800"}
 
 [ -n "$STOP_ON_ERROR" ] || export STOP_ON_ERROR=700
 export faimond=0
@@ -296,7 +296,7 @@ if [ $do_init_tasks -eq 1 ]; then
     # if the host name is still not set, use the IP for setting the hostname
     read hname < /proc/sys/kernel/hostname
     if [ -z "$HOSTNAME" -o $HOSTNAME = '(none)' -o -z "$hname" ]; then
-	myip=$(ip ad show up | grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1| tr '.' '-')
+	myip=$(ip ad show up | grep -P -o '(?<=inet )[^/]+' | grep -v 127.0.0.1| tr '.' '-')
 	if [ -n "$myip" ]; then
 	    export HOSTNAME="ip-$myip"
 	else

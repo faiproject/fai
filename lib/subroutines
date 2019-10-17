@@ -5,7 +5,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2017 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2019 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -136,12 +136,6 @@ umount_csspace() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-jobsrunning() {
-
-    # test if jobs are running
-    ps r | egrep -qv "ps r|TIME COMMAND|rcS"
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 umount_target() {
 
     if [ "$target" != '/' ]; then
@@ -191,18 +185,6 @@ mk_zerofree_list() {
 	fi
 
     done < <(df --output=source,fstype,target)
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-wait_for_jobs() {
-
-    # can be an extern script
-    # wait for running (background) jobs to finish (e.g. update-auctex-elisp)
-    local i=0
-    while jobsrunning; do
-        [ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
-        (( i += 1 ))
-        sleep 10
-    done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 stop_fai_installation() {
@@ -298,19 +280,19 @@ call_hook() {
             echo "WARNING: The suffix .source is deprecated. Use .sh instead." >&2
             # continue
         fi
-        if [ -x $hfile ]; then
-            echo "Calling hook: $hook.$cl"
-            sendmon "HOOK $hook.$cl"
-            # execute the hook
-            $hfile $dflag "$@"
-            check_status $hook.$cl $?
-        fi
         if [ -x $hfile.sh ]; then
             echo "Source hook: $hook.$cl.sh"
             sendmon "HOOK $hook.$cl.sh"
             # source this hook
             . $hfile.sh $dflag "$@"
             check_status $hook.$cl.sh $?
+        fi
+        if [ -x $hfile ]; then
+            echo "Calling hook: $hook.$cl"
+            sendmon "HOOK $hook.$cl"
+            # execute the hook
+            $hfile $dflag "$@"
+            check_status $hook.$cl $?
         fi
         # deprecated
 	if [ -x $hfile.source ]; then
@@ -600,7 +582,6 @@ task_savelog() {
 task_faiend() {
 
     local dir cdromdevice
-    wait_for_jobs
     : ${flag_reboot:=0}
     : ${flag_halt:=0}
 
@@ -621,7 +602,7 @@ task_faiend() {
 	echo "Log files are saved in $LOGDIR"
 	return 0
     fi
-    killall -q sshd udevd rsyslogd
+    killall -q sshd systemd-udevd rsyslogd
     umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
     umount -arf 2>/dev/null
 
@@ -682,6 +663,7 @@ task_dirinstall() {
         mountpoint -q $FAI_ROOT/proc && umount $FAI_ROOT/proc
         mountpoint -q $FAI_ROOT/sys  && umount $FAI_ROOT/sys
         mountpoint -q $FAI_ROOT/dev/pts && umount $FAI_ROOT/dev/pts
+        mountpoint -q $FAI_ROOT/run/udev && umount $FAI_ROOT/run/udev
         # sometimes umount $FAI_ROOT/dev fails, because a process is
         # still running in the background and accesses /dev
         # this occured sometimes when using dirinst and a long package
@@ -740,7 +722,6 @@ task_softupdate() {
     # use the last disk_var during update if available
     [ -f /var/lib/fai/disk_var.sh ] && cp -p /var/lib/fai/disk_var.sh $LOGDIR
 
-    defnop wait_for_jobs
     save_dmesg
 
     task debconf
@@ -787,21 +768,17 @@ set_disk_info() {
 eval_cmdline() {
 
     # parse kernel parameters and define variables
-    local word
+    local word cmdline
 
-    echo -n "Kernel currently running: "
+    echo "Kernel currently running: "
     uname -rsmo
-    eval "cmdline=($(</proc/cmdline))"
-    echo "Kernel parameters: ${cmdline[*]}"
-    for word in "${cmdline[@]}"; do
-      if echo "$word" | egrep -q '^[a-zA-Z0-9_]+=' ; then
-          varname=${word%%=*}
-          word=${word#*=}
-          eval $varname=\$word
-          eval export $varname
-      fi
+    cmdline="$(</proc/cmdline)"
+    echo "Kernel parameters: $cmdline"
+    for word in $cmdline; do
+	if echo "$word" | egrep -q '^[a-zA-Z0-9_]+=' ; then
+            eval "export $word"
+	fi
     done
-
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 read_fai_monitor_vars() {
@@ -836,11 +813,10 @@ task_confdir() {
 
         printk=${printk:-6}
         echo $printk > /proc/sys/kernel/printk
+        create_resolv_conf
         if [ -x /usr/sbin/rsyslogd ]; then
             /usr/sbin/rsyslogd
         fi
-
-        create_resolv_conf
     fi
     define_fai_flags
 
@@ -848,7 +824,16 @@ task_confdir() {
         # since SERVER is not set (by DHCP) we extract it from FAI_CONFIG_SRC
         # extract server name from FAI_CONFIG_SRC and delete user@ from string
         SERVER=$(expr match "$FAI_CONFIG_SRC" '.*://\([^/]*\)/.*' | sed -e 's/.*@//')
-        echo "Setting SERVER=$SERVER. Value extracted from FAI_CONFIG_SRC."
+        if [ -n "$SERVER" ]; then
+          echo "Setting SERVER=$SERVER. Value extracted from FAI_CONFIG_SRC."
+        else
+          SERVER=$(awk '{if($2 == "/live/image") print $1;}' /proc/mounts | cut -d ':' -f 1)
+          if [ -n "$SERVER" ]; then
+            echo "Setting SERVER=$SERVER. Value extracted from NFSROOT."
+          else
+            echo "NO SERVER FOUND FOR FAI_CONFIG_SRC"
+          fi
+        fi
     fi
 
     # check if monitor server is available
@@ -943,24 +928,31 @@ task_partition() {
 
 call_debootstrap() {
 
+    local targetarch
     local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
     echo "Creating base system using debootstrap version $dversion"
 
     # Check if we need cross architecture debootstrap
     targetarch=$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch=\([^[:space:]]*\)' || true)
     hostarch1=$(dpkg --print-architecture)
-    hostarch2=$(dpkg --print-foreign-architectures)
 
     _debootstrap=qemu-debootstrap
     if [ -z "$targetarch" ]; then
 	_debootstrap=debootstrap
+	targetarch=$hostarch1
     else
-	if [ $targetarch = $hostarch1 -o $targetarch = $hostarch2 ]; then
+	if [ $targetarch = $hostarch1 ]; then
 	_debootstrap=debootstrap
 	fi
     fi
+    for arch in $(dpkg --print-foreign-architectures); do
+        if [ $targetarch = $arch ]; then
+	        _debootstrap=debootstrap
+            break
+        fi
+    done
     if [ $_debootstrap = "qemu-debootstrap" ]; then
-	if ! type -P $_debootstrap >/dev/null; then
+	if ! command -v $_debootstrap >&/dev/null; then
 	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
 	fi
     fi
@@ -1098,26 +1090,24 @@ task_repository () {
     if [ X$FAI_ALLOW_UNSIGNED = X1 ]; then
         cat <<EOF > $FAI_ROOT/etc/apt/apt.conf.d/10fai
 APT::Get::AllowUnauthenticated "true";
+Acquire::AllowInsecureRepositories "true";
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 EOF
     else
 	rm -f $FAI_ROOT/etc/apt/apt.conf.d/10fai
     fi
 
-    # add apt keys for signed repositories
-
-    declare -A keys
-    # remember all available *.asc files
-    for f in `cd $FAI/package_config; ls *.asc 2>/dev/null`; do
-        keys["$f"]=1
-    done
-
     # add apt keys for all classes
     for keyfile in ${classes:-}; do
+        if [  -f $FAI/package_config/$keyfile.gpg ]; then
+	    echo "Copying APT key $keyfile.gpg to target"
+	    cp -v --preserve=timestamp $FAI/package_config/$keyfile.gpg $FAI_ROOT/etc/apt/trusted.gpg.d/
+	    continue
+        fi
         [ ! -f $FAI/package_config/$keyfile.asc ] && continue
-        echo -n "Copying APT key from $keyfile.asc "
-        cp $FAI/package_config/$keyfile.asc $FAI_ROOT/etc/apt/trusted.gpg.d/
-        unset keys["$keyfile.asc"]
+        echo "Copying APT key from $keyfile.asc to $keyfile.asc.gpg "
+        rm -f $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg
+        gpg --batch -o $FAI_ROOT/etc/apt/trusted.gpg.d/$keyfile.asc.gpg --dearmor $FAI/package_config/$keyfile.asc
     done
 
     # mount Debian mirror via NFS if needed

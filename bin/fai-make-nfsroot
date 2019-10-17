@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2017 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2019 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2017 Thomas Lange
+	Copyright (C) 1999-2019 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -97,7 +97,7 @@ usexz=1
 full=1
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpUzsN opt ; do
+while getopts aghervC:B:fkKpPUzsN opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
@@ -114,6 +114,7 @@ while getopts aghervC:B:fkKpUzsN opt ; do
         h) usage ;;
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
+        P) sshpreserve=2 ;;
         s) full=0 ;; # do only install a smaller list of packages
         ?) exit 5 ;; # error in option parsing
     esac
@@ -209,7 +210,7 @@ setup_ssh() {
     sed -i -e '/PermitRootLogin/d' $NFSROOT/etc/ssh/sshd_config
     ainsl $NFSROOT/etc/ssh/sshd_config 'PermitRootLogin yes'
 
-    if [ $sshpreserve = 1 ]; then
+    if [ $sshpreserve -ge 1 ]; then
         tar -C $NFSROOT -xf $tmptar
         rm $tmptar
         return 0
@@ -220,8 +221,8 @@ setup_ssh() {
         loguserhome=$(eval "cd ~$LOGUSER 2>/dev/null && pwd;true")
         [ -f $loguserhome/.ssh/known_hosts ] && cp $loguserhome/.ssh/known_hosts $NFSROOT/root/.ssh/known_hosts
         [ -d $loguserhome/.ssh ] && {
-            [ -f $loguserhome/.ssh/id_dsa ] &&
-               cp -p $loguserhome/.ssh/id_dsa* $NFSROOT/root/.ssh/
+            [ -f $loguserhome/.ssh/id_ed25519 ] &&
+               cp -p $loguserhome/.ssh/id_ed25519* $NFSROOT/root/.ssh/
             [ -f $loguserhome/.ssh/id_rsa ] &&
                cp -p $loguserhome/.ssh/id_rsa* $NFSROOT/root/.ssh/
         }
@@ -259,9 +260,12 @@ call_debootstrap() {
     echo "Creating base system using debootstrap version $dversion"
 
     # Check if we need cross architecture debootstrap
-    targetarch=$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch=\([^[:space:]]*\)' || true)
+    targetarch=$(echo "$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch[=[:space:]]\([^[:space:]]*\)' || true)" | tail -n 1)
     hostarch1=$(dpkg --print-architecture)
     hostarch2=$(dpkg --print-foreign-architectures)
+    if [ -z "$hostarch2" ]; then
+        hostarch2=$hostarch1
+    fi
 
     _debootstrap=qemu-debootstrap
     if [ -z "$targetarch" ]; then
@@ -272,7 +276,7 @@ call_debootstrap() {
 	fi
     fi
     if [ $_debootstrap = "qemu-debootstrap" ]; then
-	if ! type -P $_debootstrap >/dev/null; then
+	if ! command -v $_debootstrap >&/dev/null; then
 	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
 	fi
     fi
@@ -303,7 +307,7 @@ add_etc_hosts_entries() {
     ainsl $v  $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
 
     # add entries for all network devices
-    local ips=$(ip addr show up| grep -w inet | cut -d t -f 2 | cut -d ' ' -f 2 | cut -d / -f 1 | grep -v 127.0.0.1)
+    local ips=$(ip addr show up| grep -P -o '(?<=inet )[^/]+' | grep -v 127.0.0.1)
 
     local line
     for eth in $ips; do
@@ -323,7 +327,7 @@ add_etc_hosts_entries() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    [ ! -x "$(which debootstrap)" ] && die 1 "Can't find debootstrap command. Aborting."
+    command -v debootstrap >&/dev/null || die 1 "Can't find debootstrap command. Aborting."
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
@@ -394,6 +398,7 @@ create_nfsroot() {
     cat >$NFSROOT/etc/apt/apt.conf.d/10fai <<EOF
 APT::Install-Recommends no;
 APT::Get::AllowUnauthenticated true;
+Acquire::AllowInsecureRepositories "true";
 Aptitude::CmdLine::Ignore-Trust-Violations yes;
 Acquire::Languages none;
 Acquire::Check-Valid-Until false;
@@ -444,7 +449,7 @@ EOF
 
     ln -s /usr/sbin/fai etc/init.d/rcS
 
-    rm -f etc/mdadm/mdadm.conf # remove file which may contain info of the install server
+    echo "AUTO -all" > etc/mdadm/mdadm.conf # do not activate RAID arrays
     # this second rm of the same file is needed!
     rm -f etc/udev/rules.d/70-persistent-net.rules
     # remove Ubuntu-specific rules to auto-start volume groups, which confuses
@@ -467,6 +472,7 @@ upgrade_nfsroot() {
 
     local nfscommon
 
+    mkdir -p $NFSROOT/dev/pts
     mount -t proc   /proc  $NFSROOT/proc
     mount -t sysfs  /sys   $NFSROOT/sys
     mount -t devpts devpts $NFSROOT/dev/pts
@@ -476,14 +482,14 @@ upgrade_nfsroot() {
     # add any 3rd party repository keys that you may need installed into the NFSROOT
     if [ -d $cfdir/apt/keys ]; then
         local f
-        for f in `find $cfdir/apt/keys -type f -name '*.asc'`; do
-            cp $f $$NFSROOT/etc/apt/trusted.gpg.d
+        for f in `find $cfdir/apt/keys -type f -name '*.asc' -o -name '*.gpg'`; do
+            cp $f $NFSROOT/etc/apt/trusted.gpg.d
         done
     fi
 
     # if we have the keyring on the host, install the key of the fai-project.org package repository
-    if [ -n "$(apt-key list 074BCDE4 2>/dev/null)" ]; then
-        HOME=/root apt-key export 074BCDE4 > $NFSROOT/etc/apt/trusted.gpg.d/fai-project.asc
+    if [ ! -f $NFSROOT/etc/apt/trusted.gpg.d/fai-project.gpg -a -n "$(apt-key list 2BF8D9FE074BCDE4 2>/dev/null)" ]; then
+        HOME=/root apt-key export 2BF8D9FE074BCDE4 > $NFSROOT/etc/apt/trusted.gpg.d/fai-project.asc
     fi
 
     if [ $full = 1 ];then
@@ -494,6 +500,9 @@ upgrade_nfsroot() {
     # fai-nfsroot must be sucessfully installed before anything else
     $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-network dracut-config-generic $nfscommon
     $ROOTCMD apt-get -y dist-upgrade
+    # patch dracut. Do not fail if network is not available
+    local fn=$(find $NFSROOT/usr/lib/dracut/modules.d/ -name net-genrules.sh)
+    sed -i -e 's/exit 1/exit 0/' $fn
     fdivert /usr/sbin/update-grub
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -547,6 +556,12 @@ setup_tftp(){
     cp -u $v $NFSROOT/usr/lib/PXELINUX/pxelinux.0 $TFTPROOT
     if [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ]; then
 	cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
+    fi
+    if [ -f $NFSROOT/usr/lib/syslinux/modules/efi64/ldlinux.e64 ]; then
+	cp -u $NFSROOT/usr/lib/syslinux/modules/efi64/ldlinux.e64 $TFTPROOT
+    fi
+    if [ -f $NFSROOT/usr/lib/SYSLINUX.EFI/efi64/syslinux.efi ]; then
+	cp -u $NFSROOT/usr/lib/SYSLINUX.EFI/efi64/syslinux.efi $TFTPROOT
     fi
     if [ X$verbose = X1 ]; then
 	echo "TFTP environment prepared. Enable DHCP and start the TFTP daemon on root $TFTPROOT."
@@ -633,17 +648,21 @@ fi
 
 echo "Creating FAI nfsroot in $NFSROOT"
 
-if [ $sshpreserve = 1 ]; then
-    [ -d $NFSROOT/root/.ssh ] || die 8 "Cannot preserve non-existing $NFSROOT/root/.ssh."
-    [ X$verbose = X1 ] && echo "Preserving root/.ssh directory from inside the nfsroot."
-    # save old .ssh directory
+if [ $sshpreserve -ge 1 ]; then
+    [ -d $NFSROOT/root/.ssh ] || echo "Cannot preserve non-existing $NFSROOT/root/.ssh."
     tmptar=$(mktemp) || die 12 "Cannot create tmp file"
-    # should we set the umask before? Does it influence the other parts?
-    tar -C $NFSROOT -cf $tmptar root/.ssh
+    pdirs="root/.ssh"
+    if [ $sshpreserve -eq 2 ]; then
+	pdirs="root/.ssh etc/ssh/ssh_host_*"
+    fi
+    [ X$verbose = X1 ] && echo "Preserving $pdirs from inside the nfsroot."
+    cd $NFSROOT # needed for * in $pdirs to work
+    tar -C $NFSROOT -cf $tmptar $pdirs
+    cd -
 fi
 
 if [ -d $NFSROOT/proc ]; then
-    umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
+    umount $NFSROOT/dev/pts >&/dev/null || true
     [ -L $NFSROOT/proc/self ] && umount $NFSROOT/proc || true
     [ -L $NFSROOT/proc/self ] && die 1 "/proc is still mounted inside the nfsroot."
     umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount

@@ -8,6 +8,9 @@
 ### END SUBROUTINE INFO
 
 server=$(expr match "$FAI_CONFIG_SRC" '.*://\([^/]*\)/.*')
+if [ -z "$server" ]; then
+  server=$(awk '{if($2 == "/live/image") print $1;}' /proc/mounts | cut -d ':' -f 1)
+fi
 nfspath=$(expr match "$FAI_CONFIG_SRC" '.*://[^/]*\(/.*\)')
 
 mount $romountopt $server:$nfspath $FAI &&

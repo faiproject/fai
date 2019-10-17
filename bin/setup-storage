@@ -52,15 +52,15 @@ use warnings FATAL => qw(uninitialized);
 
 package FAI;
 
-my $version = "2.1";
+my $version = "2.2";
 $|=1;
 
 # command line parameter handling
 use Getopt::Std;
 $main::VERSION = $version;
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L); # the variables for getopt
-(&getopts('Xf:hdsD:L:') && !$opt_h) || die <<EOF;
+our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L,$opt_y); # the variables for getopt
+(&getopts('Xf:hdsD:L:y') && !$opt_h) || die <<EOF;
 setup-storage version $version
 
 USAGE: [-X]                     no test, your harddisks will be formated
@@ -71,6 +71,7 @@ USAGE: [-X]                     no test, your harddisks will be formated
        [-D<disks>]              override disklist variable by space-separated <disks>
        [-L<logdir>]             use <logdir> instead of LOGDIR variable
        [-h]                     print this help message
+       [-y]                     print disk variables as YAML file into disk_var.yml
 EOF
 
 # include all subparts, which are part of the FAI perl package
@@ -116,7 +117,7 @@ if ($FAI::debug) {
   print "disklist: ";
   print "$_\n" foreach(@FAI::disks);
 }
-die "No disks defined in \$disklist\n" unless (@FAI::disks);
+warn "No disks defined in \$disklist\n" unless (@FAI::disks);
 
 # the config source file
 my $config_file = undef;
@@ -178,23 +179,23 @@ if ($FAI::debug) {
   # for debugging purposes to print the hash structures
   use Data::Dumper;
 
-  print "Current disk layout\n";
+  print "Current disk layout in \%current_config\n";
 
   # make sure perl doesn't warn about it being used only once, same below
   our %current_config;
   print Dumper \%current_config;
 
-  print "Current LVM layout\n";
+  print "Current LVM layout in \%current_lvm_config\n";
 
   our %current_lvm_config;
   print Dumper \%current_lvm_config;
 
-  print "Current RAID layout\n";
+  print "Current RAID layout in \%current_raid_config\n";
 
   our %current_raid_config;
   print Dumper \%current_raid_config;
 
-  print "Current device tree\n";
+  print "Current device tree in \%current_dev_children\n";
 
   our %current_dev_children;
   print Dumper \%current_dev_children;
@@ -206,9 +207,9 @@ if ($FAI::debug) {
 &FAI::compute_lv_sizes;
 
 # print the current contents of $FAI::configs
-$FAI::debug and print "Desired disk layout\n";
+$FAI::debug and print "Desired disk layout in %FAI::configs\n";
 $FAI::debug and print Dumper \%FAI::configs;
-$FAI::debug and print "Desired device tree\n";
+$FAI::debug and print "Desired device tree in %FAI::dev_children\n";
 $FAI::debug and print Dumper \%FAI::dev_children;
 
 # generate the command script
@@ -264,6 +265,25 @@ if ($FAI::no_dry_run) {
     or die "Unable to write to file $FAI::DATADIR/disk_var.sh\n";
   print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
   close DISK_VAR;
+
+  if ($opt_y) {
+    open(DISK_YML, ">$FAI::DATADIR/disk_var.yml")
+      or die "Unable to write to file $FAI::DATADIR/disk_var.yml\n";
+
+    print DISK_YML "---\n# disk_var.sh as YAML\n";
+    foreach (keys %FAI::disk_var) {
+      $FAI::disk_var{$_} =~ s/"//g;
+      if ( $FAI::disk_var{$_} =~ m/\s/ ) {
+	# print an array
+	print DISK_YML "$_:\n";
+	my $a = join("\n  - ", split(/ /,$FAI::disk_var{$_}));
+	print DISK_YML "  - $a\n";
+      } else {
+	print DISK_YML "$_: $FAI::disk_var{$_}\n";
+      }
+    }
+    close DISK_YML;
+  }
 }
 
 # print crypttab

@@ -91,12 +91,12 @@ Use DIRECTORY as the configuration directory instead of the default
 /etc/fai. You can also set the environment variable FAI_ETC_DIR.
 .TP
 .BI "\-d " URL
-Do not include the config space in the image and set the location of the
-config space to URL. This sets FAI_CONFIG_SRC in the grub config, which
+Do not include the config space in the image. Instead set the variable
+to the location of the config space to URL. This sets FAI_CONFIG_SRC in the grub config, which
 is obtained from the FAI configuration dir (see -C). Set it to "" to not
-set FAI_CONFIG_SRC. If not set, the config space is taken from
+set FAI_CONFIG_SRC at all. If not set, the config space is taken from
 FAI_CONFIGDIR and copied to /var/lib/fai/config in the image. Currently
-no file: is allowed here, instead set FAI_CONFIGDIR in fai.conf(5).
+no file: is allowed here, instead set FAI_CONFIGDIR in nfsroot.conf(5).
 .TP
 .BI \-e
 Exclude the directory /var/tmp from the nfsroot. You may put the
@@ -144,6 +144,11 @@ Create a squashfs image file instead of a complete iso. The image
 contains the nfsroot and can be fetched through various ways over the
 network. For an example, see the section "FAI without NFS" in the FAI
 Guide.
+.TP
+.BI \-V
+Set the volume id of the ISO. Default id is FAI_CD. You also must
+adjust the CDLABEL in /etc/fai/grub.cfg, or use -g and specify
+your own grub.cfg.
 .SH EXAMPLES
 .br
 After you've created a mirror with fai-mirror in /media/mirror, you
@@ -155,12 +160,6 @@ If you want to create a bootable USB stick (here /dev/sdf) , write the
 CD image to the stick via dd(1).
 
    # dd if=fai-cd.iso of=/dev/sdf bs=1M
-
-Some computers (mostly older ones) only boot from USB stick if the
-first partition is set active. You can use this command to make your
-USB stick bootable if you stick is recognized as /dev/sdf:
-
-   # parted /dev/sdf set 1 boot on
 
 It is possible to install over the network without using NFS, i.e. by
 getting the nfsroot via an http request. To do so you have to create a

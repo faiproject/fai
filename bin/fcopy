@@ -5,7 +5,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2017 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2019 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -36,8 +36,14 @@ use File::Path;
 use File::Basename;
 use File::Spec;
 use File::Temp qw/tempfile/;
-use File::lchown qw/lchown lutimes/;
 use Getopt::Std;
+
+# load module only if available
+our $haslchown = eval {
+  require File::lchown;
+  File::lchown->import (qw/lchown lutimes/);
+  1;
+};
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Global variables
@@ -131,11 +137,6 @@ sub copy_one {
     }
   }
 
-  # global: $preinst $substiute
-  ### $ps $class $sourcefile
-  # kann lokal bleiben $tmpfh
-  # $tmpfile wird noch ausserhalb gebraucht
-
   # do we need a tmpfile
   if ($substitute or -f "$ps/_substitute" or -x "$ps/preinst") {
     ($tmpfh,$tmpfile)=tempfile("fcopy.XXXXXX",DIR=>File::Spec->tmpdir());
@@ -145,17 +146,7 @@ sub copy_one {
   if ($substitute or -f "$ps/_substitute") {
     warn "Enable substitution. Copying $sourcefile to $tmpfile" if $debug;
 
-    do_substitution("$ps/$class",$tmpfh);
-    # if error {
-    #     ewarn("Cannot write to $tmpfile");
-    #     unlink($tmpfile);
-    #   return 0;
-    #   }
-  }
-
-  else {
-    # copy, but only if subst or preinst, not always
-      _copy($sourcefile,$tmpfile);
+    do_substitution($sourcefile,$tmpfh);
   }
 
   if ( -x "$ps/preinst" ) {
@@ -347,48 +338,48 @@ sub set_mode {
   # use the values from the source file
   my ($sourcefile,$destfile,$class) = @_;
   my ($uid,$gid,$owner,$group,$mode);
-  my ($stime,@defmodes);
+  my ($stime,@smodes);
 
   # get mtime,uid,gid,mode from source file or from -m
   if ($modeset) { # use -m values
-    @defmodes = @opt_modes;
+    @smodes = @opt_modes;
     $stime = (stat("$sourcefile/$class"))[9];
   } else {
     # get mtime,uid,gid,mode from source file
     if ($opt_H) {
-      ($stime,@defmodes) = (lstat("$sourcefile/$class"))[9,4,5,2];
+      ($stime,@smodes) = (lstat("$sourcefile/$class"))[9,4,5,2];
     } else {
-      ($stime,@defmodes) = (stat("$sourcefile/$class"))[9,4,5,2];
+      ($stime,@smodes) = (stat("$sourcefile/$class"))[9,4,5,2];
     }
   }
 
   # get mtime,uid,gid,mode from destination file
-  my ($dtime,@ddefmodes);
+  my ($dtime,@dmodes);
   if ($opt_H) {
-    ($dtime,@ddefmodes) = (lstat("$destfile"))[9,4,5,2];
+    ($dtime,@dmodes) = (lstat("$destfile"))[9,4,5,2];
   } else {
-    ($dtime,@ddefmodes) = (stat("$destfile"))[9,4,5,2];
+    ($dtime,@dmodes) = (stat("$destfile"))[9,4,5,2];
   }
   # compare time,uid,gid and mode of source file and target file
 
-  if ($modeset) { # use -m values
-    ($owner,$group,$mode) = @opt_modes;
-  } elsif (-f "$sourcefile/file-modes"){
+  if (-f "$sourcefile/file-modes") {
     ($owner,$group,$mode) = read_file_mode("$sourcefile/file-modes",$class);
+  } elsif ($modeset) { # use -m values
+    ($owner,$group,$mode) = @opt_modes;
   } else { # use values from source file
-    ($owner,$group,$mode) = @defmodes;
+    ($owner,$group,$mode) = @smodes;
   }
 
   # if different: change the values
   # setting modes on a symlink is not portable, so ignore it
   my $issymlink = $opt_H && -l $destfile;
-  return if ($stime == $dtime && (($ddefmodes[0] == $owner) &&
-      ($ddefmodes[1] == $group) && ($issymlink || ($ddefmodes[2] == $mode))));
+  return if ($stime == $dtime && (($dmodes[0] == $owner) &&
+      ($dmodes[1] == $group) && ($issymlink || ($dmodes[2] == $mode))));
 
   ($uid,$gid) = name2num($owner,$group);
   warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
   return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
-  if ($issymlink) {
+  if ($issymlink && $haslchown) {
     lchown  ($uid,$gid,     $destfile) || ewarn("lchown $owner $group $destfile failed. $!");
     unless ($preinst) {
       lutimes ($stime,$stime, $destfile) || ewarn("lutimes for $destfile failed. $!");
@@ -480,7 +471,7 @@ sub usage {
   print << "EOF";
 fcopy, copy files using classes.
 
-   Copyright (C) 2001-2012 by Thomas Lange
+   Copyright (C) 2001-2019 by Thomas Lange
 
 Usage: fcopy [OPTION] ... SOURCE ...
 

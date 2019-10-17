@@ -5,9 +5,9 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-Mon, 21 Sep 2017
+Wed, 18 Sep 2019
 :Date: a date
-:Revision: 5.5
+:Revision: 5.8
 
 :nfsrootsize: 780
 :mirrorsize: 56
@@ -20,7 +20,7 @@ path <file => ''
 <em>  => _
 ////
 
-
+French version of this guide is available at http://fai-project.org/fai-guide-fr.
 
 Abstract
 --------
@@ -39,7 +39,7 @@ configuration and how to deal with errors.
      +-----------------------------------------------------------------------+
 ----
 
-(c) 2000-2017 Thomas Lange
+(c) 2000-2019 Thomas Lange
 
 
 .Copyright
@@ -80,7 +80,7 @@ Download::
 https://fai-project.org/download
 
 Entry for 'sources.list'::
-`deb https://fai-project.org/download stretch koeln`
+`deb https://fai-project.org/download buster koeln`
 
 Manual pages::
 https://fai-project.org/doc/man/
@@ -147,7 +147,7 @@ the automatic installation for reinstalling a workstation after a
 damaged hard disk had been replaced. It took two weeks until I
 received the new hard disk but only a few minutes after the new disk
 was installed, the workstation was running as before. And this is why
-I chose to adapt this technique to a PC cluster running Linux.
+I choose to adapt this technique to a PC cluster running Linux.
 
 
 
@@ -187,24 +187,24 @@ file system, inspect the hardware or do any other task.
 * Very quick unattended installation.
 * Flexible system through easy class concept.
 * Update of running systems without re-installation.
-* Easy creation of a virtualization environment or a chroot
+* Cloud images for virtualization environment.
 * Hosts can boot from network card, CD, USB stick.
 * Simple creation of an installation CD or USB stick.
 * PXE with DHCP boot method is supported.
 * ReiserFS, ext3/ext4, btrfs and XFS file system support.
 * Software RAID and LVM support.
 * Automatic hardware detection.
-* You can deploy Debian, Ubuntu, CentOS, SuSE, Scientific Linux
+* You can deploy Debian, Ubuntu, CentOS, SuSE, Scientific Linux.
 * Remote login via ssh during installation process possible.
 * All similar configurations are shared among all install clients.
 * Log files for all installations are saved to the installation server.
 * Shell, Perl, Python, Ruby, expect and CFEngine scripts are supported during the customization step.
-* Support for many protocols like NFS, FTP, HTTPS, git
+* Support for many protocols like NFS, FTP, HTTPS, git.
 * Can be used as a rescue system and for hardware inventory.
 * Diskless client support.
-* Cross-architecture support for e.g. for embedded devices
+* Cross-architecture support e.g. for embedded devices.
 * Easily add your own functions via hooks or change the default behavior.
-* Cloning machines using disk images is supported
+* Cloning machines using disk images is supported.
 
 
 === Installation times
@@ -237,34 +237,35 @@ from different installation types.
 
 This installation will run without an install server. The CD
 installation is the same as when run in a network environment using
-the FAI install server.
+the FAI install server and can also be used from USB stick on a real
+computer.
+
+You can also create yourself a custom fully automated installation
+image on the webpage https://fai-project.org/FAIme without the need of
+installing FAI on your computer.
+
 
 === [[cdserver]]My first server installation
 
-
-Please note, if you intend to use QEMU/KVM then you need to have
-qemu-kvm qemu-utils bridge-utils installed on the machine to
-use fai-mk-network and fai-kvm footnote:[fai-kvm needs a lot of RAM
-for the vm, because of caching of /var, 2GB are OK].
-
-You can do that via
-
-----
-# apt-get install qemu-kvm qemu-utils bridge-utils
-----
+We will create a private network and start two virtual machines. One
+will become your own FAI server, the other will be an install client.
 
 If you intend to use VMware or VirtualBox, ensure that your client
 uses a bridged network connection. A detailed description is in the
 FAI wiki
-footnote:[https://wiki.fai-project.org/wiki/VirtualBox_for_your_first_FAI_installation]. Also,
-It is not possible to use
+footnote:[https://wiki.fai-project.org/index.php/VirtualBox_for_your_first_FAI_installation]. Also,
+it is not possible to use
 bridged network interfaces over wireless, as most WiFi network cards
 do not support this feature.
 
-For setting up your first own FAI server, we recommend creating a
-test network on your computer and to use KVM. For creating this
-private network there's the script `fai-mk-network` (in the package
-fai-server). It sets up a software bridge with several tap devices
+When using Qemu/KVM and the `fai-kvm` wrapper you can create the
+network using the command `fai-mk-network`. First install some packages
+
+----
+# apt-get install qemu-system-gui qemu-kvm qemu-utils bridge-utils
+----
+
+The next command sets up a private network with a software bridge with several tap devices
 that belong to the user +<username>+.
 ----
 fai-mk-network <username>
@@ -272,7 +273,7 @@ fai-mk-network <username>
 
 After that, you can use fai-kvm (-h will give you some help) for
 starting virtual machines using KVM that are connected to this private
-network. Be carefull. By default, fai-kvm will create the disk images
+network. Be careful. By default, fai-kvm will create the disk images
 for the virtual machines in +/tmp+, which is a RAM disk on most
 systems. It's no problem to create an empty 20G disk image in /tmp
 (even if this partition is of 4GB size), but while the VM is writing
@@ -282,10 +283,10 @@ Start the first virtual host, which will become the FAI server
 footnote:[This installation will consume about 2GB of space in
 +/tmp+.]:
 ----
-fai-kvm -Vn -s20 -u 1 cd fai-cd.iso
+fai-kvm -Vn -s20 -u 1 cd faicd64-small.iso
 ----
 
-In the grub menu select +faiserver, fixed IP+. This will install a host called
+In the grub menu select +faiserver, using internal DHCP and a fixed IP+. This will install a host called
 faiserver with IP 192.168.33.250 which contains all software needed
 for a FAI server. It will also set up a local package cache (using
 apt-cacher-ng). Once the installation is finished, reboot the
@@ -371,7 +372,9 @@ config space for short. It includes information about:
 +
 The package _fai-doc_ includes a sample configuration space including
 examples for hosts using the XFCE and GNOME environment amongst other
-examples.
+examples. Calling `fai-mk-configspace` copies these examples to
+'/srv/fai/config'. It's recommended to study those config files and
+scripts for easier understanding how FAI works.
 
 
 nfsroot, NFS-Root::
@@ -521,8 +524,8 @@ steps are needed:
 * Install the package 'fai-quickstart' on your install server.
 
 ----
-# wget -O - https://fai-project.org/download/074BCDE4.asc | apt-key add -
-# echo "deb http://fai-project.org/download stretch koeln" > /etc/apt/sources.list.d/fai.list
+# wget -O - https://fai-project.org/download/2BF8D9FE074BCDE4.asc | apt-key add -
+# echo "deb http://fai-project.org/download buster koeln" > /etc/apt/sources.list.d/fai.list
 # apt-get update
 # aptitude install fai-quickstart
 ----
@@ -712,7 +715,7 @@ _/srv/tftp/fai_.
 
 ==== NFS
 
-The command `fai-setup` has already set up the NFS daemon add added
+The command `fai-setup` has already set up the NFS daemon and added
 some lines to the configuration file _/etc/exports_.
 It exports the directories using NFS v3.
 
@@ -728,10 +731,10 @@ Here's the command for starting the installation for the host demohost.
 
 ----
 $ fai-chboot -IFv -u nfs://faiserver/srv/fai/config demohost
-Booting kernel vmlinuz-3.16.0-4-amd64
- append initrd=initrd.img-3.16.0-4-amd64 ip=dhcp
-   FAI_FLAGS=verbose,sshd,createvt
-   FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config
+
+Booting kernel vmlinuz-4.19.0-5-amd64
+ append initrd=initrd.img-4.19.0-5-amd64 ip=dhcp
+   FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config
 
 demohost has 192.168.33.100 in hex C0A82164
 Writing file /srv/tftp/fai/pxelinux.cfg/C0A82164 for demohost
@@ -776,7 +779,7 @@ remember that knowledge is power, and it's up to you to use
 it. Installation and administration is a process, not a product. FAI
 can't do things you don't tell it to do.
 
-But you need not start from scratch. Look at the files and scripts in
+You don't need to start from scratch. Look at the files and scripts in
 the configuration space. There are a lot of things you can use for
 your own installation. A good paper called "Bootstrapping an
 Infrastructure" with more aspects of building an infrastructure is
@@ -810,7 +813,7 @@ tar file based on the classes defined. Thus the file has to be named 'CLASS.tar.
 _extrbase_. Use this if you want to install another distribution or
 version than that running during the installation.
 +
-This basefile can also be received based on FAI classes via HTTP/HTPPS or FTP
+This basefile can also be received based on FAI classes via HTTP/HTTPS or FTP
 by defining the variable +FAI_BASEFILEURL+. FAI will download a file
 CLASSNAME.tar.xz (or tgz, or tar.gz,...) from this URL, if CLASSNAME
 matches a FAI class.
@@ -849,7 +852,7 @@ customization scripts using the `fcopy(8)` command.
 
 _hooks/_::
 Hooks are user defined programs or scripts, which are called during
-the installation process. The can extend or replace the default tasks.
+the installation process. They can extend or replace the default tasks.
 The file name must be of format 'taskname.CLASSNAME[.sh]'.
 A hook called +updatebase.DEBIAN+ is executed prior to the task `updatebase`
 and only if the install client belongs to the class DEBIAN.
@@ -860,11 +863,11 @@ and only if the install client belongs to the class DEBIAN.
 There are different possibilities to define classes:
 
 . Some default classes are defined for every host:     DEFAULT, LAST and its host name.
-. Classes may be listed within a file.
+. Classes may be listed within a file (by default in 'class/<hostname>')
 . Classes may be dynamically defined by scripts.
 
 The last option is a very nice feature, since these scripts will
-define classes is a very flexible way. For example, several classes
+define classes in a very flexible way. For example, several classes
 may be defined only if certain hardware is identified or a class is
 defined depending on the network subnet information.
 
@@ -908,8 +911,8 @@ of the classes from low to high.
 
 The task _defvar_ defines the variables for the install
 client. Variables are defined by scripts in _class/*.var_. All global
-variables can be set in 'DEFAULT.var'. For certain groups of hosts use
-a class file or for a single host use the file +$HOSTNAME+ _.var_. Also
+variables can be set in 'DEFAULT.var'. For groups of hosts use
+a class file. For a single host use the file +$HOSTNAME+ _.var_. Also
 here, it's useful to study all the examples.
 
 The following variables are used in the examples and may also be
@@ -929,7 +932,7 @@ Is the font which is loaded during installation by `setfont(8)`.
 
 KEYMAP::
 Defines the keyboard map files in '/usr/share/keymaps' and
-'$FAI/files'. You need not specify the full path, since this file
+'$FAI/files'. You don't need to specify the full path, since this file
 will be located automatically.
 
 ROOTPW::
@@ -949,7 +952,7 @@ time. See `clock(8)` for more information.
 TIMEZONE::
 Is the file relative to '/usr/share/zoneinfo/' which indicates your
 time zone. E.g.: _TIMEZONE=Europe/Berlin_.
-_
+
 
 MODULESLIST::
 A list of kernel modules which are loaded during boot of the new system (written to
@@ -960,7 +963,7 @@ A list of kernel modules which are loaded during boot of the new system (written
 
 The tool `setup-storage(8)` reads a file in '$FAI/disk_config' for the
 disk configuration. This file describes how
-all the local disks will be partitioned, which file systems types should be
+all the local disks will be partitioned, which file system types should be
 created (like ext3/4, xfs, btrfs), and where they are
 mounted to. You can also create software RAID and LVM setups using this
 config file. It's also possible to preserve the disk layout or to
@@ -969,7 +972,7 @@ preserve the data on certain partitions.
 During the installation process all local file systems are mounted
 relative to '/target'. For example if you specify the mount point
 '/home' in a disk configuration file this will be the directory
-'/target/home' during the installation process und will become '/home'
+'/target/home' during the installation process and will become '/home'
 for the new installed system.
 
 === [[extrbase]]Extract base file
@@ -1072,14 +1075,14 @@ the packages specified. These lines are the output of the command
 _dpkg --get-selections_. It's not recommended to use this format,
 since you are also specifying all packages which are only installed
 because of a dependency or a recommends. It's better just to specify
-the pacakge you like to have, and to let FAI (and apt-get) resolv the
+the pacakge you like to have, and to let FAI (and apt-get) resolve the
 dependencies.
 
 
 Multiple lines with lists of space separated names of packages follow
 the PACKAGES lines. All dependencies are resolved. Packages with
 suffix _-_ (eg. _lilo-_) will be removed instead of installed. The
-order of the packages is of no matter.  If you like to install
+order of the packages doesn't matter.  If you like to install
 packages from another release than the default, you can append the
 release name to the package name like in
 _openoffice.org/etch-backports_. You can also specify a certain
@@ -1095,7 +1098,7 @@ install the software, so this archive is downloaded to the directory
 the file shouldn't be removed, use the command _PRELOAD_ instead.
 
 It's possible to append a list of class names after the command for
-apt-get. So this _PACKAGE_ command will only be executed when at least
+apt-get. So this _PACKAGES_ command will only be executed when at least
 one of the corresponding classes is defined (logical OR). So you can
 combine many small files
 into the file DEFAULT. WARNING! Use this feature only in the file
@@ -1104,12 +1107,35 @@ DEFAULT to keep everything simple. See this file for some examples.
 If you want to remove a package name from a certain class was part of
 this class before, you should not remove the package name from the
 class file, but instead append a dash (-) to it. This will make sure
-that the package is remove during a softupdate on hosts which were
+that the package is removed during a softupdate on hosts which were
 installed using the old class definition which included this package
 name.
 
 If you specify a package that does not exist this package will be
 removed automatically from the installation list only if the command _install_ is used.
+
+The concept of classes priority allows a higher priority class (one
+that comes later in the sequence of classes) to override the selection
+of packages of a lower priority class.  For this to work correctly,
+the higher priority class must use the same _PACKAGES_ command (e.g.
+_PACKAGES install-norec_ instead of just _PACKAGES install_) as the one
+used by the class it is trying to override.  This is useful to suppress
+installation of a package, for example, to avoid installing the 'linuxlogo'
+package installed by class FAIBASE:
+
+----
+# example of how to override:
+#
+# On FAIBASE we have:
+#    PACKAGES install-norec
+#    linuxlogo
+#
+# We want to _not_ install linuxlogo, and it is in a
+# install-norec section, so we must also use install-norec.
+
+PACKAGES install-norec
+linuxlogo-
+----
 
 === [[cscripts]] Customization scripts
 
@@ -1180,8 +1206,7 @@ the class CENTOS skips some Debian specific tasks.
 
 The directory '$FAI/hooks/' contains all hooks. A hook is an executable
 file following the naming scheme 'taskname.CLASSNAME[.sh]' (e.g.
-'repository.CENTOS' or 'savelog.LAST.sh), a task name and a
-class name separated by a dot, optionally followed by '.sh'. The
+'repository.CENTOS' or 'savelog.LAST.sh). The
 task name specifies which task to precede executing this hook, if the
 specified class is defined for the installing client.  See section
 <<tasks>> for a complete list of default tasks that can be used.
@@ -1189,7 +1214,7 @@ specified class is defined for the installing client.  See section
 A hook of the form _hookprefix.classname_ can't define variables for
 the installation script, because it's a subprocess. But you can use
 any binary executable or any script you wrote. Hooks that have the
-suffix _.sh_ (e.g. 'partition.DEFAULT.sh) must be Bourne
+suffix _.sh_ (e.g. 'partition.DEFAULT.sh') must be Bourne
 shell scripts and are sourced. So it's possible to redefine variables
 for the installation scripts.
 
@@ -1231,7 +1256,8 @@ Some examples for what hooks could be used:
 === [[faiflags]]FAI flags
 
 The variable +$FAI_FLAGS+ contains a space separated list of
-flags. The following flags are known:
+flags. Flags are normally defined in the pxelinux.cfg file which
+should be created by 'fai-chboot(1)'. The following flags are known:
 
 verbose::
 Create verbose output during installation. This should always be the
@@ -1291,8 +1317,6 @@ Used by `setup-storage(8)`. Partitions marked with +preserve_reinstall+
 are preserved unless this flag is set. Often, this flag is set in a
 file 'class/*.var' by using setting 'flag_initial=1'.
 
-
-
 == [[install]] FAI installs your plan
 
 === The early part of an installation
@@ -1313,7 +1337,7 @@ scripts. By default the path is _/var/lib/fai/config_.]
 
 === [[bootmesg]]Boot messages
 
-When booting the install client from network card with PXE you will some
+When booting the install client from network card with PXE you will see some
 messages like this:
 include::includes/bootexample.txt[]
 
@@ -1359,7 +1383,7 @@ small Debian system. You can login as user _demo_ or _root_ with password _fai_.
 
 After the install client has booted only the script '/usr/sbin/fai' is
 executed. It will do some minimal initialization. The variable
-+$FAI_CONFIG_SRC+ footnote:[It it defined on the kernel command line]
++$FAI_CONFIG_SRC+ footnote:[It is defined on the kernel command line]
 is used to get access to the FAI configuration space which is then
 available in the directory +$FAI+ footnote:[/var/lib/fai/config]. FAI
 will not proceed without the config space.
@@ -1391,7 +1415,7 @@ format.
 
 
 === [[ipreseed]]Debconf preseeding (task debconf)
-Files in '$FAI/debconf' are used for the usual `debconf(7)` presseding
+Files in '$FAI/debconf' are used for the usual `debconf(7)` preseeding
 if the file names match a class name.
 
 === [[ipackages]]Installing software packages (task instsoft)
@@ -1441,7 +1465,7 @@ if you are using the action _softupdate_.
 Additionally, two symlinks will be created to indicated the last
 directory written to. The symlink 'last' points to the log directory
 of the last FAI action performed. The symlinks 'last-install' and
-'last-sysinfo' point to the directory with of the last corresponding
+'last-sysinfo' point to the directory of the last corresponding
 action. By default log files will be copied to the log
 server using scp. You can use the variable +$FAI_LOGPROTO+ in file
 'fai.conf(5)' to choose another method for saving logs to the remote
@@ -1574,8 +1598,8 @@ Example of a pxelinux.cfg file:
 default fai-generated
 
 label fai-generated
-kernel vmlinuz-3.16.0-4-amd64
-append initrd=initrd.img-3.16.0-4-amd64 ip=dhcp  root=/srv/fai/nfsroot aufs  FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
+kernel vmlinuz-4.19.0-5-amd64
+append initrd=initrd.img-4.19.0-5-amd64 ip=dhcp root=/srv/fai/nfsroot:vers=3 rootovl FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
 ----
 
 See '/usr/share/doc/syslinux/pxelinux.doc' for more detailed
@@ -1597,7 +1621,7 @@ only used for creating the nfsroot are located in
 before calling 'fai-setup' or 'fai-make-nfsroot'.
 
 FAI_DEBOOTSTRAP::
-Building the nfsroot uses the command debootstrap(8)`. It needs the location of a Debian mirror and the
+Building the nfsroot uses the command `debootstrap(8)`. It needs the location of a Debian mirror and the
 name of the distribution (wheezy, jessie, stretch, sid) for which the basic Debian
 system should be built. Do not use different distributions here and in
 '/etc/fai/apt/sources.list'. This will create a broken nfsroot.
@@ -1691,7 +1715,7 @@ Here's an example how to create a raw disk image for a host called
 cloud3, with a small set of software packages:
 ----
 # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
-# fai-diskimage -vu cloud3 -S2G -cDEBIAN,STRETCH64,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST disk.raw
+# fai-diskimage -vu cloud3 -S2G -cDEBIAN,BUSTER64,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST disk.raw
 ----
 
 This command will create a disk image called ubuntu.qcow2 for a Ubuntu 16.04 desktop
@@ -1701,6 +1725,10 @@ with hostname set to foobar.
 # cl=DHCPC,UBUNTU,XENIAL,XENIAL64,AMD64,XORG,LAST
 # fai-diskimage -Nvu foobar -S5G -c$cl ubuntu.qcow2
 ----
+
+You can give disk images a try without installing FAI, if you visit
+https://fai-project.org/FAIme/cloud
+
 
 === [[cross-arch]]Building cross-architecture disk images
 
@@ -1714,7 +1742,7 @@ architecture. Here are the steps do to:
 # fai-mk-configspace
 
 # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
-# fai-diskimage -vu armhost -S2G -cDEFAULT,DHCPC,DEBIAN,ARM64,STRETCH_ARM64,FAIBASE,DEMO,CLOUD,LAST arm64.raw
+# fai-diskimage -vu armhost -S2G -cDEFAULT,DHCPC,DEBIAN,ARM64,BUSTER_ARM64,FAIBASE,DEMO,CLOUD,LAST arm64.raw
 # chown your_user_id arm64.raw
 # cp /var/log/fai/armhost/last/vmlinuz* vmlinuz
 # cp /var/log/fai/armhost/last/initrd.img* initrd
@@ -1765,20 +1793,18 @@ according to this information. Here's an example:
 
 ----
 demohost:~# df
-Filesystem      1K-blocks      Used Available Use% Mounted on
-rootfs            4099064    414088   3645296  11% /
-192.168.33.250:/srv/fai/nfsroot
-                  3905600    410976   3454944  11% /live/image
-tmpfs              193464      3112    190352   2% /live/cow
-aufs              4099064    414088   3645296  11% /
 
-192.168.33.250:/srv/fai/config
-                  3905600    410976   3454944  11% /var/lib/fai/config
-/dev/sda1          241116     74519    154149  33% /target
-/dev/sda9         4364212    139888   4179988   4% /target/home
-/dev/sda7          553376     16840    536536   4% /target/tmp
-/dev/sda8         2221628    275936   1832840  14% /target/usr
-/dev/sda6          577096    172924    374856  32% /target/var
+Filesystem                    1K-blocks     Used Available Use% Mounted on
+devtmpfs                        1950880        0   1950880   0% /dev
+tmpfs                           1971656      336   1971320   1% /run
+overlay                         1971656      148   1971508   1% /
+tmpfs                           1971656      148   1971508   1% /live/cow
+192.168.33.250:/srv/fai/nfsroot
+                                15416320 12121088    919552  93% /live/image
+faiserver:/srv/fai/config       15416320 12121088    919552  93% /var/lib/fai/config
+/dev/mapper/vg1-root            7828376  1599880   5811116  22% /target
+/dev/vda1                        198337    49976    138121  27% /target/boot
+/dev/mapper/vg1-home            1503280     4620   1404248   1% /target/home
 ----
 
 *This method can be used as a rescue environment!* If you need a file
@@ -1820,7 +1846,7 @@ squash image is served from.
 
 You can install all sorts of Linux distributions from a single Debian
 nfsroot. Therefore you have to create a base.tar.xz of the distribution
-you like to install and place it info the `basefiles` directory. Then
+you like to install and place it into the `basefiles` directory. Then
 name it UBUNTU1404.tar.xz for example. An install client which belongs
 to the class UBUNTU1404 then extracts this base file into its empty
 file system. Additionally you have to adjust the 'sources.list' or
@@ -1870,8 +1896,8 @@ echo running $CMD
 $CMD
 ----
 
-Then, you will want to set the variable _install=0_ the xen-tools
-config for that host.
+Then, you should set the variable _install=0_ in the config of
+xen-tools for that host.
 
 === [[softupdate]]Using FAI for updates
 FAI can also do updates of already running systems, without a
@@ -1921,7 +1947,7 @@ _/_ during softupdate.
 Here are some variable that help writing these scripts:
 
 +$target+:: Points to the root directory of the client, which
-is_/target_ during installation and _/_ during a softupdate.
+is _/target_ during installation and _/_ during a softupdate.
 
 +$FAI_ROOT+:: It's the same value as +$target+. For historic reasons
 we have both these variables in FAI.
@@ -2072,11 +2098,11 @@ Mounts the created partitions according to the created
 extrbase::
 Extracts a minimal system after that a chroot can be made into it. By
 default the base tar file '/var/tmp/base.tar.xz' will be
-extracted. Also files matching a class name in $FAI/basefiles /` are used for unpacking a
+extracted. Also files matching a class name in `$FAI/basefiles/` are used for unpacking a
 different tar file depending on classes defined. This can be used for
 installing different Linux distributions than the one used for
 creating the nfsroot. The default file 'base.tar.xz' is a snapshot of a
-basic Debian system created by `debootstrap(8)`
+basic Debian system created by `debootstrap(8)`.
 This task uses the variable +FAI_BASEFILEURL+ for fetching the base
 file via FTP, HTTPS or HTTP if it's defined.
 
@@ -2177,12 +2203,32 @@ should be performed, or if the client should to boot from local
 disk. This is done using `fai-chboot(8)`.
 
 
+=== [[nfsv4]]How to use NFS v4 with the nfsroot
+
+The nfsroot is mounted via NFS v3 by default. This is done
+by adding the option 'nfsvers=3' to the kernel boot options of the
+kernel booted by the install clients. fai-chboot(8) will do this for you.
+
+If you want to use NFS v4 for the nfsroot, you have to remove this
+option the the kernel boot options. Additionally, overlayfs
+- the kernel module that is used for making the read-only mounted
+nfsroot writeable - can only work with NFS v4 if acl(5) support is
+disabled on the filessystem on the NFS server side (as of 2019). If
+'/srv/fai/nfsroot' on your FAI server is located on the root partition
+mounted to '/', you can disable acl support for the whole file system
+on this partition using
+
+----
+# mount -oremount,noacl /
+----
+
+Then mounting the nfsroot from a FAI server using NFS v4 will work.
+
 === [[debian-mirror]]How to create a local Debian mirror
 
-The script `mkdebmirror` footnote:[You can find the script in
+The utility `mkdebmirror` footnote:[You can find the script in
 '/usr/share/doc/fai-doc/examples/utils/'] can be used for creating
-your own local Debian mirror. This script uses the command
-`debmirror(1)`. A partial Debian mirror for i386 and amd64 architecture for
+your own local Debian mirror. This script uses `debmirror(1)`. A partial Debian mirror for i386 and amd64 architecture for
 Debian 8.0 (aka jessie) without the source packages needs about
 {mirrorsize}GB of disk space. Accessing the mirror via HTTP will be the
 default way in most cases. To see more output from the script call
@@ -2222,7 +2268,7 @@ touch /srv/fai/nfsroot/.nocolorlogo
 ----
 
 - A list of variables used by FAI can be found at
-https://wiki.fai-project.org/wiki/Variables.
+https://wiki.fai-project.org/index.php/Variables.
 
 - You can shorten some customization scripts by using one single fcopy
 command _fcopy -r /_.
@@ -2290,10 +2336,10 @@ https://lists.uni-koeln.de/pipermail/linux-fai/2016-March/011283.html
 
 - How to use the nfsroot as system for diskless clients?
 +
-https://wiki.fai-project.org/wiki/Use_nfsroot_for_diskless_clients
+https://wiki.fai-project.org/index.php/Use_nfsroot_for_diskless_clients
 
 
-- How to server multiple nfsroot directories on one FAI server?
+- How to serve multiple nfsroot directories on one FAI server?
 +
 If you want to serve multiple nfsroot directories,
 you need to create specific config directories in '/etc' for FAI, like

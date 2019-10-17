@@ -5,7 +5,7 @@
 # fai-mirror -- create and manage a partial mirror for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2018, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2019, Thomas Lange, lange@informatik.uni-koeln.de
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -89,6 +89,7 @@ initialize() {
       -o Aptitude::Log=/dev/null \
       -o Aptitude::CmdLine::Ignore-Trust-Violations=yes\
       -o APT::Get::AllowUnauthenticated=true \
+      -o Acquire::AllowInsecureRepositories=true \
       -o DPkg::force-conflicts::=yes \
       -o Dir::State=$aptcache/var/lib/apt \
       -o Dir::Log=$aptcache/var/log/apt \
@@ -171,6 +172,7 @@ add_base_packages() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set-classes() {
 
+    local addclasses
     # if -c is given, ignore -x
     if [ -n "$cclasses" ]; then
         export classes=${cclasses//,/ }
@@ -186,13 +188,73 @@ set-classes() {
     set -e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mk_class_var_list() {
+
+    # create a list of files named class/*.var that contain a definition of a  variable that is
+    # used in package_config/<classes>
+
+    # we assume, that variables used in package_config are defined in class/*.var.
+    # For all classes search if there's a variables used in package_config/CLASS
+    # For all variables found look which files class/CLASS.var define these variables.
+
+    local -a variables=()
+    local filelist classlist sourefiles
+    local c i f
+
+    #filelist: all files in package_config which are also a defined class
+    for c in $classes; do
+	if [ -f $FAI_CONFIGDIR/package_config/$c ]; then
+	    filelist+=" $c"
+	fi
+    done
+
+    if [ -z "$filelist" ]; then
+	   return
+    fi
+
+    # make the list of variables that are used
+    # regex: $abc or ${abc}
+    variables=($(cd $FAI_CONFIGDIR/package_config;grep -h -P -o '\$[A-Za-z0-9_]+|\$\{[A-Za-z0-9_]+\}' $filelist|sort|uniq))
+
+    # debug
+    #for v in ${variables[@]}; do
+    #    echo Variable found: $v
+    #done
+
+    # create a regex like varname= for all variables
+    for i in ${!variables[@]}; do
+	variables[i]=$(echo ${variables[i]} | tr -d /{}$/)
+	variables[i]+="="
+    done
+
+    # classlist: make list of files in class, which are also a class
+    for c in $classes; do
+	if [ -f $FAI_CONFIGDIR/class/$c.var ]; then
+	    classlist+=" $FAI_CONFIGDIR/class/$c.var"
+	fi
+    done
+    # look for variable definition in this list
+    for f in $classlist; do
+	for i in ${!variables[@]}; do
+	    if grep -q -P "${variables[i]}" $f; then
+		sourefiles+=" $f"
+		break
+	    fi
+	done
+    done
+
+    # these files contain a variable definition which is needed
+    echo $sourefiles
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 preserve=0
 verbose=0
 add=1
 qflag=-qq
 bcount=0
-while getopts "a:bBvhx:pc:C:m:s:P:" opt ; do
+setvariables=0
+while getopts "a:bBvhx:pc:C:m:s:P:V" opt ; do
     case "$opt" in
         a) arch=$OPTARG ;;
         B) add=0 ; ((bcount++)) ;;
@@ -205,6 +267,7 @@ while getopts "a:bBvhx:pc:C:m:s:P:" opt ; do
         p) preserve=1;;
 	s) csdir="$OPTARG";;
         v) verbose=1; vflag=-v; qflag='';;
+        V) setvariables=1 ;;
         P) aptpref="$OPTARG";;
         ?) die 1 "Unknown option";;
     esac
@@ -227,7 +290,7 @@ export NFSROOT
 if [ -n "$csdir" ]; then
     FAI_CONFIGDIR=$csdir # override by -s
 fi
-[ -x "$(which reprepro)" ] || die 8 "reprepro not found. Please install the package."
+command -v reprepro >&/dev/null || die 8 "reprepro not found. Please install the package."
 [ -n "$exclasses" -a -n "$cclasses" ] && die 3 "Options -x and -c not allowed at the same time."
 
 # use first argument if given, use variable mirrordir if not argument was given
@@ -240,6 +303,17 @@ fi
 # set default if undefined
 : ${MAXPACKAGES:=1}
 export MAXPACKAGES
+
+set-classes
+if [ "$setvariables" -eq 1 ]; then
+    flist=$(mk_class_var_list)
+    set -a
+    for f in $flist; do
+	echo Sourcing variable definitions in $f
+	source $flist
+    done
+    set +a
+fi
 
 initialize
 
@@ -257,9 +331,6 @@ if [ "$(ls -A $cfdir/apt/sources.list.d/ 2>/dev/null)" ]; then
     sed -e 's/file:/copy:/' $cfdir/apt/sources.list.d/* >> $aptcache/etc/apt/sources.list
 fi
 
-# check if backports are used
-bpo=$(awk '/^deb .+-backports / {print $3}' $aptcache/etc/apt/sources.list)
-
 if [ -f "$aptpref" ]; then
     cp "$aptpref" $aptcache/etc/apt/preferences
 fi
@@ -270,10 +341,13 @@ cp -a /etc/apt/trusted.gpg.d $aptcache/etc/apt
 echo "Getting package information"
 apt-get $qflag $aptoptions update >/dev/null
 
-set-classes
 [ $add -eq 1 ] && add_base_packages
 echo "Downloading packages for classes:" $classes
-FAI=$FAI_CONFIGDIR install_packages -N -d $vflag
+if FAI=$FAI_CONFIGDIR install_packages -N -d $vflag; then
+    :
+else
+    die 9 "ERROR when downloading packages. Your mirror is broken. Use fai-mirror -v for details."
+fi
 umount_dirs
 trap "" EXIT ERR
 [ $add -eq 0 ] && delete_base_packages
@@ -298,11 +372,13 @@ Label: fai-project.org
 Origin: fai-mirror
 EOF
 
+# check if backports are used
+bponame=$(egrep '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports')
 # add entry for backports
-if [ -n "$bpo" ]; then
+if [ -n "$bponame" ]; then
      cat >> $mirrordir/conf/distributions <<EOF
 
-Codename: $bpo
+Codename: $bponame
 Architectures: $arch
 Components: main non-free contrib
 DebIndices: Packages Release . .xz
@@ -312,12 +388,13 @@ Origin: fai-mirror
 EOF
 
 # maybe using reprepro pulls it's possible to move instead of copy the packages
-     reprepro -b $mirrordir includedeb stretch-backports $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
+     reprepro -b $mirrordir includedeb $bponame $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
      rm -f $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
 fi
 
-reprepro -b $mirrordir includedeb cskoeln $archivedir/*.deb
-rm -r $archivedir/*.deb
+# allow package without the .deb suffix. At least they must start with a char and contain an underscore or hyphen
+reprepro --ignore=extension -b $mirrordir includedeb cskoeln $archivedir/[a-zA-z]*[_-]*
+rm -r $archivedir/[a-zA-z]*[_-]*
 
 echo "$0 finished."
 echo -n "Mirror size and location: ";du -sh --exclude aptcache --exclude db $mirrordir

@@ -15,20 +15,22 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 tapnum=9          # how many tap devies will be created
 brip=192.168.33.1 # IP of bridge device
 brname=br0
-netdev=eth0       # default network device used for routing to the outside internet
+
+# default network device used for routing to the outside internet
+netdev=$(ip route | awk '/^default/ {print $5}'|head -1)
 
 usage() {
 
     cat <<EOF
 fai-mk-network, setup a test network for FAI
 
-   Copyright (C) 2018 by Thomas Lange
+   Copyright (C) 2018-2019 by Thomas Lange
 
 Usage: fai-mk-network  {OPTIONS} USER
 
    -r                   Remove the network setup.
    -P                   Do not put the bridge into a private network
-   -i <NIC>             Use NIC instead of default eth0
+   -i <NIC>             Use NIC instead of default network device
 
 DESCRIPTION
 fai-mk-network creates $tapnum tap devices which are added to a software bridge.
@@ -141,7 +143,7 @@ if [ $(id -u) != "0" ]; then
     usage
 fi
 
-if [ ! -x "$(which brctl)" ]; then
+if ! command -v brctl >&/dev/null; then
     echo "brctl not found. Please install bridge-utils."
     exit 3
 fi

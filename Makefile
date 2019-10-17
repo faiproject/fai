@@ -74,7 +74,7 @@ veryclean: clean
 
 install:
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,apt/apt.conf.d}
-	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt
+	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt/trusted.gpg.d
 	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps/small,setup-storage}
 	mkdir -p $(DESTDIR)/usr/lib/dracut/modules.d
 	install man/* $(DESTDIR)/man
@@ -94,12 +94,14 @@ install:
 	cd conf ; install -m644 fai.conf grub.cfg grub.cfg.autodiscover $(DESTDIR)/etc/fai/
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
+	install -m644 conf/fai-project.gpg $(DESTDIR)/etc/fai/apt/trusted.gpg.d/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
 	cp -a pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
 	cp -a pixmaps/small/*.gif $(DESTDIR)/usr/share/fai/pixmaps/small
-	perl -pi -e 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
+	sed -i 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
+	rm -f $(DOCDIR)/examples/simple/.git
 	cp -a utils $(DOCDIR)/examples
 
 .PHONY: clean veryclean

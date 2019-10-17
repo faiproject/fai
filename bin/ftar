@@ -114,7 +114,13 @@ shift $(($OPTIND - 1))
 
 [ "$1" ] || usage
 
-xattrs="--xattrs --xattrs-include=*.* --selinux --acls"
+# detect target fstype
+targetfstype=`cat /proc/mounts | awk -vt="$target" '{if($2==t){print $3}}'`
+if [ "$targetfstype" != "nfs" ]; then
+    xattrs="--xattrs --xattrs-include=*.* --selinux --acl"
+else
+    xattrs=
+fi
 
 # last class has highest priority
 # reverse order of classes

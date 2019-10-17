@@ -253,12 +253,7 @@ sub build_cryptsetup_commands {
           "", "keyfile_$real_dev" );
 
         my $lukscreateopts = $vol->{lukscreateopts} // "";
-        if ($lukscreateopts !~ /(^|\s)-c\s+\S+/) {
-          $lukscreateopts .= " -c aes-cbc-essiv:sha256";
-        }
-        if ($lukscreateopts !~ /(^|\s)-s\s+\d+/) {
-          $lukscreateopts .= " -s 256";
-        }
+
         # encrypt
         &FAI::push_command(
           "yes YES | cryptsetup luksFormat $real_dev $keyfile $lukscreateopts",
@@ -282,7 +277,7 @@ sub build_cryptsetup_commands {
         }
 
         # add entries to crypttab
-        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks";
+        push @FAI::crypttab, "$enc_dev_short_name\t$real_dev\t$keyfile\tluks,discard";
       } elsif ($mode eq "tmp" || $mode eq "swap") {
         &FAI::push_command(
           "cryptsetup --key-file=/dev/urandom create $enc_dev_short_name $real_dev",
@@ -342,6 +337,8 @@ sub build_btrfs_commands {
     }
   }
 
+  my %mkfs_done;
+
   foreach my $config (keys %FAI::configs) { # loop through all configs
     next unless ($config eq "BTRFS");
 
@@ -371,15 +368,22 @@ sub build_btrfs_commands {
     }
     # creates the BTRFS volume/RAID
     if ($raidlevel eq 'single') {
-          &FAI::push_command("mkfs.btrfs -d single $createopts ". join(" ",@devs),
-                             "$pre_req",
-                             "btrfs_built_raid_$id");
-
-        } else {
-          &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ". join(" ",@devs),
-                             "$pre_req",
-                             "btrfs_built_raid_$id");
-        }
+      if (exists $mkfs_done{join(" ", @devs)}) {
+        &FAI::push_command("true",
+			   "$pre_req",
+			   "btrfs_built_raid_$id");
+      } else {
+        print "Adding mkfs command for '", join(", ", @devs), "'.\n";
+        &FAI::push_command("mkfs.btrfs -d single $createopts ".join(" ",@devs),
+			   "$pre_req",
+			   "btrfs_built_raid_$id");
+	$mkfs_done{join(" ", @devs)} = '1';
+      }
+    } else {
+      &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ".join(" ",@devs),
+			 "$pre_req",
+			 "btrfs_built_raid_$id");
+    }
 
     # initial mount, required to create the initial subvolume
     &FAI::push_command("mount $devs[0] /mnt",
@@ -427,7 +431,7 @@ sub build_raid_commands {
 
   foreach my $config (keys %FAI::configs) { # loop through all configs
     # no encrypted, tmpfs, LVM or physical devices here
-    next if ($config eq "BTRFS" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
+    next if ($config eq "BTRFS" || $config eq "CRYPT" || $config eq "TMPFS" || $config eq "NFS" || $config =~ /^VG_./ || $config =~ /^PHY_./);
     ($config eq "RAID") or &FAI::internal_error("Invalid config $config");
 
     # create all raid devices
@@ -886,7 +890,7 @@ sub build_lvm_commands {
     # prevent error due to different VG name of existing VG
     if (defined($FAI::configs{$d})) {
       # don't deactivate preserved VGs to prevent blkid error later on
-      foreach my $v (keys %{ $FAI::configs->{$d}->{volumes} }) {
+      foreach my $v (keys %{ $FAI::configs{$d}->{volumes} }) {
         $preserved = 1 if ($FAI::configs{$d}{volumes}{$v}{size}{preserve});
       }
     }
@@ -908,7 +912,7 @@ sub build_lvm_commands {
   foreach my $config (keys %FAI::configs) {
 
     # no physical devices, RAID, encrypted or tmpfs here
-    next if ($config eq "BTRFS" || $config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS");
+    next if ($config eq "BTRFS" || $config =~ /^PHY_./ || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config eq "NFS");
     ($config =~ /^VG_(.+)$/) or &FAI::internal_error("Invalid config $config");
     next if ($1 eq "--ANY--");
     my $vg = $1; # the volume group
@@ -1304,6 +1308,10 @@ sub setup_partitions {
     if (defined $part->{mountpoint} && $part->{mountpoint} eq "/boot") {
       $boot_disk=$disk;
     }
+    # override $boot_disk if /boot/efi exists
+    if (defined $part->{mountpoint} && $part->{mountpoint} eq "/boot/efi") {
+      $boot_disk=$disk;
+    }
 
     # the type of the partition defaults to primary
     my $part_type = "primary";
@@ -1354,9 +1362,10 @@ sub setup_partitions {
     $prev_id = $part_id;
   }
 
+  # set bootable flag for gpt-bios and gpt
   &FAI::push_command("parted $boot_disk set 1 boot on",
     "pt_complete_$disk", "gpt_bios_fake_bootable")
-    if($FAI::configs{$config}{disklabel} eq "gpt-bios" and $boot_disk);
+    if($FAI::configs{$config}{disklabel} =~ /^gpt/ and $boot_disk);
 
   ($prev_id > -1) or &FAI::internal_error("No partitions created");
   $partition_table_deps{$disk} = "cleared2_$disk,exist_"
@@ -1375,7 +1384,7 @@ sub build_disk_commands {
   # loop through all configs
   foreach my $config ( keys %FAI::configs ) {
     # no RAID, encrypted, tmpfs or LVM devices here
-    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config =~ /^VG_./ || $FAI::configs{$config}{vg});
+    next if ($config eq "BTRFS" || $config eq "RAID" || $config eq "CRYPT" || $config eq "TMPFS" || $config eq "NFS" || $config =~ /^VG_./ || $FAI::configs{$config}{vg});
     ($config =~ /^PHY_(.+)$/) or &FAI::internal_error("Invalid config $config");
     my $disk = $1; # the device to be configured
 

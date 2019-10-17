@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (c) 2013-2014 by Thomas Lange, Universitaet zu Koeln
+# Copyright (c) 2013-2018 by Thomas Lange, Universitaet zu Koeln
 
 # Inventory function, print hardware inventory, without too much configuration information
 
@@ -10,8 +10,12 @@
 
 inventory() {
 
+    # activate all software RAID arrays
+    echo DEVICE partitions > /etc/mdadm/mdadm.conf
+    udevadm trigger
+
     cd /sys/class/dmi/id
-    grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv 'bios_date|board_version|System Product Name|System Version|System Serial Number|123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
+    grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv 'board_version|System Product Name|System Version|System Serial Number|123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
 
     lscpu | grep 'Hypervisor vendor:'
 

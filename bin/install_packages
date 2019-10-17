@@ -5,7 +5,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2017, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2019, Thomas Lange, lange@informatik.uni-koeln.de
 # (c) 2003-2004, Henning Glawe, glaweh@physik.fu-berlin.de
 # (c) 2004     , Jonas Hoffmann, jhoffman@physik.fu-berlin.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
@@ -120,6 +120,7 @@ $opt_d && setdownloadonly();
 $maxpl=$ENV{MAXPACKAGES} || $opt_m ;
 $maxpl && $verbose && warn "Maximum number of packages installed at a time set to $maxpl\n";
 $maxpl or $maxpl = 99 ; # set default value
+$opt_N=$ENV{FAI_DISABLE_PACKAGE_NAME_CHECK} || $opt_N;
 
 my $qopt="-qq" unless $verbose;
 my $devnull=">/dev/null" unless $verbose;
@@ -281,7 +282,7 @@ sub readconfig {
 
     if (/^PACKAGES\s+(\S+)\s*/) {
       ($type,$cllist) = ($1,$');
-      warn "WARNING: Unknow action $type after PACKAGES\n" unless defined $command{$type};
+      warn "WARNING: Unknown action $type after PACKAGES\n" unless defined $command{$type};
       # by default no classes are listed after this command so doit
       $doit = 1;
       if ($cllist) {
@@ -349,33 +350,6 @@ sub dselectupgrade {
   execute("$rootcmd dpkg --set-selections < $tempfile");
   execute("$rootcmd $command{$type}");
   unlink $tempfile;
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - -
-sub installable {
-
-  # ckeck, wether package can be installed.
-  # return false for packages which only exist in
-  # dpkg status files
-
-  my $package  = shift;
-  # print "Checking wether $package is installable...\n";
-
-  # version list of package
-  my $vlist = $cache->{$package}{VersionList};
-
-  # for each version
-  foreach my $version (@$vlist) {
-    # list of package files
-    my $flist = $version->{FileList};
-    foreach my $fitem (@$flist) {
-      # if the file is a package index (not a dpkg status file)
-      # the package is installable
-      return 1 if ($fitem->{File}{IndexType} eq "Debian Package Index");
-    }
-  }
-
-  # no package index file found for the current package
-  return 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub mkpackagelist {
@@ -526,6 +500,10 @@ sub clean_pkg_list {
   my @unknown;
   my @final; # final list of packages
 
+  # clean global hashes
+  undef %pmap;
+  undef %install;
+
   foreach my $n (@inlist) {
     $pack = $n;
 
@@ -549,6 +527,16 @@ sub clean_pkg_list {
 
     # remove :arch from package name
     if ( $pack =~ s/:\S+//) {
+      insert_pkg($n, $pack, 1, "$n using $pack found") && next;
+    }
+
+    # handle $varname in package name
+    if ( $pack =~ s/\$\w+//) {
+      insert_pkg($n, $pack, 1, "$n using $pack found") && next;
+    }
+
+    # handle ${varname} in package name
+    if ( $pack =~ s/\$\{\w+\}//) {
       insert_pkg($n, $pack, 1, "$n using $pack found") && next;
     }
 

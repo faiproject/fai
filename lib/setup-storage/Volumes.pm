@@ -73,6 +73,9 @@ sub find_all_phys_devs {
     } elsif ($config eq "TMPFS") {
       # no devices
       next;
+    } elsif ($config eq "NFS") {
+      # no devices
+      next;
     } else {
       &FAI::internal_error("Unexpected key $config");
     }
@@ -399,6 +402,7 @@ sub get_current_disks {
 sub get_current_lvm {
 
   use Linux::LVM;
+  Linux::LVM->units('H');
   use Cwd qw(abs_path);
 
   # create hash of vgs to be ignored
@@ -504,7 +508,7 @@ sub get_current_raid {
   # parse the output line by line
   foreach my $line (@mdadm_print) {
     print MDADM_EX "$line";
-    if ($line =~ /^ARRAY \/dev\/md[\/]?(\d+)\s+/) {
+    if ($line =~ /^ARRAY \/dev\/md[\/]?([\w-]+)\s+/) {
       $id = $1;
 
       foreach (split (" ", $line)) {
@@ -694,6 +698,9 @@ sub propagate_and_check_preserve {
       next;
     } elsif ($config eq "TMPFS") {
       # We don't do preserve for tmpfs
+      next;
+    } elsif ($config eq "NFS") {
+      # We don't do preserve for nfs
       next;
     } else {
       &FAI::internal_error("Unexpected key $config");
