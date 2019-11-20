@@ -777,7 +777,7 @@ $FAI::Parser = Parse::RecDescent->new(
           $FAI::partition_pointer_dev_name = "/dev/md$vol_id";
         }
         mountpoint devices filesystem mount_options mdcreateopts
-        | /^btrfs (single|raid([0156]|10))\s+/
+        | /^btrfs\s+(single|raid([0156]|10))\s+/
         {
           ($FAI::device eq "BTRFS") or die "BTRFS entry invalid in this context.\n";
           defined $FAI::configs{BTRFS} or $FAI::configs{BTRFS}{volumes} = {};
