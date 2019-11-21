@@ -9,6 +9,7 @@
 # (c) 2003-2004, Henning Glawe, glaweh@physik.fu-berlin.de
 # (c) 2004     , Jonas Hoffmann, jhoffman@physik.fu-berlin.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
+# (c) 2019     , TUXEDO Computers GmbH, tux@tuxedocomputers.com
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -71,7 +72,7 @@ $| = 1;
 
 
 # @commands is the order of the commands that are executed
-our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r install install-norec aptitude aptitude-r unpack remove dselect-upgrade/;
+our @commands = qw/y2i y2r zypper zypper-pattern zypper-product zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r install install-norec aptitude aptitude-r unpack remove dselect-upgrade/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
     "install-norec" => "apt-get $aptopt --fix-missing install --no-install-recommends",
@@ -101,7 +102,9 @@ our @commands = qw/y2i y2r zypper zypper-rm yast rpmr urpmi urpme yumgroup yumi 
              "y2i"  => "y2pmsh isc",
              "y2r"  => "y2pmsh remove",
              "yast" => "yast -i",
-           "zypper" => "zypper -n install",
+           "zypper" => "zypper -n install -l",
+   "zypper-pattern" => "zypper -n install -l -t pattern",
+   "zypper-product" => "zypper -n install -l -t product",
         "zypper-rm" => "zypper -n remove",
              "rpmr" => "rpm -e",
            "smarti" => "smart install -y",
@@ -499,6 +502,10 @@ sub clean_pkg_list {
   my $pack;
   my @unknown;
   my @final; # final list of packages
+
+  # clean global hashes
+  undef %pmap;
+  undef %install;
 
   foreach my $n (@inlist) {
     $pack = $n;

@@ -1,0 +1,71 @@
+#! /bin/bash
+
+# fai-sed, call sed with diff before writing
+#
+# (c) Thomas Lange 2019, lange@debian.org
+#
+
+# idempotent sed. Execute sed command on a file
+# but do not overwrite file if nothing has changed
+
+dryrun=0
+
+cmd=$1
+shift
+filename=$1
+shift
+
+if [ -z "$cmd" -o -z "$filename" ]; then
+    printf "Please add filename and sed command\n"
+    exit 3
+fi
+
+# do not allow more than one file
+if [ -n "$1" ]; then
+    printf "Aborting. Too many arguments.\n"
+    exit 9
+fi
+
+if [ -n "$target" ]; then
+    filename="$target$filename"
+fi
+
+if [ ! -f $filename ]; then
+    printf "WARNING: $filename does not exists. Skipping\n"
+    exit 0
+fi
+
+tmp=$(mktemp)
+trap "rm $tmp" EXIT
+
+printf "sed -e $cmd $filename: "
+# cp file so we can use sed -i, otherwise the new file created by sed has different chmod, owner
+cp -p $filename $tmp
+sed -i -e "$cmd" $tmp
+res=$?
+if [ $res -ne 0 ]; then
+    printf "sed error $res\n"
+    exit $res
+fi
+
+cmp -s $filename $tmp
+res=$?
+if [ $res -eq 2 ]; then
+    printf " diff error $res. No changes made to $filename\n"
+    exit 2
+elif [ $res -eq 0 ]; then
+    printf " No changes.\n"
+    if [ $dryrun -eq 1 ]; then
+	exit 0
+    fi
+else
+    if [ $dryrun -eq 1 ]; then
+	printf " Dry-run. Changes not applied.\n"
+	exit 0
+    else
+	mv $tmp $filename
+	printf " File changed.\n"
+	trap '' EXIT
+	exit 1
+    fi
+fi

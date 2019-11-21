@@ -25,7 +25,7 @@ cleanup() {
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
 	# try umount several times, because some postinst jobs may still run and use the filesystems
 	for i in {1..8}; do
-            umount $dir >/dev/null 2>&1
+            umount $dir >&/dev/null
             [ $? -eq 0 ] && break
             [ $(($i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
 	    sleep $i
@@ -76,11 +76,11 @@ supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk, .simg.
 check_commands() {
 
     local error=0
-    if ! type qemu-img > /dev/null 2>&1; then
+    if ! command -v qemu-img >&/dev/null; then
 	echo "qemu-img not found. Install the package qemu-utils."
 	error=1
     fi
-    if ! type setup-storage > /dev/null 2>&1; then
+    if ! command -v setup-storage >&/dev/null; then
 	echo "setup-storage not found. Install the package fai-setup-storage."
 	error=1
     fi
@@ -159,7 +159,7 @@ case $ext in
 	 ;;
     simg) convert=2
 	  cmd="img2simg $rawname $iname.simg"
-	  if ! type img2simg > /dev/null 2>&1; then
+	  if ! command -v img2simg >&/dev/null; then
 	      echo "img2simg not found. Install the package img2simg."
 	      error=1
 	  fi
@@ -199,7 +199,7 @@ if [ $(id -u) != "0" ]; then
     die 1 "Run this program as root."
 fi
 
-if type vgs >/dev/null 2>&1; then
+if command -v vgs >&/dev/null; then
     export SS_IGNORE_VG=$(vgs --unbuffered --noheadings -o name --rows)
 fi
 

@@ -5,7 +5,7 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@informatik.uni-koeln.de>
-Mon, 6 Sep 2019
+Wed, 18 Sep 2019
 :Date: a date
 :Revision: 5.8
 
@@ -1672,11 +1672,17 @@ additional packages into the nfsroot.
 You can easily create an installation CD (or USB stick) of your
 network installation setup. This will perform the same installation
 and configuration from CD without the need of the install server.
-Therefore you need to create a partitial mirror of all Debian packages
+Therefore you need to create a partial mirror of all Debian packages
 needed for your FAI classes (using `fai-mirror(1)`). Then the command
 `fai-cd(8)` will put this mirror, the nfsroot and the config space
 onto a bootable CD. That's it!
 
+To easily create the installation CD, you can use the following command
+(for more tuning details see `fai-cd(8)`):
+
+----
+ faiserver# fai-cd -m <partialMirrorDir> fai-cd.iso
+----
 
 This installation CD contains all data needed for the
 installation. The command `fai-cd(8)` puts the nfsroot, the
@@ -1992,7 +1998,7 @@ Now call fai-make-nfsroot which creates the 32-bit nfsroot in
 faiserver# fai-make-nfsroot -v -C/etc/fai-i386
 ----
 
-Creating a partitial mirror using `fai-mirror(1)` that is needed for
+Creating a partial mirror using `fai-mirror(1)` that is needed for
 a bootable CD or USB stick is also possible on a different architecture.
 You have to specify the architecture when calling fai-mirror.
 
@@ -2202,6 +2208,27 @@ configurations. This will define if an installation
 should be performed, or if the client should to boot from local
 disk. This is done using `fai-chboot(8)`.
 
+
+=== [[nfsv4]]How to use NFS v4 with the nfsroot
+
+The nfsroot is mounted via NFS v3 by default. This is done
+by adding the option 'nfsvers=3' to the kernel boot options of the
+kernel booted by the install clients. fai-chboot(8) will do this for you.
+
+If you want to use NFS v4 for the nfsroot, you have to remove this
+option the the kernel boot options. Additionally, overlayfs
+- the kernel module that is used for making the read-only mounted
+nfsroot writeable - can only work with NFS v4 if acl(5) support is
+disabled on the filessystem on the NFS server side (as of 2019). If
+'/srv/fai/nfsroot' on your FAI server is located on the root partition
+mounted to '/', you can disable acl support for the whole file system
+on this partition using
+
+----
+# mount -oremount,noacl /
+----
+
+Then mounting the nfsroot from a FAI server using NFS v4 will work.
 
 === [[debian-mirror]]How to create a local Debian mirror
 

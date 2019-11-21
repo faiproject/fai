@@ -276,7 +276,7 @@ call_debootstrap() {
 	fi
     fi
     if [ $_debootstrap = "qemu-debootstrap" ]; then
-	if ! type -P $_debootstrap >/dev/null; then
+	if ! command -v $_debootstrap >&/dev/null; then
 	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
 	fi
     fi
@@ -327,7 +327,7 @@ add_etc_hosts_entries() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    [ ! -x "$(which debootstrap)" ] && die 1 "Can't find debootstrap command. Aborting."
+    command -v debootstrap >&/dev/null || die 1 "Can't find debootstrap command. Aborting."
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
@@ -662,7 +662,7 @@ if [ $sshpreserve -ge 1 ]; then
 fi
 
 if [ -d $NFSROOT/proc ]; then
-    umount $NFSROOT/dev/pts 1>/dev/null 2>&1 || true
+    umount $NFSROOT/dev/pts >&/dev/null || true
     [ -L $NFSROOT/proc/self ] && umount $NFSROOT/proc || true
     [ -L $NFSROOT/proc/self ] && die 1 "/proc is still mounted inside the nfsroot."
     umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount
