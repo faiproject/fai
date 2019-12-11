@@ -88,11 +88,13 @@ setnet() {
 	NIC1=$(ip route | awk '/ dev / {print $3}'|head -1)
     fi
 
-    read IPADDR NETMASK BROADCAST dummy<<<$(ifdata -p $dev)
-    CIDR=$(ip -o -f inet addr show| awk '{print $4}'| grep $IPADDR)
-    GATEWAYS=$(ip route | awk '/^default/ {print $3}')
+    # only write info if interface is known
+    if [ -n "$NIC1" ]; then
+	read IPADDR NETMASK BROADCAST dummy<<<$(ifdata -p $NIC1)
+	CIDR=$(ip -o -f inet addr show| awk '{print $4}'| grep $IPADDR)
+	GATEWAYS=$(ip route | awk '/^default/ {print $3}')
 
-    cat >> $bootlog <<-EOF
+	cat >> $bootlog <<-EOF
 	IPADDR=$IPADDR
 	SERVER=$SERVER
 	NETMASK=$NETMASK
@@ -101,6 +103,7 @@ setnet() {
 	CIDR=$CIDR
 	NIC1=$NIC1
 EOF
+    fi
 
     if [ -n "$DOMAIN" ]; then
         # DOMAIN was specified on the kernel command line
