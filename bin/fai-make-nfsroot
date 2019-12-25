@@ -344,16 +344,19 @@ build_basetar() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 tar_base() {
-  echo "Creating base.tar archive."
-  tar --xattrs --acls --one-file-system -C "$NFSROOT" -cf "$NFSROOT/var/tmp/base.tar" --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+  echo "Creating base.tar archive.";
+  rm -f "$NFSROOT/var/tmp/base.tar";
+  tar --xattrs --acls --one-file-system -C "$NFSROOT" -cf "$NFSROOT/var/tmp/base.tar" --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 pack_base() {
   if [ $usexz -eq 1 ]; then
       echo "Creating compressed archive \"base.tar.xz\"."
+      rm -f "$NFSROOT/var/tmp/base.tar.xz";
       nice xz -q "$NFSROOT/var/tmp/base.tar" &
   else
       echo "Creating compressed archive \"base.tar.gz\"."
+      rm -f "$NFSROOT/var/tmp/base.tar.gz";
       nice gzip "$NFSROOT/var/tmp/base.tar" &
   fi
 }
