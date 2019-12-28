@@ -802,8 +802,9 @@ _disk_config/_::
 Configuration files for disk partitioning, software RAID, LVM and file system creation.
 
 _basefiles/_::
-Normally the file 'base.tar.xz' (located inside the nfsroot) is extracted on the install
-client after the new file systems are created and before package are
+Normally the file 'base.tar.xz' (located inside the nfsroot, i.e.
+'/srv/fai/nfsroot/var/tmp/base.tar.xz') is extracted on the install
+client after the new file systems are created and before any packages are
 installed. This is a minimal base image, created right after calling
 debootstrap during the creation of the nfsroot on the install
 server. If you want to install another distribution than the nfsroot
@@ -811,7 +812,14 @@ is, you can put a tar file into the subdirectory 'basefiles/' and name
 it after a class. Then the command `ftar(8)` is used to extract the
 tar file based on the classes defined. Thus the file has to be named 'CLASS.tar.xz' not 'CLASS.base.tar.xz'. This is done in task
 _extrbase_. Use this if you want to install another distribution or
-version than that running during the installation.
+version than that running during the installation. By specifying a different
+basefile 'basefiles/CLASS.tar.xz' only files contained within this basefile will be
+extracted. If you want to supply additional files, or replace existing files, use
+the 'files/' directory structure facility mentioned below. You can also modify
+an existing basefile to match your needs, instead. Another alternative would be
+to modify the tree below '/srv/fai/nfsroot/', note however that this tree is used to create
+the installation medium and also 'base.tar.xz'. You may find 'fai-make-nfsroot(8)
+-R' useful for repacking 'base.tar.xz'.
 +
 This basefile can also be received based on FAI classes via HTTP/HTTPS or FTP
 by defining the variable +FAI_BASEFILEURL+. FAI will download a file
@@ -1139,10 +1147,11 @@ linuxlogo-
 
 === [[cscripts]] Customization scripts
 
-The command `fai-do-scripts(1)` is called to execute all scripts in
-this directory. If a directory with a class name exists, all scripts
-matching '^[0-9][0-9]*' are executed in alphabetical order. So it's
-possible to use scripts of different languages (shell, cfengine,
+The command `fai-do-scripts(1) <dir>` is called to execute all scripts in
+this '<dir>'. If a directory with a class name
+exists ('<dir>/<CLASS>/^[0-9][0-9]*'), all scripts
+matching '^[0-9][0-9]*' are executed in alphabetical order.
+ So it's possible to use scripts of different languages (shell, cfengine,
 Perl, Python, Ruby, expect,..) for one class.
 
 Thoses scripts write their output to different log files, depending on
@@ -2354,6 +2363,17 @@ you need to create specific config directories in '/etc' for FAI, like
 
 ----
 faiserver#fai-make-nfsroot -C /etc/fai-jessie
+----
+
+- How to provide DNS service for a local/testing/development FAI server or
+  deployments without installing an extra service or server?
++
+Install 'socat' and tell it to listen on the bridge interface while forwarding
+any DNS traffic to the locally listening resolver (i.e. systemd-resolved)
+masking it as if the traffic originated from localhost:
+----
+# apt install socat
+# socat UDP-LISTEN:53,fork,reuseaddr,bind=192.168.33.1 UDP:127.0.0.53:53
 ----
 
 
