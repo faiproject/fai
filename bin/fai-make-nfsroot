@@ -95,9 +95,10 @@ generic=0
 force=0
 usexz=1
 full=1
+rebuildtar=0;
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpPUzsN opt ; do
+while getopts aghervC:B:fkKpPRUzsN opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
@@ -115,6 +116,7 @@ while getopts aghervC:B:fkKpPUzsN opt ; do
         e) expert=1 ;; # a dummy option, that only fai-setup uses
         p) sshpreserve=1 ;;
         P) sshpreserve=2 ;;
+        R) rebuildtar=1 ;;
         s) full=0 ;; # do only install a smaller list of packages
         ?) exit 5 ;; # error in option parsing
     esac
@@ -331,17 +333,32 @@ create_base() {
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
-    if [ $usexz -eq 0 ]; then
-        echo "Creating base.tar.gz"
-    else
-        echo "Creating base.tar.xz"
-    fi
-    tar --xattrs --acls --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
-    if [ $usexz -eq 1 ]; then
-        nice xz -q $NFSROOT/var/tmp/base.tar &
-    else
-        nice gzip $NFSROOT/var/tmp/base.tar &
-    fi
+
+    build_basetar;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+build_basetar() {
+  tar_base;
+  pack_base;
+  exit 0;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+tar_base() {
+  echo "Creating base.tar archive.";
+  rm -f "$NFSROOT/var/tmp/base.tar";
+  tar --xattrs --acls --one-file-system -C "$NFSROOT" -cf "$NFSROOT/var/tmp/base.tar" --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .;
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+pack_base() {
+  if [ $usexz -eq 1 ]; then
+      echo "Creating compressed archive \"base.tar.xz\"."
+      rm -f "$NFSROOT/var/tmp/base.tar.xz";
+      nice xz -q "$NFSROOT/var/tmp/base.tar" &
+  else
+      echo "Creating compressed archive \"base.tar.gz\"."
+      rm -f "$NFSROOT/var/tmp/base.tar.gz";
+      nice gzip "$NFSROOT/var/tmp/base.tar" &
+  fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract_base() {
@@ -606,6 +623,8 @@ trap 'echo "Aborting";umount_dirs' EXIT
 trap "bad_exit" ERR
 
 [ $adjust = 1 ] && adjust_nfsroot
+
+[ $rebuildtar = 1 ] && build_basetar;
 
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
