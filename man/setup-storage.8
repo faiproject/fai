@@ -125,7 +125,7 @@ overrides this.
 .B flag_initial
 This variable determines if partitions should be preserved when they
 are tagged with preserve_reinstall (see below for details). Normally set by the
-list of FAI flags (FAI_FLAGS).
+list of FAI flags (FAI_FLAG).
 .TP
 .B SS_IGNORE_VG
 This variable may contain a list of volume groups, that are ignored by
@@ -367,16 +367,18 @@ luks    -        /dev/md1       -       -
 .PP
 
 .TP
-Plain disk + LUKS + LVM2 example
+Plain disk + LUKS + LVM2 aka Full Disk Encryption (FDE) example
 .sp
 .nf
 .ta 10n 20n 30n 40n 50n
 
-disk_config disk1 disklabel:gpt bootable:1 fstabkey:uuid align-at:1M
+disk_config disk1 disklabel:msdos bootable:1 fstabkey:uuid align-at:1M
 primary - 100%  -       -
 
 disk_config cryptsetup
-luks:"passwd" - disk1.1 -       -
+### FDE:
+#luks         - disk1.1 -       - lukscreateopts="--type luks1"
+luks:'passwd' - disk1.1 -       - lukscreateopts="--type luks1"
 
 disk_config lvm fstabkey:uuid
 vg vg1  disk1.1
@@ -384,6 +386,23 @@ vg1-root     /  30%-     ext4    defaults,errors=remount-ro,noatime,rw
 .sp
 .fi
 .PP
+.IP \(bu
+When deploying GRUB and LUKS with full disk encryption remember
+using 'disklabel:msdos' for now. EFI-compatible 'disklabel:gpt' makes cryptsetup use
+LUKS2 for which there is no support in GRUB yet. If there is a fixed setup
+with 'disklabel:gpt' and LUKS2 already, there is a way to downgrade LUKS2 to
+LUKS1, this is feasible without data loss (at your own risk). See the config/disk_config/FDE template
+for how to convert LUKS headers. Once GRUB2 supports LUKS2, LUKS FDE support in FAI will be updated.
+The LUKS version can be enforced with 'lukscreateopts="--type luks1"'.
+You may want to try 'disklabel:gpt' in conjunction with 'lukscreateopts="--type luks1"'.
+.IP \(bu
+The resulting crypto device is called 'crypt_dev_sda1', contains an LVM2 setup
+using volume group 'vg1' and a root partition 'vg1-root'. The luks password
+is 'passwd' and must be included literally, variable substitution is not happening
+here. If you are going to use the FDE template there's a better way: just set $LUKSPW in
+config/class/FDE.var . A password is mandatory when deploying Full Disk
+Encryption or you won't be able to unlock your system at boot time (before GRUB
+menu).
 
 .TP
 tmpfs example
