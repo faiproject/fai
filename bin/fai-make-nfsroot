@@ -329,10 +329,12 @@ add_etc_hosts_entries() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    command -v debootstrap >&/dev/null || die 1 "Can't find debootstrap command. Aborting."
-    call_debootstrap $FAI_DEBOOTSTRAP
-    $ROOTCMD apt-get clean
-    rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
+    if test "$rebuildtar" -eq 0; then
+      command -v debootstrap >&/dev/null || die 1 "Can't find debootstrap command. Aborting."
+      call_debootstrap $FAI_DEBOOTSTRAP
+      $ROOTCMD apt-get clean
+      rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
+    fi;
 
     build_basetar;
 }
@@ -340,7 +342,6 @@ create_base() {
 build_basetar() {
   tar_base;
   pack_base;
-  exit 0;
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 tar_base() {
@@ -623,8 +624,6 @@ trap 'echo "Aborting";umount_dirs' EXIT
 trap "bad_exit" ERR
 
 [ $adjust = 1 ] && adjust_nfsroot
-
-[ $rebuildtar = 1 ] && build_basetar;
 
 # remove all kernels from nfsroot
 [ -n "$kremove" ] && {
