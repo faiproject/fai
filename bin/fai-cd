@@ -206,13 +206,15 @@ create_grub2_image() {
 	mkfs.vfat $scratch/efiboot.img
 	mmd -i $scratch/efiboot.img efi efi/boot
 	mcopy -i $scratch/efiboot.img $scratch/bootx64.efi ::efi/boot/
+    else
+        die 11 "No grub-efi-amd64-bin installation found in NFSROOT. Aborting."
     fi
     if [ -d $NFSROOT/usr/lib/grub/i386-pc ]; then
 	chroot $NFSROOT grub-mkstandalone \
 	    --format=i386-pc \
 	    --output=/tmp/core.img \
 	    --locales="" --fonts="" \
-	    --install-modules="linux normal iso9660 biosdisk memdisk search ls" \
+	    --install-modules="linux normal iso9660 biosdisk memdisk search ls echo test chain" \
 	    --modules="linux normal iso9660 biosdisk search" \
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
 	cat $NFSROOT/usr/lib/grub/i386-pc/cdboot.img $NFSROOT/tmp/core.img > $scratch/bios.img
