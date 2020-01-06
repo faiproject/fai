@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2019 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2020 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -34,7 +34,6 @@ set -e
 
 # last die exit code 22
 
-boot_image="boot/grub/eltorito.img"
 count=0
 space=0
 config_space=""
@@ -61,7 +60,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2019 Thomas Lange
+	fai-cd Copyright (C) 2004-2020 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -186,36 +185,48 @@ create_squashfs_image() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image() {
 
-    mkdir -p $tmp/boot/grub $NFSROOT/boot/grub
-    if [ -f $NFSROOT/boot/grub/core.img ]; then
-        :
-    elif [ -f $NFSROOT/usr/lib/grub/i386-pc/cdboot.img ]; then
-        chroot $NFSROOT /usr/bin/grub-mkimage -p /boot/grub -d /usr/lib/grub/i386-pc -o /boot/grub/core.img biosdisk iso9660 --format=i386-pc
+    mkdir -p $tmp/boot
+
+    if [ -d $NFSROOT/usr/lib/grub/x86_64-efi ]; then
+	cp $grub_config $NFSROOT/tmp/grub.cfg
+	# insert date into grub menu
+	perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $NFSROOT/tmp/grub.cfg
+	if [ -n "$config_space" ] || [ $configset -eq 1 ]; then
+	    perl -pi -e "s|FAI_CONFIG_SRC=(.*?)\S+|FAI_CONFIG_SRC=$config_space|" $NFSROOT/tmp/grub.cfg
+	fi
+
+	chroot $NFSROOT grub-mkstandalone \
+	    --format=x86_64-efi \
+	    --output=/tmp/bootx64.efi \
+	    --locales="" --fonts="" \
+	    "boot/grub/grub.cfg=/tmp/grub.cfg"
+	mv $NFSROOT/tmp/bootx64.efi $scratch
+
+	dd if=/dev/zero of=$scratch/efiboot.img bs=1M count=3 2>/dev/null
+	mkfs.vfat $scratch/efiboot.img
+	mmd -i $scratch/efiboot.img efi efi/boot
+	mcopy -i $scratch/efiboot.img $scratch/bootx64.efi ::efi/boot/
+    else
+        die 11 "No grub-efi-amd64-bin installation found in NFSROOT. Aborting."
+    fi
+    if [ -d $NFSROOT/usr/lib/grub/i386-pc ]; then
+	chroot $NFSROOT grub-mkstandalone \
+	    --format=i386-pc \
+	    --output=/tmp/core.img \
+	    --locales="" --fonts="" \
+	    --install-modules="linux normal iso9660 biosdisk memdisk search ls echo test chain msdospart part_msdos minicmd ext2" \
+	    --modules="linux normal iso9660 biosdisk search" \
+	    "boot/grub/grub.cfg=/tmp/grub.cfg"
+	cat $NFSROOT/usr/lib/grub/i386-pc/cdboot.img $NFSROOT/tmp/core.img > $scratch/bios.img
+	rm $NFSROOT/tmp/core.img
     else
         die 11 "No grub-pc installation found in NFSROOT. Aborting."
-    fi
-    cp $NFSROOT/boot/grub/core.img $tmp/boot/grub
-    cp $NFSROOT/boot/grub/unicode.pf2 $tmp/boot/grub
-
-    grubtarget=$tmp/boot/grub/i386-pc
-    mkdir -p $grubtarget
-    for a in $NFSROOT/usr/lib/grub/*-pc/{*.mod,efiemu??.o,cdboot.img,boot.img,command.lst,moddep.lst,fs.lst,handler.lst,parttool.lst}; do
-        [[ -e $a ]] && cp $a $grubtarget
-    done
-    cp $grub_config $tmp/boot/grub/grub.cfg
-    # insert date into grub menu
-    perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $tmp/boot/grub/grub.cfg
-    if [ -n "$config_space" ] || [ $configset -eq 1 ]; then
-	perl -pi -e "s|FAI_CONFIG_SRC=(.*?)\S+|FAI_CONFIG_SRC=$config_space|" $tmp/boot/grub/grub.cfg
     fi
     cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
     cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
-    cat $grubtarget/cdboot.img $tmp/boot/grub/core.img > $tmp/boot/grub/eltorito.img
-    boot_image="boot/grub/eltorito.img"
-
-    embed_image="$tmp/boot/grub/embed.img"
-    cat $grubtarget/boot.img $tmp/boot/grub/core.img > $embed_image
+    touch $tmp/FAI-CD
+    cp $NFSROOT/boot/grub/unicode.pf2 $tmp/boot/grub
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 calculate_required_size() {
@@ -305,7 +316,7 @@ cleanup_liveos_mounts() {
 
     mountpoint -q $tmp/$liveos/mounted-ext3fs && umount $tmp/$liveos/mounted-ext3fs
     unhide_dirs
-    rm -rf $tmp
+    rm -rf $tmp $scratch
     if [ $autodiscover -eq 1 ]; then
         local initrdfiles=($ONFSROOT/tmp/initrd.img*)
         if [[ -e $initrdfiles ]]; then
@@ -317,11 +328,23 @@ cleanup_liveos_mounts() {
 mkiso() {
 
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
-    xorriso -report_about HINT -as mkisofs -iso-level 3 -graft-points -b $boot_image \
-        -V "$vname" -A "$aname" \
-        -no-emul-boot -boot-info-table --embedded-boot ${embed_image} -partition_offset 16 -no-pad -o $isoname \
-        -R $tmp --sort-weight 0 / --sort-weight 1 /boot || die 12 "xorriso failed."
-    parted $isoname set 1 boot on
+    xorriso -report_about HINT -as mkisofs -iso-level 3 \
+	-iso_mbr_part_type 00 \
+        -full-iso9660-filenames \
+	-volid "$vname" -appid "$aname" \
+	-eltorito-boot boot/grub/bios.img  \
+	-no-emul-boot -boot-load-size 4 -boot-info-table \
+	--eltorito-catalog boot/grub/boot.cat \
+	--grub2-boot-info \
+	--grub2-mbr $NFSROOT/usr/lib/grub/i386-pc/boot_hybrid.img \
+	-eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot \
+	-append_partition 2 0xef $scratch/efiboot.img \
+	-o $isoname -graft-points \
+	--sort-weight 0 / --sort-weight 1 /boot \
+	"$tmp" \
+	/boot/grub/bios.img=$scratch/bios.img \
+	/EFI/efiboot.img=$scratch/efiboot.img || die 12 "xorriso failed."
+
     echo -n "ISO image size and filename: "; du -h $isoname
 
     unhide_dirs
@@ -485,6 +508,7 @@ if [ $bootonly -eq 0 -o $configset -eq 1 ]; then
 fi
 
 tmp=$(mktemp -t -d fai-cd.XXXXXX) || exit 13
+scratch=$(mktemp -t -d scratch.XXXXXX) || exit 13
 
 trap "cleanup_liveos_mounts" EXIT ERR
 
