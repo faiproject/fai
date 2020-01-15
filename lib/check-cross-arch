@@ -3,7 +3,7 @@
 # check-cross-arch - check if qemu is needed for the target directory
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2017-2019 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2017-2020 Thomas Lange, lange@informatik.uni-koeln.de
 
 
 target=$1
@@ -15,7 +15,7 @@ if [ -n "$(ls $target/usr/bin/qemu-*-static* 2>/dev/null)" ]; then
 fi
 
 
-info=$(file /bin/ls)
+info=$(file /bin/more)
 myarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*')
 if [ -z "$myarch" ]; then
     if [[ "$info" =~  "ELF 32-bit LSB shared object, Intel 80386" ]]; then
@@ -23,19 +23,19 @@ if [ -z "$myarch" ]; then
     fi
 fi
 
-# where is the ls command
-if [ -f $target/bin/ls ]; then
-    _ls=$target/bin/ls
-elif [ -f $target/usr/bin/ls ]; then
-    _ls=$target/usr/bin/ls
+# where is the more command
+if [ -f $target/bin/more ]; then
+    _more=$target/bin/more
+elif [ -f $target/usr/bin/more ]; then
+    _more=$target/usr/bin/more
 else
-    echo "Cannot find ls command in $target"
+    echo "Cannot find more command in $target"
     exit 3
 fi
 
-_ls=$(realpath -m $_ls)      # handle symlink
-_ls=$target/${_ls#$target}
-info=$(file $_ls)
+_more=$(realpath -m $_more)      # handle symlink
+_more=$target/${_more#$target}
+info=$(file $_more)
 targetarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*')
 if [ -z "$targetarch" ]; then
     if [[ "$info" =~  "ELF 32-bit LSB shared object, Intel 80386" ]]; then
