@@ -1,77 +1,72 @@
 ## grub2 configuration
-set default="Boot OS of first partition on first disk"
+set default="Boot OS from first partition on first disk"
 set timeout=20
-set resolution=1024x768
-
-if loadfont /boot/grub/unicode.pf2 ; then
-   insmod png
-   set gfxmode=640x480
-   insmod gfxterm
-   insmod vbe
-   terminal_output gfxterm
-fi
-
-if background_image /boot/grub/fai.png ; then
-  set color_normal=black/black
-  set color_highlight=red/black
-  set menu_color_normal=black/black
-  set menu_color_highlight=black/yellow
-else
-  set menu_color_normal=white/black
-  set menu_color_highlight=black/yellow
-fi
 
 # make sure we can access partitions
 insmod part_msdos
 insmod part_gpt
+insmod all_video
+insmod gfxterm
 
-if [ ${iso_path} ] ; then
-    set loopback="findiso=${iso_path}"
-fi
+set gfxmode=auto
+set color_normal=white/black
+set color_highlight=red/black
+set menu_color_normal=white/black
+set menu_color_highlight=black/yellow
 
 menuentry "" --unrestricted {
-    set gfxpayload=$resolution
+set timeout=20
 }
+
 menuentry "        +------------------------------------------------------+" --unrestricted {
-    set gfxpayload=$resolution
+set timeout=20
 }
 
 menuentry "        |        Fully  Automatic  Installation                |" --unrestricted {
-    set gfxpayload=$resolution
+set timeout=20
 
 }
 menuentry "        |     _VERSIONSTRING_     |" --unrestricted {
-    set gfxpayload=$resolution
+set timeout=20
 
 }
 menuentry "        |        (c) Thomas Lange  lange@debian.org            |" --unrestricted {
-    set gfxpayload=$resolution
+set timeout=20
 }
 menuentry "        +------------------------------------------------------+" --unrestricted {
-    set gfxpayload=$resolution
+set timeout=20
 }
 }
 menuentry "" --unrestricted {
-    set gfxpayload=$resolution
+set timeout=20
 }
 
 menuentry "Autodiscover the FAI server" {
-    set gfxpayload=$resolution
+    search --set=root --file /FAI-CD
     linux   /boot/vmlinuz FAI_FLAGS="menu,verbose,createvt" fai.discover rootovl root=/dev/nfs ip=dhcp quiet
     initrd  /boot/initrd.img
 }
 
-menuentry "Boot OS of first partition on first disk" --unrestricted {
-    if [ -d (cd) ]; then
-       chainloader (hd0)+1
-    fi
-
-    if [ "$root" = "hd1" ]; then
-       chainloader (hd0)+1
-    fi
-
-    if [ "$root" = "hd0" ]; then
+menuentry "Boot OS from first partition on first disk" {
+   if [ "$grub_platform" = "efi" ]; then
+      if [ -f (hd0,gpt1)/efi/debian/grub.cfg ]; then
+           configfile (hd0,gpt1)/efi/debian/grub.cfg
+      elif [ -f (hd1,gpt1)/efi/debian/grub.cfg ]; then
+           configfile (hd1,gpt1)/efi/debian/grub.cfg
+      elif [ -f (hd0,gpt2)/boot/grub/grub.cfg ]; then
+           configfile (hd0,gpt2)/boot/grub/grub.cfg
+      elif [ -f (hd1,gpt2)/boot/grub/grub.cfg ]; then
+           configfile (hd1,gpt2)/boot/grub/grub.cfg
+      else
+	   echo "cannot find grub.cfg"
+	   sleep 7
+      fi
+   # legacy BIOS booting
+   elif [ -d (cd) ]; then
+       set root=(hd0)
+       chainloader +1
+   else
        set root=(hd1)
-       chainloader (hd1)+1
+       chainloader +1
    fi
 }

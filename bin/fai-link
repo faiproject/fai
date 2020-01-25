@@ -1,0 +1,48 @@
+#! /bin/bash
+
+# create a symlink, idempotent
+#
+# (c) Thomas Lange 2019, lange@debian.org
+#
+# if $target is defined, create link relative to $target
+
+mk-link() {
+
+
+    local from=$1
+    local to=$2
+    local oldto
+    local vopt
+
+    if [ X$verbose = X1 ]; then
+	vopt=-v
+    fi
+
+    # todo: check if $from starts with a slash
+
+    if [ -n "$target" ]; then
+	from="$target$from"
+    fi
+
+    if [ ! -e $from -a ! -h $from ]; then
+	ln -s $vopt $to $from
+	return
+    fi
+
+    # check if already same link
+    if [ -h $from ]; then
+	oldto=$(readlink $from)
+	if [ $oldto = $to ]; then
+	    if [ X$verbose = X1 ]; then
+		printf "fai-link: Nothing to do for link $from -> $to\n"
+	    fi
+	    return
+	fi
+    fi
+
+    # if different create new link
+    ln -sf $vopt $to $from
+}
+
+# make link from to
+mk-link $1 $2
