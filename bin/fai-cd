@@ -188,6 +188,12 @@ create_grub2_image() {
 
     mkdir -p $tmp/boot
 
+    if [ ! -d $NFSROOT/usr/lib/grub/x86_64-efi ] &&
+       [ ! -d $NFSROOT/usr/lib/grub/i386-pc ]
+    then
+      die 11 'Neither grub-efi-amd64-bin or grub-pc installation found in NFSROOT'
+    fi
+
     if [ -d $NFSROOT/usr/lib/grub/x86_64-efi ]; then
 	cp $grub_config $NFSROOT/tmp/grub.cfg
 	# insert date into grub menu
@@ -207,10 +213,7 @@ create_grub2_image() {
 	mkfs.vfat $scratch/efiboot.img
 	mmd -i $scratch/efiboot.img efi efi/boot
 	mcopy -i $scratch/efiboot.img $scratch/bootx64.efi ::efi/boot/
-    else
-        die 11 "No grub-efi-amd64-bin installation found in NFSROOT. Aborting."
-    fi
-    if [ -d $NFSROOT/usr/lib/grub/i386-pc ]; then
+    elif [ -d $NFSROOT/usr/lib/grub/i386-pc ]; then
 	chroot $NFSROOT grub-mkstandalone \
 	    --format=i386-pc \
 	    --output=/tmp/core.img \
@@ -220,9 +223,8 @@ create_grub2_image() {
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
 	cat $NFSROOT/usr/lib/grub/i386-pc/cdboot.img $NFSROOT/tmp/core.img > $scratch/bios.img
 	rm $NFSROOT/tmp/core.img
-    else
-        die 11 "No grub-pc installation found in NFSROOT. Aborting."
     fi
+
     cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
     cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
     cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
