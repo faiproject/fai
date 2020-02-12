@@ -438,8 +438,13 @@ EOF
 
     [ X$verbose = X1 ] && echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose upgrade_nfsroot
-
     LC_ALL=C add_packages_nfsroot
+
+    # remove file diversion, then create initrd
+    rm $NFSROOT/etc/kernel/postinst.d/dracut
+    $ROOTCMD dpkg-divert --rename --remove /etc/kernel/postinst.d/dracut
+    $ROOTCMD dpkg-reconfigure dracut
+
     set_root_pw
 
     # set timezone in nfsroot
@@ -504,6 +509,10 @@ upgrade_nfsroot() {
 	pkgs+=" dracut-live dracut-squash"
     fi
     set -e
+    # disable generating the initrd
+    fdivert /etc/kernel/postinst.d/dracut
+    $ROOTCMD ln -s /bin/true /etc/kernel/postinst.d/dracut
+
     # fai-nfsroot must be sucessfully installed before anything else
     $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-network dracut-config-generic $pkgs
     $ROOTCMD apt-get -y dist-upgrade
