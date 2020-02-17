@@ -45,6 +45,21 @@ inventory() {
 	(( n++ ))
     done < <(lshw -quiet -short -C disk 2>/dev/null)
 
+    # print disk infos
+    # $disklist needs to be set, normally done in fai-disk-info
+    local d=1
+    local dev cap model
+    for dev in $disklist; do
+	cap=$(smartctl -i /dev/$dev | grep Capacity: | grep -Po '\[.+?\]')
+	if [ -z "$cap" ]; then # virtio devices
+	    cap=$(blockdev --getsize64 /dev/$dev | numfmt --to=iec | sed -e 's/\(.\)$/ \1/')
+	    cap="[$cap]"
+	fi
+	model=$(smartctl -i /dev/$dev | egrep 'Product:|Device Model:|Model Number:'|sed -e 's/^.*://' -e 's/^ *//')
+	echo "disk$d: $dev $cap $model"
+	(( d++ ))
+    done
+
     vga=$(lspci|grep ' VGA '| sed -e 's/.*VGA compatible controller://')
     echo "VGA controller: $vga"
 
