@@ -515,6 +515,14 @@ sub build_raid_commands {
           . join(" ", @eff_devs) . " " . join(" ", @spares),
         "$pre_req", "exist_/dev/md$id" );
 
+      # do not sync soft raid during installation
+      # do not remove ; from echo line. Otherwise it will not work
+      if ($FAI::do_init_tasks) { # no sync when initial installation
+	&FAI::push_command(
+          "echo frozen > /sys/block/md$id/md/sync_action;",
+          "exist_/dev/md$id", "nosync_md$id" );
+      }
+
       # create the filesystem on the volume
       &FAI::build_mkfs_commands("/dev/md$id",
         \%{ $FAI::configs{$config}{volumes}{$id} });
