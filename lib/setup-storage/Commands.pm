@@ -318,6 +318,7 @@ sub build_btrfs_commands {
       next unless defined($this_fs);
       next unless ($this_fs eq 'btrfs');
       $volume = 'single_' . $single_vol_index;
+      $FAI::configs{$config}{volumes}{$volume}{preserve} = $FAI::configs{$c}{partitions}{$p}{size}{preserve};
       $FAI::configs{$config}{volumes}{$volume}{encrypt} = $FAI::configs{$c}{partitions}{$p}{encrypt};
       $FAI::configs{$config}{volumes}{$volume}{raidlevel} = 'single';
       $FAI::configs{$config}{volumes}{$volume}{filesystem} = $this_fs;
@@ -357,6 +358,7 @@ sub build_btrfs_commands {
     my $createopts = $vol->{createopts} // "";
     $createopts .= " $forcebtrfs";
     my $pre_req = "";
+    my $btrfs_tool = "";
     # creates the proper prerequisites for later command ordering
     foreach (@devs) {
       my $tmp = $_;
@@ -366,24 +368,25 @@ sub build_btrfs_commands {
     if (scalar @devs == 1) {
       $pre_req = "exist_" . $devs[0];
     }
+
     # creates the BTRFS volume/RAID
     if ($raidlevel eq 'single') {
       if (exists $mkfs_done{join(" ", @devs)}) {
-        &FAI::push_command("true",
-			   "$pre_req",
-			   "btrfs_built_raid_$id");
+	$btrfs_tool = "true";
       } else {
-        print "Adding mkfs command for '", join(", ", @devs), "'.\n";
-        &FAI::push_command("mkfs.btrfs -d single $createopts ".join(" ",@devs),
-			   "$pre_req",
-			   "btrfs_built_raid_$id");
+	print "Adding mkfs command for '", join(", ", @devs), "'.\n";
+	$btrfs_tool = "mkfs.btrfs -d single $createopts ".join(" ",@devs);
 	$mkfs_done{join(" ", @devs)} = '1';
       }
     } else {
-      &FAI::push_command("mkfs.btrfs -d raid$raidlevel $createopts ".join(" ",@devs),
-			 "$pre_req",
-			 "btrfs_built_raid_$id");
+      $btrfs_tool = "mkfs.btrfs -d raid$raidlevel $createopts ".join(" ",@devs);
     }
+
+    # nothing more to do if we need to proserve this volume. No mkfs, no subvolume
+    next if ($vol->{preserve});
+
+    # add mkfs.btrfs if needed (otherwise add true)
+    &FAI::push_command("$btrfs_tool", "$pre_req", "btrfs_built_raid_$id");
 
     # initial mount, required to create the initial subvolume
     &FAI::push_command("mount $devs[0] /mnt",
