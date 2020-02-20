@@ -14,9 +14,10 @@
 use strict;
 use Socket;
 use Getopt::Std;
+use POSIX qw(strftime);
 
 $| = 1;
-my ($port, $timeout, $daemon, $timestamp);
+my ($port, $timeout, $daemon, $timestamp, $timestamp_format, $localtime);
 my $pidfile = '/var/run/fai-monitor.pid';
 my $logfile = '-';
 my $daemonlogfile = '/var/log/fai-monitor.log';
@@ -24,11 +25,18 @@ my $useip;
 
 our %variables;
 
-our ($opt_b,$opt_h,$opt_p,$opt_l,$opt_t,$opt_d,$opt_P,$opt_T,$opt_i);
+our ($opt_b,$opt_h,$opt_p,$opt_l,$opt_t,$opt_d,$opt_P,$opt_T,$opt_i,$opt_Z,$opt_f);
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub logline(@) {
   open(LOGFILE, $logfile) or return 0;
-  print LOGFILE (scalar localtime(), ' - ') if ($timestamp);
+
+  if ($timestamp) {
+    if ($localtime) {
+      print LOGFILE (strftime "$timestamp_format - ", gmtime());
+    } else {
+      print LOGFILE (strftime "$timestamp_format - ", localtime());
+    }
+  }
   print LOGFILE @_ or return 0;
   close(LOGFILE);
   return 1;
@@ -192,6 +200,8 @@ Usage: fai-monitor [OPTIONS]
     -P FILE             PID-file. Default is '$pidfile'.
                         Used only if starting in daemon mode.
     -T                  Print timestamps in the log.
+    -f FORMAT           Use strftime(FORMAT) for timestamp formatting.
+    -Z                  Use gmtime/UTC instead of local time.
     -i                  When using -b: send IP of client to fai-choot
                         instead of the hostname the host reports.
 
@@ -200,16 +210,23 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-getopts('bhTp:l:t:dP:i') || usage;
+getopts('bhZTf:p:l:t:dP:i') || usage;
 $opt_h && usage;
 $port = $opt_p || 4711;
 $timeout = $opt_t || 5;
+$localtime = $opt_Z || 0;
 $daemon = $opt_d || 0;
 $timestamp = $opt_T || 0;
 $useip = $opt_i || 0;
 
 if (defined($opt_P)) {
   $pidfile = $opt_P;
+}
+
+if (defined($opt_f)) {
+    $timestamp_format = $opt_f
+} else {
+    $timestamp_format = "%a %b %e %H:%M:%S %Y";
 }
 
 if (defined($opt_d)) {

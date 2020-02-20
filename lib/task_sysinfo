@@ -11,7 +11,7 @@ echo Showing system information.
 
 # too much details [ -x "$(which dmidecode)" ] && dmidecode
 cd /sys/class/dmi/id
-grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| egrep -iv '123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
+grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| grep -E -iv '123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
 cd - >/dev/null
 
 if command -v lshw >&/dev/null; then
@@ -69,7 +69,7 @@ fi
 for device in /dev/sd?; do
     [ -b "$device" ] || continue # make sure device exists and is valid block device
     [ `stat -c %G $device` = "disk" ] || continue
-    hdparm -I $device | egrep -v '^$' | head -5 | sed -e 's/^[[:blank:]]*//'
+    hdparm -I $device | grep -E -v '^$' | head -5 | sed -e 's/^[[:blank:]]*//'
 done
 
 # pretty print disks by id and device names
@@ -90,6 +90,10 @@ for disk in $disklist; do
     LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
 done
 
+if command -v nvme >&/dev/null; then
+    nvme list
+fi
+
 fdisk -lu
 
 dmsetup ls
@@ -102,7 +106,7 @@ btrfs fi show
 fai-mount-disk -f
 [ -f $target/etc/fstab ] && cp -p $target/etc/fstab $LOGDIR
 
-df -PTh | egrep ':|^/|^Filesystem'
+df -PTh | grep -E ':|^/|^Filesystem'
 # - - - - - - - - - - -
 save_dmesg
 fai-savelog -r

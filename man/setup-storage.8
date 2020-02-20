@@ -15,15 +15,15 @@
 .SH DESCRIPTION
 Using FAI disk_config files,
 \fBsetup-storage\fP
-computes effective partition and volume sizes and executes the necessary
-commands to configure storage devices. It manages disk drives as well as RAID
-and LVM volumes plus encryption and tmpfs. Disks and partitions are designated
-by \fBdisk1.2\fP, \fBdisk3.1\fP etc. and may thus be referenced as such. It handles following
-filesystems: \fBext2/3/4\fP, \fBvFAT(FAT32)\fP, \fBmsdos(FAT16)\fP, \fBreiserFS\fP, \fBXFS\fP and
-\fBBTRFS\fP but is flexible enough to be extended to further types as well.
-Once the storage devices are prepared, an appropriate
-\fBfstab\fP(5) (and possibly also a \fBcrypttab\fP(5)
-file is generated.
+Computes effective partition and volume sizes and executes the necessary
+commands to configure storage devices. It manages disk drives, RAID and LVM
+volumes, along with encryption and tmpfs. Disks and partitions are designated
+by \fBdisk1.2\fP, \fBdisk3.1\fP etc. and may thus be referenced as such.
+Currently, setup-storage handles following filesystems: \fBext2/3/4\fP,
+\fBvFAT(FAT32)\fP, \fBmsdos(FAT16)\fP, \fBreiserFS\fP, \fBXFS\fP and
+\fBBTRFS\fP but could easily be extended to further types as well.
+Once the storage devices are prepared, an appropriate \fBfstab\fP(5) (and
+possibly also a \fBcrypttab\fP(5) file is generated.
 
 Without the
 \fB\-X\fP
@@ -98,7 +98,7 @@ If option
 is not used, the
 .IR disklist
 variable may contain a space separated list of disk drives available in the
-system. Their order matters as they may be referred to as disk1, etc. in
+system. Their order matters as they may be referred to as disk1, and so on, in
 disk_config. If unset, fai-disk-info will be called to determine the list.
 .TP
 .B debug
@@ -836,6 +836,12 @@ also to add the required packages (like mdadm and lvm2) to the package
 config. Otherwise the client will not be able to use these features.
 
 .IP \(bu
+MD devices aka software RAID will not be synced during a new
+installation because it would slow down the installation heavily.
+Therefore setup-storage will set the sync_action of each device to
+frozen. The sync will start after the next reboot.
+
+.IP \(bu
 Machine does not boot because no partition is marked as bootable: If the
 bootable option is not specified, not partition will be marked as such. Modern
 BIOSes don't seem to require such markers anymore, but for some systems it may
@@ -853,10 +859,10 @@ actually usable, you need to add busybox (and initramfs-tools) to your package
 config.
 .IP \(bu
 For backwards compatibility or other system-specific reasons an alignment to
-cylinder boundaries may be necessary. Yet other systems will have other
+cylinder boundaries may be necessary. Other systems might have other
 alignment constraints. setup-storage sets the alignment as follows: If align-at
 is set, align accordingly. Otherwise, if any partition on the particular disk is
-to be preserved, default to cylinder alignment. Else use sector alignment.
+to be preserved, default to cylinder alignment, otherwise use sector alignment.
 .IP \(bu
 If you use a raw partition, you should add -F to the createopts,
 otherwise mkfs.ext4 hangs due to a warning message. See man mfs.ext4
@@ -872,8 +878,8 @@ in a wiki page at https://wiki.fai-project.org/index.php/Setup-storage.
 The
 \fBsetup-storage\fP
 program was written by Michael Tautschnig <mt@debian.org>, with
-contributions from Christian Kern, Julien Blache <jblache@debian.org>
-and others.
+contributions from Christian Kern, Julien Blache <jblache@debian.org>,
+Kerim Güney, Thomas Lange and others.
 
 The original and primary author of FAI is Thomas Lange
 <lange@informatik.uni-koeln.de>.

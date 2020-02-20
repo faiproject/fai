@@ -36,6 +36,9 @@ use strict;
 
 package FAI;
 
+# are we running an inital installation from nfsroot?
+$FAI::do_init_tasks = $ENV{do_init_tasks} // 0;
+
 ################################################################################
 #
 # @brief Enable debugging by setting $debug to a value greater than 0

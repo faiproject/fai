@@ -181,7 +181,7 @@ set-classes() {
 
     set +e
     # all available file names are classes
-    classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | egrep -i "^[a-zA-Z0-9_-]+$")
+    classes=$(cd $FAI_CONFIGDIR/package_config; ls -1 | grep -E -i "^[a-zA-Z0-9_-]+$")
     addclasses=$(grep -h PACKAGES $FAI_CONFIGDIR/package_config/* | sed -e 's/#.*//' | awk '{printf $3"\n"$4"\n"$5"\n"$6"\n"}')
     export classes=$(echo -e "$classes\n$addclasses\n" | sort | uniq)
     [ -n "$exclasses" ] && excludeclass $exclasses
@@ -296,7 +296,7 @@ command -v reprepro >&/dev/null || die 8 "reprepro not found. Please install the
 # use first argument if given, use variable mirrordir if not argument was given
 [ -n "$1" ] && mirrordir=$1
 [ -z "$mirrordir" ] && die 2 "Please give the absolute path to the mirror."
-{ echo $mirrordir | egrep -q '^/'; } || die 4 "Mirrordir must start with a slash /."
+{ echo $mirrordir | grep -E -q '^/'; } || die 4 "Mirrordir must start with a slash /."
 
 [ -d $FAI_CONFIGDIR/package_config ] || die 6 "Can't find package config files in $FAI_CONFIGDIR."
 
@@ -373,7 +373,7 @@ Origin: fai-mirror
 EOF
 
 # check if backports are used
-bponame=$(egrep '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports')
+bponame=$(grep -E '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports')
 # add entry for backports
 if [ -n "$bponame" ]; then
      cat >> $mirrordir/conf/distributions <<EOF
@@ -388,8 +388,10 @@ Origin: fai-mirror
 EOF
 
 # maybe using reprepro pulls it's possible to move instead of copy the packages
-     reprepro -b $mirrordir includedeb $bponame $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
-     rm -f $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
+    if ls $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb >/dev/null 2>&1; then
+        reprepro -b $mirrordir includedeb $bponame $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
+        rm -f $archivedir/*~bpo[0-9]*+[0-9-]*_*.deb
+    fi
 fi
 
 # allow package without the .deb suffix. At least they must start with a char and contain an underscore or hyphen

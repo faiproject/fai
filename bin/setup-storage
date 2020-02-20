@@ -52,7 +52,7 @@ use warnings FATAL => qw(uninitialized);
 
 package FAI;
 
-my $version = "2.2";
+my $version = "2.3";
 $|=1;
 
 # command line parameter handling
@@ -83,6 +83,24 @@ use Sizes;
 use Commands;
 use Fstab;
 use Exec;
+
+sub prtdebug {
+
+  # for debugging purposes to print the hash structures
+  use Data::Dumper;
+
+  print "Current disk layout in \%current_config\n";
+  print Dumper \%FAI::current_config;
+
+  print "Current LVM layout in \%current_lvm_config\n";
+  print Dumper \%FAI::current_lvm_config;
+
+  print "Current RAID layout in \%current_raid_config\n";
+  print Dumper \%FAI::current_raid_config;
+
+  print "Current device tree in \%current_dev_children\n";
+  print Dumper \%FAI::current_dev_children;
+}
 
 # enable debug mode, if requested using -d
 $opt_d and $FAI::debug = 1;
@@ -176,29 +194,8 @@ $FAI::uses_raid and &FAI::in_path("mdadm") and &FAI::get_current_raid;
 
 # debugging only: print the current configuration
 if ($FAI::debug) {
-  # for debugging purposes to print the hash structures
   use Data::Dumper;
-
-  print "Current disk layout in \%current_config\n";
-
-  # make sure perl doesn't warn about it being used only once, same below
-  our %current_config;
-  print Dumper \%current_config;
-
-  print "Current LVM layout in \%current_lvm_config\n";
-
-  our %current_lvm_config;
-  print Dumper \%current_lvm_config;
-
-  print "Current RAID layout in \%current_raid_config\n";
-
-  our %current_raid_config;
-  print Dumper \%current_raid_config;
-
-  print "Current device tree in \%current_dev_children\n";
-
-  our %current_dev_children;
-  print Dumper \%current_dev_children;
+  prtdebug;
 }
 
 # compute the new LVM and partition sizes; do the partition sizes first to have
@@ -297,3 +294,11 @@ if ($FAI::no_dry_run && scalar(@FAI::crypttab)) {
   close CRYPTTAB;
 }
 
+
+# at the end print the whole config again
+if ($FAI::debug) {
+  print "==========================================\n";
+  print "=  Variables at the end of setup-storage =\n";
+  print "==========================================\n";
+  prtdebug;
+}

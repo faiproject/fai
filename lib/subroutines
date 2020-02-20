@@ -141,7 +141,7 @@ umount_target() {
     if [ "$target" != '/' ]; then
 	# do not umount during softupdate
 	umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts $FAI_ROOT/dev 2>/dev/null
-	for dir in $(mount | grep $target | egrep -v "media/mirror|tmpfs"| awk '{print $3}' | sort -r); do
+	for dir in $(mount | grep $target | grep -E -v "media/mirror|tmpfs"| awk '{print $3}' | sort -r); do
             mountpoint -q $dir && umount $dir
 	done
     fi
@@ -750,7 +750,7 @@ task_softupdate() {
 
 catnc() {
     # cat but no comment lines
-    egrep -v "^#" $@
+    grep -E -v "^#" $@
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -775,7 +775,7 @@ eval_cmdline() {
     cmdline="$(</proc/cmdline)"
     echo "Kernel parameters: $cmdline"
     for word in $cmdline; do
-	if echo "$word" | egrep -q '^[a-zA-Z0-9_]+=' ; then
+	if echo "$word" | grep -E -q '^[a-zA-Z0-9_]+=' ; then
             eval "export $word"
 	fi
     done
@@ -1143,7 +1143,7 @@ task_instsoft() {
         task_error 471 $?
     fi
     # This almost indicates an error
-    egrep "^E:" $LOGDIR/software.log && task_error 472
+    grep -E "^E:" $LOGDIR/software.log && task_error 472
     grep "Couldn't find any package whose name or description matched" $LOGDIR/software.log && task_error 321
     grep -q "E: Sub-process /usr/bin/dpkg returned an error code" $LOGDIR/software.log && task_error 620
 }
@@ -1153,12 +1153,12 @@ task_finish() {
     mkramdisk -au # umount ramdisk
     if [ $do_init_tasks -eq 1 ] ; then
         # show some local information
-        df -PTh | egrep ':|^/|^Filesystem'
+        df -PTh | grep -E ':|^/|^Filesystem'
         # show rx and tx bytes of network device
         grep . /sys/class/net/*/statistics/*x_bytes | perl -ane 'm#/sys/class/net/(.+)/statistics/(.+):(\d+)# && ($3) && ($1 ne lo) && printf "%s %s %.2f Mbytes\n",$1,$2,$3/1000000 '
         swapoff -a
     else
-        df -PTh | egrep "^Filesystem|$target"
+        df -PTh | grep -E "^Filesystem|$target"
     fi
 
     # undo fake of all programs made by fai
@@ -1179,7 +1179,7 @@ task_chboot() {
     local hostname
     read hostname < /proc/sys/kernel/hostname
     local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d= -f2 | sed "s/'//g")
-    local nexttest=$(egrep -s ^NEXTTEST= $LOGDIR/test.log | cut -d= -f2)
+    local nexttest=$(grep -E -s ^NEXTTEST= $LOGDIR/test.log | cut -d= -f2)
 
     case "$FAI_LOGPROTO" in
         ftp) remotesh=ssh ;;

@@ -69,10 +69,10 @@ check_nfsroot() {
     fi
 
     echo "FAI packages and related packages inside the nfsroot:"
-    $ROOTCMD dpkg-query -W -f='${Package;-18} ${Version}\n' fai-client fai-nfsroot fai-setup-storage dracut-network dracut 2>/dev/null
+    $ROOTCMD dpkg-query -W -f='${Package;-18} ${Version}\n' fai-client fai-nfsroot fai-setup-storage dracut-network dracut dracut-live dracut-squash 2>/dev/null
 
     # check if all important packages are installed
-    n=$($ROOTCMD dpkg-query -l fai-client fai-nfsroot fai-setup-storage dracut-network dracut 2>/dev/null|egrep ^ii |wc -l)
+    n=$($ROOTCMD dpkg-query -l fai-client fai-nfsroot fai-setup-storage dracut-network dracut 2>/dev/null|grep -E ^ii |wc -l)
     if [ $n -ne 5 ]; then
 	echo "ERROR: Some essential pacakges are missing."
 	bad_exit
@@ -80,7 +80,7 @@ check_nfsroot() {
 
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
     [ -z "$files" ] && die 1 "No initrd installed."
-    egrep -q "^ERROR: |^E: Sub-process |^dpkg: error processing |^dpkg: dependency problems" /var/log/fai/fai-make-nfsroot.log && bad_exit
+    grep -E -q "^ERROR: |^E: Sub-process |^dpkg: error processing |^dpkg: dependency problems" /var/log/fai/fai-make-nfsroot.log && bad_exit
     return 0
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -253,7 +253,7 @@ call_debootstrap() {
 
     # check if NFSROOT directory is mounted with bad options
     fs=$(df -P $NFSROOT | tail -1 | awk '{print $6}')
-    if mount | grep "on $fs " |  awk '{print $6}' | egrep -q "nosuid|nodev"; then
+    if mount | grep "on $fs " |  awk '{print $6}' | grep -E -q "nosuid|nodev"; then
         die 1 "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
     fi
     local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
@@ -438,8 +438,13 @@ EOF
 
     [ X$verbose = X1 ] && echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose upgrade_nfsroot
-
     LC_ALL=C add_packages_nfsroot
+
+    # remove file diversion, then create initrd
+    rm $NFSROOT/etc/kernel/postinst.d/dracut
+    $ROOTCMD dpkg-divert --rename --remove /etc/kernel/postinst.d/dracut
+    $ROOTCMD dpkg-reconfigure dracut
+
     set_root_pw
 
     # set timezone in nfsroot
@@ -470,7 +475,7 @@ EOF
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 upgrade_nfsroot() {
 
-    local nfscommon
+    local pkgs
 
     mkdir -p $NFSROOT/dev/pts
     mount -t proc   /proc  $NFSROOT/proc
@@ -493,12 +498,23 @@ upgrade_nfsroot() {
     fi
 
     if [ $full = 1 ];then
-	nfscommon=nfs-common
+	pkgs=nfs-common
     fi
 
     $ROOTCMD apt-get update
+    # check if we need more dracut packages (dracut >=049)
+    set +e
+    $ROOTCMD apt show dracut-live dracut-squash >/dev/null 2>/dev/null
+    if [ $? -eq 0 ]; then
+	pkgs+=" dracut-live dracut-squash"
+    fi
+    set -e
+    # disable generating the initrd
+    fdivert /etc/kernel/postinst.d/dracut
+    $ROOTCMD ln -s /bin/true /etc/kernel/postinst.d/dracut
+
     # fai-nfsroot must be sucessfully installed before anything else
-    $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-network dracut-config-generic $nfscommon
+    $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-network dracut-config-generic $pkgs
     $ROOTCMD apt-get -y dist-upgrade
     # patch dracut. Do not fail if network is not available
     local fn=$(find $NFSROOT/usr/lib/dracut/modules.d/ -name net-genrules.sh)
