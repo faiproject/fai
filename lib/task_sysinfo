@@ -10,9 +10,10 @@ udevadm trigger
 echo Showing system information.
 
 # too much details [ -x "$(which dmidecode)" ] && dmidecode
-cd /sys/class/dmi/id
-grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| grep -E -iv '123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
-cd - >/dev/null
+(
+    cd /sys/class/dmi/id || exit
+    grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| grep -E -iv '123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
+)
 
 if command -v lshw >&/dev/null; then
     lshwtmp=$(mktemp)

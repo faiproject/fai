@@ -671,10 +671,13 @@ if [ $sshpreserve -ge 1 ]; then
     if [ $sshpreserve -eq 2 ]; then
 	pdirs="root/.ssh etc/ssh/ssh_host_*"
     fi
+    export $pdirs
     [ X$verbose = X1 ] && echo "Preserving $pdirs from inside the nfsroot."
-    cd $NFSROOT # needed for * in $pdirs to work
-    tar -C $NFSROOT -cf $tmptar $pdirs
-    cd -
+    (
+	cd $NFSROOT || exit # needed for * in $pdirs to work
+	tar -C $NFSROOT -cf $tmptar $pdirs
+    )
+    unset pdirs
 fi
 
 if [ -d $NFSROOT/proc ]; then
