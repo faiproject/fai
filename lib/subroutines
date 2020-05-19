@@ -244,7 +244,7 @@ task() {
         task_error_func=''
         taskduration[$taskname]=$SECONDS
         task_$taskname "$@"
-        [ $duration -eq 1 ] && echo "Duration of task $taskname: " $(($SECONDS-${taskduration[$taskname]}))"s"
+        [ $duration -eq 1 ] && echo "Duration of task $taskname: " $((SECONDS-${taskduration[$taskname]}))"s"
         sendmon "TASKEND $taskname $task_local_error"
         if [ "$task_local_error" -ne 0 ] ; then
           echo "Exit code task_$taskname: $task_local_error" >&2
@@ -1165,7 +1165,7 @@ task_finish() {
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
     echo -n "FAI finished at: ";date
-    echo "The $FAI_ACTION took $(($(cut -d . -f 1 /proc/uptime)-$start_seconds)) seconds."
+    echo "The $FAI_ACTION took $(($(cut -d . -f 1 /proc/uptime) - start_seconds)) seconds."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
