@@ -38,8 +38,8 @@ while getopts m opt ; do
 done
 #shift $((OPTIND - 1))
 
-# get list of all files at URL
-flist=$(lftp -e 'cls;exit' $url 2>/dev/null)
+# get list of *.tar* files at URL
+flist=$(lftp -e 'cls *.tar*;exit' "$url" 2>/dev/null)
 # create an array of all lines
 baselist=($flist)
 
@@ -51,7 +51,7 @@ done
 # now search for each class, if a basename matches
 for c in $revclasses; do
     for f in "${baselist[@]}"; do
-	base=${f%%.*}
+	base=${f%%.tar*}
 	if [ "$c" = "$base" ]; then
             found=1
             [ $mount = 1 ] && mount_ramdisk
