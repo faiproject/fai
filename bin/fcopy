@@ -5,7 +5,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2019 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2020 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -337,7 +337,7 @@ sub set_mode {
   # use owner,group,mode from -m or from the file file-modes or
   # use the values from the source file
   my ($sourcefile,$destfile,$class) = @_;
-  my ($uid,$gid,$owner,$group,$mode);
+  my ($uid,$gid,$owner,$group,$mode,$omode);
   my ($stime,@smodes);
 
   # get mtime,uid,gid,mode from source file or from -m
@@ -377,7 +377,8 @@ sub set_mode {
       ($dmodes[1] == $group) && ($issymlink || ($dmodes[2] == $mode))));
 
   ($uid,$gid) = name2num($owner,$group);
-  warn "chown/chmod u:$uid g:$gid m:$mode $destfile\n" if $debug;
+  $omode = sprintf "%04o",$mode;
+  warn "chown/chmod u:$uid g:$gid m:$omode $destfile\n" if $debug;
   return if $dryrun; # do not execute if -n or FCOPY_DRYRUN was given
   if ($issymlink && $haslchown) {
     lchown  ($uid,$gid,     $destfile) || ewarn("lchown $owner $group $destfile failed. $!");
@@ -386,7 +387,7 @@ sub set_mode {
     }
   } else {
     chown ($uid,$gid,     $destfile) || ewarn("chown $owner $group $destfile failed. $!");
-    chmod ($mode,         $destfile) || ewarn("chmod $mode $destfile failed. $!");
+    chmod ($mode,         $destfile) || ewarn("chmod $omode $destfile failed. $!");
     unless ($preinst) {
       utime ($stime,$stime, $destfile) || ewarn("utime for $destfile failed. $!");
     }
