@@ -33,13 +33,12 @@ bootlog=$LOGDIR/boot.log
 netdevice_info() {
 
     # devices that are running
-    netdevices_up=$(ip link show up | grep "^[1-9$].*LOWER_UP" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -v "^lo" | sort | uniq| tr '\n' ' ')
+    netdevices_up=$(ip -br a| awk '/UP / {print $1}' | tr '\n' ' ')
     # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
 
-    netdevices_all=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -E "^eth|^en")
-    netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq| tr '\n' ' ')
+    netdevices_all=$(ip -br a| grep -P -o "^eth\S+|^en\S+"|tr '\n' ' ')
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_dhcp_info() {
