@@ -307,7 +307,7 @@ add_etc_hosts_entries() {
     ainsl $v  $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
 
     # add entries for all network devices
-    local ips=$(ip addr show up| grep -P -o '(?<=inet )[^/]+' | grep -v 127.0.0.1)
+    local ips=$(ip -br ad show up| awk '/UP / {if ($3) print $3}' |sed -e 's#\/[0-9]\+##g')
 
     local line
     for eth in $ips; do
