@@ -97,11 +97,13 @@ usexz=1
 full=1
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpPUzsN opt ; do
+while getopts aghervc:C:B:fkKpPUzsN opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
         z) usexz=0 ;;
+        c) classes=$OPTARG
+	   classes=${classes//,/ } ;;
         C) cfdir=$OPTARG ;;
         B) basetgz=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
@@ -195,7 +197,7 @@ setclasses() {
     if [ $full = 1 ]; then
 	c=FULL
     fi
-    export classes="NFSROOT $c $iarch $distro $nonfree"
+    export classes="NFSROOT $c $iarch $distro $nonfree $classes"
     if [ X$verbose = X1 ] ; then
       echo Classes are set to $classes
     fi
