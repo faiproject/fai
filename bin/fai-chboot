@@ -35,10 +35,10 @@ use Getopt::Std;
 use File::Copy;
 
 our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u,$opt_U,$opt_q);
-our ($error,$pxedir,$nfsroot,$tftproot,$verbose,$append,$action,$kernelsuffix);
+our ($error,$pxedir,$nfsroot,$nfsroot_server,$tftproot,$verbose,$append,$action,$kernelsuffix);
 our ($mac,$ipadr,$cfdir,$flags,$debug,$match,$bootprot);
 our (%hname,%hexname,%type,@allfiles,@templates,@enabled,@other,@patterns,@disabled);
-our ($initrd,$kernelname,$rootfs);
+our ($initrd,$kernelname,$rootfs_pre,$rootfs);
 $Getopt::Std::STANDARD_HELP_VERSION=1;
 
 $0=~ s#.+/##; # remove path from program name
@@ -412,6 +412,10 @@ $nfsroot = `. $cfdir/nfsroot.conf 2>/dev/null; echo \$NFSROOT`;
 chomp $nfsroot;
 $nfsroot = '/srv/fai/nfsroot' unless $nfsroot;
 
+$nfsroot_server = `. $cfdir/nfsroot.conf 2>/dev/null; echo \$NFSROOT_SERVER`;
+chomp $nfsroot_server;
+$nfsroot_server = 0 unless $nfsroot_server;
+
 $tftproot = `. $cfdir/nfsroot.conf 2>/dev/null; echo \$TFTPROOT`;
 chomp $tftproot;
 $tftproot = '/srv/tftp/fai' unless $tftproot;
@@ -474,9 +478,10 @@ if ($opt_i) {
   -d "$nfsroot/lib/modules/$kernelsuffix/kernel/fs/overlayfs" and $bopt="rootovl";
 
   # create config so host will boot the install kernel
+  $rootfs_pre = ($nfsroot_server) ? "nfs:$nfsroot_server:" : "";
   $kernelname = "kernel ${opt_U}vmlinuz-$kernelsuffix";
   $initrd     = "initrd=${opt_U}initrd.img-$kernelsuffix";
-  $rootfs     = "root=$nfsroot:vers=3 $bopt";
+  $rootfs     = "root=${rootfs_pre}$nfsroot:vers=3 $bopt";
   $bootprot   = "ip=dhcp ";
 
 } elsif ($opt_o) {
