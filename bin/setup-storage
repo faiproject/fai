@@ -258,9 +258,22 @@ $FAI::debug and print "$_=\${$_:-$FAI::disk_var{$_}}\n"
   foreach (keys %FAI::disk_var);
 
 if ($FAI::no_dry_run) {
+  # List all bootable devices. Can be used by later tasks to install a
+  # boot loader. Using Variable PHYSICAL_BOOT_DEVICES.
+  my @boot_devices;
+  foreach (keys %FAI::configs) {
+    $_ =~ /PHY_(.+)/;
+    if ( $1 && defined $FAI::configs{$_}{'bootable'}
+      &&  $FAI::configs{$_}{'bootable'} > 0 )  {
+      push @boot_devices, $1;
+    }
+  }
+  @boot_devices = sort @boot_devices;
+
   open(DISK_VAR, ">$FAI::DATADIR/disk_var.sh")
     or die "Unable to write to file $FAI::DATADIR/disk_var.sh\n";
   print DISK_VAR "$_=\${$_:-$FAI::disk_var{$_}}\n" foreach (keys %FAI::disk_var);
+  print DISK_VAR "PHYSICAL_BOOT_DEVICES=\"", join(" ", @boot_devices), "\"\n";
   close DISK_VAR;
 
   if ($opt_y) {
@@ -279,6 +292,9 @@ if ($FAI::no_dry_run) {
 	print DISK_YML "$_: $FAI::disk_var{$_}\n";
       }
     }
+    print DISK_YML "PHYSICAL_BOOT_DEVICES:\n";
+    my $a = join("\n  - ", @boot_devices);
+    print DISK_YML "  - $a\n";
     close DISK_YML;
   }
 }
