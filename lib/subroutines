@@ -285,22 +285,28 @@ call_hook() {
             sendmon "HOOK $hook.$cl.sh"
             # source this hook
             . $hfile.sh $dflag "$@"
-            check_status $hook.$cl.sh $?
+            hook_error=$?
+            check_status $hook.$cl.sh $hook_error
+            [ $hook_error -gt $STOP_ON_HOOK_ERROR ] && stop_fai_installation
         fi
         if [ -x $hfile ]; then
             echo "Calling hook: $hook.$cl"
             sendmon "HOOK $hook.$cl"
             # execute the hook
             $hfile $dflag "$@"
-            check_status $hook.$cl $?
+            hook_error=$?
+            check_status $hook.$cl $hook_error
+            [ $hook_error -gt $STOP_ON_HOOK_ERROR ] && stop_fai_installation
         fi
         # deprecated
-	if [ -x $hfile.source ]; then
+        if [ -x $hfile.source ]; then
             echo "Source hook: $hook.$cl.source"
             sendmon "HOOK $hook.$cl.source"
             # source this hook
             . $hfile.source $dflag "$@"
-            check_status $hook.$cl.source $?
+            hook_error=$?
+            check_status $hook.$cl.source $hook_error
+            [ $hook_error -gt $STOP_ON_HOOK_ERROR ] && stop_fai_installation
         fi
     done
 }
