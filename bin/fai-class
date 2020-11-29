@@ -5,7 +5,7 @@
 # fai-class - determine all classes a host belongs to
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2002-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2002-2020 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -65,6 +65,7 @@ fc_check_status() {
         res="OK."
     else
         res="FAILED with exit code $st."
+        err=1
     fi
     # put result in the log file and write to stdout
     printf "%-20s $res\n" $cmd | tee -a $LOGDIR/status.log
@@ -134,6 +135,7 @@ setup() {
 PATH=.:$PATH    # so scripts in /fai/class are found
 export PATH
 
+err=0
 setup "$@"
 verbosemsg "fai-class: Defining classes."
 
@@ -215,4 +217,4 @@ echo $HOSTNAME LAST | addclass
 # show all classes if verbose
 debugmsg List of all classes: $(< $filename)
 [ "$ctest" ] && testclass
-exit 0
+exit $err
