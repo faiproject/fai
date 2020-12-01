@@ -207,12 +207,23 @@ stop_fai_installation() {
 
 task_error() {
 
+    local current
     [ X$2 = X0 ] && return
     task_error_func=${FUNCNAME[*]}
+
+    # save max error for current task
     task_local_error=$1
-    [ $1 -gt $task_error ] && task_error=$1
-    echo $1 > $LOGDIR/task_error
-    [ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
+    current=$(< $LOGDIR/task_local_error)
+    if [ $task_local_error -gt $current ]; then
+	echo $task_local_error > $LOGDIR/task_local_error
+    fi
+
+    # save global max task error
+    task_error=$(< $LOGDIR/task_error)
+    if [ $task_local_error -gt $task_error ]; then
+     task_error=$task_local_error
+     echo $task_local_error > $LOGDIR/task_error
+    fi
     if [ X$3 = X1 ]; then
 	:
     else
@@ -238,6 +249,7 @@ task() {
     shift
     local task_local_error=0 # the error code set by every task
 
+    echo 0 > $LOGDIR/task_local_error
     [ -f $LOGDIR/skip.$taskname ] || call_hook $taskname "$@"
 
     if [ -f $LOGDIR/skip.$taskname ]; then
@@ -252,6 +264,7 @@ task() {
         taskduration[$taskname]=$SECONDS
         task_$taskname "$@"
         [ $duration -eq 1 ] && echo "Duration of task $taskname: " $((SECONDS-${taskduration[$taskname]}))"s"
+	task_local_error=$(< $LOGDIR/task_local_error)
         sendmon "TASKEND $taskname $task_local_error"
         if [ "$task_local_error" -ne 0 ] ; then
           echo "Exit code task_$taskname: $task_local_error" >&2
