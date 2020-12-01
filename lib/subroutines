@@ -201,6 +201,8 @@ stop_fai_installation() {
 # Required-Var:      $1 $2 $task_error
 # Short-Description: save the maximum error code,
 # Short-Description: $1 is the error that will be saved unless $2 is zero
+# Short-Description: if $3 is set to 1 only $task_error is set but the
+# Short-Description: installation is not stopped
 ### END SUBROUTINE INFO
 
 task_error() {
@@ -211,6 +213,11 @@ task_error() {
     [ $1 -gt $task_error ] && task_error=$1
     echo $1 > $LOGDIR/task_error
     [ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
+    if [ X$3 = X1 ]; then
+	:
+    else
+	[ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
