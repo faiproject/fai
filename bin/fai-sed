@@ -2,13 +2,23 @@
 
 # fai-sed, call sed with diff before writing
 #
-# (c) Thomas Lange 2019, lange@debian.org
+# (c) Thomas Lange 2019-2020 lange@debian.org
 #
 
 # idempotent sed. Execute sed command on a file
 # but do not overwrite file if nothing has changed
 
 dryrun=0
+showchanged=0
+
+while getopts nE opt ; do
+        case "$opt" in
+        E) showchanged=1 ;;
+        n) dryrun=1 ;;
+        esac
+done
+shift $((OPTIND - 1))
+
 
 cmd=$1
 shift
@@ -23,7 +33,7 @@ fi
 # do not allow more than one file
 if [ -n "$1" ]; then
     printf "Aborting. Too many arguments.\n"
-    exit 9
+    exit 5
 fi
 
 if [ -n "$target" ]; then
@@ -66,6 +76,9 @@ else
 	mv $tmp $filename
 	printf " File changed.\n"
 	trap '' EXIT
-	exit 1
+	if [ $showchanged -eq 1 ]; then
+	    exit 9
+	fi
+	exit 0
     fi
 fi
