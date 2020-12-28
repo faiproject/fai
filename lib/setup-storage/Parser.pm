@@ -96,7 +96,7 @@ sub resolve_disk_shortname {
   if ($disk =~ /^\d+$/) {
     # $disk-1 must be a valid index in the map of all disks in the system
     (scalar(@FAI::disks) >= $disk)
-      or die "this system does not have a physical disk $disk\n";
+      or die "This system does not have a physical disk $disk\n";
 
     # fetch the (short) device name
     $disk = $FAI::disks[ $disk - 1 ];
