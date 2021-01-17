@@ -19,6 +19,7 @@ usernet=0
 newdisk=0
 daemonize=0
 efi=0
+order=cd
 
 # not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
 # If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
@@ -54,7 +55,7 @@ boot_cd() {
   shift
   # boot fai-cd
   set -x
-  kvm $gopt -boot order=cd $net $disk -cdrom $cdimage $*
+  kvm $gopt -boot order=$order $net $disk -cdrom $cdimage $*
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -87,6 +88,7 @@ usage() {
              If you have created 9 tap devies you can use the numbers 1 to 9.
  -V          do not use vga std with Bochs extensions, use the kvm default
  -U          Use kvm user networking instead of tap devices
+ -O          Swap boot order when booting an ISO. Default order is local disk, then ISO.
  -t          Set title of the Qemu window
 
 You can add more options for kvm after --
@@ -96,8 +98,9 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "EbUhnNu:s:m:d:VD:t:" opt ; do
+while getopts "EbUhnNu:s:m:d:VD:t:O" opt ; do
     case "$opt" in
+        O) order=dc  ;;
         b) daemonize=1  ;;
         E) efi=1  ;;
         n) newdisk=1    ;;
