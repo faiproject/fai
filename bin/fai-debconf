@@ -5,7 +5,7 @@
 # fai-debconf - set debconf values using classes
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2005-2013 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2005-2021 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -85,7 +85,7 @@ usage() {
 
     local ex=$1
     cat <<-EOF
-    fai-debconf Copyright (C) 2005-2010 Thomas Lange
+    fai-debconf Copyright (C) 2005-2021 Thomas Lange
 
     Usage: fai-debconf [OPTION] DIRECTORY
 EOF
@@ -109,6 +109,11 @@ done
 shift $((OPTIND - 1))
 [ -z "$1" ] || [ -n "$2" ] && usage 1
 debconfdir=$1 # will be $FAI/debconf
+
+if [ ! -d $debconfdir ]; then
+    echo "WARNING: Subdirectory $debconf not found"
+    exit 1
+fi
 
 if [ "x$classes" = "x" ]; then
     echo "No classes are defined."
