@@ -186,8 +186,14 @@ if [ -z "$expert" ]; then
     else
 	opt="dev $SERVERINTERFACE"
     fi
-    iprange=$(ip -br ad show $SERVERINTERFACE | awk '{print $3}')
+    nip=$(ip -br ad show $opt | awk '/UP / {if ($3) print $3}' | wc -l)
+    iprange=$(ip -br ad show $opt | awk '/UP / {if ($3) print $3}' | head -1)
     myip=${iprange%/*}
+    if [ $nip -gt 1 ]; then
+	echo "Warning. More than one network interface found for FAI server."
+	echo "Using IP address $myip. Please set \$SERVERINTERFACE in"
+	echo "nfsroot.conf if you want to use another interface."
+    fi
     echo "FAI_CONFIGDIR=$FAI_CONFIGDIR" >> /var/log/fai/variables
     echo "FAI_CONFIG_SRC=nfs://${myip}$FAI_CONFIGDIR" >> /var/log/fai/variables
 
