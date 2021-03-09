@@ -46,9 +46,8 @@ lspci | grep -i audio
 
 echo
 # show network device parameters of devies which are UP
-devices=$(ip link show up | grep "^[1-9$].*LOWER_UP" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -v "^lo" | sort | uniq| tr '\n' ' ')
+devices=$(ip -br ad show up| awk '/UP / {print $1}' | tr '\n' ' ')
 for dev in $devices; do
-    [ $dev = lo ] && continue
     ip addr show up $dev
 done
 
