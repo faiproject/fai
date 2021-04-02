@@ -161,7 +161,7 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
   }
 }
 
--f "$FAI_ROOT/var/lib/dpkg/available" && create_debian_pkg_list();
+-d "$FAI_ROOT/var/lib/apt/lists" && create_debian_pkg_list();
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # begin of the big foreach loop
@@ -362,7 +362,7 @@ sub mkpackagelist {
   # @known contains the known packages
 
   # on Debian system, clean list of packages
-  if ( ! $opt_N && -f "$FAI_ROOT/var/lib/dpkg/available" ) {
+  if ( ! $opt_N && -d "$FAI_ROOT/var/lib/apt/lists" ) {
     @known = clean_pkg_list(@complete);
   } else {
     @known = @complete;
@@ -466,10 +466,10 @@ sub showcommands {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub create_debian_pkg_list {
   # build a hash of all known package names
-  open(IN,"egrep '^Package: ' $FAI_ROOT/var/lib/dpkg/available |") || die;
+  open(IN,"$rootcmd apt-cache dumpavail | egrep ^Package: | sed -e 's/^Package: //'|") || die;
   while (<IN>) {
-    m/^Package: (\S+)/;
-    $pname{$1} = 1;
+    chomp;
+    $pname{$_} = 1;
   }
   close(IN);
 }
