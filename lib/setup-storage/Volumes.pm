@@ -166,19 +166,6 @@ sub get_current_disks {
     # Parse the output line by line
     foreach my $line (@parted_print) {
 
-      my $id;
-      my $fs;
-        # store the information in the hash
-        $FAI::current_config{$disk}{partitions}{$id}{filesystem} = $fs;
-
-        # extract the file system information
-        my $flags = "";
-
-        # remove any space
-        $flags =~ s/\s//g;
-
-        # store the information in the hash
-        $FAI::current_config{$disk}{partitions}{$id}{flags} = $flags;
     }
 
     # reset the output list
@@ -186,17 +173,20 @@ sub get_current_disks {
 
     # obtain the partition table using bytes as units
     $error =
-      &FAI::execute_ro_command("parted -s $disk unit B print free", \@parted_print, 0);
+      &FAI::execute_ro_command("parted -sm $disk unit B print free", \@parted_print, 0);
 
     # ignore the first two lines
     shift @parted_print;
     shift @parted_print;
 
 
+    # currently parted -sm does not show primary/logical/extended types
+    # TODO: use parted -s output for that info
+
     # Parse the output of the byte-wise partition table
     foreach my $line (@parted_print) {
 
-    my ($n,$begin_byte,$end_byte,$count_byte,$type,$name,$flags) = split(':', $line);
+    my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$name,$flags) = split(':', $line);
 
     # ignore free space
 
@@ -204,6 +194,9 @@ sub get_current_disks {
       $FAI::current_config{$disk}{partitions}{$n}{begin_byte} = $begin_byte;
       $FAI::current_config{$disk}{partitions}{$n}{end_byte}   = $end_byte;
       $FAI::current_config{$disk}{partitions}{$n}{count_byte} = $count_byte;
+      $FAI::current_config{$disk}{partitions}{$n}{name}       = $name;
+      $FAI::current_config{$disk}{partitions}{$n}{filesystem} = $fstype;
+      $FAI::current_config{$disk}{partitions}{$n}{flags}      = $flags;
 
       # is_extended defaults to false/0
       $FAI::current_config{$disk}{partitions}{$n}{is_extended} = 0;
