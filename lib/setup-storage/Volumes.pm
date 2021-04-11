@@ -148,12 +148,6 @@ sub get_current_disks {
     $FAI::current_config{$disk}{partitions} = {};
 
 
-    # As shown above, some entries may be blank. Thus the exact column starts
-    # and lengths must be parsed from the header line. This is stored in the
-    # following hash
-    my %cols = ();
-
-
     shift @parted_print; # ignore first line
     my ($devpath,$end,$transport,$sector_size,$phy_sec,$parttype) =
       split(':',shift @parted_print);
@@ -167,93 +161,19 @@ sub get_current_disks {
     # Parse the output line by line
     foreach my $line (@parted_print) {
 
-      # the line containing the table headers
-      if ($line =~ /^(Number\s+)(\S+\s+)+/) {
-        my $col_start = 0;
-
-        # check the length of each heading; note that they might contain spaces
-        while ($line =~ /^(\S+( [a-z]\S+)?\s*)([A-Z].*)?$/) {
-          my $heading = $1;
-
-          # set the line to the remainder
-          $line = "";
-          $line = $3 if defined ($3);
-
-          # the width of the column includes any whitespace
-          my $col_width = length ($heading);
-          $heading =~ s/(\S+)\s*$/$1/;
-
-          # build the hash entry
-          # this start counter starts at 0, which is useful below
-          $cols{$heading} = {
-            "start"  => $col_start,
-            "length" => $col_width
-          };
-          $col_start += $col_width;
-        }
-
-        defined ($cols{"Flags"}{"start"})
-          or &FAI::internal_error("Column Flags not found in parted output");
-        ($col_start == $cols{"Flags"}{"start"} + $cols{"Flags"}{"length"})
-          or &FAI::internal_error("Flags column is not last");
-      } else { # one of the partitions
-
-        # we must have seen the header, otherwise probably the format has
-        # changed
-        defined ($cols{"File system"}{"start"})
-          or &FAI::internal_error("Table header not yet seen while reading $line");
-
-        # the info for the partition number
-        my $num_cols_before = $cols{"Number"}{"start"};
-        my $num_col_width   = $cols{"Number"}{"length"};
-
-        # the info for the file system column
-        my $fs_cols_before = $cols{"File system"}{"start"};
-        my $fs_col_width   = $cols{"File system"}{"length"};
-
-        # the info for the flags column
-        my $flags_cols_before = $cols{"Flags"}{"start"};
-
-        # get the partition number, if any
-        $line =~ /^.{$num_cols_before}(.{$num_col_width})/;
-        my $id = $1;
-        $id =~ s/\s*//g;
-
-        # if there is no partition number, then it must be free space, so no
-        # file system either
-        next if ($id eq "");
-
-        # extract the file system information
-        my $fs = "";
-        if (length ($line) > $fs_cols_before) {
-          if (length ($line) >= ($fs_cols_before + $fs_col_width)) {
-            $line =~ /^.{$fs_cols_before}(.{$fs_col_width})/;
-            $fs = $1;
-          } else {
-            $line =~ /^.{$fs_cols_before}(.+)$/;
-            $fs = $1;
-          }
-        }
-
-        # remove any trailing space
-        $fs =~ s/\s*$//g;
-
+      my $id;
+      my $fs;
         # store the information in the hash
         $FAI::current_config{$disk}{partitions}{$id}{filesystem} = $fs;
 
         # extract the file system information
         my $flags = "";
-        if (length ($line) > $flags_cols_before) {
-          $line =~ /^.{$flags_cols_before}(.+)$/;
-          $flags = $1;
-        }
 
         # remove any space
         $flags =~ s/\s//g;
 
         # store the information in the hash
         $FAI::current_config{$disk}{partitions}{$id}{flags} = $flags;
-      }
     }
 
     # reset the output list
