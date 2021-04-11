@@ -115,7 +115,7 @@ sub get_current_disks {
     # try to obtain the partition table for $disk
     # it might fail with parted_2 in case the disk has no partition table
     my $error =
-        &FAI::execute_ro_command("parted -s $disk unit TiB print", \@parted_print, 0);
+        &FAI::execute_ro_command("parted -sm $disk unit TiB print", \@parted_print, 0);
 
     # possible problems
     if (!defined($FAI::configs{"PHY_$disk"}) && $error ne "") {
@@ -136,7 +136,7 @@ sub get_current_disks {
       ($error eq "") or die "Failed to write disk label\n";
       # retry partition-table print
       $error =
-        &FAI::execute_ro_command("parted -s $disk unit TiB print", \@parted_print, 0);
+        &FAI::execute_ro_command("parted -sm $disk unit TiB print", \@parted_print, 0);
     }
 
     ($error eq "") or die "Failed to read the partition table from $disk\n";
@@ -153,27 +153,22 @@ sub get_current_disks {
     # following hash
     my %cols = ();
 
+
+    shift @parted_print; # ignore first line
+    my ($devpath,$end,$transport,$sector_size,$phy_sec,$parttype) =
+      split(':',shift @parted_print);
+
+    # determine the logical sector size
+    $sector_size =~ s/B$//;
+    $FAI::current_config{$disk}{sector_size} = $sector_size;
+    # read and store the current disk label
+    $FAI::current_config{$disk}{disklabel} = $parttype;
+
     # Parse the output line by line
     foreach my $line (@parted_print) {
 
-      # now we test line by line - some of them may be ignored
-      next if ($line =~ /^Disk / || $line =~ /^Model: / || $line =~ /^\s*$/
-        || $line =~ /^WARNING: You are not superuser/
-        || $line =~ /^Warning: Not all of the space available to/
-        || $line =~ /^Warning: Unable to open \S+ read-write/);
-
-      # determine the logical sector size
-      if ($line =~ /^Sector size \(logical\/physical\): (\d+)B\/\d+B$/) {
-        $FAI::current_config{$disk}{sector_size} = $1;
-      }
-
-      # read and store the current disk label
-      elsif ($line =~ /^Partition Table: (.+)$/) {
-        $FAI::current_config{$disk}{disklabel} = $1;
-      }
-
       # the line containing the table headers
-      elsif ($line =~ /^(Number\s+)(\S+\s+)+/) {
+      if ($line =~ /^(Number\s+)(\S+\s+)+/) {
         my $col_start = 0;
 
         # check the length of each heading; note that they might contain spaces
