@@ -188,28 +188,33 @@ sub get_current_disks {
     $error =
       &FAI::execute_ro_command("parted -s $disk unit B print free", \@parted_print, 0);
 
+    # ignore the first two lines
+    shift @parted_print;
+    shift @parted_print;
+
+
     # Parse the output of the byte-wise partition table
     foreach my $line (@parted_print) {
 
-      # One of the partition lines, see above example
-      next unless ($line =~
-        /^\s*(\d+)\s+(\d+)B\s+(\d+)B\s+(\d+)B(\s+(primary|logical|extended))?/i);
+    my ($n,$begin_byte,$end_byte,$count_byte,$type,$name,$flags) = split(':', $line);
+
+    # ignore free space
 
       # mark the bounds of existing partitions
-      $FAI::current_config{$disk}{partitions}{$1}{begin_byte} = $2;
-      $FAI::current_config{$disk}{partitions}{$1}{end_byte}   = $3;
-      $FAI::current_config{$disk}{partitions}{$1}{count_byte} = $4;
+      $FAI::current_config{$disk}{partitions}{$n}{begin_byte} = $begin_byte;
+      $FAI::current_config{$disk}{partitions}{$n}{end_byte}   = $end_byte;
+      $FAI::current_config{$disk}{partitions}{$n}{count_byte} = $count_byte;
 
       # is_extended defaults to false/0
-      $FAI::current_config{$disk}{partitions}{$1}{is_extended} = 0;
+      $FAI::current_config{$disk}{partitions}{$n}{is_extended} = 0;
 
       # but may be true/1 on msdos disk labels
       ( ( $FAI::current_config{$disk}{disklabel} eq "msdos" )
-          && ( $6 eq "extended" ) )
-        and $FAI::current_config{$disk}{partitions}{$1}{is_extended} = 1;
+          && ( $type eq "extended" ) )
+        and $FAI::current_config{$disk}{partitions}{$n}{is_extended} = 1;
 
       # add entry in device tree
-      push @{ $FAI::current_dev_children{$disk} }, &FAI::make_device_name($disk, $1);
+      push @{ $FAI::current_dev_children{$disk} }, &FAI::make_device_name($disk, $n);
     }
 
     # reset the output list
