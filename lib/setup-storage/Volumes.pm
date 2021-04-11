@@ -152,6 +152,11 @@ sub get_current_disks {
     my ($devpath,$end,$transport,$sector_size,$phy_sec,$parttype) =
       split(':',shift @parted_print);
 
+    $end =~ s/B$//;
+    $FAI::current_config{$disk}{begin_byte} = 0;
+    $FAI::current_config{$disk}{end_byte}   = $end - 1;
+    $FAI::current_config{$disk}{size}       = $end;
+
     # determine the logical sector size
     $sector_size =~ s/B$//;
     $FAI::current_config{$disk}{sector_size} = $sector_size;
@@ -185,16 +190,6 @@ sub get_current_disks {
 
     # Parse the output of the byte-wise partition table
     foreach my $line (@parted_print) {
-
-      # the disk size line (Disk /dev/hda: 82348277759B)
-      if ($line =~ /Disk \Q$disk\E: (\d+)B$/) {
-        $FAI::current_config{$disk}{begin_byte} = 0;
-        $FAI::current_config{$disk}{end_byte}   = $1 - 1;
-        $FAI::current_config{$disk}{size}       = $1;
-
-        # nothing else to be done
-        next;
-      }
 
       # One of the partition lines, see above example
       next unless ($line =~
