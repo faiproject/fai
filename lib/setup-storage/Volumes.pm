@@ -148,63 +148,6 @@ sub get_current_disks {
     $FAI::current_config{$disk}{partitions} = {};
 
 
-# the following code parses the output of parted print, using various units
-# (TiB, B, chs)
-# the parser is capable of reading the output of parted version 1.7.1, which
-# looks like
-#
-# $ /sbin/parted -s /dev/hda unit B print
-# WARNING: You are not superuser.  Watch out for permissions.
-#
-# Disk /dev/hda: 80026361855B
-# Sector size (logical/physical): 512B/512B
-# Partition Table: mac
-#
-# Number  Start         End           Size          File system  Name     Flags
-#  1      512B          32767B        32256B                     primary
-#  5      32768B        1033215B      1000448B      hfs          primary  boot
-#  3      134250496B    32212287487B  32078036992B  hfs+         primary
-#  6      32212287488B  46212287487B  14000000000B  ext3         primary
-#  2      46212287488B  47212287999B  1000000512B   linux-swap   primary  swap
-#  4      47212288000B  80026361855B  32814073856B  ext3         primary
-#
-# Note that the output contains an additional column on msdos, indicating,
-# whether the type of a partition is primary, logical or extended.
-#
-# $ parted -s /dev/hda unit B print
-#
-# Disk /dev/hda: 82348277759B
-# Sector size (logical/physical): 512B/512B
-# Partition Table: msdos
-#
-# Number  Start         End           Size          Type      File system  Flags
-#  1      32256B        24675839B     24643584B     primary   ext3
-#  2      24675840B     1077511679B   1052835840B   primary   linux-swap
-#  3      1077511680B   13662190079B  12584678400B  primary   ext3         boot
-#  4      13662190080B  82343278079B  68681088000B  extended
-#  5      13662222336B  14715025919B  1052803584B   logical   ext3
-#         14715058176B  30449986559B  15734928384B
-#  7      30450018816B  32547432959B  2097414144B   logical   ext3
-#  8      32547465216B  82343278079B  49795812864B  logical   ext3
-#
-# parted 2.2:
-# $ parted -s /dev/sda unit TiB print
-# Model: ATA VBOX HARDDISK (scsi)
-# Disk /dev/sda: 0.06TiB
-# Sector size (logical/physical): 512B/512B
-# Partition Table: msdos
-#
-# Number  Start    End      Size     Type      File system     Flags
-#  1      0.00TiB  0.00TiB  0.00TiB  primary   ext3            boot
-#  2      0.00TiB  0.00TiB  0.00TiB  primary   linux-swap(v1)
-#  3      0.00TiB  0.00TiB  0.00TiB  primary   ext3
-#  4      0.00TiB  0.06TiB  0.06TiB  extended                  lba
-#  5      0.00TiB  0.00TiB  0.00TiB  logical   ext3
-#  6      0.00TiB  0.00TiB  0.00TiB  logical   ext3
-#  7      0.00TiB  0.00TiB  0.00TiB  logical   ext3
-#  8      0.00TiB  0.01TiB  0.00TiB  logical   ext3
-#  9      0.01TiB  0.06TiB  0.05TiB  logical                   lvm
-
     # As shown above, some entries may be blank. Thus the exact column starts
     # and lengths must be parsed from the header line. This is stored in the
     # following hash
