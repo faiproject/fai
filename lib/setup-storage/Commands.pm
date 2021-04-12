@@ -28,7 +28,6 @@ use strict;
 # in %FAI::configs
 #
 # @author Christian Kern, Michael Tautschnig, Sebastian Hetze, Andreas Schuldei
-# @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 

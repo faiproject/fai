@@ -27,7 +27,6 @@ use strict;
 # @brief Compute the size of the partitions and volumes to be created
 #
 # @author Christian Kern, Michael Tautschnig
-# @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 

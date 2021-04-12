@@ -27,7 +27,6 @@ use strict;
 # @brief A parser for the disk_config files within FAI.
 #
 # @author Christian Kern, Michael Tautschnig, Sam Vilain, Andreas Schludei
-# @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 

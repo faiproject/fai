@@ -30,7 +30,6 @@ use strict;
 # https://wiki.fai-project.org/index.php/Setup-storage
 #
 # @author Christian Kern, Michael Tautschnig
-# @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 

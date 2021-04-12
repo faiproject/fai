@@ -27,7 +27,6 @@ use strict;
 # @brief Parse the current partition table and LVM/RAID configurations
 #
 # @author Christian Kern, Michael Tautschnig, Thomas Lange
-# @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 

@@ -27,7 +27,6 @@ use strict;
 # @brief functions to execute system commands
 #
 # @author Christian Kern, Michael Tautschnig
-# @date Sun Jul 23 16:09:36 CEST 2006
 #
 ################################################################################
 
