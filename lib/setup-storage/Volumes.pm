@@ -189,6 +189,7 @@ sub get_current_disks {
     my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$name,$flags) = split(':', $line);
 
     # ignore free space
+    ### next if ( $fstype == 'free' );
 
       # mark the bounds of existing partitions
       $FAI::current_config{$disk}{partitions}{$n}{begin_byte} = $begin_byte;
