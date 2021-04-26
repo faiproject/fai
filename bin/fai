@@ -123,6 +123,11 @@ fai_init() {
             ip -4 addr change "$addr" dev "$iface" valid_lft forever preferred_lft forever
         done
 
+        # enable EFI variables
+        if [ -d /sys/firmware/efi ]; then
+           mount -t efivarfs none /sys/firmware/efi/efivars
+        fi
+
         # tune some nfs parameters
         mount -oremount,ro,noatime /live/image
 
@@ -139,7 +144,7 @@ fai_init() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
     cat <<-EOF
-        fai $FAI_VERSION. Copyright (C) 1999-2016 Thomas Lange
+        fai $FAI_VERSION. Copyright (C) 1999-2021 Thomas Lange
         Usage: $0 [options] [action]
 
         Options:

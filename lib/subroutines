@@ -140,7 +140,7 @@ umount_target() {
 
     if [ "$target" != '/' ]; then
 	# do not umount during softupdate
-	umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts $FAI_ROOT/dev 2>/dev/null
+	umount $FAI_ROOT/proc $FAI_ROOT/sys/firmware/efi/efivars $FAI_ROOT/sys $FAI_ROOT/dev/pts $FAI_ROOT/dev 2>/dev/null
 	for dir in $(mount | grep $target | grep -E -v "media/mirror|tmpfs"| awk '{print $3}' | sort -r); do
             mountpoint -q $dir && umount $dir
 	done
@@ -629,7 +629,7 @@ task_faiend() {
 	return 0
     fi
     killall -q sshd systemd-udevd rsyslogd
-    umount $FAI_ROOT/proc $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
+    umount $FAI_ROOT/proc $FAI_ROOT/sys/firmware/efi/efivars $FAI_ROOT/sys $FAI_ROOT/dev/pts 2>/dev/null
     umount -arf 2>/dev/null
 
     echo "Rebooting $HOSTNAME now"
