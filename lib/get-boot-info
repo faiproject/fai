@@ -5,7 +5,7 @@
 # bootinfo -- get boot information via DHCP protocol
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2019 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2021 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -33,13 +33,12 @@ bootlog=$LOGDIR/boot.log
 netdevice_info() {
 
     # devices that are running
-    netdevices_up=$(ip link show up | grep "^[1-9$].*LOWER_UP" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -v "^lo" | sort | uniq| tr '\n' ' ')
+    netdevices_up=$(ip -br a| awk '/UP / {print $1}' | tr '\n' ' ')
     # netdevices is the list of ethernet devices which will be used for bootpc (maybe dhcp)
     # if not defined, use boot messages to determine network devices
     [ -n "$netdevices" ] || netdevices=$netdevices_up
 
-    netdevices_all=$(ip link | grep "^[1-9]" | cut -d : -f 2 | cut -d ' ' -f 2 | grep -E "^eth|^en")
-    netdevices_all=$(for dev in $netdevices_all; do echo $dev; done| sort | uniq| tr '\n' ' ')
+    netdevices_all=$(ip -br a| grep -P -o "^eth\S+|^en\S+"|tr '\n' ' ')
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 get_dhcp_info() {
@@ -53,7 +52,7 @@ get_dhcp_info() {
 	dhclient -lf /dev/null -cf /usr/share/fai/dhclient-fai.conf -sf /usr/share/fai/dhclient-fai-script $netdevices >>$bootlog 2> $LOGDIR/dhclient.log
 	setnet
 	if [ -f /run/dhclient.pid ]; then
-	    kill `cat /run/dhclient.pid`
+	    kill $(cat /run/dhclient.pid)
 	fi
     fi
 }
@@ -78,18 +77,16 @@ setnet() {
 
     # only write info if interface is known
     if [ -n "$NIC1" ]; then
-	read IPADDR NETMASK BROADCAST dummy<<<$(ifdata -p $NIC1)
-	CIDR=$(ip -o -f inet addr show| awk '{print $4}'| grep $IPADDR)
+	CIDR=$(ip --br ad sh $NIC1|awk '{print $3}')
+	IPADDR=${CIDR%/*}
 	GATEWAYS=$(ip route | awk '/^default/ {print $3}')
 
 	cat >> $bootlog <<-EOF
-	IPADDR=$IPADDR
-	SERVER=$SERVER
-	NETMASK=$NETMASK
-	GATEWAYS=$GATEWAYS
-	BROADCAST=$BROADCAST
-	CIDR=$CIDR
 	NIC1=$NIC1
+	IPADDR=$IPADDR
+	CIDR=$CIDR
+	GATEWAYS=$GATEWAYS
+	SERVER=$SERVER
 EOF
     fi
 

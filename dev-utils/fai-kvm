@@ -2,7 +2,7 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2020
+# Author:    Thomas Lange, Uni Koeln, 2011-2021
 # License:   GPL v2 or any later version
 
 fix="-k en-us -smp 2 -cpu host -global isa-fdc.driveA= "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
@@ -19,6 +19,15 @@ usernet=0
 newdisk=0
 daemonize=0
 efi=0
+order=cd
+
+# not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
+# If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
+# x2:xx:xx:xx:xx:xx
+# x6:xx:xx:xx:xx:xx
+# xA:xx:xx:xx:xx:xx
+# xE:xx:xx:xx:xx:xx
+
 macprefix=52:54:00:11:23
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_disk() {
@@ -46,7 +55,7 @@ boot_cd() {
   shift
   # boot fai-cd
   set -x
-  kvm $gopt -boot order=cd $net $disk -cdrom $cdimage $*
+  kvm $gopt -boot order=$order $net $disk -cdrom $cdimage $*
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
@@ -79,6 +88,7 @@ usage() {
              If you have created 9 tap devies you can use the numbers 1 to 9.
  -V          do not use vga std with Bochs extensions, use the kvm default
  -U          Use kvm user networking instead of tap devices
+ -O          Swap boot order when booting an ISO. Default order is local disk, then ISO.
  -t          Set title of the Qemu window
 
 You can add more options for kvm after --
@@ -88,8 +98,9 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "EbUhnNu:s:m:d:VD:t:" opt ; do
+while getopts "EbUhnNu:s:m:d:VD:t:O" opt ; do
     case "$opt" in
+        O) order=dc  ;;
         b) daemonize=1  ;;
         E) efi=1  ;;
         n) newdisk=1    ;;
@@ -106,7 +117,7 @@ while getopts "EbUhnNu:s:m:d:VD:t:" opt ; do
         ?) die 1 "Unknown option";;
     esac
 done
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 if [ -z "$1" ]; then
     echo Missing argument. pxe, cd or disk
@@ -118,31 +129,25 @@ fi
 if ! [[ $user =~ ^[0-9]+$ ]] ; then
     die 2 "Error: Option -u needs a number"
 fi
-hex=$(printf %X $user)
+hex=$(printf %02X $user)
 diskfile=$diskdir/faitest-disk-$user
 
 if [ $daemonize -eq 1 ]; then
     vga="-display none -daemonize -vnc :$user"
 fi
 
-# not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
-# If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
-# x2:xx:xx:xx:xx:xx
-# x6:xx:xx:xx:xx:xx
-# xA:xx:xx:xx:xx:xx
-# xE:xx:xx:xx:xx:xx
-
 mac=$macprefix:$hex
 
 if [ $usernet = 1 ]; then
-    net="-net nic,name=eth0,model=virtio -net user,name=eth0"
+    net="-device virtio-net-pci,netdev=net0 -netdev user,id=net0"
 else
-    net="-net nic,macaddr=$mac,model=virtio -net tap,ifname=tap$user,script=no,downscript=no"
+    net="-device virtio-net-pci,netdev=net0,mac=$mac -netdev tap,ifname=tap$user,id=net0,script=no,downscript=no
+"
 fi
 
 
 disk=""
-for i in `seq 1 $disks` ; do
+for i in $(seq 1 $disks) ; do
   disk="$disk -drive file=$diskfile-$i.qcow2,if=virtio,index=$i"
   if [ $i -eq 1 ] ; then
     disk="$disk"
@@ -159,7 +164,7 @@ fi
 
 # create new disk images
 if [ X$newdisk != X0 ]; then
-  for i in `seq 1 $disks` ; do
+  for i in $(seq 1 $disks) ; do
       if [ X$newdisk = X1 -a -f $diskfile-$i.qcow2 ]; then
 	  echo "Will not overwrite disk image. Please use -N."
 	  exit 3

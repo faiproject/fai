@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2020 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2021 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2020 Thomas Lange
+	Copyright (C) 1999-2021 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -72,7 +72,7 @@ check_nfsroot() {
     $ROOTCMD dpkg-query -W -f='${Package;-18} ${Version}\n' fai-client fai-nfsroot fai-setup-storage dracut-network dracut dracut-live dracut-squash 2>/dev/null
 
     # check if all important packages are installed
-    n=$($ROOTCMD dpkg-query -l fai-client fai-nfsroot fai-setup-storage dracut-network dracut 2>/dev/null|grep -E ^ii |wc -l)
+    n=$($ROOTCMD dpkg-query -l fai-client fai-nfsroot fai-setup-storage dracut-network dracut 2>/dev/null|grep -c -E ^ii)
     if [ $n -ne 5 ]; then
 	echo "ERROR: Some essential pacakges are missing."
 	bad_exit
@@ -97,11 +97,13 @@ usexz=1
 full=1
 
 # option e currently does nothing
-while getopts aghervC:B:fkKpPUzsN opt ; do
+while getopts aghervc:C:B:fkKpPUzsN opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
         z) usexz=0 ;;
+        c) classes=$OPTARG
+	   classes=${classes//,/ } ;;
         C) cfdir=$OPTARG ;;
         B) basetgz=$OPTARG ;;
         v) verbose=1 ; v=-v ;;
@@ -150,7 +152,7 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 oldnfsroot=$NFSROOT
 deldir=$NFSROOT
 
-ROOTCMD="chroot $NFSROOT"
+ROOTCMD="unshare --pid --fork --kill-child --mount-proc chroot $NFSROOT"
 export DEBIAN_FRONTEND=noninteractive
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -195,7 +197,7 @@ setclasses() {
     if [ $full = 1 ]; then
 	c=FULL
     fi
-    export classes="NFSROOT $c $iarch $distro $nonfree"
+    export classes="NFSROOT $c $iarch $distro $nonfree $classes"
     if [ X$verbose = X1 ] ; then
       echo Classes are set to $classes
     fi
@@ -307,7 +309,7 @@ add_etc_hosts_entries() {
     ainsl $v  $NFSROOT/etc/hosts "$NFSROOT_ETC_HOSTS"
 
     # add entries for all network devices
-    local ips=$(ip addr show up| grep -P -o '(?<=inet )[^/]+' | grep -v 127.0.0.1)
+    local ips=$(ip -br ad show up| awk '/UP / {if ($3) print $3}' |sed -e 's#\/[0-9]\+##g')
 
     local line
     for eth in $ips; do
@@ -417,7 +419,7 @@ EOF
     fi
     echo 'hostonly="no"' > $NFSROOT/etc/dracut.conf.d/20-generic-image.conf
     cat <<EOF > $NFSROOT/etc/dracut.conf.d/01-omit.conf
-omit_dracutmodules+=" btrfs crypt dash lvm resume usrmount modsign mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd "
+omit_dracutmodules+=" btrfs crypt dash lvm resume usrmount modsign mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd systemd-initrd virtfs "
 filesystems="$fslist"
 EOF
 
@@ -461,6 +463,7 @@ EOF
     # setup-storage
     rm -f lib/udev/rules.d/85-lvm2.rules
     # definition for loopback device
+    mkdir -p etc/network
     echo "iface lo inet loopback" > etc/network/interfaces
 
     cat >> root/.profile <<-EOF
@@ -487,7 +490,7 @@ upgrade_nfsroot() {
     # add any 3rd party repository keys that you may need installed into the NFSROOT
     if [ -d $cfdir/apt/keys ]; then
         local f
-        for f in `find $cfdir/apt/keys -type f -name '*.asc' -o -name '*.gpg'`; do
+        for f in $(find $cfdir/apt/keys -type f -name '*.asc' -o -name '*.gpg'); do
             cp $f $NFSROOT/etc/apt/trusted.gpg.d
         done
     fi
@@ -569,7 +572,7 @@ setup_tftp(){
     mkdir -p $TFTPROOT/pxelinux.cfg
     chmod a+r $NFSROOT/boot/initrd.img-* || die 9 "No initrd was created. Check the package name of the linux-image package in /etc/fai/NFSROOT."
     cp -p $v $NFSROOT/boot/vmlinu?-* $NFSROOT/boot/initrd.img-* $TFTPROOT
-    cp -u $v $NFSROOT/usr/lib/PXELINUX/pxelinux.0 $TFTPROOT
+    cp -u $v $NFSROOT/usr/lib/PXELINUX/lpxelinux.0 $TFTPROOT/pxelinux.0
     if [ -f $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 ]; then
 	cp -u $NFSROOT/usr/lib/syslinux/modules/bios/ldlinux.c32 $TFTPROOT
     fi
@@ -671,10 +674,13 @@ if [ $sshpreserve -ge 1 ]; then
     if [ $sshpreserve -eq 2 ]; then
 	pdirs="root/.ssh etc/ssh/ssh_host_*"
     fi
+    export pdirs
     [ X$verbose = X1 ] && echo "Preserving $pdirs from inside the nfsroot."
-    cd $NFSROOT # needed for * in $pdirs to work
-    tar -C $NFSROOT -cf $tmptar $pdirs
-    cd -
+    (
+	cd $NFSROOT || exit # needed for * in $pdirs to work
+	tar -C $NFSROOT -cf $tmptar $pdirs
+    )
+    unset pdirs
 fi
 
 if [ -d $NFSROOT/proc ]; then
@@ -723,5 +729,9 @@ exit $exitcode
 RC=${PIPESTATUS[0]}
 umount_dirs
 trap "true" EXIT
-echo "Log file written to /var/log/fai/fai-make-nfsroot.log"
+if [ $generic = 0 ]; then
+    cp -p /var/log/fai/fai-make-nfsroot.log $NFSROOT/var/tmp
+    msg="and $NFSROOT/var/tmp"
+fi
+echo "Log file written to /var/log/fai/fai-make-nfsroot.log $msg"
 exit ${RC}

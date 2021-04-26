@@ -5,7 +5,7 @@
 # fai -- main installation script executed after booting
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 1999-2017 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 1999-2020 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -61,6 +61,7 @@ fai_init() {
     . /usr/lib/fai/subroutines
 
     mkdir -p /var/run/fai
+    echo 0 > $LOGDIR/task_error
     [ -f $FAI_ETC_DIR/fai.conf ] && . $FAI_ETC_DIR/fai.conf
     : ${FAI:=/var/lib/fai/config} # default value
     : ${MNTPOINT:=/media/mirror}  # default value
@@ -87,7 +88,7 @@ fai_init() {
       [ $do_init_tasks -eq 1 ] && FAI_ROOT=/target || FAI_ROOT=/
     fi
     # executed command in the environment of the new system
-    ROOTCMD="chroot $FAI_ROOT"
+    ROOTCMD="unshare --pid --fork --kill-child --mount-proc chroot $FAI_ROOT"
     # no chroot needed
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
     target=$FAI_ROOT
@@ -322,7 +323,7 @@ else
     export fai_rundate=$(date +'%Y%m%d_%H%M%S')
     export LOGDIR=/var/log/fai/$HOSTNAME/$FAI_ACTION-$fai_rundate
     if [ -d $LOGDIR ]; then
-	fdie 13 "$LOGDIR already exists. MAybe another process is running. Aborting"
+	fdie 13 "$LOGDIR already exists. Maybe another process is running. Aborting"
     fi
     mkdir -p $LOGDIR
     ln -snf $FAI_ACTION-$fai_rundate $LOGDIR/../last-$FAI_ACTION

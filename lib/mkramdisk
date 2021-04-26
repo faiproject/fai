@@ -27,7 +27,7 @@ mount_ramdisk() {
     set -e
     local tmp1=$(mktemp) || exit 12
     tar -C $1 -cf $tmp1 .
-    mount $2 $3 -onoatime -t tmpfs tmpfs $1 || exit 13
+    mount $2 $3 -onoatime,size=80% -t tmpfs tmpfs $1 || exit 13
     [ X$verbose = X1 ]  && echo "Ramdisk mounted onto $1"
     tar -C $1 -xf $tmp1
     rm -f $tmp1
@@ -53,7 +53,7 @@ umount_ramdisk() {
     # move current ramdisk to a new location
     mount --bind $disk $ram
     umount $disk
-    rm -rf $disk/* $disk/.??* || true
+    rm -rf ${disk:?}/* ${disk:?}/.??* || true
     cp -a  $ram/. $disk/.   # copy ramdisk contents to disk
     umount $ram
     [ X$debug = X1 ]  && echo "Ramdisk on $disk umounted"
@@ -79,7 +79,7 @@ while getopts ans:u opt ; do
         n) mtab="-n" ;;      # do not wirte to /etc/mtab
         esac
 done
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 if [ -n "$FAI_NORAMDISK" ]; then
     echo "The use of \$FAI_NORAMDISK is now deprecated. Please use \$FAI_RAMDISKS instead." >&2

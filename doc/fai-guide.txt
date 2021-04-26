@@ -4,7 +4,7 @@
 
 FAI Guide (Fully Automatic Installation)
 ========================================
-Thomas Lange <lange@informatik.uni-koeln.de>
+Thomas Lange <lange@cs.uni-koeln.de>
 Wed, 18 Sep 2019
 :Date: a date
 :Revision: 5.8
@@ -33,13 +33,8 @@ This manual describes the Fully Automatic Installation software. This
 includes the installation of the packages, setting up the server, creating of the
 configuration and how to deal with errors.
 
-----
-     +-----------------------------------------------------------------------+
-     | This manual describes FAI 5.5 but most things are also valid for 4.x. |
-     +-----------------------------------------------------------------------+
-----
 
-(c) 2000-2019 Thomas Lange
+(c) 2000-2020 Thomas Lange
 
 
 .Copyright
@@ -524,7 +519,8 @@ steps are needed:
 * Install the package 'fai-quickstart' on your install server.
 
 ----
-# wget -O - https://fai-project.org/download/2BF8D9FE074BCDE4.asc | apt-key add -
+# wget -O fai-project.gpg https://fai-project.org/download/2BF8D9FE074BCDE4.gpg
+# cp fai-project.gpg /etc/apt/trusted.gpg.d/
 # echo "deb http://fai-project.org/download buster koeln" > /etc/apt/sources.list.d/fai.list
 # apt-get update
 # aptitude install fai-quickstart
@@ -560,11 +556,13 @@ The log file is written to /var/log/fai/fai-setup.log.
 
 ----
 FAI packages and related packages inside the nfsroot:
-dracut             044+189-2
-dracut-network     044+189-2
-fai-client         5.3.3~bpo8+2
-fai-nfsroot        5.3.3~bpo8+2
-fai-setup-storage  5.3.3~bpo8+2
+dracut             050+65-1
+dracut-live        050+65-1
+dracut-network     050+65-1
+dracut-squash      050+65-1
+fai-client         5.9.4
+fai-nfsroot        5.9.4
+fai-setup-storage  5.9.4
 Waiting for background jobs to finish
 fai-make-nfsroot finished properly.
 Log file written to /var/log/fai/fai-make-nfsroot.log
@@ -572,9 +570,7 @@ Adding line to /etc/exports: /srv/fai/config 192.168.33.250/25(async,ro,no_subtr
 Adding line to /etc/exports: /srv/fai/nfsroot 192.168.33.250/25(async,ro,no_subtree_check,no_root_squash)
 Reloading nfs-kernel-server configuration (via systemctl): nfs-kernel-server.service.
 
-   You have no FAI configuration space yet. Copy the simple examples with:
-   cp -a /usr/share/doc/fai-doc/examples/simple/* /srv/fai/config
-   Then change the configuration files to meet your local needs.
+Your initial config space is now located in /srv/fai/config
 Please don't forget to fill out the FAI questionnaire after you've finished your project with FAI.
 
 FAI setup finished.
@@ -593,7 +589,7 @@ Install the simple examples into the configuration space
 footnote:[These files need not belong to the root account.].
 
 ----
-$ cp -a /usr/share/doc/fai-doc/examples/simple/* /srv/fai/config/
+$ fai-mk-configspace
 ----
 
 These examples contain configuration for some sample
@@ -610,6 +606,9 @@ A XFCE desktop is installed, using LVM, and the account demo is created.
 
 gnomehost::
 A GNOME desktop is installed, and the account demo is created.
+
+ubuntuhost::
+A Ubuntu desktop will be installed, and the account demo is created.
 
 other host names::
 Hosts with another host name will most notably use the classes FAIBASE,
@@ -833,8 +832,8 @@ that is used by `debconf-set-selections(1)`.
 _package_config/_::
 Files with class names contain lists of software packages to be
 installed or removed by `install_packages(8)`. Files named
-'<CLASS>.asc' are added to the list of keys used by apt (using
-`apt-key(8)`) for trusted package repositories.
+'<CLASS>.gpg' are added to the list of keys used by apt
+for trusted package repositories.
 
 _scripts/_::
 Scripts for your local site customization. Used by `fai-do-scripts(1)`.
@@ -1604,8 +1603,8 @@ append initrd=initrd.img-4.19.0-5-amd64 ip=dhcp root=/srv/fai/nfsroot:vers=3 roo
 ----
 
 See '/usr/share/doc/syslinux/pxelinux.doc' for more detailed
-information about PXELINUX. There's a new lpxelinux binary which also
-support loading the kernel and initrd via FTP or HTTP. The command
+information about PXELINUX. FAI uses the lpxelinux.0 binary which also
+supports loading the kernel and initrd via FTP or HTTP. The command
 'fai-chboot(8)' supports this with the option '-U'.
 
 
@@ -2010,6 +2009,63 @@ $ fai-mirror -m800 -B -a i386 -v -cDEFAULT,DEBIAN,FAIBASE,I386 /srv/mirror-i386
 That's all!
 
 
+=== [[error]]Aborting the installation when an error occurs
+
+Every task and hook can call the function +task_error+
+to send an error value to the installation. This error will appear in
+the log file and can be shown in the `fai-monitor-gui(1)`.
+The error value is also checked against the variable +$STOP_ON_ERROR+
+which is set to 700 by default. If the error value
+is greater than +$STOP_ON_ERROR+  the installation will stop
+immediately. In a hook, just add a call like this:
+
+----
+task_error <value>
+----
+
+It is comfortable to call task_error with $? as second parameter, for
+e.g. if you want to set an error value of 123 use this
+
+----
+<some command>
+task_error 123 $?
+----
+
+Then the task error is only set if the preceding command failed with
+some error. The same syntax can be used by the scripts in the class
+subdirectory ending in .sh.
+
+A special case are scripts inside the class/ subdirectory that does
+not end in .sh. In those scripts you have to call task_error with 1 as
+third parameter. As an example you can use those two variants for
+setting the value to 123
+
+----
+task_error 123 $? 1
+----
+
+or
+
+----
+task_error 123 1 1
+----
+
+The latter command always sets the task error to 123 regardless of
+the value of +$?+. If the error value is greater than +$STOP_ON_ERROR+,
+the installation will abort immediately.
+
+The error values are grouped into four categories
+
+----
+normal or info messages:       1xx, 2xx
+warnings:                      3xx, 4xx
+minor errors:                  5xx, 6xx
+errors:                        7xx, 8xx
+----
+
+The fai-monitor-gui has 4 different icons for these error categories.
+
+
 == [[hints]]Various hints and details
 
 
@@ -2118,8 +2174,8 @@ Calls `fai-debconf(1)` to set the values for the debconf preseeding database.
 
 repository::
 Prepare access to the package repository by preparing the apt
-configuration. This can also add repository keys via
-`apt-key(8)` in a class based manner from files like _CLASSNAME.asc_
+configuration. This can also add repository keys
+in a class based manner from files like _CLASSNAME.gpg_
 in the directory _package_config_.
 
 
@@ -2433,11 +2489,9 @@ all log files.
 
 === How to use HTTP for PXE boot
 
-----
-cp /usr/lib/PXELINUX/lpxelinux.0 /srv/tftp/fai/pxelinux.0
-----
-
-Enable HTTP access to the tftp directory:
+fai-make-nfsroot now uses the lpxelinux.0 binary which already
+supports transfer of the kernel and initrd via http (additional to tftp).
+You only have to enable HTTP access to the tftp directory:
 
 ----
 cd /var/www/html

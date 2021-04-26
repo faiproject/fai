@@ -42,14 +42,14 @@ extract() {
     local catname=$2
 
     if [ $deletefiles -eq 1 ] ; then
-      cd $target/$dir && rm -f  .* * 2>/dev/null
+      cd $target/$dir && rm -f  -- .* * 2>/dev/null
       deletefiles=0
     fi
 
     if [ $removedir -eq 1 ]; then
         cd $target/$dir || die 4 "ERROR: cd to $target/$dir failed. Aborting."
         [ $PWD = "/" ] && die 3 "WARNING: Will not do recursive removal of directory /"
-        rm -rf .* * 2>/dev/null
+        rm -rf -- .* * 2>/dev/null
         removedir=0
     fi
 
@@ -110,12 +110,12 @@ while getopts 1hDdrvs:t:c:i opt ; do
         h) usage ;;
         esac
 done
-shift $(($OPTIND - 1))
+shift $((OPTIND - 1))
 
 [ "$1" ] || usage
 
 # detect target fstype
-targetfstype=`cat /proc/mounts | awk -vt="$target" '{if($2==t){print $3}}'`
+targetfstype=$(awk -vt="$target" '{if($2==t){print $3}}' /proc/mounts)
 if [ "$targetfstype" != "nfs" ]; then
     xattrs="--xattrs --xattrs-include=*.* --selinux --acl"
 else

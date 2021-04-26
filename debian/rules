@@ -2,12 +2,22 @@
 
 -include VERSION
 
+# Tell texlive to respect SOURCE_DATE_EPOCH for reproducible builds
+export FORCE_SOURCE_DATE=1
+
 %:
 	dh $@
+
+override_dh_auto_build:
+	# Force UTF-8 locale to ensure UTF-8 file encoding for generated files
+	LC_ALL=C.UTF-8 dh_auto_build
 
 override_dh_installdocs:
 	dh_installdocs -Nfai-server -Nfai-quickstart
 	sed -i 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' debian/fai-client/usr/share/doc/fai-client/README
+	# Remove embedded temporary directory for reproducible builds
+	sed -i -e 's,/tmp/tmp.*/fai-guide.ps,fai-guide.ps,g' debian/fai-doc/usr/share/doc/fai-doc/fai-guide.ps
+	sed -i -e 's,/tmp/tmp.*/fai-guide.dvi,fai-guide.dvi,g' debian/fai-doc/usr/share/doc/fai-doc/fai-guide.ps
 
 override_dh_installchangelogs:
 	dh_installchangelogs -Nfai-server -Nfai-quickstart

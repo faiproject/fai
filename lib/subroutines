@@ -5,7 +5,7 @@
 # subroutines -- useful subroutines for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2019 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2021 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2001-2005 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -201,16 +201,34 @@ stop_fai_installation() {
 # Required-Var:      $1 $2 $task_error
 # Short-Description: save the maximum error code,
 # Short-Description: $1 is the error that will be saved unless $2 is zero
+# Short-Description: if $3 is set to 1 only $task_error is set but the
+# Short-Description: installation is not stopped
 ### END SUBROUTINE INFO
 
 task_error() {
 
+    local current
     [ X$2 = X0 ] && return
     task_error_func=${FUNCNAME[*]}
+
+    # save max error for current task
     task_local_error=$1
-    [ $1 -gt $task_error ] && task_error=$1
-    echo $1 > $LOGDIR/task_error
-    [ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
+    current=$(< $LOGDIR/task_local_error)
+    if [ $task_local_error -gt $current ]; then
+	echo $task_local_error > $LOGDIR/task_local_error
+    fi
+
+    # save global max task error
+    task_error=$(< $LOGDIR/task_error)
+    if [ $task_local_error -gt $task_error ]; then
+     task_error=$task_local_error
+     echo $task_local_error > $LOGDIR/task_error
+    fi
+    if [ X$3 = X1 ]; then
+	:
+    else
+	[ $task_error -gt $STOP_ON_ERROR ] && stop_fai_installation
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -231,6 +249,7 @@ task() {
     shift
     local task_local_error=0 # the error code set by every task
 
+    echo 0 > $LOGDIR/task_local_error
     [ -f $LOGDIR/skip.$taskname ] || call_hook $taskname "$@"
 
     if [ -f $LOGDIR/skip.$taskname ]; then
@@ -244,7 +263,8 @@ task() {
         task_error_func=''
         taskduration[$taskname]=$SECONDS
         task_$taskname "$@"
-        [ $duration -eq 1 ] && echo "Duration of task $taskname: " $(($SECONDS-${taskduration[$taskname]}))"s"
+        [ $duration -eq 1 ] && echo "Duration of task $taskname: " $((SECONDS-${taskduration[$taskname]}))"s"
+	task_local_error=$(< $LOGDIR/task_local_error)
         sendmon "TASKEND $taskname $task_local_error"
         if [ "$task_local_error" -ne 0 ] ; then
           echo "Exit code task_$taskname: $task_local_error" >&2
@@ -363,6 +383,8 @@ task_setup() {
         if [ "$flag_sshd" -a -x /usr/sbin/sshd ]; then
             pgrep -x sshd >/dev/null || /usr/sbin/sshd
         fi
+
+        udevadm trigger
     fi
     unset flag_createvt flag_sshd
 
@@ -464,6 +486,10 @@ task_defclass() {
     if [ $renewclass -eq 1 ]; then
         # reevaluate new list of classes
         fai-class -T $FAI/class $LOGDIR/FAI_CLASSES
+	# check task error again
+	local lerr=$(< $LOGDIR/task_local_error)
+	task_error $lerr
+
         classes=$(< $LOGDIR/FAI_CLASSES)
     elif [ -n "$cmdlineclasses" ]; then
         classes=$cmdlineclasses
@@ -501,7 +527,7 @@ task_defvar() {
             # show only lines with ++, we cannot use a pipe, since it would call
             # _devfar in a subprocess. Then, variables are not defined
             _defvar $class.var > $svar 2>&1
-            grep ^++ $svar| sed -e 's/\(.*PW\)=.*$/\1=XXXXXXXXXXXXX/'
+            grep -P '^\+\+ \w+=' $svar| sed -e 's/\(.*PW\)=.*$/\1=XXXXXXXXXXXXX/'
             rm $svar
         fi
     done
@@ -516,7 +542,7 @@ task_defvar() {
     fi
     unset class svar
     # now all variables are defined. Dump them to variables.log, so we can sources them if needed
-    set | perl -ne 'print if /^\w\w+=/ and not /^(EUID|PPID|SHELLOPTS|UID|rootpw|ROOTPW|HOME|PWD|BASHOPTS)|\(/' > $LOGDIR/variables.log
+    set | perl -ne 'print if /^\w\w+=/ and not /^(EUID|PPID|SHELLOPTS|UID|rootpw|ROOTPW|USERPW|HOME|PWD|BASHOPTS)|\(/' > $LOGDIR/variables.log
     # another approach is to use this. A slightly different format, but seems to be robust.
     # declare -x > $LOGDIR/variables.log
     cd $odir
@@ -788,8 +814,8 @@ read_fai_monitor_vars() {
 	return
     fi
 
-    eval `grep FAI_CONFIG_SRC /run/initramfs/fai-variables`
-    eval `grep FAI_FLAGS /run/initramfs/fai-variables`
+    eval $(grep FAI_CONFIG_SRC /run/initramfs/fai-variables)
+    eval $(grep FAI_FLAGS /run/initramfs/fai-variables)
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -867,8 +893,9 @@ task_confdir() {
         fi
     fi
 
-    local mdir=/lib/modules/`uname -r`
+    local mdir=/lib/modules/$(uname -r)
     if [ $do_init_tasks -eq 1 ] && [ ! -d $mdir ]; then
+        echo "ERROR: The running kernel does not match the kernel modules inside the nfsroot."
         echo "ERROR: Kernel modules directory $mdir not available. Only found:"
         ls -d /lib/modules/*
         echo ""
@@ -1165,7 +1192,7 @@ task_finish() {
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
     echo -n "FAI finished at: ";date
-    echo "The $FAI_ACTION took $(($(cut -d . -f 1 /proc/uptime)-$start_seconds)) seconds."
+    echo "The $FAI_ACTION took $(($(cut -d . -f 1 /proc/uptime) - start_seconds)) seconds."
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_chboot() {
