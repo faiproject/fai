@@ -161,23 +161,6 @@ sub get_current_disks {
     # read and store the current disk label
     $FAI::current_config{$disk}{disklabel} = $parttype;
 
-    # Parse the output line by line
-    foreach my $line (@parted_print) {
-
-    }
-
-    # reset the output list
-    @parted_print = ();
-
-    # obtain the partition table using bytes as units
-    $error =
-      &FAI::execute_ro_command("parted -sm $disk unit B print free", \@parted_print, 0);
-
-    # ignore the first two lines
-    shift @parted_print;
-    shift @parted_print;
-
-
     # currently parted -sm does not show primary/logical/extended types
     # TODO: use parted -s output for that info
 
@@ -185,6 +168,9 @@ sub get_current_disks {
     foreach my $line (@parted_print) {
 
     my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$name,$flags) = split(':', $line);
+    $begin_byte =~ s/B$//;
+    $end_byte   =~ s/B$//;
+    $count_byte =~ s/B$//;
 
     # ignore free space
     ### next if ( $fstype == 'free' );
