@@ -114,7 +114,7 @@ sub get_current_disks {
     # try to obtain the partition table for $disk
     # it might fail with parted_2 in case the disk has no partition table
     my $error =
-        &FAI::execute_ro_command("parted -sm $disk unit TiB print", \@parted_print, 0);
+        &FAI::execute_ro_command("parted -sm $disk unit B print", \@parted_print, 0);
 
     # possible problems
     if (!defined($FAI::configs{"PHY_$disk"}) && $error ne "") {
@@ -135,7 +135,7 @@ sub get_current_disks {
       ($error eq "") or die "Failed to write disk label\n";
       # retry partition-table print
       $error =
-        &FAI::execute_ro_command("parted -sm $disk unit TiB print", \@parted_print, 0);
+        &FAI::execute_ro_command("parted -sm $disk unit B print", \@parted_print, 0);
     }
 
     ($error eq "") or die "Failed to read the partition table from $disk\n";
@@ -157,7 +157,6 @@ sub get_current_disks {
     $FAI::current_config{$disk}{size}       = $end;
 
     # determine the logical sector size
-    $sector_size =~ s/B$//;
     $FAI::current_config{$disk}{sector_size} = $sector_size;
     # read and store the current disk label
     $FAI::current_config{$disk}{disklabel} = $parttype;
