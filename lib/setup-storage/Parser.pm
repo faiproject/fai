@@ -706,6 +706,9 @@ $FAI::Parser = Parse::RecDescent->new(
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
+          if ($1 eq 'partlabel' && $FAI::configs{$FAI::device}{disklabel} eq 'msdos') {
+            die "fstabkey:partlabel not allowed with msdos disk label\n";
+          }
         }
 	| /^vg:(\d+)/
 	{
