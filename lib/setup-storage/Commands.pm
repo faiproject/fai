@@ -1097,6 +1097,12 @@ sub rebuild_preserved_partitions {
       }
     }
 
+    # set partition label if it exists
+    if ($FAI::configs{$config}{disklabel} eq "gpt") {
+      $part_type = (defined($FAI::configs{$config}{partitions}{$mapped_id}{ptlabel}) ) ?
+      $FAI::configs{$config}{partitions}{$mapped_id}{ptlabel} : "'\" \"'"; # or empty ptlabel
+    }
+
     # restore the partition type, if any
     my $fs =
       $FAI::current_config{$disk}{partitions}{$mapped_id}{filesystem};
@@ -1335,6 +1341,12 @@ sub setup_partitions {
       }
     }
 
+    # set partition label if it exists
+    if ($FAI::configs{$config}{disklabel} eq "gpt") {
+      $part_type = (defined($part->{ptlabel}) ) ?
+      $part->{ptlabel} : "'\" \"'"; # or empty ptlabel
+    }
+
     my $fs = (defined($part->{filesystem}) && $part->{filesystem} =~ /\S+/) ?
       $part->{filesystem} : "-";
     ($fs) = split(/:/, $fs);
@@ -1351,6 +1363,7 @@ sub setup_partitions {
     $pre .= ",exist_" . &FAI::make_device_name($disk, $prev_id) if ($prev_id > -1);
     # build a parted command to create the partition
     my $dn = &FAI::make_device_name($disk, $part_id);
+
     &FAI::push_command( "parted -s $disk mkpart $part_type \"$fs\" ${start}B ${end}B",
       $pre, "prep2_$dn");
     my $cmd = "true";
@@ -1473,6 +1486,12 @@ sub restore_partition_table {
         } elsif ($part_id > 4) {
           $part_type = "logical";
         }
+      }
+
+      # set partition label if it exists
+      if ($FAI::current_config{$disk}{disklabel} eq "gpt") {
+	$part_type = (defined($curr_part->{ptlabel}) ) ?
+	  $curr_part->{ptlabel} : "'\" \"'"; # or empty ptlabel
       }
 
       # restore the partition type, if any
