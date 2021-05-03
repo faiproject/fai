@@ -146,9 +146,8 @@ sub get_current_disks {
     # initialise the hash
     $FAI::current_config{$disk}{partitions} = {};
 
-
     shift @parted_print; # ignore first line
-    my ($devpath,$end,$transport,$sector_size,$phy_sec,$parttype) =
+    my ($devpath,$end,$transport,$sector_size,$phy_sec,$disklabel) =
       split(':',shift @parted_print);
 
     $end =~ s/B$//;
@@ -159,10 +158,7 @@ sub get_current_disks {
     # determine the logical sector size
     $FAI::current_config{$disk}{sector_size} = $sector_size;
     # read and store the current disk label
-    $FAI::current_config{$disk}{disklabel} = $parttype;
-
-    # currently parted -sm does not show primary/logical/extended types
-    # TODO: use parted -s output for that info
+    $FAI::current_config{$disk}{disklabel} = $disklabel;
 
     # Parse the output of the byte-wise partition table
     foreach my $line (@parted_print) {
@@ -190,9 +186,7 @@ sub get_current_disks {
       push @{ $FAI::current_dev_children{$disk} }, &FAI::make_device_name($disk, $n);
     }
 
-    # reset the output list
     @parted_print = ();
-
     # obtain the partition table using bytes as units
     $error =
       &FAI::execute_ro_command("parted -s $disk unit chs print free", \@parted_print, 0);
@@ -209,7 +203,7 @@ sub get_current_disks {
         $FAI::current_config{$disk}{bios_sectors_per_track} = $3;
       }
 
-      # check for extended on msdos disk labels
+      # check for extended partition on msdos disk labels
       if ( $FAI::current_config{$disk}{disklabel} eq "msdos" &&
            $line =~ /\s*(\d+)\s+[\d,]+\s+[\d,]+\s+extended/) {
 	$FAI::current_config{$disk}{partitions}{$1}{is_extended} = 1;
