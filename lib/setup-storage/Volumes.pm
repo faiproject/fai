@@ -166,12 +166,12 @@ sub get_current_disks {
 
     # Parse the output of the byte-wise partition table
     foreach my $line (@parted_print) {
-
+      chomp $line;
     my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$name,$flags) = split(':', $line);
     $begin_byte =~ s/B$//;
     $end_byte   =~ s/B$//;
     $count_byte =~ s/B$//;
-
+    $flags      =~ s/;$//;
     # ignore free space
     ### next if ( $fstype == 'free' );
 
@@ -185,11 +185,6 @@ sub get_current_disks {
 
       # is_extended defaults to false/0
       $FAI::current_config{$disk}{partitions}{$n}{is_extended} = 0;
-
-      # but may be true/1 on msdos disk labels
-      ( ( $FAI::current_config{$disk}{disklabel} eq "msdos" )
-          && ( $type eq "extended" ) )
-        and $FAI::current_config{$disk}{partitions}{$n}{is_extended} = 1;
 
       # add entry in device tree
       push @{ $FAI::current_dev_children{$disk} }, &FAI::make_device_name($disk, $n);
@@ -213,6 +208,12 @@ sub get_current_disks {
         $FAI::current_config{$disk}{bios_cylinders}         = $1;
         $FAI::current_config{$disk}{bios_heads}             = $2;
         $FAI::current_config{$disk}{bios_sectors_per_track} = $3;
+      }
+
+      # check for extended on msdos disk labels
+      if ( $FAI::current_config{$disk}{disklabel} eq "msdos" &&
+           $line =~ /\s*(\d+)\s+[\d,]+\s+[\d,]+\s+extended/) {
+	$FAI::current_config{$disk}{partitions}{$1}{is_extended} = 1;
       }
     }
 
