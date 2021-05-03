@@ -114,14 +114,14 @@ sub get_current_disks {
     # try to obtain the partition table for $disk
     # it might fail with parted_2 in case the disk has no partition table
     my $error =
-        &FAI::execute_ro_command("parted -sm $disk unit B print", \@parted_print, 0);
+      &FAI::execute_ro_command("parted -sm $disk unit B print", \@parted_print, 0);
 
     # possible problems
     if (!defined($FAI::configs{"PHY_$disk"}) && $error ne "") {
       warn "Could not determine size and contents of $disk, skipping\n";
       next;
     } elsif (defined($FAI::configs{"PHY_$disk"}) &&
-      $FAI::configs{"PHY_$disk"}{preserveparts} == 1 && $error ne "") {
+	     $FAI::configs{"PHY_$disk"}{preserveparts} == 1 && $error ne "") {
       die "Failed to determine size and contents of $disk, but partitions should have been preserved\n";
     }
 
@@ -167,13 +167,13 @@ sub get_current_disks {
     # Parse the output of the byte-wise partition table
     foreach my $line (@parted_print) {
       chomp $line;
-    my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$name,$flags) = split(':', $line);
-    $begin_byte =~ s/B$//;
-    $end_byte   =~ s/B$//;
-    $count_byte =~ s/B$//;
-    $flags      =~ s/;$//;
-    # ignore free space
-    ### next if ( $fstype == 'free' );
+      my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$name,$flags) = split(':', $line);
+      $begin_byte =~ s/B$//;
+      $end_byte   =~ s/B$//;
+      $count_byte =~ s/B$//;
+      $flags      =~ s/;$//;
+      # ignore free space
+      ### next if ( $fstype == 'free' );
 
       # mark the bounds of existing partitions
       $FAI::current_config{$disk}{partitions}{$n}{begin_byte} = $begin_byte;
@@ -195,16 +195,15 @@ sub get_current_disks {
 
     # obtain the partition table using bytes as units
     $error =
-      &FAI::execute_ro_command(
-      "parted -s $disk unit chs print free", \@parted_print, 0);
+      &FAI::execute_ro_command("parted -s $disk unit chs print free", \@parted_print, 0);
 
     # Parse the output of the CHS partition table
     foreach my $line (@parted_print) {
 
-   # find the BIOS geometry that looks like this:
-   # BIOS cylinder,head,sector geometry: 10011,255,63.  Each cylinder is 8225kB.
+      # find the BIOS geometry that looks like this:
+      # BIOS cylinder,head,sector geometry: 10011,255,63.  Each cylinder is 8225kB.
       if ($line =~
-        /^BIOS cylinder,head,sector geometry:\s*(\d+),(\d+),(\d+)\.\s*Each cylinder is \d+(\.\d+)?kB\.$/) {
+	  /^BIOS cylinder,head,sector geometry:\s*(\d+),(\d+),(\d+)\.\s*Each cylinder is \d+(\.\d+)?kB\.$/) {
         $FAI::current_config{$disk}{bios_cylinders}         = $1;
         $FAI::current_config{$disk}{bios_heads}             = $2;
         $FAI::current_config{$disk}{bios_sectors_per_track} = $3;
