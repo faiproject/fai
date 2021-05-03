@@ -120,15 +120,15 @@ sub get_fstab_key {
   # get the label -- this is likely empty; exit code 3 if no label, but that is
   # ok here
   my @label = ();
-  &FAI::execute_ro_command(
+  ($key_type eq "label") && &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s LABEL -o value $device_name", \@label, 0);
 
   my @ptlabel = ();
-  &FAI::execute_ro_command(
+  ($key_type eq "partlabel") && &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s PARTLABEL -o value $device_name", \@ptlabel, 0);
 
   my @ptuuid = ();
-  &FAI::execute_ro_command(
+  ($key_type eq "partuuid") && &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s PARTUUID -o value $device_name", \@ptuuid, 0);
 
   # print uuid and label to console
