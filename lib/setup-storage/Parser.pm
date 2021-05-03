@@ -883,6 +883,13 @@ $FAI::Parser = Parse::RecDescent->new(
           # partitioning it
           &FAI::init_part_config("raw");
         }
+        | m{^p=([^/,;\s=]*)\s+}
+        {
+          # gpt partition label
+          my $ptlabel = $1;
+          &FAI::init_part_config("primary");
+          $FAI::partition_pointer->{ptlabel} = $ptlabel if $ptlabel;
+        }
         | m{^([^/,\s\-]+)-([^/,\s\-]+)\s+}
         {
           # set $FAI::device to VG_$1
