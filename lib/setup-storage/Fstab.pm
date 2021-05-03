@@ -102,10 +102,11 @@ sub get_fstab_key {
     ("partuuid" eq $key_type) or ("partlabel" eq $key_type) or
     &FAI::internal_error("Invalid key type $key_type");
 
+  `$FAI::udev_settle`;
+
   # write the device name as the first entry; if the user prefers uuids
   # or labels, use these if available
   my @uuid = ();
-  `$FAI::udev_settle`;
   &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s UUID -o value $device_name", \@uuid, 0);
 
@@ -119,17 +120,14 @@ sub get_fstab_key {
   # get the label -- this is likely empty; exit code 3 if no label, but that is
   # ok here
   my @label = ();
-  `$FAI::udev_settle`;
   &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s LABEL -o value $device_name", \@label, 0);
 
   my @ptlabel = ();
-  `$FAI::udev_settle`;
   &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s PARTLABEL -o value $device_name", \@ptlabel, 0);
 
   my @ptuuid = ();
-  `$FAI::udev_settle`;
   &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s PARTUUID -o value $device_name", \@ptuuid, 0);
 
