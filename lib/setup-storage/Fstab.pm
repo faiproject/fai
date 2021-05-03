@@ -123,17 +123,35 @@ sub get_fstab_key {
   &FAI::execute_ro_command(
     "/sbin/blkid -c /dev/null -s LABEL -o value $device_name", \@label, 0);
 
+  my @ptlabel = ();
+  `$FAI::udev_settle`;
+  &FAI::execute_ro_command(
+    "/sbin/blkid -c /dev/null -s PARTLABEL -o value $device_name", \@ptlabel, 0);
+
+  my @ptuuid = ();
+  `$FAI::udev_settle`;
+  &FAI::execute_ro_command(
+    "/sbin/blkid -c /dev/null -s PARTUUID -o value $device_name", \@ptuuid, 0);
+
   # print uuid and label to console
   warn "$device_name UUID=$uuid[0]" if @uuid;
   warn "$device_name LABEL=$label[0]" if @label;
+  warn "$device_name PARTUUID=$ptuuid[0]" if @ptuuid;
+  warn "$device_name PARTLABEL=$ptlabel[0]" if @ptlabel;
 
   # using the fstabkey value the desired device entry is defined
   if ($key_type eq "uuid") {
     chomp ($uuid[0]);
     return "UUID=$uuid[0]";
+  } elsif ($key_type eq "partuuid") {
+    chomp($ptuuid[0]);
+    return "PARTUUID=$ptuuid[0]";
   } elsif ($key_type eq "label" && scalar(@label) == 1) {
     chomp($label[0]);
     return "LABEL=$label[0]";
+  } elsif ($key_type eq "partlabel" && scalar(@ptlabel) == 1) {
+    chomp($ptlabel[0]);
+    return "PARTLABEL=$ptlabel[0]";
   } else {
     # otherwise, use the usual device path
     return $device_name;
