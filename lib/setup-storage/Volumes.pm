@@ -163,7 +163,7 @@ sub get_current_disks {
     # Parse the output of the byte-wise partition table
     foreach my $line (@parted_print) {
       chomp $line;
-      my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$name,$flags) = split(':', $line);
+      my ($n,$begin_byte,$end_byte,$count_byte,$fstype,$ptlabel,$flags) = split(':', $line);
       $begin_byte =~ s/B$//;
       $end_byte   =~ s/B$//;
       $count_byte =~ s/B$//;
@@ -173,7 +173,7 @@ sub get_current_disks {
       $FAI::current_config{$disk}{partitions}{$n}{begin_byte} = $begin_byte;
       $FAI::current_config{$disk}{partitions}{$n}{end_byte}   = $end_byte;
       $FAI::current_config{$disk}{partitions}{$n}{count_byte} = $count_byte;
-      $FAI::current_config{$disk}{partitions}{$n}{name}       = $name;
+      $FAI::current_config{$disk}{partitions}{$n}{ptlabel}    = $ptlabel;
       $FAI::current_config{$disk}{partitions}{$n}{filesystem} = $fstype;
       $FAI::current_config{$disk}{partitions}{$n}{flags}      = $flags;
 
