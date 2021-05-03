@@ -543,7 +543,7 @@ $FAI::Parser = Parse::RecDescent->new(
             $FAI::configs{RAID}{volumes}{$_}{preserve} = 2 foreach (split(",", $1));
           }
         }
-        | /^fstabkey:(device|label|uuid)/
+        | /^fstabkey:(device|label|uuid|partuuid|partlabel)/
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;
@@ -557,7 +557,7 @@ $FAI::Parser = Parse::RecDescent->new(
           }
         }
 
-    btrfs_option: /^fstabkey:(device|label|uuid)/
+    btrfs_option: /^fstabkey:(device|label|uuid|partuuid|partlabel)/
         {
         $FAI::configs{$FAI::device}{fstabkey} = $1;
         }
@@ -620,7 +620,7 @@ $FAI::Parser = Parse::RecDescent->new(
             }
           }
         }
-        | /^fstabkey:(device|label|uuid)/
+        | /^fstabkey:(device|label|uuid|partuuid|partlabel)/
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{"VG_--ANY--"}{fstabkey} = $1;
@@ -702,7 +702,7 @@ $FAI::Parser = Parse::RecDescent->new(
           # this is a configuration for a virtual disk
           $FAI::configs{$FAI::device}{virtual} = 1;
         }
-        | /^fstabkey:(device|label|uuid)/
+        | /^fstabkey:(device|label|uuid|partuuid|partlabel)/
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{$FAI::device}{fstabkey} = $1;

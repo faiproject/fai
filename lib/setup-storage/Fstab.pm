@@ -51,7 +51,7 @@ sub create_fstab_line {
 
   # add a comment denoting the actual device name in case of UUID or LABEL
   $comment_line="# device during installation: $dev_name\n"
-    if ($name =~ /^(UUID|LABEL)=/);
+    if ($name =~ /^(UUID|LABEL|PARTUUID|PARTLABEL)=/);
 
   # start with the device key
   push @fstab_line, $name;
@@ -99,6 +99,7 @@ sub get_fstab_key {
   my ($device_name, $key_type) = @_;
 
   ("uuid" eq $key_type) or ("label" eq $key_type) or ("device" eq $key_type) or
+    ("partuuid" eq $key_type) or ("partlabel" eq $key_type) or
     &FAI::internal_error("Invalid key type $key_type");
 
   # write the device name as the first entry; if the user prefers uuids
