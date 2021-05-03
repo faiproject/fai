@@ -1,4 +1,4 @@
-.TH setup-storage 8 "Sep 18, 2017" "Debian GNU/Linux"
+.TH setup-storage 8 "May, 2021" "FAI 5"
 .SH NAME
 \fBsetup-storage\fP
 \- automatically prepare storage devices
@@ -496,9 +496,9 @@ Example using a GPT partition table and EFI/ESP partition
 .sp
 .nf
 .ta 10n 20n 30n 40n 60n
-disk_config disk1 disklabel:gpt fstabkey:uuid bootable:1
-primary   /boot/efi  200     vfat    rw
-primary   /          1G-     ext4    rw
+disk_config disk1 disklabel:gpt fstabkey:partlabel bootable:1
+p=efi     /boot/efi  200     vfat    rw
+p=root    /          1G-     ext4    rw
 .sp
 .fi
 .PP
@@ -578,11 +578,12 @@ lvmoption ::= /* empty */
 .br
            /* attempt to resize partitions */
 .br
-           | fstabkey:(device|label|uuid)
+           | fstabkey:(device|label|uuid|partuuid|partlabel)
 .br
            /* when creating the fstab, the key used for defining the device
 .br
-           may be the device (/dev/xxx), a label given using \-L, or the uuid
+           may be the device (/dev/xxx), a label given using \-L,
+           the filesystem uuid, partition label (only when using GPT) or partition uuide
 .br
            */
 .br
@@ -668,7 +669,7 @@ option ::= /* empty */
 .br
            /* do not assume the disk to be a physical device, use with xen */
 .br
-           | fstabkey:(device|label|uuid)
+           | fstabkey:(device|label|uuid|partuuid|partlabel)
 .br
            /* when creating the fstab the key used for defining the device
 .br
@@ -727,6 +728,10 @@ type ::= primary
          | raw-disk
 .br
          /* for physical disks only: do not partition this disk, use it as-is */
+.br
+         | m{^p=([^/,;\s=]*)\s+}
+.br
+         /* p=<NAME> set NAME as gpt partition label, NAME may be empty */
 .br
          | raid[0156]
 .br
