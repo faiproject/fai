@@ -26,7 +26,7 @@ use strict;
 #
 # @brief Generate an fstab file as appropriate for the configuration
 #
-# @author Christian Kern, Michael Tautschnig
+# @author Christian Kern, Michael Tautschnig, Thomas Lange
 #
 ################################################################################
 
