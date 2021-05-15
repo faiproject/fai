@@ -66,6 +66,11 @@ inventory() {
     if [ -d /sys/firmware/efi ]; then
 	efibootmgr
     fi
+
+    echo List serial numbers of devices
+    cd /sys/class/dmi/id
+    grep . *_serial 2>/dev/null| sed -e 's/:/: /'| egrep -iv 'serial: 0123456789|: Not |N/A|:[[:blank:]]+$'
+    lsblk -dno name,serial
 }
 
 if [ X$verbose = X1 ]; then
