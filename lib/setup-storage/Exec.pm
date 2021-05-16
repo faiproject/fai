@@ -70,7 +70,7 @@ $FAI::error_codes = [
     message      => "Parted could not read a disk label (new disk?)\n",
     stderr_regex => "Error: .* unrecognised disk label",
     stdout_regex => "",
-    program      => "parted -s \\S+ unit TiB print",
+    program      => "parted -sm \\S+ unit B print",
     response     => "warn",
     exit_codes   => [1],
   },
