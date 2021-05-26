@@ -620,7 +620,7 @@ $FAI::Parser = Parse::RecDescent->new(
             }
           }
         }
-        | /^fstabkey:(device|label|uuid|partuuid|partlabel)/
+        | /^fstabkey:(device|label|uuid)/
         {
           # the information preferred for fstab device identifieres
           $FAI::configs{"VG_--ANY--"}{fstabkey} = $1;
