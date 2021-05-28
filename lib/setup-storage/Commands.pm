@@ -1098,7 +1098,7 @@ sub rebuild_preserved_partitions {
     }
 
     # set partition label if it exists
-    if ($FAI::configs{$config}{disklabel} eq "gpt") {
+    if ($FAI::configs{$config}{disklabel} =~ /gpt(-bios)?/) {
       $part_type = (defined($FAI::configs{$config}{partitions}{$mapped_id}{ptlabel}) ) ?
       $FAI::configs{$config}{partitions}{$mapped_id}{ptlabel} : "'\" \"'"; # or empty ptlabel
     }
@@ -1342,7 +1342,7 @@ sub setup_partitions {
     }
 
     # set partition label if it exists
-    if ($FAI::configs{$config}{disklabel} eq "gpt") {
+    if ($FAI::configs{$config}{disklabel} =~ /gpt(-bios)?/) {
       $part_type = (defined($part->{ptlabel}) ) ?
       $part->{ptlabel} : "'\" \"'"; # or empty ptlabel
     }
@@ -1489,7 +1489,7 @@ sub restore_partition_table {
       }
 
       # set partition label if it exists
-      if ($FAI::current_config{$disk}{disklabel} eq "gpt") {
+      if ($FAI::current_config{$disk}{disklabel} =~ /gpt(-bios)?/) {
 	$part_type = (defined($curr_part->{ptlabel}) ) ?
 	  $curr_part->{ptlabel} : "'\" \"'"; # or empty ptlabel
       }
