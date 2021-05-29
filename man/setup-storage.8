@@ -169,39 +169,39 @@ given below. First we show a number of examples to give an intuition what these
 should look like.
 
 .TP
-Simple configuration of /dev/hda
+Simple configuration of /dev/sda
 .sp
 .nf
 .ta 10n 20n 30n 40n 50n
-disk_config hda preserve_always:6,7 disklabel:msdos bootable:3
+disk_config sda preserve_always:6,7 disklabel:msdos bootable:3
 
-primary /boot   20-100  ext3    rw
-primary swap    1000    swap    sw
-primary /       12000   ext3    rw      createopts="\-b 2048"
-logical /tmp    1000    ext3    rw,nosuid
-logical /usr    5000    ext3    rw
-logical /var    10%-    ext3    rw
-logical /nobackup       0-      xfs     rw
+primary /boot   20-100  ext4    rw
+primary swap    1G      swap    sw
+primary /       12G     ext4    rw      createopts="\-b 2048"
+logical /tmp    1G      ext4    rw,nosuid
+logical /usr    5G      ext4    rw
+logical /var    10%-    ext4    rw
+logical /nobackup  0-   xfs     rw
 .sp
 .fi
 .PP
 .IP \(bu
-Preserve /dev/hda6 and /dev/hda7. The disklabel is msdos which is the default
-for x86. Furthermore, partition /dev/hda3 is made bootable.
+Preserve /dev/sda6 and /dev/sda7. The disklabel is msdos which is the default
+for x86. Furthermore, partition /dev/sda3 is made bootable.
 .IP \(bu
-Create a primary partition /dev/hda1 with a size between 20 and 100 MiB and mount it
-read-write as /boot; it is formatted using ext3 filesystem.
+Create a primary partition /dev/sda1 with a size between 20 and 100 MiB and mount it
+read-write as /boot; it is formatted using ext4 filesystem.
 .IP \(bu
-/dev/hda2 will be a swap space of 1000 MiB
+/dev/sda2 will be a swap space of 1 GiB
 .IP \(bu
-/dev/hda3 should be formatted using ext3 filesystem; when calling mkfs.ext3
+/dev/sda3 should be formatted using ext4 filesystem; when calling mkfs.ext4
 the option "\-b 2048" is appended.
 .IP \(bu
-Create the logical partition /dev/hda5
+Create the logical partition /dev/sda5
 .IP \(bu
-Make /dev/hda7 at least 10% of the disk size
+Make /dev/sda7 at least 10% of the disk size
 .IP \(bu
-Use mkfs.xfs to format the partition 8
+Use mkfs.xfs to format the partition 8.
 
 .TP
 Create a softRAID
@@ -273,13 +273,13 @@ Simple LVM example
 .nf
 .ta 15n 22n 30n 40n
 disk_config sda bootable:1
-primary /boot   500     ext3    rw
+primary /boot   500     ext4    rw
 primary -       4096-   -       -
 
 disk_config lvm
 vg      my_pv   sda2
 my_pv_swap     swap    2048    swap    sw
-my_pv_root     /       2048    ext3    rw
+my_pv_root     /       2048    ext4    rw
 .sp
 .fi
 .PP
@@ -300,7 +300,7 @@ primary -       350     -       -
 primary swap    2G      swap    sw,pri=1
 primary -       0-      -       -
 
-disk_config sdb  sameas:disk1
+disk_config disk2  sameas:disk1
 
 disk_config raid fstabkey:uuid
 raid1   /boot   disk1.1,disk2.1       ext4    rw,noatime,errors=remount-ro
@@ -334,8 +334,8 @@ Crypt example
 .nf
 .ta 10n 20n 30n 40n 50n
 disk_config /dev/sdb
-primary /       21750   ext3    defaults,errors=remount-ro
-primary /boot   250     ext3    defaults
+primary /       21750   ext4    defaults,errors=remount-ro
+primary /boot   250     ext4    defaults
 logical -       4000    -       -
 logical -       2000    -       -
 logical -       10-     -       -
@@ -343,7 +343,7 @@ logical -       10-     -       -
 disk_config cryptsetup
 swap    swap    /dev/sdb5       swap    defaults
 tmp     /tmp    /dev/sdb6       ext2    defaults
-luks    /local00        /dev/sdb7       ext3    defaults,errors=remount-ro  createopts="\-m     0"
+luks    /local00        /dev/sdb7       ext4    defaults,errors=remount-ro  createopts="\-m     0"
 .sp
 .fi
 .PP
@@ -367,7 +367,7 @@ cryptsetup configuration. In this case, the encrypted device will be
 called 'crypt_format_md1' and will be used as the underlying physical
 device (PV) in LVM.
 
-.sp
+`<.sp
 .nf
 .ta 10n 20n 30n 40n 50n
 disk_config cryptsetup
@@ -545,9 +545,9 @@ config ::= disk_config lvm( <lvmoption>)*
 .br
            | disk_config [^[:space:]]+( <option>)*
 .br
-           /* fully qualified device-path or short form, like hda, whereby full
+           /* fully qualified device-path or short form, like sda, whereby full
 .br
-            * path is assumed to be /dev/hda; may contain shell globbing such
+            * path is assumed to be /dev/sda; may contain shell globbing such
 .br
             * as /dev/disk/by-id/scsi-* */
 .br
@@ -634,7 +634,7 @@ option ::= /* empty */
 .br
            /* preserve partitions -- always; the numbers refer to partition
 .br
-           numbers, i.e., preserve_always:5 for /dev/hda refers to /dev/hda5,
+           numbers, i.e., preserve_always:5 for /dev/sda refers to /dev/sda5,
 .br
            which may not necessarily be the 5th line of the configuration */
 .br
