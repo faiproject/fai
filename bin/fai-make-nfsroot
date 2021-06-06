@@ -444,8 +444,8 @@ EOF
 
     # remove file diversion, then create initrd
     rm $NFSROOT/etc/kernel/postinst.d/dracut
-    $ROOTCMD dpkg-divert --rename --remove /etc/kernel/postinst.d/dracut
-    $ROOTCMD dpkg-reconfigure dracut
+    LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /etc/kernel/postinst.d/dracut
+    LC_ALL=C $ROOTCMD dpkg-reconfigure dracut
 
     set_root_pw
 
@@ -531,11 +531,11 @@ add_packages_nfsroot() {
     local err
 
     setclasses
-    install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
+    LC_ALL=C install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
     echo "Adding additional packages to $NFSROOT:"
     cat $NFSROOT/var/tmp/packages.nfsroot
     set +e
-    call_verbose install_packages $v -p$cfdir
+    LC_ALL=C call_verbose install_packages $v -p$cfdir
     err=$?
     if [ $err -ne 0 ]; then
 	die 12 "install_packages had exit code: $err"
