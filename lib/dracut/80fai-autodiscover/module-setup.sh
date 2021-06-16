@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 
 check() {
     # do not add this module by default

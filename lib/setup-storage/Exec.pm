@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -317,7 +317,7 @@ sub execute_ro_command {
 
 ################################################################################
 #
-# @brief execute a /bin/bash command, given as string. also catch stderr and
+# @brief execute a bash command, given as string. also catch stderr and
 # stdout, to be passed to the caller function, and also used for error
 # recognition. This caller function must handle the error.
 #
