@@ -174,7 +174,7 @@ Simple configuration of /dev/sda
 .sp
 .nf
 .ta 8n +8n +7n +5n +5n +5n
-disk_config sda disklabel:msdos bootable:3
+disk_config disk1 disklabel:msdos bootable:3
 
 primary	/boot	20-100	ext4	rw
 primary	swap	1G	swap	sw
@@ -184,8 +184,10 @@ logical	/backup	10%-	xfs	rw
 .fi
 .PP
 .IP \(bu
+The first disk found is going to be partitioned. FAI looks into
+/proc/partitions and sets the variable \fIdisklist\fP.
 The disklabel is msdos which is the default
-for x86. Furthermore, partition /dev/sda3 is made bootable.
+for x86. Let's assume /dev/sda is the first disk. Then partition /dev/sda3 is made bootable.
 .IP \(bu
 Create a primary partition /dev/sda1 with a size between 20 and 100 MiB and mount it
 read-write as /boot; it is formatted using ext4 filesystem.
@@ -488,7 +490,8 @@ p=	/data	1G-	ext4	rw
 .IP \(bu
 Creating a ESP partition is very simple. Use a GPT partition table,
 create a vfat partition for /boot/efi which is also bootable. That's it.
-
+A name after p= is used as the partition label. Remember that GPT does
+not use logical partition. Just use p= for each partition.
 
 
 .SH SYNTAX
@@ -787,7 +790,7 @@ size ::= <sizespec>(-(<sizespec>)?)?(:resize|:preserve_(always|reinstall|lazy))?
 .br
           * volumes only */
 .br
-         | [^,:[:space:]]+(:(spare|missing))*(,[^,:[:space:]]+(:(spare|missing))*)*
+  | [^,:[:space:]]+(:(spare|missing))*(,[^,:[:space:]]+(:(spare|missing))*)*
 .br
          /* devices and options for a raid or lvm vg */
 .br
