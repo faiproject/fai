@@ -165,28 +165,26 @@ file plus key files will be generated.
 .SH EXAMPLES
 \fBsetup-storage\fP configures storage devices according to a FAI disk_config
 file. The full grammar describing the syntax of these disk_config files is
-given below. First we show a number of examples to give an intuition what these
+given below. The syntax is similar to the structure of an fstab file.
+First we show a number of examples to give an intuition what these
 should look like.
 
-.TP
+.TP 3m
 Simple configuration of /dev/sda
 .sp
 .nf
-.ta 10n 20n 30n 40n 50n
-disk_config sda preserve_always:6,7 disklabel:msdos bootable:3
+.ta 8n +8n +7n +5n +5n +5n
+disk_config sda disklabel:msdos bootable:3
 
-primary /boot   20-100  ext4    rw
-primary swap    1G      swap    sw
-primary /       12G     ext4    rw      createopts="\-b 2048"
-logical /tmp    1G      ext4    rw,nosuid
-logical /usr    5G      ext4    rw
-logical /var    10%-    ext4    rw
-logical /nobackup  0-   xfs     rw
+primary	/boot	20-100	ext4	rw
+primary	swap	1G	swap	sw
+primary	/	12G	ext4	rw,noatime
+logical	/backup	10%-	xfs	rw	
 .sp
 .fi
 .PP
 .IP \(bu
-Preserve /dev/sda6 and /dev/sda7. The disklabel is msdos which is the default
+The disklabel is msdos which is the default
 for x86. Furthermore, partition /dev/sda3 is made bootable.
 .IP \(bu
 Create a primary partition /dev/sda1 with a size between 20 and 100 MiB and mount it
@@ -194,64 +192,48 @@ read-write as /boot; it is formatted using ext4 filesystem.
 .IP \(bu
 /dev/sda2 will be a swap space of 1 GiB
 .IP \(bu
-/dev/sda3 should be formatted using ext4 filesystem; when calling mkfs.ext4
-the option "\-b 2048" is appended.
+/dev/sda3 should be formatted using ext4 filesystem
 .IP \(bu
-Create the logical partition /dev/sda5
-.IP \(bu
-Make /dev/sda7 at least 10% of the disk size
-.IP \(bu
-Use mkfs.xfs to format the partition 8.
+Create the logical partition /dev/sda5 (because the first logical
+partition will always become number 5)
+Make it at least 10% of the disk size.
+Use mkfs.xfs to format this partition.
 
-.TP
-Create a softRAID
-.TS
-tab(@) nospaces;
-l s s s s
-l l r l l.
+.TP 3m
+Create a software RAID
+.sp
+.nf
+.ta 10n +5n +10n +4n +4n +4n
 disk_config sda
-primary @ - @ 20GiB @ - @ -
-primary @ - @ 4GiB @ - @ -
+primary	-	20G	-	-
+primary	-	4G	-	-
 
-.T&
-l s s s s.
-disk_config sdb
-.T&
-l l r l l.
-primary @ - @ 20GiB @ - @ -
-primary @ - @ 4GiB @ - @ -
+disk_config sdb sameas: sda
 
-.T&
-l s s s s.
 disk_config raid
-.T&
-l l l l l.
-raid1 @ / @ sda1,sdb1 @ ext3 @ rw
-raid1 @ swap @ sda2,sdb2 @ swap @ sw
-.TE
+raid1	/	sda1,sdb1	ext4	rw
+raid1	swap	sda2,sdb2	swap	sw
 .sp
 .fi
 .PP
 .IP \(bu
 Create 2 partitions of size 20 and 4 GiB, respectively, on disks /dev/sda and
-/dev/sdb. No file system or fstab entry will be created.
+/dev/sdb. No file system or fstab entry will be created. on these partitions.
 .IP \(bu
-Create a RAID-1 on /dev/sda1 and /dev/sdb1, format using mkfs.ext3 and mount
+Create a RAID-1 on /dev/sda1 and /dev/sdb1, format using mkfs.ext4 and mount
 it as /
 .IP \(bu
 Create a RAID-1 on /dev/sda2 and /dev/sdd2, prepare as swap space and use it as
 such later on.
 
-.TP
+.TP 3m
 Advanced softRAID features
-.TS
-tab(@) nospaces;
-l s s s s
-l l l l l.
+.sp
+.nf
+.ta 7n 12n 23n 27n 37n
 disk_config raid
-raid1 @ / @ sda1,sdd1 @ ext2 @ rw,errors=remount-ro
-raid0 @ - @ disk2.2,sdc1,sde1:spare:missing @ ext2 @ default
-.TE
+raid1	/	sda1,sdd1	ext4	rw,errors=remount-ro	
+raid0	-	disk2.2,sdc1,sde1:spare:missing ext4 default	
 .sp
 .fi
 .PP
@@ -267,19 +249,19 @@ omitted in this example. These devices can be configured similar to the
 configuration shown in the first example. They may also already be properly set
 up and hence the configuration can be left out.
 
-.TP
+.TP 3m
 Simple LVM example
 .sp
 .nf
-.ta 15n 22n 30n 40n
-disk_config sda bootable:1
-primary /boot   500     ext4    rw
-primary -       4096-   -       -
+.ta 7n +7n +7n +10n +10n +10n
+disk_config	sda	bootable:1
+primary	/boot	500	ext4	rw	
+primary	-	4096-	-	-	
 
 disk_config lvm
-vg      my_pv   sda2
-my_pv_swap     swap    2048    swap    sw
-my_pv_root     /       2048    ext4    rw
+vg	my_pv	sda2
+my_pv_swap	swap	2048	swap	sw
+my_pv_root	/	2048	ext4	rw
 .sp
 .fi
 .PP
@@ -294,24 +276,24 @@ This volume group hosts two logical volumes: _swap and _root.
 LVM on software RAID
 .sp
 .nf
-.ta 18n 28n 38n 45n 55n
+.ta 12n +6n +8n +8n +8n
 disk_config disk1
-primary -       350     -       -
-primary swap    2G      swap    sw,pri=1
-primary -       0-      -       -
+primary	-	350	-	-
+primary	swap	2G	swap	sw,pri=1
+primary	-	0-	-	-
 
 disk_config disk2  sameas:disk1
 
 disk_config raid fstabkey:uuid
-raid1   /boot   disk1.1,disk2.1       ext4    rw,noatime,errors=remount-ro
-raid1   -       disk1.3,disk2.3       -       -
+raid1	/boot	disk1.1,disk2.1	ext4	rw,noatime,errors=remount-ro
+raid1	-	disk1.3,disk2.3	-	-
 
 disk_config lvm fstabkey:uuid
-vg      vg_system       md1
-vg_system-root  /       8G      ext4    rw,noatime
-vg_system-var   /var    20G     ext4    rw,noatime
-vg_system-home  /home   10G     ext4    rw,noatime,nosuid,nodev
-vg_system-tmp   /tmp    30G     ext4    rw,noatime,nosuid,nodev
+vg	vg_system	md1
+vg_system-root	/	8G	ext4	rw,noatime
+vg_system-var	/var	20G	ext4	rw,noatime
+vg_system-home	/home	10G	ext4	rw,noatime,nosuid,nodev
+vg_system-tmp	/tmp	30G	ext4	rw,noatime,nosuid,nodev
 .sp
 .fi
 .PP
@@ -334,16 +316,16 @@ Crypt example
 .nf
 .ta 10n 20n 30n 40n 50n
 disk_config /dev/sdb
-primary /       21750   ext4    defaults,errors=remount-ro
-primary /boot   250     ext4    defaults
-logical -       4000    -       -
-logical -       2000    -       -
-logical -       10-     -       -
+primary	/	21750	ext4	defaults,errors=remount-ro
+primary	/boot	250	ext4	defaults
+logical	-	4000	-	-
+logical	-	2000	-	-
+logical	-	10-	-	-
 
 disk_config cryptsetup
-swap    swap    /dev/sdb5       swap    defaults
-tmp     /tmp    /dev/sdb6       ext2    defaults
-luks    /local00        /dev/sdb7       ext4    defaults,errors=remount-ro  createopts="\-m     0"
+swap	swap	/dev/sdb5	swap	defaults
+tmp	/tmp	/dev/sdb6	ext2	defaults
+luks	/local00	/dev/sdb7	ext4	defaults,errors=remount-ro  createopts="\-m 0"
 .sp
 .fi
 .PP
@@ -367,11 +349,11 @@ cryptsetup configuration. In this case, the encrypted device will be
 called 'crypt_format_md1' and will be used as the underlying physical
 device (PV) in LVM.
 
-`<.sp
+.sp
 .nf
-.ta 10n 20n 30n 40n 50n
+.ta 7n +7n +7n +7n
 disk_config cryptsetup
-luks    -        /dev/md1       -       -
+luks	-	/dev/md1	- -
 .sp
 .fi
 .PP
@@ -383,14 +365,14 @@ Plain disk + LUKS + LVM2 example
 .ta 10n 20n 30n 40n 50n
 
 disk_config disk1 disklabel:gpt bootable:1 fstabkey:uuid align-at:1M
-primary - 100%  -       -
+primary	-	100%	-	-
 
 disk_config cryptsetup
-luks:"passwd" - disk1.1 -       -
+luks:"passwd"	-	disk1.1	-	-
 
 disk_config lvm fstabkey:uuid
-vg vg1  disk1.1
-vg1-root     /  30%-     ext4    defaults,errors=remount-ro,noatime,rw
+vg	vg1	disk1.1
+vg1-root	/	30%-	ext4	defaults,errors=remount-ro,noatime,rw
 .sp
 .fi
 .PP
@@ -401,8 +383,8 @@ tmpfs example
 .nf
 .ta 10n 20n 30n 40n 50n
 disk_config tmpfs
-tmpfs   /tmp    RAM:20% defaults
-tmpfs   /scratch        3GiB    defaults
+tmpfs	/tmp	RAM:20%	defaults
+tmpfs	/scratch	3GiB	defaults
 .sp
 .fi
 .PP
@@ -433,18 +415,18 @@ Simple BTRFS example
 .nf
 .ta 10n 20n 30n 40n 50n
 disk_config disk1
-primary /boot 500 ext4 rw
-primary - 2G- - -
+primary	/boot	500	ext4	rw
+primary	-	2G-	-	-
 
 disk_config disk2
-primary - 2G- - -
+primary	-	2G-	-	-
 
 disk_config disk3 sameas:disk2
 disk_config disk4 sameas:disk2
 
 disk_config btrfs fstabkey:uuid
-btrfs raid1 /                 disk1.2,disk2.1  noatime,subvol=@/
-btrfs raid1 /home             disk3.1,disk4.1  subvol=@home,noatime
+btrfs	raid1	/	disk1.2,disk2.1	noatime,subvol=@/
+btrfs	raid1	/home	disk3.1,disk4.1	subvol=@home,noatime
 .sp
 .fi
 .PP
@@ -470,17 +452,17 @@ External log device example
 .nf
 .ta 10n 20n 30n 40n 60n
 disk_config /dev/sda fstabkey:uuid bootable:2
-primary /       20GiB   ext3            defaults
-primary /boot   250     ext2            defaults
-primary swap    4GiB    swap            defaults
-logical -       256     ext3_journal    -
-logical -       256     ext4_journal    -
-logical -       256     xfs_journal     -
+primary	/	20GiB	ext3	defaults
+primary	/boot	250	ext2	defaults
+primary	swap	4GiB	swap	defaults
+logical	-	256	ext3_journal	-
+logical	-	256	ext4_journal	-
+logical	-	256	xfs_journal	-
 
 disk_config /dev/sdb fstabkey:uuid
-primary /mnt/ext3       33%     ext3:journal=/dev/sda5          defaults
-primary /mnt/ext4       33%     ext4:journal=/dev/sda6          defaults
-primary /mnt/xfs        33%     xfs:journal=/dev/sda7           defaults
+primary	/mnt/ext3	33%	ext3:journal=/dev/sda5	defaults
+primary	/mnt/ext4	33%	ext4:journal=/dev/sda6	defaults
+primary	/mnt/xfs	33%	xfs:journal=/dev/sda7	defaults
 .sp
 .fi
 .PP
@@ -497,9 +479,9 @@ Example using a GPT partition table and EFI/ESP partition
 .nf
 .ta 10n 20n 30n 40n 60n
 disk_config disk1 disklabel:gpt fstabkey:partlabel bootable:1
-p=efi     /boot/efi  200     vfat    rw
-p=root    /          1G-20G  ext4    rw
-p=        /data      1G-     ext4    rw
+p=efi	/boot/efi	200	vfat	rw
+p=root	/	1G-20G	ext4	rw
+p=	/data	1G-	ext4	rw
 .sp
 .fi
 .PP
