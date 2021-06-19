@@ -371,10 +371,10 @@ sub generate_fstab {
           warn "Specified tmpfs size for $c_ref->{mountpoint} ignored as mount options contain size= or nr_blocks=\n";
         } else {
           unless ($c_ref->{size} eq '-') {
-	  $c_ref->{mount_options} .= "," if ($c_ref->{mount_options} ne "");
-          # Size will be in % or MiB
-	  $c_ref->{mount_options} .= "size=" . $c_ref->{size};
-        }
+            $c_ref->{mount_options} .= "," if ($c_ref->{mount_options} ne "");
+            # Size will be in % or MiB
+            $c_ref->{mount_options} .= "size=" . $c_ref->{size};
+          }
 	}
 
         push @fstab, create_fstab_line($c_ref, "tmpfs", "tmpfs");
