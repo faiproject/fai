@@ -991,7 +991,7 @@ $FAI::Parser = Parse::RecDescent->new(
         }
         | <error: invalid partition size near "$text">
 
-    tmpfs_size: /^(RAM:(\d+%)|\d+[kKMGTPiB]*)\s+/
+    tmpfs_size: /^(RAM:(\d+%)|\d+[kKMGTPiB]*|-)\s+/
         {
           my $size;
 
@@ -999,6 +999,8 @@ $FAI::Parser = Parse::RecDescent->new(
           # A percentage is kept as is as tmpfs handles it
           if (defined($2)) {
             $size = $2;
+          } elsif ($1 eq '-') {
+            $size = '-';
           } else {
             $size = $1;
             $size .= "MiB" if ($size =~ /\d\s*$/);
