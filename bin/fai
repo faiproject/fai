@@ -87,8 +87,17 @@ fai_init() {
     if [ -z "$FAI_ROOT" ] ; then
       [ $do_init_tasks -eq 1 ] && FAI_ROOT=/target || FAI_ROOT=/
     fi
-    # executed command in the environment of the new system
-    ROOTCMD="unshare --pid --fork --kill-child --mount-proc chroot $FAI_ROOT"
+    # ROOTCMD will execute a command in the environment of the new system
+    # if ROOTCMD was set from outside, do not touch it
+    if [ -z "$ROOTCMD" ]; then
+        # check if unshare can be used (e.g. not possible in some container environments)
+        unshare --pid --fork --kill-child --mount-proc chroot / ls >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            ROOTCMD="unshare --pid --fork --kill-child --mount-proc chroot $FAI_ROOT"
+        else
+            ROOTCMD="chroot $FAI_ROOT"
+        fi
+    fi
     # no chroot needed
     [ "$FAI_ROOT" = '/' ] && ROOTCMD=
     target=$FAI_ROOT
