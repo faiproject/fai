@@ -154,7 +154,17 @@ cfdir=$(readlink -f $cfdir) # canonicalize path
 oldnfsroot=$NFSROOT
 deldir=$NFSROOT
 
-ROOTCMD="unshare --pid --fork --kill-child --mount-proc chroot $NFSROOT"
+set +e
+if [ -z "$ROOTCMD" ]; then
+    # check if unshare can be used (e.g. not possible in some container environments)
+    unshare --pid --fork --kill-child --mount-proc chroot / ls >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        ROOTCMD="unshare --pid --fork --kill-child --mount-proc chroot $FAI_ROOT"
+    else
+        ROOTCMD="chroot $FAI_ROOT"
+    fi
+fi
+set -e
 export DEBIAN_FRONTEND=noninteractive
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -531,7 +541,8 @@ add_packages_nfsroot() {
     local err
 
     setclasses
-    LC_ALL=C install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
+    > $NFSROOT/var/lib/dpkg/available
+    install_packages -l -p$cfdir > $NFSROOT/var/tmp/packages.nfsroot
     echo "Adding additional packages to $NFSROOT:"
     cat $NFSROOT/var/tmp/packages.nfsroot
     set +e

@@ -4,11 +4,8 @@
 
 # This script is part of FAI (Fully Automatic Installation)
 #
-# Copyright (C) 2016-2018 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2016-2021 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
-
-# this script neither needs /etc/fai nor the nfsroot. Only the config space is needed
-# should unshare be used ?
 
 die() {
 
@@ -51,6 +48,7 @@ cleanup() {
 	    rm /var/run/fai/FAI_INSTALLATION_IN_PROGRESS
 	fi
     fi
+    rmmod loop
 }
 
 usage() {
@@ -66,6 +64,7 @@ supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk, .simg.
    -v|--verbose   	    be verbose
    -N|--new                 execute scripts class/[0-9]* for defining classes
    -c|--class <class,...>   define list of FAI classes
+   -C|--cfdir <dir>         Use dir for reading the config files (default /etc/fai)
    -S|--size  <size>        size of raw image (suffixes k M G T are supported)
    -s|--cspace  <uri>       location of the config space
    -u|--hostname <name>     set hostname to name
@@ -92,7 +91,7 @@ check_commands() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 call="$0 $*"
-TEMP=$(getopt -o NS:s:u:hvc: --long new,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
+TEMP=$(getopt -o C:NS:s:u:hvc: --long new,cfdir:,cspace:,hostname:,class:,size:,help,verbose -n "$0" -- "$@")
 if [ $? != 0 ] ; then die 6 "Wrong option. Terminating." >&2 ; fi
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -110,6 +109,9 @@ while true ; do
             shift ;;
         -c|--class)
             export classes=$2
+            shift 2 ;;
+        -C|--cfdir)
+            cfdir="-C $2 "
             shift 2 ;;
         -N|--new)
             renew="-N"
@@ -213,7 +215,7 @@ mnt=$(mktemp -d -t fai-diskimage.XXXXXX)
 
 trap "cleanup" EXIT
 
-LC_ALL=C fai $renew -u $hname -s $uri -c$classes install $mnt
+LC_ALL=C fai ${cfdir}${renew} -u $hname -s $uri -c$classes install $mnt
 error=$?
 cleanup
 
