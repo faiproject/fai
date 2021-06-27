@@ -105,7 +105,11 @@ while getopts aghervc:C:B:fkKpPUzsN opt ; do
         c) classes=$OPTARG
 	   classes=${classes//,/ } ;;
         C) cfdir=$OPTARG ;;
-        B) basetgz=$OPTARG ;;
+        B) basetgz=$OPTARG
+           if [ ! -r "$basetgz" ] ; then
+               die 7 "Specified $basetgz can not be read."
+           fi
+           ;;
         v) verbose=1 ; v=-v ;;
         U) die 1 "Option -U is not supported any more." ;;
         r) die 1 "Option -r is not supported any more." ;;
@@ -357,10 +361,6 @@ create_base() {
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 extract_base() {
-
-    if [ ! -r "$basetgz" ] ; then
-      die 7 "Specified $basetgz could not be used."
-    fi
 
     if cd $NFSROOT ; then
       printf "Extracting $basetgz: "
