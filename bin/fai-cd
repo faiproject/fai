@@ -5,7 +5,7 @@
 # fai-cd -- make a fai CD, a bootable CD that performs the FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2004-2020 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2004-2021 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Support for grub2 added by Sebastian Hetze, s.hetze@linux-ag.de
 # with major support from Michael Prokop, prokop@grml-solutions.com
@@ -60,7 +60,7 @@ hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/c
 usage() {
 
     cat <<-EOF
-	fai-cd Copyright (C) 2004-2020 Thomas Lange
+	fai-cd Copyright (C) 2004-2021 Thomas Lange
 
 	Usage: fai-cd [OPTIONS] -m MIRRORDIR ISONAME
 	Usage: fai-cd [OPTIONS] -B ISONAME
@@ -149,7 +149,7 @@ create_autodiscover_iso() {
 omit_dracutmodules+=" fs-lib livenet rootfs-block "
 EOF
 
-    if [ -n "$sqopt" ]; then
+    if [ -n "$_OPTJ" ]; then
 	compress="--xz"
     else
 	compress=--compress='gzip -1'
@@ -383,6 +383,8 @@ burniso() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
 
+sqopt="-comp zstd  -Xcompression-level 5"
+
 # Parse commandline options
 while getopts "AekfhHg:Jbs:SBMn:m:V:c:C:d:" opt ; do
     case "$opt" in
@@ -394,7 +396,7 @@ while getopts "AekfhHg:Jbs:SBMn:m:V:c:C:d:" opt ; do
         h)  usage ;;
         H)  hidedirs="" ;;
         g)  grub_config="$OPTARG" ;;
-        J)  sqopt="-comp xz" ; arguments+=" -J";;
+        J)  _OPTJ=1; sqopt="-comp xz" ; arguments+=" -J";;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
         n)  setnfsroot="$OPTARG" ;;
