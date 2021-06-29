@@ -7,8 +7,9 @@
 # This script is part of FAI (Fully Automatic Installation)
 # (c) 2000-2021 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
-# (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
+# (c) 2004,2021 by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
+# Max-Planck-Institut fuer Struktur und Dynamik der Materie, Hamburg
 #
 #*********************************************************************
 # This program is free software; you can redistribute it and/or modify
@@ -93,15 +94,16 @@ sshpreserve=0
 adjust=0
 generic=0
 force=0
-usexz=1
+create_base_tar="xz"
 full=1
 
 # option e currently does nothing
-while getopts aghervc:C:B:fkKpPUzsN opt ; do
+while getopts aghervc:C:B:fkKpPUzsNb opt ; do
     case "$opt" in
         a) adjust=1 ;;
         g) generic=1 ;;
-        z) usexz=0 ;;
+        z) create_base_tar="gz" ;;
+        b) create_base_tar="" ;;
         c) classes=$OPTARG
 	   classes=${classes//,/ } ;;
         C) cfdir=$OPTARG ;;
@@ -343,16 +345,14 @@ create_base() {
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
-    if [ $usexz -eq 0 ]; then
-        echo "Creating base.tar.gz"
-    else
-        echo "Creating base.tar.xz"
-    fi
-    tar --xattrs --acls --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
-    if [ $usexz -eq 1 ]; then
-        nice xz -q $NFSROOT/var/tmp/base.tar &
-    else
-        nice gzip $NFSROOT/var/tmp/base.tar &
+    if [ -n "$create_base_tar" ] ; then
+        echo "Creating base.tar.${create_base_tar}"
+        tar --xattrs --acls --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+        if [ $create_base_tar == "xz" ]; then
+            nice xz -q $NFSROOT/var/tmp/base.tar &
+        else
+            nice gzip $NFSROOT/var/tmp/base.tar &
+        fi
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -454,8 +454,8 @@ EOF
 
     # remove file diversion, then create initrd
     rm $NFSROOT/etc/kernel/postinst.d/dracut
-    $ROOTCMD dpkg-divert --rename --remove /etc/kernel/postinst.d/dracut
-    $ROOTCMD dpkg-reconfigure dracut
+    LC_ALL=C $ROOTCMD dpkg-divert --rename --remove /etc/kernel/postinst.d/dracut
+    LC_ALL=C $ROOTCMD dpkg-reconfigure dracut
 
     set_root_pw
 
@@ -546,7 +546,7 @@ add_packages_nfsroot() {
     echo "Adding additional packages to $NFSROOT:"
     cat $NFSROOT/var/tmp/packages.nfsroot
     set +e
-    call_verbose install_packages $v -p$cfdir
+    LC_ALL=C call_verbose install_packages $v -p$cfdir
     err=$?
     if [ $err -ne 0 ]; then
 	die 12 "install_packages had exit code: $err"
