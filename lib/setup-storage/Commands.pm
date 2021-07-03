@@ -1559,7 +1559,7 @@ sub order_commands {
     if (defined($FAI::commands{$i}{pre})) {
       foreach (split(/,/, $FAI::commands{$i}{pre})) {
         my $cur = $_;
-        next if scalar(grep(m{^$cur$}, @pre_deps));
+        next if scalar(grep(m{^\Q$cur\E$}, @pre_deps));
         $all_matched = 0;
         last;
       }
