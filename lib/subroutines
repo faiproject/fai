@@ -158,8 +158,7 @@ cleanup_devicemapper() {
 	> /var/run/fai/vgremove.$PPID
 	vgroup=$(awk '/Executing: vgcreate/ {print $3}' $LOGDIR/format.log)
 	for v in $vgroup; do
-	    vgchange -an $v
-	    echo vgremove -f $v >> /var/run/fai/vgremove.$PPID
+	    echo blkdeactivate /dev/$v/* >> /var/run/fai/vgremove.$PPID
 	done
     fi
 }
