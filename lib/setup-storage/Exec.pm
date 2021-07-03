@@ -74,15 +74,6 @@ $FAI::error_codes = [
     response     => "warn",
     exit_codes   => [1],
   },
-  ## {
-  ##   error        => "parted_3",
-  ##   message      => "Parted was unable to create the partition\n",
-  ##   stderr_regex => "Warning: You requested a partition from .* to .*\\.\$",
-  ##   stdout_regex => "",
-  ##   program      => "parted",
-  ##   response     => \&FAI::restore_partition_table,
-  ##   exit_codes   => [0..255],
-  ## },
   {
     error        => "parted_4",
     message      => "Parted was unable to read the partition table\n",
