@@ -5,7 +5,7 @@
 # fai-chboot -- manage configuration for network boot
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2003-2020 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2003-2021 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -34,7 +34,7 @@ use Net::hostent;
 use Getopt::Std;
 use File::Copy;
 
-our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u,$opt_U,$opt_q);
+our ($opt_D,$opt_p,$opt_h,$opt_t,$opt_s,$opt_C,$opt_P,$opt_E,$opt_c,$opt_l,$opt_d,$opt_i,$opt_S,$opt_L,$opt_B,$opt_I,$opt_n,$opt_v,$opt_e,$opt_F,$opt_f,$opt_k,$opt_g,$opt_o,$opt_u,$opt_U,$opt_q,$opt_a);
 our ($error,$pxedir,$nfsroot,$nfsroot_server,$tftproot,$verbose,$append,$action,$kernelsuffix);
 our ($mac,$ipadr,$cfdir,$flags,$debug,$match,$bootprot);
 our (%hname,%hexname,%type,@allfiles,@templates,@enabled,@other,@patterns,@disabled);
@@ -390,7 +390,7 @@ sub tcopy {
   }
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:U:oPq') || usage;
+getopts('gBc:C:D:eEdhnvlLiIpf:Fk:Ss:tu:U:oPqa:') || usage;
 $opt_h and usage;
 
 $opt_n and $opt_v = 1;
@@ -402,6 +402,10 @@ $opt_l or ( @ARGV ) or usage;
 
 ($opt_B and $opt_F) && die "ERROR: use only one option out of -B and -F\n";
 ($opt_S and $opt_I) && die "ERROR: use only one option out of -I and -S\n";
+($opt_S and $opt_a) && die "ERROR: use only one option out of -S and -a\n";
+($opt_I and $opt_a) && die "ERROR: use only one option out of -I and -a\n";
+
+
 #TODO: also -e, -r and -c can't be used together
 
 if ($opt_U && $opt_U !~ m#/$#) {
@@ -463,6 +467,10 @@ if ($opt_S) {
 if ($opt_I) {
   $opt_i = 1;
   $action="FAI_ACTION=install";
+}
+if ($opt_a) {
+  $opt_i = 1;
+  $action="FAI_ACTION=$opt_a";
 }
 
 if ($opt_i || $opt_s) {
