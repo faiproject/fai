@@ -506,7 +506,7 @@ sub build_raid_commands {
       $pre_req = "exist_/dev/md" . ( $id - 1 ) . $pre_req if (0 != $id);
       $pre_req =~ s/^,//;
       &FAI::push_command(
-        "yes | mdadm --create $create_options /dev/md$id --level=$level --force --run --raid-devices="
+        "yes | mdadm --create /dev/md$id --level=$level --force --run $create_options --raid-devices="
           . scalar(@eff_devs) . (scalar(@spares) !=0 ? " --spare-devices=" . scalar(@spares) : "") . " "
           . join(" ", @eff_devs) . " " . join(" ", @spares),
         "$pre_req", "exist_/dev/md$id" );
