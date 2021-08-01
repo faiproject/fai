@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (c) 2013-2018 by Thomas Lange, Universitaet zu Koeln
+# Copyright (c) 2013-2021 by Thomas Lange, Universitaet zu Koeln
 
 # Inventory function, print hardware inventory, without too much configuration information
 
@@ -21,6 +21,9 @@ inventory() {
 
     # memory, RAM
     mem=$(/usr/sbin/dmidecode -t memory | awk '( /Size:.*MB/ ) { x+=$2 } END { print x/1024 " GB"}')
+    if [ "$mem" = "0 GB" ]; then
+    mem=$(/usr/sbin/dmidecode -t memory | awk '( /Size:.*GB/ ) { x+=$2 } END { print x " GB"}')
+    fi
     echo "RAMSIZE: $mem"
 
     ncpu=$(grep "model name" /proc/cpuinfo | sed -e 's/model name.*://' -e 's/(R)//g' -e 's/(TM)//g' -e 's/^[[:blank:]]\+//'|wc -l)
