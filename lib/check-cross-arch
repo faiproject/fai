@@ -17,8 +17,9 @@ fi
 
 info=$(file /bin/more)
 myarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*')
+i386_re="ELF 32-bit LSB (shared object|pie executable), Intel 80386"
 if [ -z "$myarch" ]; then
-    if [[ "$info" =~  "ELF 32-bit LSB shared object, Intel 80386" ]]; then
+    if [[ "$info" =~  $i386_re ]]; then
 	myarch=i386
     fi
 fi
@@ -38,7 +39,7 @@ _more=$target/${_more#$target}
 info=$(file $_more)
 targetarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*')
 if [ -z "$targetarch" ]; then
-    if [[ "$info" =~  "ELF 32-bit LSB shared object, Intel 80386" ]]; then
+    if [[ "$info" =~  $i386_re ]]; then
 	targetarch=i386
     fi
 fi
