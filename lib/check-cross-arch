@@ -5,7 +5,9 @@
 # This script is part of FAI (Fully Automatic Installation)
 # Copyright (C) 2017-2020 Thomas Lange, lange@informatik.uni-koeln.de
 
+set -euE
 
+verbose=${verbose:-0}
 target=$1
 
 # is there already a qemu-*static binary?
@@ -37,7 +39,7 @@ fi
 _more=$(realpath -m $_more)      # handle symlink
 _more=$target/${_more#$target}
 info=$(file $_more)
-targetarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*')
+targetarch=$(expr "$info" : '.*ld-linux-\([^[:space:]]*\).so.*') || true
 if [ -z "$targetarch" ]; then
     if [[ "$info" =~  $i386_re ]]; then
 	targetarch=i386
