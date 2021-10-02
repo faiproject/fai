@@ -59,6 +59,7 @@ my $maxpl;  # maximum length of package list
 my @known;   # list of all known packages
 my $execerrors; # counts execution errors
 my $aptopt='-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew';
+my $pacmanopts='';
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 my $debsourcesdir='/var/lib/fai/packages';
 my @ls;
@@ -71,12 +72,14 @@ $| = 1;
 
 
 # @commands is the order of the commands that are executed
-our @commands = qw/y2i y2r zypper zypper-pattern zypper-product zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r install install-norec aptitude aptitude-r apt unpack remove dselect-upgrade/;
+our @commands = qw/y2i y2r zypper zypper-pattern zypper-product zypper-rm yast rpmr urpmi urpme yumgroup yumi yumr dnfgroup dnfi dnfr smarti smartr hold taskrm taskinst clean-internal cupt cupt-r install install-norec aptitude aptitude-r apt unpack remove dselect-upgrade pacman-Rns pacman-S/;
 %command = (
           "install" => "apt-get $aptopt --fix-missing install",
     "install-norec" => "apt-get $aptopt --fix-missing install --no-install-recommends",
            "remove" => "apt-get $aptopt --purge remove",
   "dselect-upgrade" => "apt-get $aptopt dselect-upgrade",
+  "pacman-S" => "pacman $aptopt -S ",
+  "pacman-Rns" => "pacman $aptopt -Rns ",
          "taskinst" => "tasksel install",
            "taskrm" => "tasksel remove",
              "hold" => "dpkg --set-selections",
