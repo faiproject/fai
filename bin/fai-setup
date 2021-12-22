@@ -108,11 +108,17 @@ setup_fai_account() {
             cat $sshdir/id_ed25519.pub >> $sshdir/authorized_keys
         }
 
+        [ -f $sshdir/id_ecdsa ] || {
+            ssh-keygen -t ecdsa -N '' -f $sshdir/id_ecdsa -C "$LOGUSER@$HOSTNAME"
+            cat $sshdir/id_ecdsa.pub >> $sshdir/authorized_keys
+        }
+
         #Adding servers keys to known_hosts list of LOGUSER.
         #So that installed clients can ssh $LOGUSER@$HOSTNAME without password
         if [ ! -f $sshdir/known_hosts ]; then
             [ -f /etc/ssh/ssh_host_ed25519_key.pub ] && ED25519SERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_ed25519_key.pub)
             [ -f /etc/ssh/ssh_host_rsa_key.pub ] && RSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_rsa_key.pub )
+            [ -f /etc/ssh/ssh_host_ecdsa_key.pub ] && ECDSASERVER=$(sed -e "s/= .*$/=/" /etc/ssh/ssh_host_ecdsa_key.pub )
             # determine all IP addresses, and their host names
             ips=$(ip addr show up| grep -P -o '(?<=inet )[^/]+' | grep -v 127.0.0.1)
             for ip in $ips; do
@@ -121,6 +127,7 @@ setup_fai_account() {
                 echo "Adding $hname to known_hosts."
                 [ -z "$ED25519SERVER" ] || echo "$hname $ED25519SERVER" >> $sshdir/known_hosts
                 [ -z "$RSASERVER" ] || echo "$hname $RSASERVER" >> $sshdir/known_hosts
+                [ -z "$ECDSASERVER" ] || echo "$hname $ECDSASERVER" >> $sshdir/known_hosts
             done
             echo "$sshdir/known_hosts created."
         else
