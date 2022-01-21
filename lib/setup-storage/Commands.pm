@@ -513,7 +513,7 @@ sub build_raid_commands {
 
       # do not sync soft raid during installation
       # do not remove ; from echo line. Otherwise it will not work
-      if ($FAI::do_init_tasks) { # no sync when initial installation
+      if ($FAI::do_init_tasks && $level ne 'raid0')  { # no sync when initial installation
 	&FAI::push_command(
           "echo frozen | tee /sys/block/md$id/md/sync_action",
           "exist_/dev/md$id", "nosync_md$id" );
