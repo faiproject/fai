@@ -5,7 +5,7 @@
 # fcopy -- copy files using FAI classes and preserve directory structure
 #
 # This script is part of FAI (Fully Automatic Installation)
-# Copyright (C) 2000-2020 Thomas Lange, lange@informatik.uni-koeln.de
+# Copyright (C) 2000-2022 Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 # Copyright (C) 2001-2005 Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Univeritaet Berlin
@@ -135,6 +135,12 @@ sub copy_one {
       ewarn("reading symlink $sourcefile failed. $!") ;
       return;
     }
+  }
+
+  # handle broken symlink
+  unless (stat($sourcefile)) {
+    ewarn "$sourcefile is a broken symlink\n";
+    return;
   }
 
   # do we need a tmpfile
