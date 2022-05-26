@@ -94,7 +94,7 @@ $FAI::error_codes = [
   },
   {
     error        => "parted_5",
-    message      => "Parted failed to resize due to a setup-storage internal error\n",
+    message      => "Parted failed to resize due to overlapping partitions\n",
     stderr_regex => "Error: Can't have overlapping partitions",
     stdout_regex => "",
     program      => "parted",
@@ -103,7 +103,7 @@ $FAI::error_codes = [
   },
   {
     error        => "parted_5_new",
-    message      => "Parted failed to resize due to a setup-storage internal error\n",
+    message      => "Parted failed to resize due to overlapping partitions\n",
     stderr_regex => "",
     stdout_regex => "Error: Can't have overlapping partitions",
     program      => "parted",
