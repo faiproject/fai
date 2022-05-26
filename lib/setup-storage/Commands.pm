@@ -355,7 +355,10 @@ sub build_btrfs_commands {
     # creates the proper prerequisites for later command ordering
     foreach (@devs) {
       my $tmp = $_;
-      $tmp =~ s/\d//;
+      # special handling for nvme devices
+      unless ($tmp =~ s/(nvme.+)p\d+/\1/) {
+        $tmp =~ s/\d//;
+      }
       $pre_req = "${pre_req}pt_complete_${tmp}," unless ($pre_req =~ m/pt_complete_$tmp/);
     }
     if (scalar @devs == 1) {
