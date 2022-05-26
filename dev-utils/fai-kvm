@@ -2,7 +2,7 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2021
+# Author:    Thomas Lange, Uni Koeln, 2011-2022
 # License:   GPL v2 or any later version
 
 fix="-k en-us -smp 2 -cpu host -global isa-fdc.driveA= "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
@@ -20,6 +20,7 @@ newdisk=0
 daemonize=0
 efi=0
 order=cd
+usenvme=0
 
 # not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
 # If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
@@ -81,6 +82,7 @@ usage() {
  -s <size>   size of the local disk in GB (default is ${size}GB)
  -d <num>    number of local disks (default is 1)
  -D <path>   directory, where the disk image files are created (default: $diskdir)
+ -M          Create NVMe drives instead of SATA disks
  -m <mem>    RAM size in MB (defaults is ${ram}MB)
  -u <num>    user number. This will become part of the MAC address of the interface
              of the VM and is the number of the tap device number. It is also used
@@ -98,13 +100,14 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "EbUhnNu:s:m:d:VD:t:O" opt ; do
+while getopts "EbUhnNu:s:Mm:d:VD:t:O" opt ; do
     case "$opt" in
         O) order=dc  ;;
         b) daemonize=1  ;;
         E) efi=1  ;;
         n) newdisk=1    ;;
         N) newdisk=2    ;;
+        M) usenvme=1    ;;
         U) usernet=1 ;;
         u) user=$OPTARG ;;
         m) ram=$OPTARG ;;
@@ -148,8 +151,12 @@ fi
 
 disk=""
 for i in $(seq 1 $disks) ; do
-  disk="$disk -drive file=$diskfile-$i.qcow2,if=virtio,index=$i"
-  if [ $i -eq 1 ] ; then
+    if [ $usenvme -eq 1 ]; then
+        disk="$disk -drive file=$diskfile-$i.qcow2,if=none,id=nvme$i -device nvme,serial=SN12345000$i,drive=nvme$i"
+    else
+        disk="$disk -drive file=$diskfile-$i.qcow2,if=virtio,index=$i"
+    fi
+    if [ $i -eq 1 ] ; then
     disk="$disk"
   fi
 done
