@@ -5,7 +5,7 @@
 # fai-mk-network -- setup a test network for FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2015 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2022 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -13,7 +13,7 @@
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 tapnum=9          # how many tap devies will be created
-brip=192.168.33.1 # IP of bridge device
+brip=192.168.33.250 # IP of bridge device
 brname=br0
 
 # default network device used for routing to the outside internet
@@ -24,7 +24,7 @@ usage() {
     cat <<EOF
 fai-mk-network, setup a test network for FAI
 
-   Copyright (C) 2018-2019 by Thomas Lange
+   Copyright (C) 2018-2022 by Thomas Lange
 
 Usage: fai-mk-network  {OPTIONS} USER
 
@@ -74,10 +74,10 @@ mk_bridge() {
 	brname=$netdev                   # use name of NIC for bridge
     fi
 
-    brctl addbr $brname
+    ip link add name $brname type bridge
     ip link set $brname up
     if [ $private -eq 0 ]; then
-	brctl addif $brname r$netdev
+	ip link set r$netdev master $brname
 	ip link set r$netdev up
 	dhclient -v $netdev
     else
@@ -86,7 +86,7 @@ mk_bridge() {
 
     for i in $(eval echo {1..$tapnum}); do
 	[ -f /sys/class/net/tap$i/address ] || continue
-	brctl addif $brname tap$i          # add device to the bridge
+	ip link set tap$i master $brname        # add device to the bridge
 	ip link set tap$i up
     done
 }
@@ -95,7 +95,7 @@ rm_bridge() {
 
     for i in $(eval echo {1..$tapnum}); do
 	[ -f /sys/class/net/tap$i/address ] || continue
-	brctl delif $brname tap$i
+	ip link set tap$i nomaster
 	ip link set tap$i down
 	ip tuntap del dev tap$i mode tap
     done
@@ -103,13 +103,13 @@ rm_bridge() {
     if [ $private -eq 0 ]; then
 	brname=$netdev                   # use name of NIC for bridge
 	dhclient -r $netdev
-	brctl delif $brname r$netdev
+	ip link set r$netdev nomaster
     fi
 
 
     ip link set $brname down
     ip addr flush $brname
-    brctl delbr $brname
+    ip link delete $brname type bridge
 
     if [ $private -eq 1 ]; then
 	iptables -t nat -D POSTROUTING -o $netdev -j MASQUERADE
@@ -141,11 +141,6 @@ if [ $(id -u) != "0" ]; then
     echo "You must run this program as root."
     echo
     usage
-fi
-
-if ! command -v brctl >&/dev/null; then
-    echo "brctl not found. Please install bridge-utils."
-    exit 3
 fi
 
 if [ $remove -eq 1 ]; then
