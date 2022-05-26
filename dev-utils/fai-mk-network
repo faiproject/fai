@@ -53,13 +53,6 @@ mk_tap_devices() {
   for i in $(eval echo {1..$tapnum}); do
       [ -f /sys/class/net/tap$i/address ] && continue
       ip tuntap add dev tap$i mode tap user $user
-      # when mixing tap devices and a real eth0 into a bridge, the
-      # ethernet device should alsways have the lowest MAC address.
-      # A bridge always uses the smallest/lowest MAC address when
-      # doing dhcp requests. Make sure the tap devices have a high MAC address
-      # change MAC address, so it begins with fX:
-      mac=$(sed -e 's/^./f/' /sys/class/net/tap$i/address)
-      ip link set tap$i address $mac
   done
 }
 
