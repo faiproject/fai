@@ -356,7 +356,7 @@ sub build_btrfs_commands {
     foreach (@devs) {
       my $tmp = $_;
       # special handling for nvme devices
-      unless ($tmp =~ s/(nvme.+)p\d+/\1/) {
+      unless ($tmp =~ s/(nvme.+)p\d+/$1/) {
         $tmp =~ s/\d//;
       }
       $pre_req = "${pre_req}pt_complete_${tmp}," unless ($pre_req =~ m/pt_complete_$tmp/);
