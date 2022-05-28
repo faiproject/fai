@@ -2,7 +2,7 @@
 
 # fetch-basefile, fetch a basefile via ftp or http using classes
 #
-# (c) Thomas Lange, 2011-2017
+# (c) Thomas Lange, 2011-2022
 #
 # Try to download a file CLASSNAME.tar.gz (or tgz, or tar.xz,...) from an URL
 # CLASSNAME must match a FAI class
@@ -39,7 +39,8 @@ done
 #shift $((OPTIND - 1))
 
 # get list of *.tar* files at URL
-flist=$(lftp -e 'cls *.tar*;exit' "$url" 2>/dev/null)
+flist=$(lftp -e 'set ssl:verify-certificate no; connect $url ;cls -1 *.tar*;exit' 2>/dev/null)
+
 # create an array of all lines
 baselist=($flist)
 
@@ -65,7 +66,7 @@ for c in $revclasses; do
             fi
 
             echo "Downloading $url/$f"
-            lftp -e "get $url/$f;exit" # fails if file already exists. this is nice.
+            curl -s $url/$f > $f
             error=$?
             break 2
 	fi
