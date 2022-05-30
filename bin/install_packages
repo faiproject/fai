@@ -5,7 +5,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2021, Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2000-2022, Thomas Lange, lange@informatik.uni-koeln.de
 # (c) 2003-2004, Henning Glawe, glaweh@physik.fu-berlin.de
 # (c) 2004     , Jonas Hoffmann, jhoffman@physik.fu-berlin.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
@@ -41,6 +41,8 @@ our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
+our $pkgopt;   # additional option for packages
+our $pkgrel;   # additional release info for packages
 my $dryrun=0;
 my $verbose;
 my $FAI_ROOT;
@@ -179,13 +181,25 @@ foreach $atype (@commands) {
 
   # skip if empty list
   next unless defined $list{$atype};
+  my $pkglist;
+
+  foreach $pkgopt (sort keys %{$list{$atype}}) {
+    $pkglist = $list{$atype}{$pkgopt}; # create an alias
+    # skip if empty list
+    next unless defined $pkglist;
+
+    # map release= option to -t
+    undef $pkgrel;
+    if ($pkgopt =~ /release=(\S+)/) {
+      $pkgrel=" -t $1";
+    }
 
   if ($atype eq "dselect-upgrade") {
     dselectupgrade($atype);
     next;
   }
 
-  my $packlist = join(' ',@{$list{$atype}});
+  my $packlist = join(' ',@{$pkglist});
 
   if ($atype eq "hold") {
     my $hold = join " hold\n", @{$list{hold}}, "";
@@ -195,7 +209,7 @@ foreach $atype (@commands) {
 
   if ($atype eq "install" || $atype eq "install-norec" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "apt" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
 
-    mkpackagelist(@{$list{$atype}}); # create lists of known and unknown packages
+    mkpackagelist(@{$pkglist}); # create lists of known and unknown packages
     getsources(); # retrieve sources
     if ($opt_l) {
       next;
@@ -215,7 +229,7 @@ foreach $atype (@commands) {
 	@ls=<$ENV{FAI_ARCHIVE_DIR}/${shortlist}_*deb>;
 	next if @ls;
       }
-      execute("$rootcmd $command{$atype} $shortlist") if $shortlist;
+      execute("$rootcmd $command{$atype} $pkgrel $shortlist") if $shortlist;
       execute("$rootcmd $command{'clean-internal'}") if $hasdebian;
       execute("$rootcmd $command{'unpack-internal'}") if ($atype eq "unpack"); # unpack and rm deb files
     }
@@ -231,6 +245,7 @@ foreach $atype (@commands) {
 
   # other types
   execute("$rootcmd $command{$atype} $packlist") if $packlist;
+  } # foreach $pkgopt
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # end of the big foreach loop
@@ -273,6 +288,7 @@ sub readconfig {
 
   my ($path,$file) = @_;
   my ($package,$type,$cllist,@oclasses,$doit);
+  my $pkgoption;
 
   open (FILE,"$path/$file") || warn "ERROR $0: Can't read config file: $path/$file\n";
   warn "$0: read config file $file\n" if $verbose;
@@ -285,8 +301,11 @@ sub readconfig {
     /^PRELOAD\s+(\S+)\s+(\S+)/   and push(@preloadlist,   [$1,$2]),next;
     /^PRELOADRM\s+(\S+)\s+(\S+)/ and push(@preloadrmlist, [$1,$2]),next;
 
-    if (/^PACKAGES\s+(\S+)\s*/) {
-      ($type,$cllist) = ($1,$');
+    if (/^PACKAGES\s+(\S+)\s*(\S+=\S+)?\s*/) {
+      ($type,$pkgoption,$cllist) = ($1,$2,$');
+
+      warn "ERROR: PACKAGES option $pkgoption not allowed\n" unless ( ! defined $pkgoption or $pkgoption =~ /^release=/);
+
       warn "WARNING: Unknown action $type after PACKAGES\n" unless defined $command{$type};
       # by default no classes are listed after this command so doit
       $doit = 1;
@@ -308,7 +327,7 @@ sub readconfig {
         warn "ERROR: PACKAGES .. line missing in $file\n";
         next;
     }
-    push @{$list{$type}}, split if $doit;
+    push @{$list{$type}{$pkgoption}}, split if $doit;
     $types{$type}=1 if $doit;   # remember which types are used in package_config
   }
 }
