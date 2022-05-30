@@ -194,58 +194,58 @@ foreach $atype (@commands) {
       $pkgrel=" -t $1";
     }
 
-  if ($atype eq "dselect-upgrade") {
-    dselectupgrade($atype);
-    next;
-  }
-
-  my $packlist = join(' ',@{$pkglist});
-
-  if ($atype eq "hold") {
-    my $hold = join " hold\n", @{$list{hold}}, "";
-    execute("echo \"$hold\" | $rootcmd $command{hold}");
-    next;
-  }
-
-  if ($atype eq "install" || $atype eq "install-norec" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "apt" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
-
-    mkpackagelist(@{$pkglist}); # create lists of known and unknown packages
-    getsources(); # retrieve sources
-    if ($opt_l) {
-      next;
-    }
-    if ($opt_L) {
-      # only print the package list, only works for install and instal-norec
-      execute("$rootcmd $command{$atype} -s @known | egrep ^Inst");
+    if ($atype eq "dselect-upgrade") {
+      dselectupgrade($atype);
       next;
     }
 
-    # pass only maxpl packages to apt-get
-    while (@known) {
-      my $shortlist = join(' ', splice @known,0,$maxpl);
+    my $packlist = join(' ',@{$pkglist});
 
-      # we can skip a package it's already processed,
-      if ($maxpl == 1 && $shortlist) {
-	@ls=<$ENV{FAI_ARCHIVE_DIR}/${shortlist}_*deb>;
-	next if @ls;
+    if ($atype eq "hold") {
+      my $hold = join " hold\n", @{$list{hold}}, "";
+      execute("echo \"$hold\" | $rootcmd $command{hold}");
+      next;
+    }
+
+    if ($atype eq "install" || $atype eq "install-norec" || $atype eq "smarti" || $atype eq "cupt"|| $atype eq "cupt-r"|| $atype eq "apt" || $atype eq "aptitude" || $atype eq "aptitude-r" || $atype eq "unpack" || $opt_l || $opt_L) {
+
+      mkpackagelist(@{$pkglist}); # create lists of known and unknown packages
+      getsources();               # retrieve sources
+      if ($opt_l) {
+        next;
       }
-      execute("$rootcmd $command{$atype} $pkgrel $shortlist") if $shortlist;
-      execute("$rootcmd $command{'clean-internal'}") if $hasdebian;
-      execute("$rootcmd $command{'unpack-internal'}") if ($atype eq "unpack"); # unpack and rm deb files
-    }
-    next;
-  }
+      if ($opt_L) {
+        # only print the package list, only works for install and instal-norec
+        execute("$rootcmd $command{$atype} -s @known | egrep ^Inst");
+        next;
+      }
 
-  if ($atype eq "taskinst" || $atype eq "taskrm") {
-    foreach my $tsk (@{$list{$atype}}) {
-      execute("$rootcmd $command{$atype} $tsk");
-    }
-    next;
-  }
+      # pass only maxpl packages to apt-get
+      while (@known) {
+        my $shortlist = join(' ', splice @known,0,$maxpl);
 
-  # other types
-  execute("$rootcmd $command{$atype} $packlist") if $packlist;
-  } # foreach $pkgopt
+        # we can skip a package it's already processed,
+        if ($maxpl == 1 && $shortlist) {
+          @ls=<$ENV{FAI_ARCHIVE_DIR}/${shortlist}_*deb>;
+          next if @ls;
+        }
+        execute("$rootcmd $command{$atype} $pkgrel $shortlist") if $shortlist;
+        execute("$rootcmd $command{'clean-internal'}") if $hasdebian;
+        execute("$rootcmd $command{'unpack-internal'}") if ($atype eq "unpack"); # unpack and rm deb files
+      }
+      next;
+    }
+
+    if ($atype eq "taskinst" || $atype eq "taskrm") {
+      foreach my $tsk (@{$list{$atype}}) {
+        execute("$rootcmd $command{$atype} $tsk");
+      }
+      next;
+    }
+
+    # other types
+    execute("$rootcmd $command{$atype} $packlist") if $packlist;
+  }                             # foreach $pkgopt
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # end of the big foreach loop
