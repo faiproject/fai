@@ -1017,19 +1017,18 @@ less passwd
 PACKAGES remove
 gpm xdm
 
-PACKAGES aptitude GRUB
+PACKAGES install GRUB
 lilo- grub
-
 ----
 
 Comments are starting with a hash (#) and are ending at the end of the
 line. Every package command begins with the word _PACKAGES_ followed by a
 command name, which maps to a different package tool like apt-get,
-aptitude or yum for e.g. The command defines which command will be used to
+aptitude or dnf for e.g. The command defines which command will be used to
 install the packages named after this command. The list of all
 available commands can be listed using _install_packages -H_.
-Supported package tools are: _aptitude, apt-get, smart, yast,
-yum, rpm, zypper_
+Supported package tools are: _apt, apt-get, aptitude, smart, yast,
+dnf, rpm, zypper_
 
 hold::
 Put a package on hold. This package will not be handled by dpkg, e.g
@@ -1085,6 +1084,22 @@ release name to the package name like in
 _openoffice.org/etch-backports_. You can also specify a certain
 version like _apt=0.3.1_. More information on these features are
 described in `aptitude(8)`.
+
+You can specify additional parameters for the package manager adding
+_key=value_ after _PACKAGES <command>_. Currently we support
+_release=<name>_ which will add _-t <name>_ when installing packages.
+
+Example:
+----
+PACKAGES install-norec release=testing
+nvidia-smi
+----
+
+This will install the nvidia-smi package from the testing release,
+including the dependencies. Don't forget to add an entry into
+'sources.list'. You may also want to adjust the apt pinning (see
+'apt_references(5)').
+
 
 A line which contains the _PRELOADRM_ commands, downloads a file using
 `wget(1)` into a directory before installing the packages. Using the
