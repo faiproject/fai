@@ -1,0 +1,43 @@
+#! /bin/bash
+
+set -eu
+
+. ./debian/tests/common.sh
+
+# test fai dirinstall
+
+cd "$AUTOPKGTEST_TMP"
+
+ch=/srv/chroot
+cl="DEBIAN,AMD64,FAIBASE,DHCPC,DEMO,LAST"
+export NIC1=dummy
+LC_ALL=C fai -v dirinstall -c $cl -s file://$CS $ch >& dirinstall.log
+
+chk-size $ch 800
+chk-size $ch/boot 30
+
+# chroot into and execute some commands
+chroot $ch ls -l /boot/
+chroot $ch /usr/bin/ldd --version
+chroot $ch /usr/bin/apt --version
+chroot $ch /usr/bin/systemd --version
+
+grep tmpfs $ch/etc/fstab
+if [ ! -f $ch/etc/network/interfaces.d/dummy ]; then
+    error "dirinstall failed. interfaces.d/dummy is missing"
+fi
+if [ ! -d $ch/home/demo/ ]; then
+    error "dirinstall failed. No home dir for user demo"
+fi
+if grep -q FAILED $ch/var/log/fai/localhost/last/status.log; then
+    error "dirinstall failed. See status.log"
+fi
+if grep -q FAILED dirinstall.log; then
+    error "dirinstall failed. See dirinstall.log"
+fi
+
+# check if $ch is unset or /
+#rm -rf $ch
+
+echo rm -rf $ch
+cp -avpL /var/log/fai/localhost/last-dirinstall/dirinstall.log dirinstall.log $AUTOPKGTEST_ARTIFACTS

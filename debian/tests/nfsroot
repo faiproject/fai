@@ -1,0 +1,34 @@
+#! /bin/bash
+
+set -e
+
+. ./debian/tests/common.sh
+
+cd "$AUTOPKGTEST_TMP"
+
+fai-make-nfsroot -gv > nfsroot.log
+chk-size $N 700
+
+grep 'fai-make-nfsroot finished properly.' nfsroot.log
+egrep '^Calling debootstrap ' nfsroot.log
+egrep ^fai-nfsroot nfsroot.log
+egrep ^dracut-network nfsroot.log
+
+chk-file $TFTP/pxelinux.0
+chk-file $TFTP/syslinux.efi
+chk-size $N/boot/initrd.img* 40
+
+$N/usr/bin/lsinitrd -m $N/initrd.img | grep livenet
+$N/usr/bin/lsinitrd    $N/initrd.img | grep mount.nfs
+
+# - - - - - - - - - - - - - - - - -
+# fai-chboot
+# currently fai-chboot writes to stderr
+fai-chboot -o default 2>/dev/null
+fai-chboot -Iv -f verbose,sshd,createvt,menu -u nfs://faiserver/$CS test.tmpl 2>/dev/null
+fai-chboot -Iv -f verbose,sshd,createvt,menu -u nfs://faiserver/$CS localhost 2>/dev/null
+
+chk-file $TFTP/pxelinux.cfg/test.tmpl
+chk-file $TFTP/pxelinux.cfg/7F000001
+
+cp -vp /var/log/fai/fai-make-nfsroot.log nfsroot.log $AUTOPKGTEST_ARTIFACTS

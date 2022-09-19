@@ -1,0 +1,33 @@
+#! /bin/bash
+
+set -e
+
+. ./debian/tests/common.sh
+
+# test some FAI utilities
+
+cd "$AUTOPKGTEST_TMP"
+
+echo "7565a01bd35f31ba82ab55c978c1b755  testfile"  > testfile.md5sum
+ainsl -a testfile "first line"
+ainsl    testfile "first line"
+ainsl    testfile "second line"
+ainsl    testfile "first line"
+md5sum -c testfile.md5sum
+
+fai-link linka testfile
+fai-link linka testfile
+fai-sed    's/testfile/XXX/' testfile.md5sum
+fai-sed    's/testfile/AAA/' testfile.md5sum
+fai-sed -E 's/testfile/XXX/' testfile.md5sum
+mv testfile XXX
+md5sum -c testfile.md5sum
+
+# test if symlink was created
+fai-sed    's/XXX/linkb/' testfile.md5sum
+fai-link linkb XXX
+md5sum -c testfile.md5sum
+
+# TODO: fcopy
+
+rm testfile.md5sum linka linkb XXX

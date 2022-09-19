@@ -1,0 +1,32 @@
+#! /bin/bash
+
+set -e
+
+. ./debian/tests/common.sh
+
+cd "$AUTOPKGTEST_TMP"
+
+# add skippable
+# check if I can mount loop devices
+# if not suported, exit 77
+
+
+# fai-diskimage
+# Depends fai-setup-storage
+# apt -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 install fai-setup-storage
+
+cl="DEBIAN,BUSTER64,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
+LC_ALL=C fai-diskimage -vu cloud3 -S2G -c$cl cloud.raw
+chk-size cloud.raw 900
+
+mount -oloop,offset=1048576 cloud.raw /mnt
+chk-size /mnt/boot 30
+umount /mnt
+
+if grep -q FAILED $ch/var/log/fai/cloud3/last/status.log; then
+    error "fai-diskimage failed. See status.log"
+fi
+
+cp -vap /var/log/fai/cloud3 $AUTOPKGTEST_ARTIFACTS
+
+# rm cloud.raw
