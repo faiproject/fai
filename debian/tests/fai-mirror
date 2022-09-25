@@ -1,0 +1,34 @@
+#! /bin/bash
+
+. ./debian/tests/common.sh
+error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
+trap "cp -vp mirror.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
+cd "$AUTOPKGTEST_TMP"
+
+mdir=/tmp/mirror
+fai-mirror -s$CS -m1 -xARM64,I386,ROCKY,UBUNTU,FOCAL,CLOUD,CHROOT,STANDARD,NONFREE,GNOME $mdir >& mirror.log
+
+# test the results of the commands called
+s=$(du -sm --exclude aptcache --exclude db $mdir | awk '{print $1}')
+if [ $s -lt 420 ]; then
+    error "$mdir is too small: $s MB"
+else
+    echo "OK: $mdir size is $s MB"
+fi
+
+find $mdir -name \*.deb > pkg.list
+n=$(wc -l pkg.list | awk '{ print $1}')
+if [ $n -lt 800 ]; then
+    error "fai-mirror includes too few packages. Only $n found."
+else
+    echo "OK. Number of packages found in mirror: $n"
+fi
+
+# check some package names in the mirror
+pkgs="linux-image- dracut-network_ xfce4-taskmanager_ xfdesktop4_ syslinux-common_ lvm2_"
+for p in $pkgs ; do
+    echo Search for $p
+    grep /$p pkg.list
+done
+
+exit $error

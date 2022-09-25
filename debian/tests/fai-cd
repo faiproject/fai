@@ -1,34 +1,21 @@
 #! /bin/bash
 
+# test fai-cd
+
 set -e
 
 . ./debian/tests/common.sh
-
+trap "cp -vp fai-cd.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
 cd "$AUTOPKGTEST_TMP"
 
-# test fai-mirror and fai-cd
-
-# fai-mirror
-fai-mirror -s$CS -m1 -xARM64,I386,CENTOS,UBUNTU,FOCAL,CLOUD,CHROOT,STANDARD,NONFREE,GNOME mirror >& mirror.log
-
-chk-size mirror 900
-find mirror -name \*.deb > pkg.list
-n=$(wc -l pkg.list | awk '{ print $1}')
-if [ $n -lt 1300 ]; then
-    error "fai-mirror includes too few packages. Only $n found."
-fi
-
-# check some package names in the mirror
-pkgs="linux-image- dracut-network_ xfce4-taskmanager_ gnome-shell_ gnome-terminal_ xfdesktop4_"
-for p in $pkgs ; do
-    grep /$p pkg.list
-done
 
 # - - - - - - - - - - - - - - - - -
-# fai-cd
-fai-cd -c$csdir -fJm mirror faicd64-small.iso >& fai-cd.log
+fai-cd -Jm /tmp/mirror faicd64-small.iso >& fai-cd.log
+echo fai-cd exit code: $?
 
-# check size of ISO
+
+
+# test the results of the commands called
 chk-size faicd64-small.iso 700
 
 # more test after mounting the ISO
@@ -36,7 +23,4 @@ chk-size faicd64-small.iso 700
 # umount /mnt
 # chk-size /mnt/boot/initrd.img 30
 
-
-# rm faicd64-small.iso mirror.log fai-cd.log pkg.list
-
-cp -vp mirror.log fai-cd.log $AUTOPKGTEST_ARTIFACTS
+# rm faicd64-small.iso fai-cd.log

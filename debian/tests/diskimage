@@ -1,22 +1,30 @@
 #! /bin/bash
 
-set -e
-
-. ./debian/tests/common.sh
-
-cd "$AUTOPKGTEST_TMP"
-
-# add skippable
-# check if I can mount loop devices
-# if not suported, exit 77
-
-
 # fai-diskimage
 # Depends fai-setup-storage
 # apt -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 install fai-setup-storage
 
+set -e
+
+. ./debian/tests/common.sh
+cd "$AUTOPKGTEST_TMP"
+
+# check if we can use loop devices
+trap 'exit 77' ERR ABRT EXIT QUIT
+qemu-img create test.raw 10M
+loop=$(losetup -P -f --show test.raw)
+echo "LOOP: $loop"
+losetp -d $loop
+rm test.raw
+trap - ERR ABRT EXIT QUIT
+
+trap "cp -vap /var/log/fai/cloud3 $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
+
 cl="DEBIAN,BUSTER64,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
 LC_ALL=C fai-diskimage -vu cloud3 -S2G -c$cl cloud.raw
+
+
+# test the results of the commands called
 chk-size cloud.raw 900
 
 mount -oloop,offset=1048576 cloud.raw /mnt
@@ -27,6 +35,4 @@ if grep -q FAILED $ch/var/log/fai/cloud3/last/status.log; then
     error "fai-diskimage failed. See status.log"
 fi
 
-cp -vap /var/log/fai/cloud3 $AUTOPKGTEST_ARTIFACTS
-
-# rm cloud.raw
+rm cloud.raw
