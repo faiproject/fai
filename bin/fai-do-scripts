@@ -85,6 +85,7 @@ do_script() {
     # execute scripts and save their output in log files
     # cfengine, shell, perl and expect scripts are known types
     local shelldebug file filetype name
+    local -r slog=$LOGDIR/scripts.log
 
     file=$1
 
@@ -127,19 +128,18 @@ do_script() {
         case $filetype in
         *"POSIX shell script"*|*"executable shell script"*|*"/bash script"*|*"Bourne shell script"*|*"Bourne-Again shell script"*|*"zsh script"*)
             vecho "Executing   $shelldebug shell: $file"
-            echo "=====   shell: $file   =====" >> $LOGDIR/scripts.log 2>&1
-            $shelldebug ./$file >> $LOGDIR/script.log 2>&1
+            echo "=====   shell: $file   =====" >> $slog 2>&1
+            $shelldebug ./$file >> $slog 2>&1
             savemaxstatus $?
-            fc_check_status $file $exitcode | tee -a $LOGDIR/scripts.log
+            fc_check_status $file $exitcode | tee -a $slog
         ;;
         *)
             vecho "Executing: $file"
-            echo "=====   $filetype $file   =====" >> $LOGDIR/scripts.log 2>&1
-            ./$file >> $LOGDIR/scripts.log 2>&1
+            echo "=====   $filetype $file   =====" >> $slog 2>&1
+            ./$file >> $slog 2>&1
             savemaxstatus $?
-            fc_check_status $file $exitcode | tee -a $LOGDIR/scripts.log
+            fc_check_status $file $exitcode | tee -a $slog
         ;;
-
         esac
         return
     fi
