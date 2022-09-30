@@ -5,7 +5,7 @@
 # fai-do-scripts - call configuration scripts for every defined class
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2003-2016 by Thomas Lange, lange@informatik.uni-koeln.de
+# (c) 2003-2022 by Thomas Lange, lange@informatik.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -26,7 +26,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 #*********************************************************************
 
-# variables needed: $classes, $cfclasses, $LOGDIR
+# variables needed: $classes, $cfclasses, $LOGDIR, $FAI_USE_OLD_SCRIPT_LOGS
 #
 # And many other variables like:
 
@@ -115,6 +115,34 @@ do_script() {
         *"zsh script"*)
             [ X$debug = X1 ] && shelldebug="zsh -x" ;;
     esac
+
+
+    if [ X$FAI_USE_OLD_SCRIPT_LOGS = X1 ]; then
+        echo "WARNING. Old style log file names for custom scripts may be removed in the future."
+        echo "unset FAI_USE_OLD_SCRIPT_LOGS for writing output to scripts.log."
+        # use old code below
+    else
+
+        # always write to scripts.log
+        case $filetype in
+        *"POSIX shell script"*|*"executable shell script"*|*"/bash script"*|*"Bourne shell script"*|*"Bourne-Again shell script"*|*"zsh script"*)
+            vecho "Executing   $shelldebug shell: $file"
+            echo "=====   shell: $file   =====" >> $LOGDIR/scripts.log 2>&1
+            $shelldebug ./$file >> $LOGDIR/script.log 2>&1
+            savemaxstatus $?
+            fc_check_status $file $exitcode | tee -a $LOGDIR/scripts.log
+        ;;
+        *)
+            vecho "Executing: $file"
+            echo "=====   $filetype $file   =====" >> $LOGDIR/scripts.log 2>&1
+            ./$file >> $LOGDIR/scripts.log 2>&1
+            savemaxstatus $?
+            fc_check_status $file $exitcode | tee -a $LOGDIR/scripts.log
+        ;;
+
+        esac
+        return
+    fi
 
     case $filetype in
 
