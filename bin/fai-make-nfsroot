@@ -503,14 +503,9 @@ upgrade_nfsroot() {
     # add any 3rd party repository keys that you may need installed into the NFSROOT
     if [ -d $cfdir/apt/keys ]; then
         local f
-        for f in $(find $cfdir/apt/keys -type f -name '*.asc' -o -name '*.gpg'); do
+        for f in $(find $cfdir/apt/keys -type f -name '*.gpg'); do
             cp $f $NFSROOT/etc/apt/trusted.gpg.d
         done
-    fi
-
-    # if we have the keyring on the host, install the key of the fai-project.org package repository
-    if [ ! -f $NFSROOT/etc/apt/trusted.gpg.d/fai-project.gpg -a -n "$(apt-key list 2BF8D9FE074BCDE4 2>/dev/null)" ]; then
-        HOME=/root apt-key export 2BF8D9FE074BCDE4 > $NFSROOT/etc/apt/trusted.gpg.d/fai-project.asc
     fi
 
     if [ $full = 1 ];then
