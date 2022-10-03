@@ -299,7 +299,7 @@ call_hook() {
             continue
         fi
         if [ -f $hfile.source ]; then
-            echo "WARNING: The suffix .source is deprecated. Use .sh instead." >&2
+            echo "ERROR: The suffix .source is deprecated. Use .sh instead." >&2
             # continue
         fi
         if [ -x $hfile.sh ]; then
@@ -315,14 +315,6 @@ call_hook() {
             # execute the hook
             $hfile $dflag "$@"
             check_status $hook.$cl $?
-        fi
-        # deprecated
-	if [ -x $hfile.source ]; then
-            echo "Source hook: $hook.$cl.source"
-            sendmon "HOOK $hook.$cl.source"
-            # source this hook
-            . $hfile.source $dflag "$@"
-            check_status $hook.$cl.source $?
         fi
     done
 }
