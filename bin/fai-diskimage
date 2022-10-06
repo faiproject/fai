@@ -21,12 +21,14 @@ cleanup() {
     local dir
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
 	# try umount several times, because some postinst jobs may still run and use the filesystems
-	for i in {1..8}; do
+	for i in {1..15}; do
             umount $dir >&/dev/null
             [ $? -eq 0 ] && break
             [ $((i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
+            [ $i -gt 12 ] && echo "Still cannot umount $dir. Will try again."
 	    sleep $i
 	done
+	echo "ERROR: fai-diskimage cannot umount $dir" >&2
     done
 
     # call zerofree for ext2/3/4 devices if available
