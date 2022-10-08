@@ -513,19 +513,12 @@ upgrade_nfsroot() {
     fi
 
     $ROOTCMD apt-get update
-    # check if we need more dracut packages (dracut >=049)
-    set +e
-    $ROOTCMD apt show dracut-live dracut-squash >/dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
-	pkgs+=" dracut-live dracut-squash"
-    fi
-    set -e
     # disable generating the initrd
     fdivert /etc/kernel/postinst.d/dracut
     $ROOTCMD ln -s /bin/true /etc/kernel/postinst.d/dracut
 
     # fai-nfsroot must be sucessfully installed before anything else
-    $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-network dracut-config-generic $pkgs
+    $ROOTCMD apt-get -yf --no-install-recommends install fai-nfsroot dracut-config-generic dracut-live dracut-squash
     $ROOTCMD apt-get -y dist-upgrade
     # patch dracut. Do not fail if network is not available
     local fn=$(find $NFSROOT/usr/lib/dracut/modules.d/ -name net-genrules.sh)
