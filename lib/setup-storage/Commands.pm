@@ -296,7 +296,6 @@ sub build_cryptsetup_commands {
 #
 ################################################################################
 sub build_btrfs_commands {
-  my $forcebtrfs = &btrfs_options;
 
 # following monstrosity takes care of single device/partition btrfs disk configs
   foreach my $c (keys %FAI::configs) {
@@ -349,7 +348,7 @@ sub build_btrfs_commands {
     ($mountoptions =~ m/subvol=([^,\s]+)/ and my $initial_subvolume= $1) or die "You must define an initial subvolume for your BTRFS RAID";
     my $btrfscreateopts =  $vol->{btrfscreateopts} // "" ;
     my $createopts = $vol->{createopts} // "";
-    $createopts .= " $forcebtrfs";
+    $createopts .= " -f";
     my $pre_req = "";
     my $btrfs_tool = "";
     # creates the proper prerequisites for later command ordering
@@ -655,7 +654,6 @@ sub setup_logical_volumes {
   my ($config) = @_;
   ($config =~ /^VG_(.+)$/) and ($1 ne "--ANY--") or &FAI::internal_error("Invalid config $config");
   my $vg = $1; # the actual volume group
-  my $optyes = &lvm_options;
   # now create or resize the configured logical volumes
   foreach my $lv (@{ $FAI::configs{$config}{ordered_lv_list} }) {
     # reference to the size of the current logical volume
@@ -722,7 +720,7 @@ sub setup_logical_volumes {
     my ($create_options) = $FAI::configs{$config}{volumes}{$lv}{lvcreateopts};
     # prevent warnings of uninitialized variables
     $create_options = '' unless $create_options;
-    $create_options .= " $optyes";
+    $create_options .= " --yes";
     print "/dev/$vg/$lv LV create_options: $create_options\n" if ($FAI::debug && $create_options);
     # create a new volume
     &FAI::push_command( "lvcreate $create_options -n $lv -L " .
@@ -1489,31 +1487,6 @@ sub restore_partition_table {
   }
 
   die "setup-storage failed, but the partition tables have been restored\n";
-}
-
-################################################################################
-#
-# @brief test whether --force option is available for btrfs, wheezy/jessie
-#
-################################################################################
-sub btrfs_options {
-  # check if --force is available for mkfs.btrfs
-  my $opt = `mkfs.btrfs 2>&1`;
-  return "" unless $opt;
-  my $btrfsopt = $opt =~ '--force' ? '-f' : '';
-  return $btrfsopt;
-}
-
-################################################################################
-#
-# @brief test whether --yes option is available for lvcreate, wheezy/jessie
-#
-################################################################################
-# Closes: #750212
-sub lvm_options {
-  my $opt = `lvcreate --yes 2>&1`;
-  my $lvmopt = $opt =~ 'unrecognized option' ? '' : '--yes';
-  return $lvmopt;
 }
 
 ################################################################################
