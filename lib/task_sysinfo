@@ -82,11 +82,16 @@ command -v lsblk >&/dev/null && lsblk -i
 command -v blkid >&/dev/null && blkid
 
 # very detailed
+echo "========================================"
 for disk in $disklist; do
-    smartctl -i /dev/$disk
-    hdparm -iv /dev/$disk
+    smartctl -i /dev/$disk | tail +4
+    echo "----------------------------------------"
     fdisk -lu /dev/$disk
+    echo "----------------------------------------"
     parted -s /dev/$disk print
+    echo "----------------------------------------"
+    sfdisk -d /dev/$disk
+    echo "----------------------------------------"
     LC_ALL=C file -s /dev/$disk?* | grep -v ": empty"
 done
 
