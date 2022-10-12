@@ -2,13 +2,15 @@
 
 # display some information about the system and save it to the logserver
 
-# activate all software RAID arrays
-echo DEVICE partitions > /etc/mdadm/mdadm.conf
-udevadm trigger
+if [ X$do_init_tasks = X1 ] ; then
+    # activate all software RAID arrays
+    echo DEVICE partitions > /etc/mdadm/mdadm.conf
+    udevadm trigger
 
-# start software raid
-/usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf
-/etc/init.d/lvm2 start
+    # start software raid
+    /usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf
+    /etc/init.d/lvm2 start
+fi
 
 # first show some hardware info
 echo Showing system information.
@@ -107,8 +109,10 @@ pvs;vgs;lvs
 
 btrfs fi show
 
-fai-mount-disk -f
-[ -f $target/etc/fstab ] && cp -p $target/etc/fstab $LOGDIR
+if [ X$do_init_tasks = X1 ]; then
+     fai-mount-disk -f
+     [ -f $target/etc/fstab ] && cp -p $target/etc/fstab $LOGDIR
+fi
 
 df -PTh | grep -E ':|^/|^Filesystem'
 # - - - - - - - - - - -
