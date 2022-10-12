@@ -6,6 +6,10 @@
 echo DEVICE partitions > /etc/mdadm/mdadm.conf
 udevadm trigger
 
+# start software raid
+/usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf
+/etc/init.d/lvm2 start
+
 # first show some hardware info
 echo Showing system information.
 
@@ -60,10 +64,6 @@ lspci
 if [ -d /sys/firmware/efi ]; then
     efibootmgr
 fi
-
-# start software raid
-/usr/share/mdadm/mkconf > /etc/mdadm/mdadm.conf
-/etc/init.d/lvm2 start
 
 for device in /dev/sd?; do
     [ -b "$device" ] || continue # make sure device exists and is valid block device
