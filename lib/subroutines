@@ -118,6 +118,15 @@ rwmount() {
     mount -o rw,remount $1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+rw_target() {
+
+    # make $target and mounted subdirectories read-write
+    local dir
+    for dir in $(mount | grep "on $target" | grep -E -v "media/mirror|tmpfs"| awk '{print $3}'); do
+        rwmount $dir
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ctam() {
 
     # mount pseudo filesystems into /target
