@@ -661,7 +661,6 @@ task_savelog() {
 ### END SUBROUTINE INFO
 task_faiend() {
 
-    local dir cdromdevice
     : ${flag_reboot:=0}
     : ${flag_halt:=0}
 
@@ -731,9 +730,7 @@ task_dirinstall() {
 
     mkdir -p $FAI_ROOT
     FAI_ROOT=$(cd $FAI_ROOT;pwd)
-    xstamp=${FAI_ROOT//\//=}
-    stamp=/var/run/fai/dirinstall-$xstamp
-    unset xstamp
+    stamp=/var/run/fai/dirinstall-${FAI_ROOT//\//=}
     clean_exit() {
         rm -f $stamp
         [ -z "$FAI_ROOT" ] && return
@@ -1012,7 +1009,7 @@ task_partition() {
 
 call_debootstrap() {
 
-    local targetarch
+    local targetarch hostarch1 _debootstrap
     local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
     echo "Creating base system using debootstrap version $dversion"
 
@@ -1126,6 +1123,7 @@ task_debconf () {
 
 task_repository () {
 
+    local v
     if [ X$verbose = X1 ]; then
 	v=-v
     fi
@@ -1238,9 +1236,8 @@ task_chboot() {
 
     [ -z "$LOGUSER" ] && return # silently return from subroutine
 
-    local frsh remotesh
+    local frsh remotesh hostname
     local doexit=0
-    local hostname
     read hostname < /proc/sys/kernel/hostname
     local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d= -f2 | sed "s/'//g")
     local nexttest=$(grep -E -s ^NEXTTEST= $LOGDIR/test.log | cut -d= -f2)
