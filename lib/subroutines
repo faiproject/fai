@@ -118,6 +118,57 @@ rwmount() {
     mount -o rw,remount $1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ctam() {
+
+    # mount pseudo filesystems into /target
+    if [ -z "$target" -o "$target" = "/" ]; then
+        echo "ERROR: \$target is not set (correctly)."
+        return
+    fi
+    if [ -f $target/proc/cpuinfo ] ; then
+        echo "Filesystems already mounted to $target."
+        return
+    fi
+
+    for f in /sys /proc /dev /dev/pts; do
+        mount --bind $f ${target}$f
+    done
+    if [ -d /sys/firmware/efi ]; then
+        mount --bind /sys/firmware/efi/efivars $target/sys/firmware/efi/efivars
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ctau() {
+
+    # umount pseudo filesystems from /target
+    if [ -z "$target" -o "$target" = "/" ]; then
+        echo "ERROR: \$target is not set (correctly)."
+        return
+    fi
+    if [ ! -f $target/proc/cpuinfo ] ; then
+        echo "Filesystems already umounted from $target."
+        return
+    fi
+
+    for f in /dev/pts /dev /proc /sys/firmware/efi/efivars /sys; do
+        umount ${target}$f
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ctai() {
+
+    # chroot into target
+    if [ -z "$target" -o "$target" = "/" ]; then
+        echo "ERROR: \$target is not set (correctly)."
+        return
+    fi
+    if [ ! -f $target/bin/bash ]; then
+        echo "ERROR: Cannot chroot into $target."
+        return
+    fi
+    chroot $target bash
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
 
     [ $do_init_tasks -eq 0 ] && return
