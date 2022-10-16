@@ -35,6 +35,10 @@ grep "model name" /proc/cpuinfo | sort | uniq -c | sed -e 's/model name.*://' -e
 echo "NUMA configuration:"
 numactl -H
 
+if [ -f /usr/bin/upower ]; then
+    upower -e | grep 'BAT' | xargs -n1 upower -i | egrep 'native-path|vendor|model|energy-full'
+fi
+
 echo
 if command -v hwinfo >&/dev/null; then
     hwinfo --short --cpu --sys
