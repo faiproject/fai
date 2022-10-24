@@ -75,7 +75,7 @@ veryclean: clean
 install:
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,apt/apt.conf.d}
 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt/trusted.gpg.d
-	mkdir -p $(DESTDIR)/etc/{init,init.d} $(DESTDIR)/usr/share/fai/{pixmaps/small,setup-storage}
+	mkdir -p $(DESTDIR)/etc/{init,init.d} $(SHAREDIR)/{pixmaps/small,setup-storage}
 	mkdir -p $(DESTDIR)/usr/lib/dracut/modules.d
 	install man/* $(DESTDIR)/man
 	pod2man -c '' -r '' -s8 bin/dhcp-edit > $(DESTDIR)/man/dhcp-edit.8
@@ -88,8 +88,8 @@ install:
 	cd bin ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
 	install dev-utils/fai-kvm $(DESTDIR)/usr/bin
 	install dev-utils/fai-mk-network $(DESTDIR)/usr/sbin
-	install bin/dhclient-fai-script  $(DESTDIR)/usr/share/fai
-	install -m644 conf/dhclient-fai.conf $(DESTDIR)/usr/share/fai
+	install bin/dhclient-fai-script  $(SHAREDIR)/
+	install -m644 conf/dhclient-fai.conf $(SHAREDIR)/
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
 	cd conf ; install -m644 fai.conf grub.cfg grub.cfg.autodiscover $(DESTDIR)/etc/fai/
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
@@ -97,8 +97,8 @@ install:
 	install -m644 conf/fai-project.gpg $(DESTDIR)/etc/fai/apt/trusted.gpg.d/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
 	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
-	cp -a pixmaps/*.gif $(DESTDIR)/usr/share/fai/pixmaps
-	cp -a pixmaps/small/*.gif $(DESTDIR)/usr/share/fai/pixmaps/small
+	cp -a pixmaps/*.gif $(SHAREDIR)/pixmaps
+	cp -a pixmaps/small/*.gif $(SHAREDIR)/pixmaps/small
 	sed -i 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
 	cp -a examples $(DOCDIR)
 	rm -f $(DOCDIR)/examples/simple/.git
