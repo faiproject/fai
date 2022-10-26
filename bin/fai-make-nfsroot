@@ -346,13 +346,14 @@ create_base() {
     command -v debootstrap >&/dev/null || die 1 "Can't find debootstrap command. Aborting."
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
-    rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules
+    rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules $NFSROOT/var/lib/dbus/machine-id
+    > $NFSROOT/etc/machine-id
     if [ $usexz -eq 0 ]; then
         echo "Creating base.tar.zst"
     else
         echo "Creating base.tar.xz"
     fi
-    tar --xattrs --acls --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude etc/machine-id --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
+    tar --xattrs --acls --one-file-system -C $NFSROOT -cf $NFSROOT/var/tmp/base.tar --exclude var/tmp/base.tar --exclude 'var/lib/apt/lists/*_*' .
     if [ $usexz -eq 1 ]; then
         nice xz -q $NFSROOT/var/tmp/base.tar &
     else
