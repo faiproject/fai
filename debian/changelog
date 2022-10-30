@@ -1,4 +1,4 @@
-fai (6.0~alpha14) experimental; urgency=low
+fai (6.0~alpha17) experimental; urgency=low
 
   [ Thomas Lange ]
   * fai-do-scripts: write output of all scripts to scripts.log,
@@ -9,9 +9,13 @@ fai (6.0~alpha14) experimental; urgency=low
     feature, Closes: #844377, add pacman support
   * fetch-basefile: cuse curl instead of lftp, so https is now working
   * Commands.pm: special handling of nvme devices, Closes: #999739, quote
-    variables, Closes: #977832
+    variables, Closes: #977832, remove old code need by old version of
+    mkfs.btrfs and lvcreate
   * fai-mk-network: usie iproute commands instead of brctl
   * fai-make-nfsroot: add dracut modul network-legacy, Closes: #1010906
+    do not kill dhclient, Closes: #987779, drop support for dracut < 049,
+    patch udev rule of lvm for bullseye, include empty machine-id into
+    base.tar
   * Exec.pm: better error message, Closes: #1005745
   * fcopy: handle broken symlinks, Closes: #985303
   * fai-chboot: add variable substitution when coping a template, add
@@ -28,14 +32,30 @@ fai (6.0~alpha14) experimental; urgency=low
   * Fstab.pm: support tmpfs size -, this uses the system default size for
     tmpfs, Closes: #951659
   * setup-storage: add support for fstabkey:partlabel and
-    fstabkey:partuuid
+    fstabkey:partuuid, remove crypto keyfile after use
   * enhance disk_config format for partition label support
   * ftar: add support for zstd
   * fai: check if unshare can be used, Closes: #989547
     use only IPv4 address as hostname
-  * subroutines: start dhclient, Closes: #987779
     remove code for deprecated taskname prepareapt
   * watch: update to version 4, use new url
+  * install_packages: parse apt-cache output, Closes: #990211
+  * subroutines: umount tmpfs if config space was downloaded via http,
+    Closes: #1011642
+  * task_sysinfo: print machine readable partition information, do not
+    call commands that modify the system if no run in FAI environment,
+    print battery information
+  * subroutines: add help functions:
+      ctam (Chroot TArget Mount pseudo filesystems)
+      ctau (Chroot TArget Umount)
+      ctai (Chroot TArget Into)
+      rm_target (remount /target read-write)
+  * NFSROOT: cleanup package list, add cryptsetup
+  * update my email address
+  * mk-basefile: remove /var/lib/dbus/machine-id, use zstd instead of gzip
+  * simple/examples: use fai-link and fai-sed instead of ln and sed,
+    remove cryptsetup passphrase from logs, use class ROCKY instead of
+    CENTOS, update Ubuntu support to 22.04
 
   [ Mike Gabriel ]
   * fai-abort:give job control to bash, Closes: #1020976
@@ -53,7 +73,11 @@ fai (6.0~alpha14) experimental; urgency=low
   [ Aki Tuomi ]
   * check-cross-arch: fail on errors and unbound variables
 
- -- Thomas Lange <lange@debian.org>  Sun, 25 Sep 2022 11:18:43 +0200
+  [ Hannes Eberhardt ]
+  * package_config/ROCKY: update EFI packages
+
+
+ -- Thomas Lange <lange@debian.org>  Sun, 30 Oct 2022 19:56:33 +0100
 
 fai (5.10.3) unstable; urgency=low
 
@@ -131,7 +155,7 @@ fai (5.10) unstable; urgency=low
   * fai: use unshare when calling chroot
   * mount2dir: ignore nfs mounts
   * several shellcheck fixes
-  * fcopy: print file mode in octal
+  * fcopy: print file mode in octa l
   * get-boot-info: use ip --brief, remove variables NETMASK,BROADCAST
   * NEWS: add change of fai-sed
   * mkramdisk: set tmpfs size to 80%
@@ -144,7 +168,8 @@ fai (5.10) unstable; urgency=low
   * package_config/DEBIAN: add non-free wireless packages
   * 30-interface: remove obsolete test, use CIDR
   * mk-basefile: add bookworm,trixie releases
-  * LAST/50-misc: add trixie release
+  * LAST/50-misc: add trixie release, print error if cryptsetup is missing
+    but needed
   * 20-hwdetect.sh: use ip --brief
   * rc.local/FAISERVER: check /etc/network/interfaces.d/$IFACE for nic
     devices, Closes: #965262
