@@ -34,13 +34,22 @@ macprefix=52:54:00:11:23
 boot_disk() {
 
   # boot from disk
+    local ldisk
+    local f
+
     [ -n "$1" ] && disk=$1
     shift
     case "$disk" in
 	*.raw) f=",format=raw" ;;
     esac
+
+    if [ $usenvme -eq 1 ]; then
+        ldisk="-drive file=$disk,if=none$f,id=nvme1 -device nvme,serial=SN123450001,drive=nvme1"
+    else
+        ldisk="-drive file=$disk,if=virtio$f "
+    fi
     set -x
-    kvm $gopt -boot order=c $net -drive file=$disk,if=virtio$f $*
+    kvm $gopt -boot order=c $net $ldisk $*
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 boot_pxe() {
