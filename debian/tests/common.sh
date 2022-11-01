@@ -20,6 +20,15 @@ chk-file() {
     fi
 }
 # - - - - - - - - - - - - - - - - -
+chk-no-file() {
+
+    # check that files does not exist
+    local file=$1
+    if [ -f $file ]; then
+        error "$file exists, but it should not."
+    fi
+}
+# - - - - - - - - - - - - - - - - -
 chk-size() {
 
     # check if the disk space of a path is greater than minsize
