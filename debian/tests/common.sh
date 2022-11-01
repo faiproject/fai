@@ -37,3 +37,15 @@ chk-size() {
         echo "OK: $path size is $size MB"
     fi
 }
+# - - - - - - - - - - - - - - - - -
+chk-loop-device() {
+
+    # check if we can use loop devices
+    trap 'exit 77' ERR ABRT EXIT QUIT
+    qemu-img create test.raw 10M
+    loop=$(losetup -P -f --show test.raw)
+    echo "LOOP: $loop"
+    losetp -d $loop
+    rm test.raw
+    trap - ERR ABRT EXIT QUIT
+}
