@@ -32,7 +32,7 @@ chk-size() {
     size=$(du -sm $path | awk '{print $1}')
 
     if [ $size -lt $minsize ]; then
-        error "$path is too small: $size MB"
+        error "$path is too small: $size MB. Should be greater $minsize MB"
     else
         echo "OK: $path size is $size MB"
     fi
