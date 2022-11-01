@@ -45,7 +45,7 @@ chk-loop-device() {
     qemu-img create test.raw 10M
     loop=$(losetup -P -f --show test.raw)
     echo "LOOP: $loop"
-    losetp -d $loop
+    losetup -d $loop
     rm test.raw
     trap - ERR ABRT EXIT QUIT
 }
