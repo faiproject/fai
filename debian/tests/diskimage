@@ -13,7 +13,7 @@ chk-loop-device
 
 trap "cp -vap /var/log/fai/cloud3 diskimage.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
 
-cl="DEBIAN,BUSTER64,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
+cl="DEBIAN,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
 LC_ALL=C fai-diskimage -vu cloud3 -S2G -c$cl cloud.raw  >& diskimage.log
 
 
@@ -25,9 +25,7 @@ chk-size /mnt/boot 38
 chk-file /mnt/etc/network/interfaces.d/eth0
 chk-file /mnt/etc/rc.local
 
-echo 'd41d8cd98f00b204e9800998ecf8427e  /mnt/etc/machine-id' > /tmp/zerocheck
-md5sum -c /tmp/zerocheck
-rm /tmp/zerocheck
+echo 'd41d8cd98f00b204e9800998ecf8427e  /mnt/etc/machine-id' | md5sum -c
 
 chk-no-file /mnt/var/lib/dbus/machine-id
 chk-no-file /mnt/etc/udev/rules.d/70-persistent-net.rules
@@ -37,7 +35,7 @@ chk-no-file /mnt/etc/ssh/ssh_host_ecdsa_key
 
 umount /mnt
 
-if grep -q FAILED $ch/var/log/fai/cloud3/last/status.log; then
+if grep -q FAILED /var/log/fai/cloud3/last/status.log; then
     error "fai-diskimage failed. See status.log"
 fi
 
