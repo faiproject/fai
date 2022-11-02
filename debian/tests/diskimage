@@ -11,35 +11,39 @@ cd "$AUTOPKGTEST_TMP"
 
 chk-loop-device
 
-trap "cp -vap /var/log/fai/cloud3 diskimage.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
+vlf=/var/log/fai
+
+main-check() {
+    chk-size /mnt/boot 38
+    chk-file /mnt/etc/network/interfaces.d/eth0
+    chk-file /mnt/etc/rc.local
+
+    echo 'd41d8cd98f00b204e9800998ecf8427e  /mnt/etc/machine-id' | md5sum -c
+
+    chk-no-file /mnt/var/lib/dbus/machine-id
+    chk-no-file /mnt/etc/udev/rules.d/70-persistent-net.rules
+    chk-no-file /mnt/etc/resolv.conf
+    chk-no-file /mnt/etc/ssh/ssh_host_ed25519_key
+    chk-no-file /mnt/etc/ssh/ssh_host_ecdsa_key
+}
+
+trap "cp -vap /var/log/fai/cloud? diskimage.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
 
 cl="DEBIAN,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
 LC_ALL=C fai-diskimage -vu cloud3 -S2G -c$cl cloud.raw  >& diskimage.log
-
 
 # test the results of the commands called
 chk-size cloud.raw 860
 
 mount -oloop,ro,offset=1048576 cloud.raw /mnt
-chk-size /mnt/boot 38
-chk-file /mnt/etc/network/interfaces.d/eth0
-chk-file /mnt/etc/rc.local
-
-echo 'd41d8cd98f00b204e9800998ecf8427e  /mnt/etc/machine-id' | md5sum -c
-
-chk-no-file /mnt/var/lib/dbus/machine-id
-chk-no-file /mnt/etc/udev/rules.d/70-persistent-net.rules
-chk-no-file /mnt/etc/resolv.conf
-chk-no-file /mnt/etc/ssh/ssh_host_ed25519_key
-chk-no-file /mnt/etc/ssh/ssh_host_ecdsa_key
-
+main-check
 umount /mnt
 
-if grep -q FAILED /var/log/fai/cloud3/last/status.log; then
+if grep -q FAILED $vlf/cloud3/last/status.log; then
     error "fai-diskimage failed. See status.log"
 fi
-if [ -f /var/log/fai/cloud3/last/error.log ]; then
-    cat /var/log/fai/cloud3/last/error.log  >/dev/stderr
+if [ -f $vlf/cloud3/last/error.log ]; then
+    cat $vlf/cloud3/last/error.log  >/dev/stderr
 fi
 
 rm cloud.raw
