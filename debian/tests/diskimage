@@ -14,7 +14,12 @@ chk-loop-device
 vlf=/var/log/fai
 
 main-check() {
+
     chk-size /mnt/boot 38
+    chk-size /mnt/lib 430
+    chk-size /mnt/bin 45
+    chk-size /mnt/usr/lib/modules 300
+    chk-file /mnt/boot/grub/grub.cfg
     chk-file /mnt/etc/network/interfaces.d/eth0
     chk-file /mnt/etc/rc.local
 
@@ -27,7 +32,9 @@ main-check() {
     chk-no-file /mnt/etc/ssh/ssh_host_ecdsa_key
 }
 
-trap "cp -vap /var/log/fai/cloud? diskimage.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
+trap "cp -ap /var/log/fai/cloud? diskimage*.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
+
+echo "=== creating and testing legacy bios diskimage ==="
 
 cl="DEBIAN,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
 LC_ALL=C fai-diskimage -vu cloud3 -S2G -c$cl cloud.raw  >& diskimage.log
@@ -47,3 +54,33 @@ if [ -f $vlf/cloud3/last/error.log ]; then
 fi
 
 rm cloud.raw
+
+
+echo "=== creating and testing EFI diskimage ==="
+
+# now create a diskimage using EFI
+cl="DEBIAN,AMD64,FAIBASE,GRUB_EFI,DHCPC,DEMO,CLOUD,CLOUD_EFI,LAST"
+LC_ALL=C fai-diskimage -vu cloud4 -S2G -c$cl cloud-efi.raw  >& diskimage-efi.log
+
+chk-size cloud-efi.raw 890
+mount -oloop,offset=1048576 cloud-efi.raw /mnt
+chk-file /mnt/EFI/debian/grub.cfg
+chk-file /mnt/EFI/BOOT/grubx64.efi
+chk-size /mnt 3
+umount /mnt
+
+dev=$(losetup --show -f cloud-efi.raw)
+partprobe -s $dev
+mount ${dev}p2 /mnt
+main-check
+umount /mnt
+losetup -D $dev
+
+if grep -q FAILED $vlf/cloud4/last/status.log; then
+    error "fai-diskimage failed. See status.log"
+fi
+if [ -f $vlf/cloud4/last/error.log ]; then
+    cat $vlf/cloud4/last/error.log  >/dev/stderr
+fi
+
+rm cloud-efi.raw
