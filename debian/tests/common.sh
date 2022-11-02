@@ -38,6 +38,10 @@ chk-size() {
     local minsize=$2
     local size
 
+    if [ ! -e $path ]; then
+        error "$path does not exist."
+    fi
+
     size=$(du -Dsm $path | awk '{print $1}')
 
     if [ $size -lt $minsize ]; then
