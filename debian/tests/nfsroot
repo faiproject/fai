@@ -7,22 +7,28 @@ cd "$AUTOPKGTEST_TMP"
 trap "cp -vp /var/log/fai/fai-make-nfsroot.log nfsroot.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
 
 fai-make-nfsroot -gv > nfsroot.log
-echo "exit code fai-make-nfsroot: $?"
+err=$?
+echo "exit code fai-make-nfsroot: $err"
+if [ $err ]; then
+    error "ERROR: fai-make-nfsroot exit code $err"
+fi
 
 # test the results of the commands called
 chk-size $N 700
 
-grep 'fai-make-nfsroot finished properly.' nfsroot.log
+grep 'fai-make-nfsroot finished properly.' nfsroot.log || error "fai-make-nfsroot error."
 egrep '^Calling debootstrap ' nfsroot.log
 egrep ^fai-nfsroot nfsroot.log
-egrep ^dracut-network nfsroot.log
+egrep ^dracut-network nfsroot.log  || error "package dracut-network is missing."
 
 chk-file $TFTP/pxelinux.0
 chk-file $TFTP/syslinux.efi
+chk-file $TFTP/ldlinux.e64
 chk-size $N/boot/initrd.img* 40
+chk-no-file $N/etc/udev/rules.d/70-persistent-net.rules
 
-chroot $N /usr/bin/lsinitrd -m /initrd.img | grep livenet
-chroot $N /usr/bin/lsinitrd    /initrd.img | grep mount.nfs
+chroot $N /usr/bin/lsinitrd -m /initrd.img | grep livenet || error "livenet fehlt"
+chroot $N /usr/bin/lsinitrd    /initrd.img | grep mount.nfs || error "mount.nfs fehlt"
 
 # - - - - - - - - - - - - - - - - -
 # fai-chboot
@@ -31,5 +37,6 @@ fai-chboot -o default 2>/dev/null
 fai-chboot -Iv -f verbose,sshd,createvt,menu -u nfs://faiserver/$CS test.tmpl 2>/dev/null
 fai-chboot -Iv -f verbose,sshd,createvt,menu -u nfs://faiserver/$CS localhost 2>/dev/null
 
+chk-file $TFTP/pxelinux.cfg/default
 chk-file $TFTP/pxelinux.cfg/test.tmpl
 chk-file $TFTP/pxelinux.cfg/7F000001
