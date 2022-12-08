@@ -336,7 +336,7 @@ sub build_btrfs_commands {
     next unless ($config eq "BTRFS");
 
     #create BTRFS RAIDs
-    foreach my $id (keys %{ $FAI::configs{$config}{volumes} }) {
+    foreach my $id (numsort(keys %{ $FAI::configs{$config}{volumes} })) {
     #reference to current btrfs volume
     my $vol = (\%FAI::configs)->{$config}->{volumes}->{$id};
 
