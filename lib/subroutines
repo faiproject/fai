@@ -1131,6 +1131,9 @@ task_repository () {
     # resolv.conf is needed, /etc/hosts is useful in /target
     # use a file from the config space or from /etc inside the nfsroot
     if ! fcopy -BM $v /etc/resolv.conf ; then
+        if [ -d "$FAI_ROOT/run/systemd/resolve" ]; then
+            cp $v /etc/resolv.conf "$FAI_ROOT/run/systemd/resolve/stub-resolv.conf"
+        fi
         if [ "$(readlink -f /etc/resolv.conf)" = "$(readlink -f $FAI_ROOT/etc/resolv.conf)" ] ; then
             :
 	    # no need for copy since both are pointing to the same file
