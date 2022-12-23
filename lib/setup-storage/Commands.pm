@@ -374,7 +374,12 @@ sub build_btrfs_commands {
 	$mkfs_done{join(" ", @devs)} = '1';
       }
     } else {
-      $btrfs_tool = "mkfs.btrfs -d raid$raidlevel $createopts ".join(" ",@devs);
+      if (exists $mkfs_done{join(" ", sort @devs)}) {
+	$btrfs_tool = "true";
+      } else {
+      $btrfs_tool = "mkfs.btrfs -d raid$raidlevel $createopts ".join(" ", sort @devs);
+      $mkfs_done{join(" ", sort @devs)} = '1';
+      }
     }
 
     # nothing more to do if we need to proserve this volume. No mkfs, no subvolume
@@ -394,7 +399,7 @@ sub build_btrfs_commands {
                        "btrfs_created_$initial_subvolume");
 
     # unmounting the device itself
-    &FAI::push_command("umount $devs[0]",
+    &FAI::push_command("umount /mnt",
                        "btrfs_created_$initial_subvolume",
                        "");
     }
