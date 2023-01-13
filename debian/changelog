@@ -1,4 +1,4 @@
-fai (6.0~beta2) experimental; urgency=low
+fai (6.0) unstable; urgency=low
 
   [ Thomas Lange ]
   * fai-do-scripts: write output of all scripts to scripts.log,
@@ -7,11 +7,13 @@ fai (6.0~beta2) experimental; urgency=low
   * add autopkgtest
   * install_packages: add release=<name>
     feature, Closes: #844377, add pacman support
+    add --allow-change-held-packages
+    parse apt-cache output, Closes: #990211
   * fetch-basefile: use curl instead of lftp for downloading
   * Commands.pm: special handling of nvme devices, Closes: #999739, quote
     variables, Closes: #977832, remove old code need by old version of
-    mkfs.btrfs and lvcreate
-  * fai-mk-network: usie iproute commands instead of brctl
+    mkfs.btrfs and lvcreate,
+  * fai-mk-network: use iproute commands instead of brctl
   * fai-make-nfsroot: add dracut modul network-legacy, Closes: #1010906
     do not kill dhclient, Closes: #987779, drop support for dracut < 049,
     patch udev rule of lvm for bullseye, include empty machine-id into
@@ -40,9 +42,8 @@ fai (6.0~beta2) experimental; urgency=low
     use only IPv4 address as hostname
     remove code for deprecated taskname prepareapt
   * watch: update to version 4, use new url
-  * install_packages: parse apt-cache output, Closes: #990211
   * subroutines: umount tmpfs if config space was downloaded via http,
-    Closes: #1011642
+    Closes: #1011642, check if systemd-resolved is used
   * task_sysinfo: print machine readable partition information, do not
     call commands that modify the system if no run in FAI environment,
     print battery information
@@ -51,13 +52,18 @@ fai (6.0~beta2) experimental; urgency=low
       ctau (Chroot TArget Umount)
       ctai (Chroot TArget Into)
       rm_target (remount /target read-write)
-  * NFSROOT: cleanup package list, add cryptsetup
+  * NFSROOT: cleanup package list, add cryptsetup, zstd
   * update my email address
   * mk-basefile: remove /var/lib/dbus/machine-id, use zstd instead of gzip
+    add Rocky 9, Debian Forky
+  * ROCKY/60-network-scripts: add support for
+    system-connections/${NIC1}.nmconnection
   * simple/examples: use fai-link and fai-sed instead of ln and sed,
-    remove cryptsetup passphrase from logs, use class ROCKY instead of
-    CENTOS, update Ubuntu support to 22.04, add CLOUD_EFI, use ext4 for
-    /boot in LVM examples, install kernel packages without recommends
+    remove cryptsetup passphrase from format.log,
+    use class ROCKY instead of CENTOS, update Ubuntu support to 22.04,
+    add CLOUD_EFI, use ext4 for
+    /boot in LVM examples, install kernel packages without recommends,
+    use $kernelname in package_config set by class/DEBIAN.var
   * 20-hwdetect.sh: do not load kernel modules by default
   * get-boot-info: set NIC1 even if no network is used during installation
   * grub.cfg: new code booting from local disk, support more than two
@@ -65,6 +71,8 @@ fai (6.0~beta2) experimental; urgency=low
   * 15-root-ssh-key: new script that adds ssh keys class based
   * disk_config/*_EFI: use new format for gpt, p=<partlabel> instead of
     primary
+  * GRUB_PC/10-setup: add test
+  * remove --pid from unshare call
 
   [ Mike Gabriel ]
   * fai-abort:give job control to bash, Closes: #1020976
@@ -85,8 +93,11 @@ fai (6.0~beta2) experimental; urgency=low
   [ Hannes Eberhardt ]
   * package_config/ROCKY: update EFI packages
 
+  [ Christoph Pleger ]
+  * Commands.pm: sort btrfs subvolumes, Closes: #964761
+    do not call mkfs mutliple times
 
- -- Thomas Lange <lange@debian.org>  Sun, 13 Nov 2022 00:48:23 +0100
+ -- Thomas Lange <lange@debian.org>  Fri, 13 Jan 2023 22:45:03 +0100
 
 fai (5.10.3) unstable; urgency=low
 
