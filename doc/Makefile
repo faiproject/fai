@@ -6,7 +6,7 @@ DOC2DIR = $(shell pwd)/../debian/fai-setup-storage/usr/share/doc/fai-setup-stora
 OPT = --dblatex-opts "-P latex.output.revhistory=0"
 
 
-free:	text html ps pdf
+free:	text html pdf
 #	echo "`grep -c FIXME $(DOC).txt` FIXMEs left to fix:"
 #	grep FIXME $(DOC).txt
 
@@ -19,11 +19,6 @@ html: $(DOC).txt images
 .NOTPARALLEL:	pdf
 pdf: $(DOC).txt	images
 	a2x $(OPT) -L --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
-	rm -f $(DOC).xml $(DOC).fo
-
-.NOTPARALLEL:	ps
-ps: $(DOC).txt images
-	a2x $(OPT) -L --icons -a toc -a toclevels=3 -f ps $(DOC).txt
 	rm -f $(DOC).xml $(DOC).fo
 
 # a2x uses lynx, maybe use w3m instead
