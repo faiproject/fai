@@ -59,15 +59,6 @@ check_nfsroot() {
         die 1 "dracut was not installed into the nfsroot."
     fi
 
-    if [ ! -e $NFSROOT/sbin/init ]; then
-        die 1 "sysvinit-core was not installed into the nfsroot."
-    fi
-
-    readlink $NFSROOT/sbin/init | grep -q systemd
-    if [ $? -eq 0 ]; then
-        die 1 "Do not use systemd inside the nfsroot."
-    fi
-
     echo "FAI packages and related packages inside the nfsroot:"
     $ROOTCMD dpkg-query -W -f='${Package;-18} ${Version}\n' fai-client fai-nfsroot fai-setup-storage dracut-network dracut dracut-live dracut-squash 2>/dev/null
 
@@ -477,6 +468,20 @@ EOF
     ln -s /usr/sbin/fai etc/init.d/rcS
 
     echo "AUTO -all" > etc/mdadm/mdadm.conf # do not activate RAID arrays
+
+    # Start FAI using SysV
+    [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
+
+    # Start FAI using Upstart
+    if [ -d etc/init ]; then   # if upstart is available
+        find etc/init ! -type d | egrep -v "fai|udev|hostname|mountall|mounted" | xargs -r rm
+    fi
+
+    #Start FAI using Systemd
+    if [ -f /bin/systemctl ]; then
+        LC_ALL=C $ROOTCMD  systemctl set-default fai-install.target
+    fi
+
     # this second rm of the same file is needed!
     rm -f etc/udev/rules.d/70-persistent-net.rules
     # remove Ubuntu-specific rules to auto-start volume groups, which confuses
