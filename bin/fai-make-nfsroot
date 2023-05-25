@@ -470,7 +470,10 @@ EOF
     echo "AUTO -all" > etc/mdadm/mdadm.conf # do not activate RAID arrays
 
     # Start FAI using SysV
-    [ -f etc/init/tty1.conf ] || ln -s /usr/sbin/fai etc/init.d/rcS
+    if [ -e $NFSROOT/sbin/init ]; then
+       ln -s /usr/sbin/fai etc/init.d/rcS
+    fi
+
 
     # Start FAI using Upstart
     if [ -d etc/init ]; then   # if upstart is available
@@ -478,7 +481,8 @@ EOF
     fi
 
     #Start FAI using Systemd
-    if [ -f /bin/systemctl ]; then
+    readlink $NFSROOT/sbin/init | grep -q systemd
+    if [ $? -eq 0 ]; then
         LC_ALL=C $ROOTCMD  systemctl set-default fai-install.target
     fi
 
