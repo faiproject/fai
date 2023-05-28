@@ -104,5 +104,9 @@ install:
 	cp -a examples $(DOCDIR)
 	rm -f $(DOCDIR)/examples/simple/.git
 	cp -a utils $(DOCDIR)/examples
+	# Systemd
+	mkdir -p $(DESTDIR)/usr/lib/systemd/system
+	install -m644 conf/systemd/* $(DESTDIR)/usr/lib/systemd/system
+
 
 .PHONY: clean veryclean
