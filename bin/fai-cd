@@ -115,7 +115,7 @@ create_ext3fs_image() {
     calculate_required_size
 
     # creates an empty file
-    dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1MB count=$count 2>/dev/null ||
+    dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1M count=$count 2>/dev/null ||
         die 9 "dd failed. Maybe no enough free space in $tmp"
 
     mkfs.ext4 -m1 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
@@ -231,9 +231,9 @@ calculate_required_size() {
 
     [ $configset -eq 1 ] && unset FAI_CONFIGDIR
     if [ $nomirror -eq 0 ]; then
-	size=$(du -sc $ONFSROOT $FAI_CONFIGDIR $mirrordir/{dists,pool} | tail -n1 | awk '{print $1}')
+	size=$(du -sck $ONFSROOT $FAI_CONFIGDIR $mirrordir/{dists,pool} | tail -n1 | awk '{print $1}')
     else
-	size=$(du -sc $ONFSROOT $FAI_CONFIGDIR $mdir | tail -n1 | awk '{print $1}')
+	size=$(du -sck $ONFSROOT $FAI_CONFIGDIR $mdir | tail -n1 | awk '{print $1}')
     fi
 
     # not dividing by 1024 to get the exact, this allows us to get some additional space
