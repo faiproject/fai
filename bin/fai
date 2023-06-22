@@ -126,6 +126,12 @@ fai_init() {
 
         cat /proc/kmsg >/dev/tty4 &
 
+        # fix IP address lifetime
+	ip -4 -br a | awk '/UP / {if ($3) print $3 " " $1}' | \
+        while read addr iface; do
+            ip -4 addr change "$addr" dev "$iface" valid_lft forever preferred_lft forever
+        done
+
         # enable EFI variables
         if [ -d /sys/firmware/efi ]; then
            mount -t efivarfs none /sys/firmware/efi/efivars
