@@ -4,7 +4,7 @@
 
 # This script is part of FAI (Fully Automatic Installation)
 #
-# Copyright (C) 2016-2022 Thomas Lange, lange@cs.uni-koeln.de
+# Copyright (C) 2016-2023 Thomas Lange, lange@cs.uni-koeln.de
 # Universitaet zu Koeln
 
 die() {
@@ -62,7 +62,7 @@ usage() {
 Create a disk image name.raw using FAI and a list of FAI classes.
 This can be used for a virtual machine or a cloud instance. If you
 use another suffix the image will be converted. Following formats are
-supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk, .simg.
+supported: .raw.xz, .raw.zst, .qcow2, .qcow2.zst, .vdi, .vhdx, .vmdk, .simg.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
@@ -142,47 +142,58 @@ done
 [ "$1" ] || usage
 image=$1
 
-iname=${image%.*}
-ext=${image##*.}
+iname=${image%.*}   # strip last suffix
+iname2=${iname%.*}  # strip next to last suffix
 rawname="$iname.raw"
-case $ext in
-    raw)   convert=0 ;;
-    xz) convert=2
+
+case "$image" in
+    *.raw.xz)
+        convert=2
 	rawname=$iname
 	export XZ_OPT=${XZ_OPT-"-1 -T0"}
 	cmd="xz $rawname"
+        ;;
+
+    *.raw.zst)
+        convert=2
+	rawname=$iname
+	cmd="zstd --rm -q -9 -T0 $rawname"
+        ;;
+
+    *.qcow2.zst)
+        convert=3
+	rawname="$iname2.raw"
+        copt="-O qcow2 "
+	qcowname="$iname2.qcow2"
+	cmd="zstd --rm -q -9 -T0 $qcowname"
+        ;;
+
+    *.raw)
+        convert=0
+        ;;
+
+    *.qcow2)
+        copt="-O qcow2 "
+	qcowname="$iname.qcow2"
 	;;
-    zst) convert=2
-	 rawname=$iname
-	 # check if zstd support threads
-	 flagtest=$(zstd -h | grep threads)
-	 if [ -z "$flagtest" ]; then
-	     cmd="zstd --rm -q -9 $rawname"
-	 else
-	     cmd="zstd --rm -q -9 -T0 $rawname"
-	 fi
-	 unset flagtest
-	 ;;
-    simg) convert=2
+
+    *.simg) convert=2
 	  cmd="img2simg $rawname $iname.simg"
 	  if ! command -v img2simg >&/dev/null; then
 	      echo "img2simg not found. Install the package img2simg."
 	      error=1
 	  fi
 	  ;;
-    qcow2) copt="-c -O qcow2 "
-	   qcowname="$iname.qcow2"
-	   ;;
-    vdi) copt="-O vdi"
+    *.vdi) copt="-O vdi"
 	 qcowname="$iname.vdi"
 	   ;;
-    vmdk) copt="-O vmdk"
+    *.vmdk) copt="-O vmdk"
 	  qcowname="$iname.vmdk"
 	  ;;
-    vhdx) copt="-O vhdx"
+    *.vhdx) copt="-O vhdx"
 	  qcowname="$iname.vhdx"
 	  ;;
-    *) die 8 "Unknown suffix .$ext in name of disk image. Please use raw, qcow2, vdi, vmdk or vhdx."
+    *) die 8 "Unknown suffix. Please use raw, raw.zst, raw.xz, qcow2, qcow2.zst, vdi, vmdk or vhdx, simg."
 esac
 
 if [ -z "$classes" -a -z "$renew" ]; then
@@ -226,13 +237,13 @@ cleanup
 trap - EXIT
 
 # convert if needed
-if [ $convert -eq 1 ]; then
-    [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname."
+if [ $convert -eq 1 ] || [ $convert -eq 3 ]; then
+    [ $verbose -eq 1 ] && echo "Converting $rawname to $qcowname"
     qemu-img convert -f raw $rawname $copt $qcowname
     rm $rawname
 fi
-if [ $convert -eq 2 ]; then
-    [ $verbose -eq 1 ] && echo "Converting $rawname to $rawname.$ext."
+if [ $convert -ge 2 ]; then
+    [ $verbose -eq 1 ] && echo "Converting to $image"
     $cmd
 fi
 echo -n "Size of disk image and filename: "; du -h $image
