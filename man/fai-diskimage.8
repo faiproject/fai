@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH fai-diskimage 8 "September 2018" "FAI 5.7"
+.TH fai-diskimage 8 "June 2023" "FAI 6"
 
 .SH NAME
 fai-diskimage \- create a disk image for booting a VM
@@ -11,7 +11,7 @@ creates a disk image that can be used with Qemu/KVM, VirtualBox,
 VMware, Xen, Android device or by your cloud infrastructure. It runs the Fully
 Automatic Installation using a list of FAI classes. In the end you
 have a bootable disk image. Following formats are
-supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk, .simg.
+supported: .raw, .raw.xz, .raw.zst, .qcow2, .qcow2.zst, .vdi, .vhdx, .vmdk, .simg.
 .SH OPTIONS
 .TP
 .B \-c, --class \fICLASS\fR[,\fICLASS\fR]
@@ -48,19 +48,23 @@ configuration including several examples.
 You can now build your fist disk image.
 
  # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
- # cl="DEBIAN,BULLSEYE64,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
+ # cl="DEBIAN,BOOKWORM64,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
  # fai-diskimage -vu cloud3 -S2G -c$cl cloud.raw
 
 Creates a Debian system with a small set of software packages without
-graphical desktop. The disk image cloud.raw will be of size 2 GB and
+a graphical desktop. The disk image cloud.raw will be of size 2 GB and
 the host is called cloud3.
 
 
  # export FAI_BASEFILEURL=https://fai-project.org/download/basefiles/
- # cl=DHCPC,UBUNTU,XENIAL,XENIAL64,AMD64,XORG,LAST
- # fai-diskimage -vNu ubuntu -S7G -c$cl ubuntu.qcow2
+ # export NIC1=ens3
+ # cl=DEBIAN,FAIBASE,UBUNTU,JAMMY64,AMD64,GRUB_PC,DHCPC,XORG,DEMO,LAST
+ # fai-diskimage -vNu ubuntu -S15G -c$cl ubuntu.qcow2
 
-Creates a disk image of size 7GB called ubuntu.qcow2 for a Ubuntu 16.04 desktop.
+Creates a disk image of size 15GB called ubuntu.qcow2 for a Ubuntu 22.04 desktop.
+You have to set the variable NIC1 to the name of the network
+interface inside the environment you will run this disk image. Here,
+ens3 is the network name inside a KVM/QEMU virtual machine.
 
 .SH NOTES
 fai-diskimage will use zerofree if it's available on the host for
