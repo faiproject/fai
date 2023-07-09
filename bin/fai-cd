@@ -118,7 +118,7 @@ create_ext3fs_image() {
     dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1M count=$count 2>/dev/null ||
         die 9 "dd failed. Maybe no enough free space in $tmp"
 
-    mkfs.ext4 -m1 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
+    mkfs.ext4 -q -m1 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
 
     # the resulting ext3fs.img is mounted
     mount -o loop,noatime $tmp/$liveos/ext3fs.img $tmp/$liveos/mounted-ext3fs
@@ -205,7 +205,7 @@ create_grub2_image() {
 	mv $NFSROOT/tmp/bootx64.efi $scratch
 
 	dd if=/dev/zero of=$scratch/efiboot.img bs=1M count=3 2>/dev/null
-	mkfs.vfat $scratch/efiboot.img
+	mkfs.vfat $scratch/efiboot.img >/dev/null
 	mmd -i $scratch/efiboot.img efi efi/boot
 	mcopy -i $scratch/efiboot.img $scratch/bootx64.efi ::efi/boot/
     else
@@ -384,7 +384,7 @@ burniso() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 # main program
 
-sqopt="-comp zstd  -Xcompression-level 5"
+sqopt="-quiet -comp zstd  -Xcompression-level 5"
 
 # Parse commandline options
 while getopts "AekfhHg:Jbs:SBMn:m:V:c:C:d:" opt ; do
@@ -397,7 +397,7 @@ while getopts "AekfhHg:Jbs:SBMn:m:V:c:C:d:" opt ; do
         h)  usage ;;
         H)  hidedirs="" ;;
         g)  grub_config="$OPTARG" ;;
-        J)  _OPTJ=1; sqopt="-comp xz" ; arguments+=" -J";;
+        J)  _OPTJ=1; sqopt="-quiet -comp xz" ; arguments+=" -J";;
         M)  nomirror=1 ;;
         m)  mirrordir="$OPTARG" ;;
         n)  setnfsroot="$OPTARG" ;;
