@@ -123,7 +123,11 @@ create_ext3fs_image() {
     # the resulting ext3fs.img is mounted
     mount -o loop,noatime $tmp/$liveos/ext3fs.img $tmp/$liveos/mounted-ext3fs
 
-    echo "Copying the nfsroot to CD image"
+    if [ -f $ONFSROOT/.THIS_IS_THE_FAI_NFSROOT ]; then
+        echo "Copying the nfsroot to CD image"
+    else
+        echo "Copying the file system to CD image"
+    fi
     # copy the contents of the nfsroot into it
     cp -a $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || error_space $? "nfsroot"
     rm -f $tmp/$liveos/mounted-ext3fs/etc/resolv.conf
