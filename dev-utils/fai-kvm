@@ -68,6 +68,15 @@ boot_cd() {
   kvm $gopt -boot order=$order $net $disk -cdrom $cdimage $*
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
+boot_usb() {
+
+  [ -n "$1" ] && iso=$1
+  shift
+  # boot an USB stick
+  set -x
+  kvm $gopt -boot order=$order $net $disk -drive if=none,id=stick,format=raw,file=$iso,index=0,media=cdrom -device nec-usb-xhci,id=xhci -device usb-storage,bus=xhci.0,drive=stick $*
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - -
 die() {
   echo "$2" 1>&2
   exit $1
@@ -80,7 +89,8 @@ usage() {
 
  fai-kvm [options] pxe               # boot VM using PXE from NIC
  fai-kvm [options] disk [diskimage]  # boot VM from first disk
- fai-kvm [options] cd   [imagename]  # boot VM from an ISO image
+ fai-kvm [options] cd   [imagename]  # boot VM from a   CD ISO image
+ fai-kvm [options] usb  [imagename]  # boot VM from an USB ISO image
 
  fai-kvm [options] pxe|cd|disk [imagename] -- [more options for kvm]
 
@@ -214,6 +224,7 @@ fi
 case "$param1" in
     pxe) boot_pxe $* ;;
     cd) boot_cd $param2 $* ;;
+    usb) boot_usb $param2 $* ;;
     disk) boot_disk $param2 $* ;;
     *)
         echo "Wrong argument. Use one of pxe, cd, disk." >&2
