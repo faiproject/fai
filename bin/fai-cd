@@ -201,11 +201,11 @@ create_grub2_image() {
 	TMPDIR=tmp chroot $NFSROOT grub-mkstandalone \
 	    --format=x86_64-efi \
 	    --output=/tmp/bootx64.efi \
-	    --locales="" --fonts="" \
+	    --locales="" \
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
 	mv $NFSROOT/tmp/bootx64.efi $scratch
 
-	dd if=/dev/zero of=$scratch/efiboot.img bs=1M count=3 2>/dev/null
+	dd if=/dev/zero of=$scratch/efiboot.img bs=1M count=6 2>/dev/null
 	mkfs.vfat $scratch/efiboot.img >/dev/null
 	mmd -i $scratch/efiboot.img efi efi/boot
 	mcopy -i $scratch/efiboot.img $scratch/bootx64.efi ::efi/boot/
