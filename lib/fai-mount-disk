@@ -27,6 +27,7 @@ mount_local_disks() {
     for disk in /dev/disk/by-uuid/*; do
         type=$(blkid -sTYPE $disk)
         [[ "$type" =~ "swap" ]] && continue
+        [[ "$type" =~ "zfs_member" ]] && continue
         dev=$(readlink -e $disk)
         devname=${dev##*/}
         mkdir -p $FAI_ROOT/$devname
