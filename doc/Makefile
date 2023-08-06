@@ -11,7 +11,7 @@ free:	text html pdf
 #	grep FIXME $(DOC).txt
 
 images:
-	ln -s /usr/share/asciidoc/images images
+	ln -fs /usr/share/asciidoc/images images
 
 html: $(DOC).txt images
 	asciidoc -a toc2 -a toclevels=3 --theme=flask $(DOC).txt
