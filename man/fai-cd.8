@@ -1,7 +1,7 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .if \n(zZ=1 .ig zZ
 .if \n(zY=1 .ig zY
-.TH fai-cd 8 "Oct 2017" "FAI 5"
+.TH fai-cd 8 "Aug 2023" "FAI 6"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -161,6 +161,33 @@ If you want to create a bootable USB stick (here /dev/sdf) , write the
 CD image to the stick via dd(1).
 
    # dd if=fai-cd.iso of=/dev/sdf bs=1M
+
+
+\&\fBBuilding a live ISO\fR.
+You can create a live ISO using two FAI commands. First, you need to build
+your own live environment, containing all software including
+configuration that you like to use. Using the command "fai dirinstall"
+you do an installation using the FAI config space into a directory
+which will become your live system. After that you create a bootable
+ISO which includes this directory tree.
+
+Define the FAI classes:
+
+cl="DEBIAN,BOOKWORM64,AMD64,FAIBASE,XFCE,XORG,DHCPC,DEMO,LIVEISO,LAST"
+
+Build the live environment directory tree:
+
+  # LC_ALL=C fai \-v dirinstall \-u xfce33 \-c $cl \\
+    \-s file:///srv/fai/config /srv/xfce
+
+Then create the live ISO:
+
+  # fai-cd \-s500 \-MH \-d none \-g /etc/fai/grub.cfg-live \\
+    \-n /srv/xfce live.iso
+
+Hint: The FAI nfsroot is not needed when building a live ISO.
+
+\&\fBMore advanced usage\fR.
 
 It is possible to install over the network without using NFS, i.e. by
 getting the nfsroot via an http request. To do so you have to create a
