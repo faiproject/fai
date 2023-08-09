@@ -31,6 +31,9 @@ mount_local_disks() {
         dev=$(readlink -e $disk)
         devname=${dev##*/}
         [[ "$devname" =~ "$stick" ]] && continue # skip USB stick device
+        if [ -n "$base" ]; then
+            [[ "$devname" =~ "$base" ]] && continue
+        fi
         mkdir -p $FAI_ROOT/$devname
         mount -o $mountoption $dev $FAI_ROOT/$devname
 
@@ -81,11 +84,16 @@ while getopts ufw opt ; do
       esac
 done
 
+# determine two device we want to ignore
 # determine the device of the USB stick we boot from
 stick=$(mount | awk '/run\/initramfs\/live/ {print $1}')
 stick=${stick#/dev/}
 stick=${stick%%[[:digit:]]*}
 : ${stick:=_XXX_} # if empty set to a never matching value
+if [ -e /dev/mapper/live-base ]; then
+    base=$(readlink -f /dev/mapper/live-base)
+    base=${base#/dev/}
+fi
 
 mount_local_disks
 if [ $dofstab -eq 1 ]; then
