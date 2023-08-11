@@ -561,9 +561,8 @@ umount_dirs() {
     [ -d $NFSROOT/proc/self ] && die 1 "/proc still mounted inside the nfsroot."
     umount $NFSROOT/dev/pts 2> /dev/null || true
 
-    if mount | grep -q "on $NFSROOT/var/lib/dpkg type tmpfs" ; then
+    mountpoint -q $NFSROOT/var/lib/dpkg && \
         /usr/lib/fai/mkramdisk -u $NFSROOT/var/lib/dpkg $NFSROOT/var/cache
-    fi
 
     if [ -n "$FAI_DEBMIRROR" ]; then
         test -d $NFSROOT/$MNTPOINT && umount $NFSROOT/$MNTPOINT || true
