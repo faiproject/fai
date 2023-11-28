@@ -92,7 +92,7 @@ install:
 	install bin/dhclient-fai-script  $(SHAREDIR)/
 	install -m644 conf/dhclient-fai.conf $(SHAREDIR)/
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
-	cd conf ; install -m644 fai.conf grub.cfg grub.cfg.autodiscover $(DESTDIR)/etc/fai/
+	cd conf ; install -m644 fai.conf grub.cfg grub.cfg.autodiscover grub.cfg.live $(DESTDIR)/etc/fai/
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/fai-project.gpg $(DESTDIR)/etc/fai/apt/trusted.gpg.d/
