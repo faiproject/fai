@@ -54,9 +54,9 @@ getvar() {
     local var
     local port
 
-    var=$1; shift
-    srv=$1; shift
-    port=$1; shift
+    var=$1
+    srv=$2
+    port=$3
 
     : ${port:=$FAI_MONITOR_PORT}
     : ${srv:=$monserver}
