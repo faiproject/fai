@@ -129,7 +129,7 @@ if [ -z "FAI_CONFIG_SRC" ]; then
     FAI_CONFIG_SRC="nfs://$monserver/$FAI_CONFIGDIR"
 fi
 
-dialog --infobox "\n\n FAI server $FAI_VERSION found at $monserver\n\n  Using root=$monserver:$NFSROOT\n" 9 50
+dialog --infobox "\n\n FAI server $FAI_VERSION found at $monserver\n\n  Using root=$monserver:$NFSROOT\n" 9 50  > /dev/console
 sleep 4
 
 root=$monserver:$NFSROOT
