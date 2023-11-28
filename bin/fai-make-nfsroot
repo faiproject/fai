@@ -413,8 +413,7 @@ EOF
     # currently we do not want to use systemd, but CD booting, also we
     # do not need all those filesystems inside the initrd
     mkdir $NFSROOT/etc/dracut.conf.d
-    echo 'omit_dracutmodules+=" dracut-systemd systemd systemd-initrd systemd-networkd "' > $NFSROOT/etc/dracut.conf.d/12-no-systemd.conf
-    echo 'add_dracutmodules+=" network-legacy "' >>  $NFSROOT/etc/dracut.conf.d/12-no-systemd.conf
+    echo 'add_dracutmodules+=" network-legacy "' >  $NFSROOT/etc/dracut.conf.d/11-network.conf
     if [ $full = 1 ];then
 	echo 'add_dracutmodules+=" livenet "' > $NFSROOT/etc/dracut.conf.d/13-add-cd-support.conf
 	fslist="nfs lockd ext4"
@@ -423,8 +422,9 @@ EOF
 	fslist="ext4"
     fi
     echo 'hostonly="no"' > $NFSROOT/etc/dracut.conf.d/20-generic-image.conf
+    echo 'compress="zstd"' > $NFSROOT/etc/dracut.conf.d/20-zstd-compress.conf
     cat <<EOF > $NFSROOT/etc/dracut.conf.d/01-omit.conf
-omit_dracutmodules+=" btrfs crypt dash lvm resume usrmount modsign mdraid shutdown dracut-systemd systemd systemd-initrd systemd-networkd virtfs "
+omit_dracutmodules+=" btrfs crypt dash lvm resume usrmount modsign mdraid shutdown virtfs "
 filesystems="$fslist"
 EOF
 
