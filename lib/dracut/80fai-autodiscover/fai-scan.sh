@@ -71,16 +71,16 @@ getvar() {
 }
 
 iprange=$(ip addr show up | grep -P -o '(?<=inet )\S+' | grep -v 127.0.0.1 |head -1)
-echo "Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)"
+echo "Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)" > /dev/console
 
 while [ 1 ]; do
 
-    dialog --infobox "\n  Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)\n" 5 59
+    dialog --infobox "\n  Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)\n" 5 59  > /dev/console
     scan_net $iprange $FAI_MONITOR_PORT
     faisrv=($faiserver)
 
     if [ ${#faisrv[@]} -eq 0 ]; then
-	dialog --colors --yesno "\n  \Zr\Z1No FAI server found.\Zn\n\n\n      Retry scan?\n" 10 28
+	dialog --colors --yesno "\n  \Zr\Z1No FAI server found.\Zn\n\n\n      Retry scan?\n" 10 28  > /dev/console
 	if [ $? -eq 1 ]; then
 	   die "No FAI server found."
 	   root=
