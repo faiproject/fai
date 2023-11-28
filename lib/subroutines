@@ -1290,3 +1290,109 @@ sendmon() {
     return $?
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+all_disks_and_size() {
+
+    # print a list of devices and their block size
+    ( grep -E 'md[0-9]{3,}$' /proc/partitions;
+      grep -E ' etherd/e[[:digit:]]+\.[[:digit:]]+\b| i2o/hd.+\b| cciss/c[[:digit:]]+d[[:digit:]]+\b| ida/c[[:digit:]]+d[[:digit:]]+\b| rd/c[[:digit:]]+d[[:digit:]]+\b| fio.\b| hd.\b| sd[a-z]{1,2}\b|/disc\b| vd.\b| xvd.\b| nvme[[:digit:]]+n[[:digit:]]+$| mmcblk[[:digit:]]+$' /proc/partitions ) | awk '{ print $4 " " $3 }'
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+disks_by_id() {
+
+    # list all disks by ID and their link to the device name
+    (
+      cd /dev/disk/by-id
+      find -type l -printf "%f %l\n" | \
+          grep -Pv '^md|-part\d|^wwn-|^nvme-eui|^nvme-nvme|^nvme\S+_\d ' | \
+          grep -E '^ata|^nvme|^usb'
+    )
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+checkdisk() {
+
+    # read lines with device name and size and check if device is a disk
+    # $1 can be a device name that will be ignored. Used for the device
+    # name of the USB stick if we boot from it
+
+    local igndev=$1 # a device to ignore
+    local isdisk
+    while read device blocks; do
+        isdisk=1
+        # old way of detecting disks: [ $(cat /sys/block/$device/removable) -eq 1 ] && isdisk=0
+        [ $(stat -c %G /dev/$device) = "disk" ] || isdisk=0
+
+        # if set, ignore this device
+        [ "$device" = "$igndev" ] && isdisk=0
+        if [ $isdisk -eq 1 ]; then
+            echo "$device"
+        fi
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+once_only() {
+
+    # read from stdin and echo lines only once, ignore if the same line occurs again
+    local line
+    local -A seen
+    while read line; do
+        if [ X${seen["$line"]} = X ]; then
+            echo $line
+        fi
+        seen["$line"]=1
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+all_disks_by_size() {
+    all_disks_and_size | sort -nr -k2 | checkdisk $FAI_BOOTSTICK
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+largestdisk()  {
+    all_disks_and_size | sort -nr -k2 | checkdisk $FAI_BOOTSTICK | head -1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+smallestdisk() {
+    all_disks_and_size | sort -n  -k2 | checkdisk $FAI_BOOTSTICK | head -1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+matchdisks() {
+    # matchdisks PATTERN PATTERN ....
+    # create an ordered list of disks matching the patterns provided
+    # pay attention that the pattern do not match multiple times
+    grep_disks "$@" | sed -e 's#.*/##g'
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+notmatchdisks() {
+    grepv_disks $1 | sed -e 's#.*/##g'
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+grep_disks() {
+    if [ -z "$*" ]; then
+        set -- '.'
+    fi
+    for p in "$@"; do
+        disks_by_id | grep -E $p
+    done
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+grepv_disks() {
+    if [ -z "$1" ]; then
+        set -- '.'
+    fi
+    disks_by_id | grep -E -v $1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+set_bootstick() {
+
+    # determine the device of the USB stick we boot from
+    # sets the variable FAI_BOOTSTICK
+
+    FAI_BOOTSTICK=$(mount | awk '/run\/initramfs\/live/ {print $1}')
+    FAI_BOOTSTICK=${FAI_BOOTSTICK#/dev/}
+    FAI_BOOTSTICK=${FAI_BOOTSTICK%%[[:digit:]]*}
+
+    # use disk label FAI_CD to detect the USB stick
+    if [ -z "$FAI_BOOTSTICK" ] && [ -L /dev/disk/by-label/FAI_CD ]; then
+        FAI_BOOTSTICK=$(readlink /dev/disk/by-label/FAI_CD | sed -e 's#.*/##g')
+        FAI_BOOTSTICK=${FAI_BOOTSTICK%%[[:digit:]]*}
+    fi
+}

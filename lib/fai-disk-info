@@ -1,33 +1,4 @@
 #! /bin/sh
 
-### BEGIN SUBROUTINE INFO
-# Provides-Var:    none
-# Requires-Var:    none
-# Short-Description: <task desc.>
-### END SUBROUTINE INFO
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-checkdisk() {
-
-    while read major minor blocks device suffix; do
-        isdisk=1
-        # skip ide cdrom
-        [ -f /proc/ide/$device/media ] && grep -q cdrom /proc/ide/$device/media && isdisk=0
-# old way of detecting disks: [ `cat /sys/block/$device/removable` -eq 1 ] && isdisk=0
-        [ `stat -c %G /dev/$device` = "disk" ] || isdisk=0
-        if [ -n "$stick" ]; then
-            [ $device = $stick ] && isdisk=0
-        fi
-        [ $isdisk -eq 1 ] && echo "$device"
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-
-# determine the device of the USB stick we boot from
-stick=$(mount | awk '/run\/initramfs\/live/ {print $1}')
-stick=${stick#/dev/}
-stick=${stick%%[[:digit:]]*}
-
-
-# echo a space separated list of devices and their block size
-( grep -E 'md[0-9]{3,}$' /proc/partitions; grep -E ' etherd/e[[:digit:]]+\.[[:digit:]]+\b| i2o/hd.+\b| cciss/c[[:digit:]]+d[[:digit:]]+\b| ida/c[[:digit:]]+d[[:digit:]]+\b| rd/c[[:digit:]]+d[[:digit:]]+\b| fio.\b| hd.\b| sd[a-z]{1,2}\b|/disc\b| vd.\b| xvd.\b| nvme[[:digit:]]+n[[:digit:]]+$| mmcblk[[:digit:]]+$' /proc/partitions ) | checkdisk
+set_bootstick
+all_disks_and_size | checkdisk $FAI_BOOTSTICK | once_only
