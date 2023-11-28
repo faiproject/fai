@@ -207,7 +207,7 @@ sub phys_dev {
     return (1, "/dev/$1", $2);
   }
   elsif ($dev =~
-    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d{3,}|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n\d+|mmcblk\d+)(p(\d+))?$})
+    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d+|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n\d+|mmcblk\d+)(p(\d+))?$})
   {
     defined($2) or return (1, "/dev/$1", -1);
     return (1, "/dev/$1", $3);
@@ -289,7 +289,7 @@ sub mark_encrypted {
 sub make_device_name {
   my ($dev, $p) = @_;
   $dev .= "p" if ($dev =~
-    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d{3,}|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n1|mmcblk\d+)$});
+    m{^/dev/(loop\d+|cciss/c\d+d\d+|ida/c\d+d\d+|md\d+|md/\w+\d*|rd/c\d+d\d+|ataraid/d\d+|etherd/e\d+\.\d+|nvme\d+n1|mmcblk\d+)$});
   $dev .= $p;
   internal_error("Invalid device $dev") unless (&FAI::phys_dev($dev))[0];
   return $dev;
