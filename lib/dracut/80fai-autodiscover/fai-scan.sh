@@ -70,17 +70,18 @@ getvar() {
     fi
 }
 
+exec 1>&/dev/console
 iprange=$(ip addr show up | grep -P -o '(?<=inet )\S+' | grep -v 127.0.0.1 |head -1)
-echo "Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)" > /dev/console
+echo "Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)"
 
 while [ 1 ]; do
 
-    dialog --infobox "\n  Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)\n" 5 59  > /dev/console
+    dialog --infobox "\n  Scanning $iprange for FAI server (port $FAI_MONITOR_PORT)\n" 5 59
     scan_net $iprange $FAI_MONITOR_PORT
     faisrv=($faiserver)
 
     if [ ${#faisrv[@]} -eq 0 ]; then
-	dialog --colors --yesno "\n  \Zr\Z1No FAI server found.\Zn\n\n\n      Retry scan?\n" 10 28  > /dev/console
+	dialog --colors --yesno "\n  \Zr\Z1No FAI server found.\Zn\n\n\n      Retry scan?\n" 10 28
 	if [ $? -eq 1 ]; then
 	   die "No FAI server found."
 	   root=
@@ -129,7 +130,7 @@ if [ -z "FAI_CONFIG_SRC" ]; then
     FAI_CONFIG_SRC="nfs://$monserver/$FAI_CONFIGDIR"
 fi
 
-dialog --infobox "\n\n FAI server $FAI_VERSION found at $monserver\n\n  Using root=$monserver:$NFSROOT\n" 9 50  > /dev/console
+dialog --infobox "\n\n FAI server $FAI_VERSION found at $monserver\n\n  Using root=$monserver:$NFSROOT\n" 9 50
 sleep 4
 
 root=$monserver:$NFSROOT
