@@ -168,6 +168,18 @@ else
 fi
 
 
+# create new disk images
+if [ X$newdisk != X0 ]; then
+  for i in $(seq 1 $disks) ; do
+      if [ X$newdisk = X1 -a -f $diskfile-$i.qcow2 ]; then
+	  echo "Will not overwrite disk image. Please use -N."
+	  exit 3
+      fi
+      rm -f $diskfile-$i.qcow2
+      qemu-img create -f qcow2 -o preallocation=metadata $diskfile-$i.qcow2 ${size}G
+  done
+fi
+
 disk=""
 for i in $(seq 1 $disks) ; do
     if [ ! -f $diskfile-$i.qcow2 ]; then
@@ -191,18 +203,6 @@ if [ $efi = 1 ]; then
     gopt="-bios /usr/share/ovmf/OVMF.fd $gopt"
 fi
 
-
-# create new disk images
-if [ X$newdisk != X0 ]; then
-  for i in $(seq 1 $disks) ; do
-      if [ X$newdisk = X1 -a -f $diskfile-$i.qcow2 ]; then
-	  echo "Will not overwrite disk image. Please use -N."
-	  exit 3
-      fi
-      rm -f $diskfile-$i.qcow2
-      qemu-img create -f qcow2 -o preallocation=metadata $diskfile-$i.qcow2 ${size}G
-  done
-fi
 
 # Loop through parameters until '--' to pass the remainder to kvm.
 # The preceding parameters are stored in $param1 & $param2
