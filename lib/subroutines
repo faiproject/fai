@@ -121,6 +121,28 @@ mount-fai-data() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+install_debs_from_data() {
+
+    # install all packages found in the subdirecories /media/data/debs/<CLASSNAME>
+
+    local c dirs
+    local debdir=/media/data/debs
+
+    if [ ! -d $debdir ]; then
+        echo ""
+        return
+    fi
+
+    for c in $classes; do
+        if [ -d $debdir/$c ]; then
+            dirs+=" $c"
+        fi
+    done
+
+    cd $debdir || exit 9
+    dpkg -R -i $dirs
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rwmount() {
 
     # remount partition read/write, for interactive use only
