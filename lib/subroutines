@@ -121,15 +121,14 @@ mount-fai-data() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-install_debs_from_data() {
+install_debs() {
 
-    # install all packages found in the subdirecories /media/data/debs/<CLASSNAME>
+    # install all packages found in the subdirecories debs/<CLASSNAME>
 
     local c dirs
-    local debdir=/media/data/debs
+    local debdir=$1
 
     if [ ! -d $debdir ]; then
-        echo ""
         return
     fi
 
@@ -142,6 +141,7 @@ install_debs_from_data() {
     if [ -z "$dirs" ]; then
         return
     fi
+    echo "Installing .deb files from $debdir"
     cd $debdir || exit 9
     dpkg -R -i $dirs
 }
@@ -1251,7 +1251,8 @@ task_instsoft() {
     grep "Couldn't find any package whose name or description matched" $LOGDIR/software.log && task_error 321
     grep -q "E: Sub-process /usr/bin/dpkg returned an error code" $LOGDIR/software.log && task_error 620
 
-    install_debs_from_data |& tee -a $LOGDIR/software.log
+    install_debs $FAI/debs |& tee -a $LOGDIR/software.log
+    install_debs /media/data/debs |& tee -a $LOGDIR/software.log
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 task_finish() {
