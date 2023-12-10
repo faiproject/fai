@@ -125,7 +125,7 @@ install_debs() {
 
     # install all packages found in the subdirecories debs/<CLASSNAME>
 
-    local c dirs
+    local c m dirs
     local debdir=$1
 
     if [ ! -d $debdir ]; then
@@ -141,8 +141,12 @@ install_debs() {
     if [ -z "$dirs" ]; then
         return
     fi
-    echo "Installing .deb files from $debdir"
     cd $debdir || exit 9
+    m=$(find $dirs -name \*.deb)
+    if [ -z "$m" ]; then
+        return
+    fi
+    echo "Installing .deb files from $debdir"
     dpkg -R -i $dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
