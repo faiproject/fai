@@ -1,0 +1,144 @@
+#! /bin/bash
+
+# (c) 2023 by Thomas Lange, lange@debian.org
+#
+# mk-data-partition  ISO | <USB device>
+# extend an ISO file by size and create a data partition
+# for USB stick the data partition will take the whole size of the USB stick
+
+add_p3() {
+
+    # $1: filename or device name
+    # $2: partition name
+    local type
+
+    if [ -b $2 ]; then
+        echo "Partition 3 already exists on $1"
+        exit 4
+    fi
+
+    if [ X$fmt = Xexfat ]; then
+        type=7
+    else
+        type=83
+    fi
+    # add 3th partion to the image or device
+    fdisk -w never $1 << EOM  >/dev/null 2>&1
+n
+p
+3
+
+
+t
+3
+$type
+w
+EOM
+    if [ "$?" -ne 0 ]; then
+        echo "Cannot add 3th partition to $1"
+        exit 3
+    fi
+    udevadm settle --timeout=10
+}
+
+make_fs() {
+
+    if [ -b $1 ]; then
+        if [ X$fmt = Xexfat ]; then
+            mkfs.exfat -L MY-DATA $1
+        else
+            mkfs.ext4 -q -L MY-DATA -J size=5 -E lazy_itable_init $1
+        fi
+        echo "Data partition MY-DATA created"
+    fi
+}
+
+usage() {
+
+    cat <<EOF
+mk-data-partition, create additional partition for storing data
+
+   Copyright (C) 2023 by Thomas Lange
+
+Usage: mk-data-partition [OPTION] IMAGE
+
+   -F              Format data partition as exFAT. Default is to use ext4.
+   -s              Set size of data partition. Default 300M, ignored for USB devices
+   IMAGE           Can be an ISO file or the device of an USB stick.
+
+The command adds a third partition containing an ext4 or exFAT
+file system with label MY-DATA. This partition can be mounted read-write.
+
+Examples:
+
+    Extend the Debian installer ISO by 1G
+    # mk-data-partition -s 1G debian-12.2.0-amd64-netinst.iso
+
+    Create the data partition using an exFAT file system
+    # mk-data-partition -F /dev/sdb
+EOF
+    exit $1
+}
+
+while getopts Fhs: opt ; do
+    case "$opt" in
+        h) usage 0;;
+        F) fmt=exfat ;;
+        s) size=$OPTARG
+           shift ;;
+        *) usage 1;;
+    esac
+    shift
+done
+
+filename=$1
+if [ -z "$filename" ]; then
+    echo "ERROR: No filename or device supplied"
+    echo
+    usage 1
+fi
+filename=$(readlink -f $filename)
+
+
+if [ $(id -u) != "0" ]; then
+    echo "Run this program as root."
+    exit 2
+fi
+
+if [ ! -b $filename ] && [ ! -f $filename ]; then
+    echo "$filename is neither a device nor an existing file"
+    exit 9
+fi
+
+if [ -b $filename ]; then
+    # file is a USB device
+    if [ -n "$size" ]; then
+        echo "Warning: Ignoring the size parameter for USB sticks."
+    fi
+    part=${filename}3
+    add_p3 $filename $part
+    make_fs $part
+fi
+
+if [ -f $filename ]; then
+
+    # check if the image already has a 3th partition
+    set +e
+    fdisk -l $filename | egrep -q ^${filename}3
+    if [ $? -eq 0 ]; then
+        echo "Partition 3 already exists on $filename"
+        exit 5
+    fi
+    size=${size:-300M}
+    echo "Extend $filename by $size"
+    truncate -s +$size $filename
+    loop=$(losetup -P -f --show $filename)
+    if [ "$?" -ne 0 ]; then
+        echo "Cannot create loop device"
+        exit 5
+    fi
+    trap "losetup -d $loop" EXIT
+    part=${loop}p3
+    add_p3 $loop $part
+    make_fs $part
+fi
