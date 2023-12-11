@@ -125,33 +125,41 @@ install_pkgs() {
 
     # install all packages found in the subdirecories pkgs/<CLASSNAME>
 
-    local c pkgs dirs
+    local c pkgs dirs pdir ttdir
     local debdir=$1
 
     if [ ! -d $debdir ]; then
         return
     fi
 
+    pdir=/tmp/pkgs
+    ttdir=${target}$pdir
+    mkdir $ttdir
+    mount --bind $debdir $ttdir
+
     for c in $classes; do
-        if [ -d $debdir/$c ]; then
+        if [ -d $ttdir/$c ]; then
             dirs+=" $c"
         fi
     done
 
     if [ -z "$dirs" ]; then
+        umount $ttdir
         return
     fi
-    cd $debdir || exit 9
-    pkgs=$(find $dirs -name \*.deb)
+
+    pkgs=$(cd $ttdir;find $dirs -name \*.deb)
     if [ -n "$pkgs" ]; then
         echo "Installing .deb files from $debdir"
-        dpkg --root=$target -R -i $dirs
+        $ROOTCMD bash -c "cd $pdir; dpkg -R -i $dirs"
     fi
-    pkgs=$(find $dirs -name \*.rpm)
+
+    pkgs=$(cd $ttdir;find $dirs -name \*.rpm)
     if [ -n "$pkgs" ]; then
         echo "Installing .rpm files from $debdir"
-        rpm --root $target -i $pkgs
+        $ROOTCMD bash -c "cd $pdir; rpm -i $pkgs"
     fi
+    umount $ttdir
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rwmount() {
