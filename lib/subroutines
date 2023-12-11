@@ -143,11 +143,15 @@ install_pkgs() {
     fi
     cd $debdir || exit 9
     m=$(find $dirs -name \*.deb)
-    if [ -z "$m" ]; then
-        return
+    if [ -n "$m" ]; then
+        echo "Installing .deb files from $debdir"
+        dpkg --root=$target -R -i $dirs
     fi
-    echo "Installing .deb files from $debdir"
-    dpkg --root=$target -R -i $dirs
+    m=$(find $dirs -name \*.rpm)
+    if [ -n "$m" ]; then
+        echo "Installing .rpm files from $debdir"
+        rpm --root $target -i $m
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rwmount() {
