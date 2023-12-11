@@ -1,4 +1,4 @@
-////
+<////
   -*- Doc -*-
 ////
 
@@ -832,6 +832,12 @@ installed or removed by `install_packages(8)`. Files named
 '<CLASS>.gpg' are added to the list of keys used by apt
 for trusted package repositories.
 
+_pkgs/_::
+This directory can contain subdirectories named by classes. You can
+put '.deb' or '.rpm' files into these subdirectories. FAI will then
+install these packages without the need of creating the metadata of a
+package repository.
+
 _scripts/_::
 Scripts for your local site customization. Used by `fai-do-scripts(1)`.
 
@@ -1453,6 +1459,10 @@ dependecies are also resolved by the package tools.
 
 The format of the configuration files is described in <<packageconfig>>.
 
+Additionaly FAI will install packages ('.deb' or .rpm') from the
+directories '$FAI/pkgs/<CLASSNAME>'.
+
+
 === [[icscripts]]Site specific customization (task configure)
 
 Often the default configurations of the software packages will not
@@ -1758,6 +1768,23 @@ with hostname set to foobar.
 You can give disk images a try without installing FAI, if you visit
 https://fai-project.org/FAIme/cloud
 
+
+=== [[live-image]]Creating a bootable live image
+
+Creating a bootable live ISO is easy with FAI. You only need two
+steps. First, create your live environment using the command 'fai
+dirinstall'. Don't forget to add the class 'LIVEISO'
+Then create the live ISO using 'fai-cd':
+
+----
+# cl="DEBIAN,BOOKWORM64,AMD64,FAIBASE,XFCE,XORG,DHCPC,DEMO,LIVEISO,LAST"
+# LC_ALL=C fai -v dirinstall -u xfce33 -c $cl \
+    -s file:///srv/fai/config /srv/xfce
+# fai-cd -s500 -MH -d none -g /etc/fai/grub.cfg.live \
+  -n /srv/xfce live.iso
+----
+
+The nfsroot is not needed for a live ISO.
 
 === [[cross-arch]]Building cross-architecture disk images
 
