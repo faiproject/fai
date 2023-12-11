@@ -23,19 +23,10 @@ add_p3() {
         type=83
     fi
     # add 3th partion to the image or device
-    fdisk -w never $1 << EOM  >/dev/null 2>&1
-n
-p
-3
 
-
-t
-3
-$type
-w
-EOM
+    { echo -e "n\np\n3\n\n\n"; sleep 2; echo -e "v\nt\n3\n$type\nw\n"; } | fdisk -w never $1 >/dev/null 2>&1
     if [ "$?" -ne 0 ]; then
-        echo "Cannot add 3th partition to $1"
+        echo "Cannot add 3th partition to $1. Error code $?"
         exit 3
     fi
     udevadm settle --timeout=10
