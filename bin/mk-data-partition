@@ -6,6 +6,8 @@
 # extend an ISO file by size and create a data partition
 # for USB stick the data partition will take the whole size of the USB stick
 
+mntdir=/media/data
+
 add_p3() {
 
     # $1: filename or device name
@@ -44,6 +46,24 @@ make_fs() {
     fi
 }
 
+mount_data() {
+
+    mkdir $mntdir
+    mount $1 $mntdir
+}
+
+umount_data() {
+
+    umount $mntdir
+    rmdir $mntdir
+
+}
+copy_data() {
+
+    cp -av $* $mntdir
+}
+
+
 usage() {
 
     cat <<EOF
@@ -53,9 +73,10 @@ mk-data-partition, create additional partition for storing data
 
 Usage: mk-data-partition [OPTION] IMAGE
 
-   -F              Format data partition as exFAT. Default is to use ext4.
+   -F              Format data partition as exFAT. Default is to use ext4
    -s              Set size of data partition. Default 300M, ignored for USB devices
-   IMAGE           Can be an ISO file or the device of an USB stick.
+   -c [DIR,..]     Copy a list of directories to the data partition
+   IMAGE           Can be an ISO file or the device of an USB stick
 
 The command adds a third partition containing an ext4 or exFAT
 file system with label MY-DATA. This partition can be mounted read-write.
@@ -71,9 +92,10 @@ EOF
     exit $1
 }
 
-while getopts Fhs: opt ; do
+while getopts Fhs:c opt ; do
     case "$opt" in
         h) usage 0;;
+        c) copy=1 ;;
         F) fmt=exfat ;;
         s) size=$OPTARG ;;
         *) usage 1;;
@@ -82,6 +104,7 @@ done
 shift $((OPTIND - 1))
 
 filename=$1
+shift
 if [ -z "$filename" ]; then
     echo "ERROR: No filename or device supplied"
     echo
@@ -131,4 +154,11 @@ if [ -f $filename ]; then
     part=${loop}p3
     add_p3 $loop $part
     make_fs $part
+fi
+
+if [ X$copy = X1 ]; then
+
+    mount_data $part
+    copy_data $*
+    umount_data $part
 fi
