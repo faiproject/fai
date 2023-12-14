@@ -67,27 +67,35 @@ copy_data() {
 usage() {
 
     cat <<EOF
-mk-data-partition, create additional partition for storing data
+Usage: mk-data-partition [OPTION] IMAGE [dir...]
 
-   Copyright (C) 2023 by Thomas Lange
-
-Usage: mk-data-partition [OPTION] IMAGE
+Create additional partition for storing data.
 
    -F              Format data partition as exFAT. Default is to use ext4
    -s              Set size of data partition. Default 300M, ignored for USB devices
-   -c [DIR,..]     Copy a list of directories to the data partition
+   -c              Copy a list of directories to the data partition
    IMAGE           Can be an ISO file or the device of an USB stick
 
-The command adds a third partition containing an ext4 or exFAT
-file system with label MY-DATA. This partition can be mounted read-write.
+The command adds a third partition to an ISO or an USB stick containing a bootable ISO.
+This partition contains an ext4 or exFAT file system with label MY-DATA that can be
+mounted read-write. An ISO file will be extened by the given size, on an USB stick the
+partition will take the whole remaining size.
 
 Examples:
 
-    Extend the Debian installer ISO by 1G
+    Add a data partition of size 1G to the Debian installer ISO using an ext4 partition
     # mk-data-partition -s 1G debian-12.2.0-amd64-netinst.iso
 
-    Create the data partition using an exFAT file system
+    Create the data partition using an exFAT file system on USB named /dev/sdb.
+    First copy (or dd) the ISO onto the USB stick. Then you can add the data partition
+    to the USB stick.
     # mk-data-partition -F /dev/sdb
+
+    Create the data partition and copy directories A and B to it
+    # mk-data-partition debian-12.2.0-amd64-netinst.iso A B
+
+    Copyright (C) 2023 by Thomas Lange
+
 EOF
     exit $1
 }
