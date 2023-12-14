@@ -30,7 +30,7 @@ mount_local_disks() {
         [[ "$type" =~ "zfs_member" ]] && continue
         dev=$(readlink -e $disk)
         devname=${dev##*/}
-        [[ "$devname" =~ "$stick" ]] && continue # skip USB stick device
+        [[ "$devname" =~ "$FAI_BOOTSTICK" ]] && continue # skip USB stick device
         if [ -n "$base" ]; then
             [[ "$devname" =~ "$base" ]] && continue
         fi
@@ -84,12 +84,7 @@ while getopts ufw opt ; do
       esac
 done
 
-# determine two device we want to ignore
-# determine the device of the USB stick we boot from
-stick=$(mount | awk '/run\/initramfs\/live/ {print $1}')
-stick=${stick#/dev/}
-stick=${stick%%[[:digit:]]*}
-: ${stick:=_XXX_} # if empty set to a never matching value
+set_bootstick
 if [ -e /dev/mapper/live-base ]; then
     base=$(readlink -f /dev/mapper/live-base)
     base=${base#/dev/}
