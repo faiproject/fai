@@ -164,6 +164,10 @@ if [ -f $filename ]; then
     size=${size:-300M}
     echo "Extend $filename by $size"
     truncate -s +$size $filename
+    if [ $? -ne 0 ]; then
+        echo "Cannot extend $filename. Aborting"
+        exit 9
+    fi
     loop=$(losetup -P -f --show $filename)
     if [ "$?" -ne 0 ]; then
         echo "Cannot create loop device"
