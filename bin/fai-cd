@@ -213,7 +213,10 @@ create_grub2_image() {
         die 11 "No grub-efi-amd64-bin installation found in NFSROOT. Aborting."
     fi
     if [ -d $NFSROOT/usr/lib/grub/i386-pc ]; then
+        cp -a $NFSROOT/usr/lib/grub/i386-pc $NFSROOT/tmp/grub
+        echo -e "ext2\niso9660\ntar\n" > $NFSROOT/tmp/grub/fs.lst
 	TMPDIR=/tmp chroot $NFSROOT grub-mkstandalone \
+            --directory=/tmp/grub \
 	    --format=i386-pc \
 	    --output=/tmp/core.img \
 	    --locales="" --fonts="" \
@@ -221,7 +224,7 @@ create_grub2_image() {
 	    --modules="linux normal iso9660 biosdisk search" \
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
 	cat $NFSROOT/usr/lib/grub/i386-pc/cdboot.img $NFSROOT/tmp/core.img > $scratch/bios.img
-	rm $NFSROOT/tmp/core.img
+	rm -rf $NFSROOT/tmp/core.img $NFSROOT/tmp/grub
     else
         die 11 "No grub-pc installation found in NFSROOT. Aborting."
     fi
