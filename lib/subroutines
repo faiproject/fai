@@ -1202,10 +1202,7 @@ task_repository () {
 
     # apt specific things
     if ! fcopy -SBM $v /etc/apt/sources.list; then
-	if [ -f $FAI_ETC_DIR/apt/sources.list ]; then
-            cp $v $FAI_ETC_DIR/apt/sources.list $target/etc/apt/sources.list.d/nfsroot.list
-            rm -f $target/etc/apt/sources.list
-        fi
+	[ -f $FAI_ETC_DIR/apt/sources.list ] && cp $v $FAI_ETC_DIR/apt/sources.list $FAI_ROOT/etc/apt
     fi
     if ! fcopy -BM $v /etc/apt/preferences; then
         [ -f $FAI_ETC_DIR/apt/preferences ] && cp $v $FAI_ETC_DIR/apt/preferences $FAI_ROOT/etc/apt
@@ -1287,7 +1284,6 @@ task_finish() {
     # undo fake of all programs made by fai
     fai-divert -R
     rm -f $FAI_ROOT/etc/apt/apt.conf.d/{10,90}fai
-    rm -f $target/etc/apt/sources.list.d/nfsroot.list
     echo -n "FAI finished at: ";date
     echo "The $FAI_ACTION took $(($(cut -d . -f 1 /proc/uptime) - start_seconds)) seconds."
 }
