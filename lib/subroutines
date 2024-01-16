@@ -193,8 +193,12 @@ ctam() {
     for f in /sys /proc /dev /dev/pts; do
         mount --bind $f ${target}$f
     done
-    if [ -d /sys/firmware/efi ]; then
-        mount --bind /sys/firmware/efi/efivars $target/sys/firmware/efi/efivars
+    if [ "$FAI_ACTION" = "softupdate" -o "$FAI_ACTION" = "dirinstall" ]; then
+        :  # do not mount efivars for these actions
+    else
+        if [ -d /sys/firmware/efi ]; then
+            mount --bind /sys/firmware/efi/efivars $target/sys/firmware/efi/efivars
+        fi
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
