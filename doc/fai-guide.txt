@@ -4,12 +4,12 @@
 
 FAI Guide (Fully Automatic Installation)
 ========================================
-Thomas Lange <lange@cs.uni-koeln.de>
-Wed, 18 Sep 2019
+Thomas Lange <lange@debian.org>
+Wed, 17 Jan 2024
 :Date: a date
-:Revision: 5.8
+:Revision: 6.0
 
-:nfsrootsize: 960
+:nfsrootsize: 1.1
 
 ////
 <tt>  => _
@@ -33,7 +33,7 @@ includes the installation of the packages, setting up the server, creating of th
 configuration and how to deal with errors.
 
 
-(c) 2000-2023 Thomas Lange
+(c) 2000-2024 Thomas Lange
 
 
 .Copyright
@@ -84,7 +84,7 @@ Send feedback and comments to mailto:fai@fai-project.org[] or
 to the mailing list.
 
 Bugs::
-Use the Debian bug tracking system (BTS) https://bugs.debian.org
+Use the Debian bug tracking system (BTS) https://bugs.debian.org/src:fai
 
 User visible changes::
 https://fai-project.org/NEWS
@@ -183,7 +183,7 @@ file system, inspect the hardware or do any other task.
 * Simple creation of an installation or live ISO.
 * PXE with DHCP boot method is supported.
 * ReiserFS, ext3/ext4, btrfs and XFS file system support.
-* Software RAID and LVM support.
+* Software RAID and LVM support. LUKS support.
 * Automatic hardware detection.
 * You can deploy Debian, Ubuntu, Rocky Linux, CentOS, AlmaLinux, SuSE
 * Remote login via ssh during installation process possible.
@@ -372,7 +372,7 @@ nfsroot, NFS-Root::
 A file system located on the install server. During the installation
 process it's the complete file system for the install clients. All
 clients share the same nfsroot, which they mount read only. The
-nfsroot needs about {nfsrootsize}MB of free disk space.
+nfsroot needs about {nfsrootsize}GB of free disk space.
 
 TFTP::
 Serves clients the initrd and kernel that is used for the installation process.
@@ -552,13 +552,13 @@ The log file is written to /var/log/fai/fai-setup.log.
 
 ----
 FAI packages and related packages inside the nfsroot:
-dracut             050+65-1
-dracut-live        050+65-1
-dracut-network     050+65-1
-dracut-squash      050+65-1
-fai-client         5.9.4
-fai-nfsroot        5.9.4
-fai-setup-storage  5.9.4
+dracut             059-4
+dracut-live        059-4
+dracut-network     059-4
+dracut-squash      059-4
+fai-client         6.2
+fai-nfsroot        6.2
+fai-setup-storage  6.2
 Waiting for background jobs to finish
 fai-make-nfsroot finished properly.
 Log file written to /var/log/fai/fai-make-nfsroot.log
@@ -811,7 +811,7 @@ version than that running during the installation.
 +
 This basefile can also be received based on FAI classes via HTTP/HTTPS or FTP
 by defining the variable +FAI_BASEFILEURL+. FAI will download a file
-CLASSNAME.tar.xz (or tgz, or tar.gz,...) from this URL, if CLASSNAME
+CLASSNAME.tar.xz (or tgz, or tar.gz,...) from this URL, if +CLASSNAME+
 matches a FAI class.
 +
 Example:
@@ -890,13 +890,15 @@ version) is used to define classes depending on the host name.
 # use a list of classes for our demo machines
 case $HOSTNAME in
     demohost)
-        echo "FAIBASE GRUB DHCPC DEMO" ;;
+        echo "FAIBASE GRUB DEMO" ;;
     xfcehost)
-        echo "FAIBASE GRUB DHCPC DEMO XORG XFCE";;
+        echo "FAIBASE GRUB DEMO XORG XFCE LVM";;
     faiserver)
-        echo "FAIBASE DEBIAN DHCPC DEMO FAISERVER" ;;
+        echo "FAIBASE DEBIAN DEMO FAISERVER" ;;
+    ubuntuhost)
+        echo "FAIBASE DEBIAN DEMO UBUNTU JAMMY JAMMY64 XORG";;
     *)
-        echo "FAIBASE GRUB DHCPC" ;;
+        echo "FAIBASE DEBIAN DEMO" ;;
 esac
 ----
 
@@ -943,7 +945,7 @@ The encrypted root password for the new system. You can use
 `mkpasswd(1)` for creating the hash for a certain password.
 For example, to generate a md5 hash for the password use
 ----
-$ echo "yoursecrectpassword" | mkpasswd -m md5 -s
+$ echo "yoursecrectpassword" | mkpasswd -m yescrypt -s
 ----
 
 
@@ -1015,14 +1017,14 @@ whose file name matches a defined class. The syntax is very simple.
 PACKAGES taskinst
 german
 
-PACKAGES aptitude
-adduser netstd ae
-less passwd
+PACKAGES install-norec
+adduser nmap
+less zstd
 
 PACKAGES remove
 gpm xdm
 
-PACKAGES install GRUB
+PACKAGES install GRUB_PC
 grub-pc
 ----
 
@@ -1315,14 +1317,14 @@ menu::
 This enables a user menu for selecting a profile. All files
 +class/*.profile+ are read and a curses based menu will be created.
 
-screen:
+screen::
 Run FAI inside a `screen(1)` session. The session is called FAI.
 If you log in via ssh from remote you can attach to the session using:
 ----
 $ screen -x
 ----
 
-tmux:
+tmux::
 Run FAI inside a `tmux(1)` session. The session is called FAI.
 If you log in via ssh from remote you can attach to the session using:
 ----
@@ -1416,6 +1418,10 @@ is used to get access to the FAI configuration space which is then
 available in the directory +$FAI+ footnote:[/var/lib/fai/config]. FAI
 will not proceed without the config space.
 
+You can access the config space using different methods. Supported
+methods are: nfs:, file:, cvs:, svn: git:, hg:, http: and detect:.
+See `fai.conf(5)` for a detailed description of these methods.
+
 
 === [[iclass]]Defining classes and variables (tasks defclass and defvar)
 
@@ -1426,7 +1432,7 @@ as a class. Read all the details in the man page of `fai-class(1)`.
 
 After defining the classes, every file matching _.var_ with a prefix
 which matches a defined class is sourced to define variables. It must
-contain vaild shell code.
+contain valid shell code.
 
 === [[ipartition]]Partitioning local disks, creating file systems (task partition)
 
@@ -1631,8 +1637,8 @@ Example of a pxelinux.cfg file:
 default fai-generated
 
 label fai-generated
-kernel vmlinuz-4.19.0-5-amd64
-append initrd=initrd.img-4.19.0-5-amd64 ip=dhcp root=/srv/fai/nfsroot:vers=3 rootovl FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
+kernel vmlinuz-6.1.0-17-amd64
+append initrd=initrd.img-6.1.0-17-amd64 ip=dhcp root=/srv/fai/nfsroot:vers=3 rootovl FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
 ----
 
 See '/usr/share/doc/syslinux/pxelinux.doc' for more detailed
@@ -1733,7 +1739,31 @@ stick by just writing the content of the ISO file to your USB stick
  faiserver# dd if=fai-cd.iso of=/dev/sdf bs=1M
 ----
 
-This is no live CD of the install server.
+
+`mk-data-partition` is a tool that extends an ISO (that will be copied
+to an USB stick) or an USB stick containing an ISO with
+an ext4 or exFAT partition and sets the file system label to MY-DATA.
+This partition is automatically mounted to '/media/data' by FAI.
+You can copy your own _.deb_ packages into this data partition und the
+subdiretories 'pkgs/<CLASSNAME>'. FAI will then install these packages
+if the equivalent class is defined.
+
+Example how to use `mk-data-partition`:
+
+----
+# mk-data-partition -s 1G -c faicd-large.iso A B
+----
+The former command creates the data partition of size 1 Gbytes inside
+the ISO file and copy directories A and B to it. You can then copy the modified ISO
+onto an USB stick.
+
+
+If the ISO is already on the USB stick and if it's available as
+_dev/sdf_, you can add a data partition of type exFAT will will use
+the whole remaining part of the USB stick by using this command:
+----
+# mk-data-partition -F /dev/sdf
+----
 
 
 === [[diskimage]]Creating VM disk images using FAI
@@ -1773,7 +1803,7 @@ https://fai-project.org/FAIme/cloud
 
 Creating a bootable live ISO is easy with FAI. You only need two
 steps. First, create your live environment using the command 'fai
-dirinstall'. Don't forget to add the class 'LIVEISO'
+dirinstall'. Don't forget to add the class +LIVEISO+.
 Then create the live ISO using 'fai-cd':
 
 ----
@@ -1781,10 +1811,12 @@ Then create the live ISO using 'fai-cd':
 # LC_ALL=C fai -v dirinstall -u xfce33 -c $cl \
     -s file:///srv/fai/config /srv/xfce
 # fai-cd -s500 -MH -d none -g /etc/fai/grub.cfg.live \
-  -n /srv/xfce live.iso
+    -n /srv/xfce live.iso
 ----
 
 The nfsroot is not needed for a live ISO.
+Currently there's no live ISO of the install server available.
+
 
 === [[cross-arch]]Building cross-architecture disk images
 
@@ -2409,6 +2441,21 @@ please check the contents of your 'NFSROOT/root/.ssh/known_hosts file'
 
 - A list of all local hard disks is
 stored in +$disklist+. It's defined after `set_disk_info` is called.
+
+-  There are multiple functions for generating a customized disk
+list. See `fai-disk-info` for an example.
+    * set_bootstick()
+    * grepv_disks()
+    * grep_disks()
+    * notmatchdisks()
+    * matchdisks()
+    * smallestdisk()
+    * largestdisk()
+    * all_disks_by_size()
+    * all_disks_and_size()
+    * once_only()
+    * checkdisk()
+    * disks_by_id()
 
 - Use `fai-divert -a` if a postinst script calls a configuration
 program, e.g. the postinst script for package apache calls
