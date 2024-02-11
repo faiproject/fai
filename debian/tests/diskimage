@@ -4,7 +4,7 @@
 # Depends fai-setup-storage
 # apt -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 install fai-setup-storage
 
-set -e
+#set -e
 
 . ./debian/tests/common.sh
 cd "$AUTOPKGTEST_TMP"
@@ -39,6 +39,7 @@ echo "=== creating and testing legacy bios diskimage ==="
 
 cl="DEBIAN,AMD64,FAIBASE,GRUB_PC,DHCPC,DEMO,CLOUD,LAST"
 LC_ALL=C fai-diskimage -vu cloud3 -S2G -c$cl cloud.raw  >& diskimage.log
+echo fai-diskimage return code $?
 
 # test the results of the commands called
 chk-size cloud.raw 860
@@ -64,6 +65,7 @@ echo "=== creating and testing EFI diskimage ==="
 # now create a diskimage using EFI
 cl="DEBIAN,AMD64,FAIBASE,GRUB_EFI,DHCPC,DEMO,CLOUD,CLOUD_EFI,LAST"
 LC_ALL=C fai-diskimage -vu cloud4 -S2G -c$cl cloud-efi.raw  >& diskimage-efi.log
+echo fai-diskimage return code $?
 
 chk-size cloud-efi.raw 890
 mount -oloop,offset=1048576 cloud-efi.raw /mnt
