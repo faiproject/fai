@@ -27,8 +27,9 @@ chk-file $TFTP/ldlinux.e64
 chk-size $N/boot/initrd.img* 40
 chk-no-file $N/etc/udev/rules.d/70-persistent-net.rules
 
-chroot $N /usr/bin/lsinitrd -m $(readlink /initrd.img) | grep livenet || error "livenet fehlt"
-chroot $N /usr/bin/lsinitrd    $(readlink /initrd.img) | grep mount.nfs || error "mount.nfs fehlt"
+initrd=$(chroot $N readlink -f /initrd.img)
+chroot $N /usr/bin/lsinitrd -m $initrd | grep livenet || error "livenet fehlt"
+chroot $N /usr/bin/lsinitrd    $initrd | grep mount.nfs || error "mount.nfs fehlt"
 
 # - - - - - - - - - - - - - - - - -
 # fai-chboot
