@@ -6,6 +6,17 @@ trap "cp -vp mirror.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
 cd "$AUTOPKGTEST_TMP"
 
 mdir=/tmp/mirror
+
+echo "Checking config space"
+set -x
+umask
+ls -al /srv
+ls -al /srv/fai
+ls -al /srv/config
+fai-mk-configspace
+ls -al /srv/fai/config
+set +x
+
 fai-mirror -s$CS -m1 -xARM64,I386,ROCKY,UBUNTU,FOCAL,CLOUD,CHROOT,STANDARD,NONFREE,GNOME $mdir >& mirror.log
 
 # test the results of the commands called
