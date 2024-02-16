@@ -138,7 +138,8 @@ sub get_current_disks {
         &FAI::execute_ro_command("parted -sm $disk unit B print", \@parted_print, 0);
     }
 
-    ($error eq "") or die "Failed to read the partition table from $disk\n";
+    ($error ne "" && $FAI::no_dry_run) &&
+      die "Failed to read the partition table from $disk\n";
 
     # disk is usable
     &FAI::push_command( "true", "", "exist_$disk" );
