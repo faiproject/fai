@@ -56,8 +56,8 @@ $|=1;
 use Getopt::Std;
 $main::VERSION = $version;
 $Getopt::Std::STANDARD_HELP_VERSION = 1;
-our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L,$opt_y); # the variables for getopt
-(&getopts('Xf:hdsD:L:y') && !$opt_h) || die <<EOF;
+our ($opt_X, $opt_f, $opt_h, $opt_d, $opt_s, $opt_D, $opt_L,$opt_y,$opt_p); # the variables for getopt
+(&getopts('Xf:hdsD:L:yp') && !$opt_h) || die <<EOF;
 setup-storage version $version
 
 USAGE: [-X]                     no test, your harddisks will be formated
@@ -68,6 +68,7 @@ USAGE: [-X]                     no test, your harddisks will be formated
        [-D<disks>]              override disklist variable by space-separated <disks>
        [-L<logdir>]             use <logdir> instead of LOGDIR variable
        [-h]                     print this help message
+       [-p]                     print the commands that would be executed, then exit.
        [-y]                     print disk variables as YAML file into disk_var.yml
 EOF
 
@@ -220,6 +221,16 @@ if ($FAI::debug) {
     defined($FAI::commands{$_}{pre}) and print "\tpre: " . $FAI::commands{$_}{pre} . "\n";
     defined($FAI::commands{$_}{post}) and print "\tpost: " . $FAI::commands{$_}{post} . "\n";
   }
+}
+
+# only print the commands that would be executed
+if ($opt_p) {
+  print "These commands would be executed:\n";
+  foreach (&numsort(keys %FAI::commands)) {
+    next if ($FAI::commands{$_}{cmd} eq "true");
+    print "$FAI::commands{$_}{cmd}\n";
+  }
+  exit 0;
 }
 
 # run the commands (if $FAI::no_dry_run is set)
