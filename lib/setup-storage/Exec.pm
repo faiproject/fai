@@ -75,6 +75,15 @@ $FAI::error_codes = [
     exit_codes   => [1],
   },
   {
+    error        => "parted_3_3",
+    message      => "Parted could not read a disk label (new disk?)\n",
+    stderr_regex => "Error: .* unrecognised disk label",
+    stdout_regex => "",
+    program      => "parted -s \\S+ unit chs print free",
+    response     => "warn",
+    exit_codes   => [1],
+  },
+  {
     error        => "parted_4",
     message      => "Parted was unable to read the partition table\n",
     stderr_regex => "No Implementation: Partition \\d+ isn't aligned to cylinder boundaries",
