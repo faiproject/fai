@@ -286,7 +286,7 @@ LVM on software RAID
 .sp
 .nf
 .ta 12n +6n +8n +8n +8n
-disk_config disk1
+disk_config disk1 disklabel:msdos fstabkey:uuid
 primary	-	350	-	-
 primary	swap	2G	swap	sw,pri=1
 primary	-	0-	-	-
@@ -294,15 +294,13 @@ primary	-	0-	-	-
 disk_config disk2  sameas:disk1
 
 disk_config raid fstabkey:uuid
-raid1	/boot	disk1.1,disk2.1	ext4	rw,noatime,errors=remount-ro
-raid1	-	disk1.3,disk2.3	-	-
+raid1  /boot   disk1.1,disk2.1  ext4	rw,noatime,errors=remount-ro
+raid1  -       disk1.3,disk2.3	 -	-
 
 disk_config lvm fstabkey:uuid
-vg	vg_system	md1
-vg_system-root	/	8G	ext4	rw,noatime
-vg_system-var	/var	20G	ext4	rw,noatime
-vg_system-home	/home	10G	ext4	rw,noatime,nosuid,nodev
-vg_system-tmp	/tmp	30G	ext4	rw,noatime,nosuid,nodev
+vg  vg_system	md1
+vg_system-root	/	4G-50G	ext4	rw,noatime
+vg_system-home	/home	1G-	ext4	rw,noatime,nosuid,nodev
 .sp
 .fi
 .PP
@@ -312,11 +310,11 @@ Configure the first and second disk identical with three partitions each.
 The first partitions of each device are bundled into a RAID 1 (/dev/md0), which
 will be mounted at /boot.
 .IP \(bu
-The third partitions of each device are combined as another RAID 1, but not
+The third partition of each device are combined as another RAID 1, but not
 mounted. Instead, the resulting device /dev/md1 is used to host the LVM volume
 group vg_system.
 
-Do not forget to install the packages mdadm and lvm2 into a system
+ATTENTION! Do not forget to install the packages mdadm and lvm2 into a system
 using this partition scheme. Also set rd.auto when using dracut as
 initrd generator.
 .TP
