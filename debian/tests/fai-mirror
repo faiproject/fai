@@ -2,22 +2,21 @@
 
 . ./debian/tests/common.sh
 error=0; trap 'error=$(($?>$error?$?:$error))' ERR # save maximum error code
-trap "cp -vp mirror.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
+trap "cp -vp /tmp/mirror.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
 cd "$AUTOPKGTEST_TMP"
 
 mdir=/tmp/mirror
 
-echo "Checking config space"
-set -x
-umask
-ls -al /srv
-ls -al /srv/fai
-ls -al /srv/config
-fai-mk-configspace
-ls -al /srv/fai/config
-set +x
+echo "PRE checks fai-mirror BEGIN"
 
-fai-mirror -s$CS -m1 -xARM64,I386,ROCKY,UBUNTU,FOCAL,CLOUD,CHROOT,STANDARD,NONFREE,GNOME $mdir >& mirror.log
+chk-file /srv/fai/config/class/50-host-classes
+du -sh /srv/fai/nfsroot /srv/fai/config
+chk-size /srv/fai/nfsroot 700
+chk-file /srv/fai/nfsroot/var/tmp/packages.nfsroot
+chk-file /srv/fai/nfsroot/var/tmp/base-pkgs.lis
+echo "PRE checks fai-mirror END"
+
+su $AUTOPKGTEST_NORMAL_USER -c "fai-mirror -s$CS -m1 -xARM64,I386,ROCKY,UBUNTU,FOCAL,CLOUD,CHROOT,STANDARD,NONFREE,GNOME $mdir >& /tmp/mirror.log"
 
 # test the results of the commands called
 s=$(du -sm --exclude aptcache --exclude db $mdir | awk '{print $1}')
