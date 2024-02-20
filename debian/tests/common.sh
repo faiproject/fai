@@ -40,6 +40,7 @@ chk-size() {
 
     if [ ! -e $path ]; then
         error "$path does not exist."
+        return
     fi
 
     size=$(du -Dsm $path | awk '{print $1}')
