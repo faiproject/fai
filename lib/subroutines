@@ -1065,37 +1065,11 @@ task_partition() {
 
 call_debootstrap() {
 
-    local targetarch hostarch1 _debootstrap
     local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
     echo "Creating base system using debootstrap version $dversion"
 
-    # Check if we need cross architecture debootstrap
-    targetarch=$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch=\([^[:space:]]*\)' || true)
-    hostarch1=$(dpkg --print-architecture)
-
-    _debootstrap=qemu-debootstrap
-    if [ -z "$targetarch" ]; then
-	_debootstrap=debootstrap
-	targetarch=$hostarch1
-    else
-	if [ $targetarch = $hostarch1 ]; then
-	_debootstrap=debootstrap
-	fi
-    fi
-    for arch in $(dpkg --print-foreign-architectures); do
-        if [ $targetarch = $arch ]; then
-	        _debootstrap=debootstrap
-            break
-        fi
-    done
-    if [ $_debootstrap = "qemu-debootstrap" ]; then
-	if ! command -v $_debootstrap >&/dev/null; then
-	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
-	fi
-    fi
-
-    echo "Calling $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3"
-    LC_ALL=C $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3
+    echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3"
+    LC_ALL=C debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
@@ -1130,8 +1104,6 @@ task_extrbase() {
         fi
     fi
 
-    # now check if this is a cross architecture installation, and install qemu user static if needed
-    check-cross-arch $FAI_ROOT
     # now we can copy fstab
     [ -f $LOGDIR/fstab ] && cp -S.old -bp $LOGDIR/fstab $fs
     # copy crypttab, if setup-storage created one
