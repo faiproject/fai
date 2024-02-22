@@ -1,22 +1,37 @@
 #! /bin/bash
 
-# test fai-cd
-
-set -e
+# create fai-cd
 
 . ./debian/tests/common.sh
 trap "cp -vp fai-cd.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
-cd "$AUTOPKGTEST_TMP"
 
+mdir=/tmp/mirror
+
+if [ ! -d /srv/fai/config ]; then
+    fai-mk-configspace
+fi
+if [ ! -d /srv/fai/nfsroot ]; then
+    fai-make-nfsroot -zg
+fi
+chk-size /srv/fai/nfsroot 950
+chk-file /srv/fai/nfsroot/var/tmp/packages.nfsroot
+chk-file /srv/fai/nfsroot/var/tmp/base-pkgs.lis
+
+if [ ! -d $mdir ]; then
+    echo "Creating package mirror $mdir"
+    su $AUTOPKGTEST_NORMAL_USER -s /bin/bash -c "fai-mirror -v -s$CS -m1 -xARM64,I386,ROCKY,UBUNTU,FOCAL,CLOUD,CHROOT,STANDARD,NONFREE,GNOME $mdir >& /tmp/mirror.log"
+fi
+chk-size $mdir 550
 
 # - - - - - - - - - - - - - - - - -
-fai-cd -Jm /tmp/mirror faicd64-small.iso >& fai-cd.log
+echo "Call fai-cd"
+fai-cd -m $mdir faicd64-small.iso >& fai-cd.log
 echo fai-cd exit code: $?
 
 
 # test the results of the commands called
-chk-size faicd64-small.iso 730
+chk-size faicd64-small.iso 830
 
 if [ X$NO_CLEANUP != X1 ]; then
-    rm -rf /tmp/mirror
+    rm -rf $mdir
 fi
