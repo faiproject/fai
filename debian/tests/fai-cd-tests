@@ -2,17 +2,20 @@
 
 # more tests for fai-cd
 
-set -e
-
 . ./debian/tests/common.sh
-trap "cp -vp fai-cd.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
-cd "$AUTOPKGTEST_TMP"
+#trap "cp -vp fai-cd.log $AUTOPKGTEST_ARTIFACTS" INT QUIT EXIT
 
 chk-loop-device
 
+chk-file faicd64-small.iso
+
+
 # more test after mounting the ISO
 mount -oloop,ro faicd64-small.iso /mnt
-chk-size /mnt/boot/initrd.img 35
+chk-size /mnt/boot/initrd.img 40
+chk-size /mnt/boot/vmlinuz 7
+chk-size /mnt/LiveOS/squashfs.img 770
+chk-file /mnt/boot/grub/bios.img
 chk-file /mnt/FAI-CD
 
 umount /mnt
