@@ -255,7 +255,6 @@ set_root_pw() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
 
-    local targetarch hostarch1 hostarch2 _debootstrap
     [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
 
     # check if NFSROOT directory is mounted with bad options
@@ -266,32 +265,10 @@ call_debootstrap() {
     local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
     echo "Creating base system using debootstrap version $dversion"
 
-    # Check if we need cross architecture debootstrap
-    targetarch=$(echo "$(expr "$FAI_DEBOOTSTRAP_OPTS" : '.*--arch[=[:space:]]\([^[:space:]]*\)' || true)" | tail -n 1)
-    hostarch1=$(dpkg --print-architecture)
-    hostarch2=$(dpkg --print-foreign-architectures)
-    if [ -z "$hostarch2" ]; then
-        hostarch2=$hostarch1
-    fi
-
-    _debootstrap=qemu-debootstrap
-    if [ -z "$targetarch" ]; then
-	_debootstrap=debootstrap
-    else
-	if [ $targetarch = $hostarch1 -o $targetarch = $hostarch2 ]; then
-	_debootstrap=debootstrap
-	fi
-    fi
-    if [ $_debootstrap = "qemu-debootstrap" ]; then
-	if ! command -v $_debootstrap >&/dev/null; then
-	    die 1 "qemu-debootstrap not found. Please install the package qemu-user-static."
-	fi
-    fi
-
-    echo "Calling $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
-    LC_ALL=C call_verbose $_debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
+    echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
+    LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
     if [ $? -ne 0 ]; then
-        echo "ERROR: $_debootstrap did not complete successfully."
+        echo "ERROR: debootstrap did not complete successfully."
         echo "This is mostly caused by a broken mirror."
         echo "Please check your mirror or use an official mirror."
         [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
@@ -300,7 +277,7 @@ call_debootstrap() {
 
     if [ ! -f $NFSROOT/usr/bin/apt-get ]; then
         echo "No apt-get executable available inside the NFSROOT."
-        echo "Maybe $_debootstrap did not finish successfully. Aborting."
+        echo "Maybe debootstrap did not finish successfully. Aborting."
         [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
         exit 11
     fi
