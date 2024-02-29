@@ -14,10 +14,6 @@ if [ "$FAI_ACTION" = "install" -o "$FAI_ACTION" = "dirinstall" ]; then
       mount --bind /run/udev $target/run/udev
     fi
 
-    # if libc is upgraded init u is called in chroot environment and
-    # then init will eat up much cpu time
-    # fake some more programs
-    [ -L $target/sbin/init ] || fai-divert -a /sbin/init
     fai-divert -a /usr/sbin/policy-rc.d
     # never start any daemons inside chroot during installtion
     cat > $FAI_ROOT/usr/sbin/policy-rc.d <<EOF
