@@ -191,6 +191,8 @@ create_grub2_image() {
     mkdir -p $tmp/boot/grub
 
     if [ -d $NFSROOT/usr/lib/grub/x86_64-efi ]; then
+
+	# prepare grub.cfg
 	cp $grub_config $NFSROOT/tmp/grub.cfg
 	# insert date into grub menu
 	perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $NFSROOT/tmp/grub.cfg
@@ -198,6 +200,7 @@ create_grub2_image() {
 	    perl -pi -e "s|FAI_CONFIG_SRC=(.*?)\S+|FAI_CONFIG_SRC=$config_space|" $NFSROOT/tmp/grub.cfg
 	fi
 
+	# create arch.efi and copy to vfat file system
 	TMPDIR=tmp chroot $NFSROOT grub-mkstandalone \
 	    --format=x86_64-efi \
 	    --output=/tmp/bootx64.efi \
