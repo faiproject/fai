@@ -169,6 +169,8 @@ create_autodiscover_iso() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_squashfs_image() {
 
+    local output_path
+
     # this is where the squashfs.img needs to be placed
     mkdir -p $tmp/LiveOS
 
@@ -240,6 +242,7 @@ create_grub2_image() {
 calculate_required_size() {
     # calculates the amount of space needed for the ext3fsimage
 
+    local size
     [ $configset -eq 1 ] && unset FAI_CONFIGDIR
     if [ $nomirror -eq 0 ]; then
 	size=$(du -sck $ONFSROOT $FAI_CONFIGDIR $mirrordir/{dists,pool} | tail -n1 | awk '{print $1}')
@@ -251,7 +254,7 @@ calculate_required_size() {
     # add some addition space
     count=$((size/850 + space))
 }
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 provide_memtest_boot_option() {
 
     if [ $bootonly -eq 1 ]; then
@@ -286,7 +289,7 @@ hide_dirs() {
         fi
     done
 }
-
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 customize_nfsroot() {
 
     # hide some dirs to save space and make the CD image smaller
