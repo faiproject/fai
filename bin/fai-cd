@@ -208,6 +208,30 @@ copy_kernel_initrd() {
     echo "$isoversion" > $tmp/FAI-CD
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_grub2_image_arm64() {
+
+    mkdir -p $tmp/boot/grub
+    if [ -d $NFSROOT/usr/lib/grub/arm64-efi ]; then
+
+	prepare_grub_cfg
+
+	# create arch.efi and copy to vfat file system
+	TMPDIR=tmp chroot $NFSROOT grub-mkstandalone \
+	    --format=arm64-efi \
+	    --output=/tmp/grubaa64.efi \
+	    --locales="" \
+	    "boot/grub/grub.cfg=/tmp/grub.cfg"
+	mv $NFSROOT/tmp/grubaa64.efi $scratch
+
+	mkfs.vfat -C $scratch/efiboot.img 6000 >/dev/null
+	mmd -i $scratch/efiboot.img efi efi/boot
+	mcopy -i $scratch/efiboot.img $scratch/grubaa64.efi ::efi/boot/
+    else
+        die 11 "No grub-efi-arm64-bin installation found in NFSROOT. Aborting."
+    fi
+
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image_x86() {
 
     mkdir -p $tmp/boot/grub
