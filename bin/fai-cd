@@ -199,6 +199,15 @@ prepare_grub_cfg() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+copy_kernel_initrd() {
+    # copy kernel and initrd
+    cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
+    cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
+    cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
+    rm -f $NFSROOT/tmp/grub.cfg
+    echo "$isoversion" > $tmp/FAI-CD
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image() {
 
     mkdir -p $tmp/boot/grub
@@ -237,11 +246,7 @@ create_grub2_image() {
     else
         die 11 "No grub-pc installation found in NFSROOT. Aborting."
     fi
-    cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
-    cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
-    cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
-    rm -f $NFSROOT/tmp/grub.cfg
-    echo "$isoversion" > $tmp/FAI-CD
+    copy_kernel_initrd
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 calculate_required_size() {
