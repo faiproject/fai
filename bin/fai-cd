@@ -208,7 +208,7 @@ copy_kernel_initrd() {
     echo "$isoversion" > $tmp/FAI-CD
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_grub2_image() {
+create_grub2_image_x86() {
 
     mkdir -p $tmp/boot/grub
 
@@ -553,7 +553,12 @@ faiversion=$(dpkg --root=$NFSROOT -l fai-client 2>/dev/null |awk '/fai-client/ {
 isoversion=$(printf "FAI %-6s build $(date '+%Y %b %d - %R')" "$faiversion")
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
-create_grub2_image
+case $(uname -m) in
+    x86_64)
+        create_grub2_image_x86 ;;
+    aarch64)
+        create_grub2_image_arm ;;
+esac
 
 provide_memtest_boot_option
 
