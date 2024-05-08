@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2023 Thomas Lange
+	Copyright (C) 1999-2024 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -447,10 +447,12 @@ EOF
     ln -s /usr/sbin/fai etc/init.d/rcS
 
     #Start FAI using Systemd
+    set +e
     readlink $NFSROOT/sbin/init | grep -q systemd
     if [ $? -eq 0 ]; then
         LC_ALL=C $ROOTCMD  systemctl set-default fai.target
     fi
+    set -e
 
     # this second rm of the same file is needed!
     rm -f etc/udev/rules.d/70-persistent-net.rules
