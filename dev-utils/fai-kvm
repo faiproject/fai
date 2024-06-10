@@ -2,7 +2,7 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2023
+# Author:    Thomas Lange, Uni Koeln, 2011-2024
 # License:   GPL v2 or any later version
 
 fix="-k en-us -smp 2 -cpu host -global isa-fdc.fdtypeA=none "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
@@ -10,7 +10,7 @@ fix="-k en-us -smp 2 -cpu host -global isa-fdc.fdtypeA=none "  # if loading cirr
 
 vga="-vga std"
 user=1
-size=10   # default size of the disk image
+size=10G   # default size of the disk image
 ram=2G
 disks=1
 cdimage=/files/scratch/fai-cd.iso # default name for CD image
@@ -98,11 +98,11 @@ usage() {
  -E          Boot the VM with UEFI instead of legacy BIOS
  -n          create a new empty disk image, which is used as a local disk
  -N          recreate a new empty disk image, even if one already exists
- -s <size>   size of the local disk in GB (default is ${size}GB)
+ -s <size>   size of the local disk (default is ${size}), a suffix like M,G,T can be used.
  -d <num>    number of local disks (default is 1)
  -D <path>   directory, where the disk image files are created (default: $diskdir)
  -M          Create NVMe drives instead of SATA disks. You may want to add -E.
- -m <mem>    RAM size in MB (defaults is ${ram}), a suffix like "M" and "G" can be used.
+ -m <mem>    RAM size (defaults is ${ram}), a suffix like M,G,T can be used.
  -u <num>    user number. This will become part of the MAC address of the interface
              of the VM and is the number of the tap device number. It is also used
              for the file name of the disk files. Each VM must have a unique number.
@@ -130,7 +130,11 @@ while getopts "EbUhnNu:s:Mm:d:VD:t:O" opt ; do
         U) usernet=1 ;;
         u) user=$OPTARG ;;
         m) ram=$OPTARG ;;
-        s) size=$OPTARG ;;
+        s) size=$OPTARG
+           if [ -z "${size//[0-9]}" ]; then
+               size="${size}G"
+           fi
+           ;;
         d) disks=$OPTARG ;;
         D) diskdir=$OPTARG ;;
         t) title=$OPTARG ;;
