@@ -4,7 +4,7 @@
 
 # This script is part of FAI (Fully Automatic Installation)
 #
-# Copyright (C) 2016-2023 Thomas Lange, lange@cs.uni-koeln.de
+# Copyright (C) 2016-2024 Thomas Lange, lange@cs.uni-koeln.de
 # Universitaet zu Koeln
 
 die() {
@@ -62,7 +62,7 @@ usage() {
 Create a disk image name.raw using FAI and a list of FAI classes.
 This can be used for a virtual machine or a cloud instance. If you
 use another suffix the image will be converted. Following formats are
-supported: .raw.xz, .raw.zst, .qcow2, .qcow2.zst, .vdi, .vhdx, .vmdk, .simg.
+supported: .raw.xz, .raw.zst, .qcow2, .vdi, .vhdx, .vmdk, .simg.
 
    -h|--help      	    print help
    -v|--verbose   	    be verbose
@@ -160,14 +160,6 @@ case "$image" in
 	cmd="zstd --rm -q -9 -T0 $rawname"
         ;;
 
-    *.qcow2.zst)
-        convert=3
-	rawname="$iname2.raw"
-        copt="-O qcow2 "
-	qcowname="$iname2.qcow2"
-	cmd="zstd --rm -q -9 -T0 $qcowname"
-        ;;
-
     *.raw)
         convert=0
         ;;
@@ -193,7 +185,7 @@ case "$image" in
     *.vhdx) copt="-O vhdx"
 	  qcowname="$iname.vhdx"
 	  ;;
-    *) die 8 "Unknown suffix. Please use raw, raw.zst, raw.xz, qcow2, qcow2.zst, vdi, vmdk or vhdx, simg."
+    *) die 8 "Unknown suffix. Please use raw, raw.zst, raw.xz, qcow2, vdi, vmdk or vhdx, simg."
 esac
 
 if [ -z "$classes" -a -z "$renew" ]; then
