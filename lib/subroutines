@@ -265,6 +265,7 @@ umount_target() {
 	# do not umount during softupdate
 	umount $target/proc $target/sys/firmware/efi/efivars $target/sys $target/dev/pts $target/dev 2>/dev/null
 	for dir in $(mount | grep $target | grep -E -v "media/mirror"| awk '{print $3}' | sort -r); do
+            [ "$dir" = "$target" ] && return
             mountpoint -q $dir && umount $dir
 	done
     fi
