@@ -208,9 +208,32 @@ copy_kernel_initrd() {
     echo "$isoversion" > $tmp/FAI-CD
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+copy_background_and_font() {
+    # copy background image and fonts.
+
+    local _font="/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
+    local _bgimg="/usr/share/images/desktop-base/desktop-grub.png"
+
+    if ! [ -s "${_font}" ]; then
+	return
+    fi
+
+    if ! [ -s "${_bgimg}" ]; then
+	return
+    fi
+
+    # Needs 'desktop-base' package.
+    cp -p "${_bgimg}" $tmp/boot/grub/
+
+    # Needs 'grub2-common' and 'fonts-dejavu-core' packages.
+    grub-mkfont -s 16 -o "$tmp/boot/grub/$(basename ${_font%.ttf}.pf2)" "${_font}"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image_arm64() {
 
     mkdir -p $tmp/boot/grub
+    copy_background_and_font
+
     if [ -d $NFSROOT/usr/lib/grub/arm64-efi ]; then
 
 	prepare_grub_cfg
@@ -235,6 +258,7 @@ create_grub2_image_arm64() {
 create_grub2_image_x86() {
 
     mkdir -p $tmp/boot/grub
+    copy_background_and_font
 
     if [ -d $NFSROOT/usr/lib/grub/x86_64-efi ]; then
 
@@ -262,7 +286,7 @@ create_grub2_image_x86() {
 	    --format=i386-pc \
 	    --output=/tmp/core.img \
 	    --locales="" --fonts="" \
-	    --install-modules="linux normal iso9660 biosdisk memdisk search ls echo test chain msdospart part_msdos part_gpt minicmd ext2 keystatus all_video font sleep gfxterm regexp" \
+	    --install-modules="linux normal iso9660 biosdisk memdisk search ls echo test chain msdospart part_msdos part_gpt minicmd ext2 keystatus all_video font sleep gfxterm regexp gfxterm_background png" \
 	    --modules="linux normal iso9660 biosdisk search" \
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
 	cat $NFSROOT/usr/lib/grub/i386-pc/cdboot.img $NFSROOT/tmp/core.img > $scratch/bios.img
