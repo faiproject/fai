@@ -483,6 +483,9 @@ task_setup() {
         # set the system time and date using rdate or/and ntpdate
         [ "$TIMESRVS_1" ] && [ -f /bin/rdate ] && rdate $TIMESRVS_1
         [ -n "$NTPSRVS" ]  && ntpdate -b $NTPSRVS
+        # Save the updated time to hardware, so when udevadm trigger
+        # triggers a re-read of the time from rtc, it isn't reset
+        hwclock --systohc
         [ "$flag_createvt" ] && {
             # create two virtual terminals; acces via alt-F2 and alt-F3
             echo "Press ctrl-c to interrupt FAI and to get a shell"
