@@ -208,19 +208,56 @@ copy_kernel_initrd() {
     echo "$isoversion" > $tmp/FAI-CD
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_grub2_image_arm64() {
+copy_background_and_font() {
+    # copy background image and fonts.
 
-    mkdir -p $tmp/boot/grub
+    set -x
+    local _font="/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
+    local _bgimg="/usr/share/images/desktop-base/desktop-grub.png"
+    _bgimg="$(chroot "$NFSROOT" realpath ${_bgimg})"
+
+    if ! chroot "$NFSROOT" ls "${_font}"; then
+	    echo "Couldn't found font '${_font}', skipping installing grub2 background image."
+        set +x
+        return
+    fi
+
+    if ! chroot "$NFSROOT" ls "${_bgimg}"; then
+        echo "Couldn't found image '${_bgimg}', skipping installing grub2 background image."
+        set +x
+        return
+    fi
+
+    mkdir -p "${NFSROOT}/tmp/boot/grub"
+
+    # Needs 'desktop-base' package.
+    cp -p "${NFSROOT}/${_bgimg}" "${NFSROOT}/tmp/boot/grub/background.png"
+
+    # Needs 'grub2-common' and 'fonts-dejavu-core' packages.
+    grub-mkfont -s 16 -o "${NFSROOT}/tmp/boot/grub/$(basename ${_font%.ttf}.pf2)" "${NFSROOT}/${_font}"
+
+    echo "Adding background image to grub menu"
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_grub2_image_arm64() {
     if [ -d $NFSROOT/usr/lib/grub/arm64-efi ]; then
 
 	prepare_grub_cfg
+
+    mkdir -p $tmp/boot/grub
+
+    declare -a grub_background_plus_font=()
+    if copy_background_and_font; then
+        grub_background_plus_font+=("boot/grub/DejaVuSansMono.pf2=/tmp/boot/grub/DejaVuSansMono.pf2" "boot/grub/background.png=/tmp/boot/grub/background.png")
+    fi
 
 	# create arch.efi and copy to vfat file system
 	TMPDIR=tmp chroot $NFSROOT grub-mkstandalone \
 	    --format=arm64-efi \
 	    --output=/tmp/grubaa64.efi \
 	    --locales="" \
-	    "boot/grub/grub.cfg=/tmp/grub.cfg"
+	    "boot/grub/grub.cfg=/tmp/grub.cfg" \
+        "${grub_background_plus_font[@]}"
 	mv $NFSROOT/tmp/grubaa64.efi $scratch
 
 	mkfs.vfat -C $scratch/efiboot.img 6000 >/dev/null
@@ -235,6 +272,11 @@ create_grub2_image_arm64() {
 create_grub2_image_x86() {
 
     mkdir -p $tmp/boot/grub
+
+    declare -a grub_background_plus_font=()
+    if copy_background_and_font; then
+        grub_background_plus_font+=("boot/grub/DejaVuSansMono.pf2=/tmp/boot/grub/DejaVuSansMono.pf2" "boot/grub/background.png=/tmp/boot/grub/background.png")
+    fi
 
     if [ -d $NFSROOT/usr/lib/grub/x86_64-efi ]; then
 
@@ -262,9 +304,10 @@ create_grub2_image_x86() {
 	    --format=i386-pc \
 	    --output=/tmp/core.img \
 	    --locales="" --fonts="" \
-	    --install-modules="linux normal iso9660 biosdisk memdisk search ls echo test chain msdospart part_msdos part_gpt minicmd ext2 keystatus all_video font sleep gfxterm regexp" \
+	    --install-modules="linux normal iso9660 biosdisk memdisk search ls echo test chain msdospart part_msdos part_gpt minicmd ext2 keystatus all_video font sleep gfxterm regexp gfxterm_background png" \
 	    --modules="linux normal iso9660 biosdisk search" \
-	    "boot/grub/grub.cfg=/tmp/grub.cfg"
+	    "boot/grub/grub.cfg=/tmp/grub.cfg" \
+        "${grub_background_plus_font[@]}"
 	cat $NFSROOT/usr/lib/grub/i386-pc/cdboot.img $NFSROOT/tmp/core.img > $scratch/bios.img
 	rm -rf $NFSROOT/tmp/core.img $NFSROOT/tmp/grub
     else

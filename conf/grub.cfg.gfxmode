@@ -1,0 +1,157 @@
+## grub2 configuration
+set default="Boot OS from first partition on first disk"
+set timeout=20
+
+# make sure we can access partitions
+insmod part_msdos
+insmod part_gpt
+insmod regexp
+
+function load_video {
+  insmod gfxterm
+  insmod png
+  insmod font
+
+  set gfxmode="1280x720, auto"
+  terminal_output gfxterm
+
+  if [ x$feature_all_video_module = xy ]; then
+    insmod all_video
+  else
+    insmod efi_gop
+    insmod efi_uga
+    insmod ieee1275_fb
+    insmod vbe
+    insmod vga
+    insmod video_bochs
+    insmod video_cirrus
+  fi
+}
+
+function load_background {
+  insmod gfxterm_background
+
+  if background_image (memdisk)/boot/grub/background.png; then
+    set color_normal=white/black
+    set color_highlight=red/black
+  else
+    set menu_color_normal=white/black
+    set menu_color_highlight=black/yellow
+  fi
+}
+
+# Chroot into FAI-CD
+search --set=root --file /FAI-CD
+
+# Load font, graphics mode and background image.
+set font="(memdisk)/boot/grub/DejaVuSansMono.pf2"
+if loadfont $font ; then
+  load_video
+  load_background
+fi
+
+menuentry "        +------------------------------------------------------+" {
+set timeout=20
+}
+
+menuentry "        |        Fully  Automatic  Installation                |" {
+set timeout=20
+
+}
+menuentry "        |     _VERSIONSTRING_     |" --unrestricted {
+set timeout=20
+
+}
+menuentry "        |        (c) Thomas Lange  lange@debian.org            |" {
+set timeout=20
+}
+menuentry "        +------------------------------------------------------+" {
+set timeout=20
+}
+
+menuentry "" {
+set timeout=20
+}
+
+menuentry "Client standalone installation - select installation type from menu " {
+    search --set=root --file /FAI-CD
+    linux   /boot/vmlinuz FAI_FLAGS="menu,verbose,createvt" FAI_ACTION=install FAI_CONFIG_SRC=detect:// rd.live.image root=live:CDLABEL=FAI_CD rd.neednet quiet
+    initrd  /boot/initrd.img
+}
+
+menuentry "Boot OS from first partition on first disk" {
+
+if [ "$grub_platform" = "efi" ]; then
+
+  for d in (hd*,gpt*); do
+    for cfg in efi/debian/grub.cfg grub/grub.cfg boot/grub/grub.cfg ; do
+      if [ -e "$d/$cfg" ]; then
+         found=true
+         echo "FOUND $d/$cfg"
+         sleep 1
+         configfile "$d/$cfg"
+      fi
+    done
+  done
+
+  if [ "$found" != true ]; then
+    echo "Cannot find grub.cfg"
+    sleep 7
+  fi
+
+else
+
+  # legacy BIOS booting
+  # detect which disk has a DOS partitions, and boot the MBR via chainloader
+  found=false
+  for d in (hd*,msdos*) (hd*,gpt*); do
+    if [ "$found" == "false" ]; then
+      regexp -s device '^\((.+),' $d
+      if [ -e "($device)/FAI-CD" ]; then
+        # FAI-CD detected, ignore it
+        device=""
+        continue
+      fi
+      if [ "$device" != "" ]; then
+        if [ "$device" == "hd*" ]; then
+          continue
+        fi
+        found=true
+        set root=($device)
+        chainloader +1
+      fi
+    fi
+  done
+  if [ "$device" != "" ]; then
+    echo "Booting from $device"
+    sleep 2
+  else
+    echo "Cannot find grub.cfg"
+    sleep 7
+  fi
+fi
+}
+
+menuentry "Rescue system, no installation" {
+    search --set=root --file /FAI-CD
+    linux /boot/vmlinuz FAI_FLAGS="verbose,createvt" FAI_ACTION=sysinfo FAI_CONFIG_SRC=detect:// rd.live.image root=live:CDLABEL=FAI_CD quiet
+    initrd /boot/initrd.img
+}
+
+menuentry "FAI server installation - using external DHCP server" {
+    search --set=root --file /FAI-CD
+    linux /boot/vmlinuz FAI_FLAGS="verbose,createvt" FAI_ACTION=install hostname=faiserver FAI_CONFIG_SRC=detect:// rd.live.image root=live:CDLABEL=FAI_CD rd.neednet quiet
+    initrd /boot/initrd.img
+}
+
+menuentry "FAI server installation - using internal DHCP and a fixed IP" {
+    search --set=root --file /FAI-CD
+    linux /boot/vmlinuz FAI_FLAGS="verbose,createvt" FAI_ACTION=install ip=192.168.33.250::192.168.33.1:255.255.255.0:faiserver:eth0:off FAI_CONFIG_SRC=detect:// rd.live.image root=live:CDLABEL=FAI_CD quiet net.ifnames=0 hostname=faiserver
+    initrd /boot/initrd.img
+}
+
+if [ ${grub_platform} == "efi" ]; then
+  menuentry 'UEFI Firmware Settings' --id 'uefi-firmware' {
+    fwsetup
+  }
+fi
