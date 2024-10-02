@@ -84,7 +84,6 @@ install:
 	-install $(libfiles) $(LIBDIR)
 	cp -a lib/dracut/80fai-autodiscover $(DESTDIR)/usr/lib/dracut/modules.d
 	install lib/setup-storage/* $(SHAREDIR)/setup-storage
-	install -m644 lib/udev.patch $(SHAREDIR)/
 	cd bin ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd bin ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
 	install dev-utils/fai-kvm $(DESTDIR)/usr/bin
