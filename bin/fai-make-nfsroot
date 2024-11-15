@@ -53,6 +53,7 @@ die() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 check_nfsroot() {
 
+    local lname
     set +e
     # simple test, to see if important thing are available inside the nfsroot
     if [ ! -x $NFSROOT/usr/bin/dracut ]; then
@@ -67,6 +68,14 @@ check_nfsroot() {
     if [ $n -ne 5 ]; then
 	echo "ERROR: Some essential packages are missing."
 	bad_exit
+    fi
+
+    lname=$(readlink $NFSROOT/sbin/init)
+    if ! [[ "$lname" =~ "lib/systemd/systemd" ]]; then
+        echo "ERROR: It seems that you did not installed systemd into the nfsroot."
+        echo "Make sure this old config line does NOT appear in /etc/fai/NFSROOT:"
+        echo "sysvinit-core systemd-sysv-"
+        bad_exit
     fi
 
     local files=$(ls $NFSROOT/boot/initrd* 2>/dev/null)
