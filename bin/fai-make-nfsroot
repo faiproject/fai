@@ -262,6 +262,14 @@ set_root_pw() {
     return # do not copy fai files at all
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mount_special_into_nfsroot() {
+
+    mkdir -p $NFSROOT/dev/pts
+    mount -t proc   /proc  $NFSROOT/proc
+    mount -t sysfs  /sys   $NFSROOT/sys
+    mount -t devpts devpts $NFSROOT/dev/pts
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
 
     [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
@@ -480,10 +488,7 @@ upgrade_nfsroot() {
 
     local pkgs
 
-    mkdir -p $NFSROOT/dev/pts
-    mount -t proc   /proc  $NFSROOT/proc
-    mount -t sysfs  /sys   $NFSROOT/sys
-    mount -t devpts devpts $NFSROOT/dev/pts
+    mount_special_into_nfsroot
     /usr/lib/fai/mkramdisk $NFSROOT/var/lib/dpkg $NFSROOT/var/cache
     mkdir $NFSROOT/etc/mdadm; touch $NFSROOT/etc/mdadm/mdadm.conf # stop mdadm from calling mkconf
 
@@ -623,6 +628,7 @@ trap "bad_exit" ERR
 # just upgrade the nfsroot and install packages into it
 [ -n "$kinstall" ] && {
     echo "Upgrading nfsroot and installing new packages into the nfsroot."
+    mount_special_into_nfsroot
     $ROOTCMD apt-get update
     $ROOTCMD apt-get -y dist-upgrade
     LC_ALL=C add_packages_nfsroot
