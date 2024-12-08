@@ -1,4 +1,4 @@
-#!/bin/make -s
+#!/bin/make
 
 DOC = fai-guide
 MISC_DOC = classes_description.txt changelog.old
