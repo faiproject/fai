@@ -197,6 +197,7 @@ prepare_grub_cfg() {
     if [ -n "$config_space" ] || [ $configset -eq 1 ]; then
 	perl -pi -e "s|FAI_CONFIG_SRC=(.*?)\S+|FAI_CONFIG_SRC=$config_space|" $NFSROOT/tmp/grub.cfg
     fi
+    provide_memtest_boot_option
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 copy_kernel_initrd() {
@@ -295,18 +296,27 @@ provide_memtest_boot_option() {
 	return
     fi
 
-    if [ -f $NFSROOT/boot/memtest86+.bin ] || [ -f $NFSROOT/boot/memtest86+x64.bin ]; then
-        cp -p $NFSROOT/boot/memtest86+* $tmp/boot
+    if [ -f $NFSROOT/boot/memtest86+x64.efi ] || [ -f $NFSROOT/boot/memtest86+x64.bin ]; then
+        cp -p $NFSROOT/boot/memtest86+x64* $tmp/boot
         echo "Adding memtest86+ to grub menu"
     else
         return 0
     fi
 
-    cat >> $tmp/boot/grub/grub.cfg <<EOF
+    cat >> $NFSROOT/tmp/grub.cfg <<'EOF'
 
-menuentry "Memory test (memtest86+)" --unrestricted {
-    linux16 /boot/memtest86+.bin
-}
+    if [ "$grub_platform" = efi -a "$grub_cpu" = x86_64 ]; then
+       menuentry "Memory test (memtest86+)" --unrestricted {
+         search --set=root --file /FAI-CD
+         linux /boot/memtest86+x64.efi
+       }
+    fi
+    if [ "$grub_platform" = pc ]; then
+       menuentry "Memory test (memtest86+)" --unrestricted {
+         search --set=root --file /FAI-CD
+         linux /boot/memtest86+x64.bin
+       }
+    fi
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -580,12 +590,10 @@ aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 case $(uname -m) in
     x86_64)
         create_grub2_image_x86
-        provide_memtest_boot_option
         mkiso_x86
         ;;
     aarch64)
         create_grub2_image_arm64
-        provide_memtest_boot_option
         mkiso_arm64
         ;;
 esac
