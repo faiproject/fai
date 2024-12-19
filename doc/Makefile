@@ -16,7 +16,6 @@ images:
 html: $(DOC).txt images
 	asciidoc -a toc2 -a toclevels=3 --theme=flask $(DOC).txt
 
-.NOTPARALLEL:	pdf text
 pdf: $(DOC).txt	images
 	a2x $(OPT) -L --icons -a toc -a toclevels=3 -f pdf $(DOC).txt
 	rm -f $(DOC).xml $(DOC).fo
@@ -32,6 +31,7 @@ doc:	html
 	unoconv --show >/dev/null 2>&1 || exit "Please install the unoconv package."
 	unoconv -f doc $(DOC).html
 
+.NOTPARALLEL:	free
 all:	free
 
 install:
