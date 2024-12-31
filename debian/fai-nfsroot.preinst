@@ -6,17 +6,6 @@ if [ ! -f /.THIS_IS_THE_FAI_NFSROOT ]; then
     exit 1
 fi
 
-if [ -n "$(dpkg-divert --list /etc/init.d/rcS.distrib)" ]; then
-	# migrate diverted file from /etc/init.d/rcS.distrib to /etc/init.d/rcS.orig
-	dpkg-divert --package fai-nfsroot --no-rename --remove /etc/init.d/rcS
-	if [ -e /etc/init.d/rcS.distrib ]; then
-		mv /etc/init.d/rcS.distrib /etc/init.d/rcS.orig
-	fi
-	dpkg-divert --package fai-nfsroot --no-rename --divert /etc/init.d/rcS.orig --add /etc/init.d/rcS
-fi
-
-dpkg-divert --package fai-nfsroot --add --divert /etc/init.d/rcS.orig --rename /etc/init.d/rcS
-
 #DEBHELPER#
 
 exit 0

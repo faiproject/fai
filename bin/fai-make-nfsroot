@@ -454,16 +454,7 @@ EOF
 
     echo "AUTO -all" > etc/mdadm/mdadm.conf # do not activate RAID arrays
 
-    # symlink needed for sysv and systemd environment
-    ln -s /usr/sbin/fai etc/init.d/rcS
-
-    #Start FAI using Systemd
-    set +e
-    readlink $NFSROOT/sbin/init | grep -q systemd
-    if [ $? -eq 0 ]; then
-        LC_ALL=C $ROOTCMD  systemctl set-default fai.target
-    fi
-    set -e
+    LC_ALL=C $ROOTCMD  systemctl set-default fai.target
 
     # this second rm of the same file is needed!
     rm -f etc/udev/rules.d/70-persistent-net.rules
