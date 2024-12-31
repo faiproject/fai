@@ -15,7 +15,7 @@ SHELL_SCRIPTS = bin/dhclient-fai-script bin/policy-rc.d.fai lib/check_status lib
 PERL_SCRIPTS = lib/setup-storage/*.pm bin/ainsl bin/device2grub bin/dhcp-edit bin/fai-chboot bin/fai-deps bin/fai-monitor bin/fai-monitor-gui bin/fai-new-mac bin/fcopy bin/install_packages bin/setup-storage dev-utils/setup-storage_deps-graph.pl examples/simple/tests/Faitest.pm lib/dhclient-perl lib/fai-savelog-ftp
 
 # do not include setup-storage and dracut subdir
-EXCL=lib/dracut lib/setup-storage
+EXCL=lib/dracut lib/setup-storage lib/fai-abort
 libfiles=$(filter-out $(EXCL),$(wildcard lib/[a-z]*))
 
 all:
