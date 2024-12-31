@@ -150,6 +150,18 @@ fai_init() {
     prcopyleft
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+inside_nfsroot() {
+
+    # check if fai is using the nfsroot as root filesystem
+    if [ $do_init_tasks -eq 1 ];then
+       return 0
+    else
+        return 1
+    fi
+}
+export -f inside_nfsroot
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 usage() {
     cat <<-EOF
         fai $FAI_VERSION. Copyright (C) 1999-2024 Thomas Lange
@@ -287,9 +299,12 @@ if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
     fdie 2 "Please give more parameters if not run from the nfsroot." >&2
 fi
 
-# Do we run inside the nfsroot?
+
+# set variable so we can use the funcion inside_nfsroot
 export do_init_tasks=0
 [ -f /.THIS_IS_THE_FAI_NFSROOT ] && do_init_tasks=1
+
+# Do we run inside the nfsroot?
 if [ $do_init_tasks -eq 1 ]; then
 
     # if hostname was set on the kernel command line (mostly when booting from CD)
