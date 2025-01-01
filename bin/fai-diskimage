@@ -4,7 +4,7 @@
 
 # This script is part of FAI (Fully Automatic Installation)
 #
-# Copyright (C) 2016-2024 Thomas Lange, lange@cs.uni-koeln.de
+# Copyright (C) 2016-2025 Thomas Lange, lange@cs.uni-koeln.de
 # Universitaet zu Koeln
 
 die() {
@@ -22,8 +22,7 @@ cleanup() {
     for dir in $(mount | awk '{print $3}'| grep $mnt | sort -r); do
 	# try umount several times, because some postinst jobs may still run and use the filesystems
 	for i in {1..15}; do
-            umount $dir >&/dev/null
-            [ $? -eq 0 ] && break
+            umount $dir >&/dev/null && break
             [ $((i % 3)) -eq 0 ] && echo "Waiting for background jobs to finish."
             [ $i -gt 12 ] && echo "Still cannot umount $dir. Will try again."
 	    sleep $i
@@ -32,7 +31,7 @@ cleanup() {
     done
 
     # call zerofree for ext2/3/4 devices if available
-    if [ -f /var/run/fai/zerofree.$$ -a -x /usr/sbin/zerofree ]; then
+    if [ -f /var/run/fai/zerofree.$$ ] && [ -x /usr/sbin/zerofree ]; then
         . /var/run/fai/zerofree.$$ 2>/dev/null
         rm /var/run/fai/zerofree.$$
     fi
@@ -188,7 +187,7 @@ case "$image" in
     *) die 8 "Unknown suffix. Please use raw, raw.zst, raw.xz, qcow2, vdi, vmdk or vhdx, simg."
 esac
 
-if [ -z "$classes" -a -z "$renew" ]; then
+if [ -z "$classes" ] && [ -z "$renew" ]; then
     die 7 "No classes are defined. Use -c or -N."
 fi
 
