@@ -5,7 +5,7 @@
 # fai-setup -- set up FAI
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2021 by Thomas Lange, lange@cs.uni-koeln.de
+# (c) 2000-2025 by Thomas Lange, lange@cs.uni-koeln.de
 # Universitaet zu Koeln
 #
 #*********************************************************************
@@ -137,7 +137,7 @@ setup_fai_account() {
         chmod 0600 $sshdir/authorized_keys
         echo "$sshdir/authorized_keys created."
     fi
-    if [ "$FAI_LOGPROTO" = "rsh" -a ! -f $loguserhome/.rhosts ]; then
+    if [ "$FAI_LOGPROTO" = "rsh" ] && [ ! -f $loguserhome/.rhosts ]; then
         # use .rhosts authentication
         echo "+@faiclients root" > $loguserhome/.rhosts
         chmod go-rwx $loguserhome/.rhosts
@@ -159,9 +159,7 @@ fi
 
 cp /dev/null /var/log/fai/variables
 set +e
-fai-make-nfsroot $options
-err=$?
-if [ $err -ne 0 ]; then
+if ! fai-make-nfsroot $options ; then
     echo "ERROR when calling fai-make-nfsroot."
     exit 9
 fi
@@ -169,8 +167,7 @@ set -e
 
 if [ -n "$LOGUSER" ]; then
     # chown only if cd was successful
-    cd $loguserhome
-    if [ $? -eq 0 ]; then
+    if cd $loguserhome; then
         [ -e .rhosts ] && chown $LOGUSER:$logusergid . .rhosts || true
         [ -d .ssh ] && chown -R $LOGUSER:$logusergid .ssh || true
     fi
