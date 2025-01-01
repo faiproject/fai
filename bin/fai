@@ -91,8 +91,7 @@ fai_init() {
     # if ROOTCMD was set from outside, do not touch it
     if [ -z "$ROOTCMD" ]; then
         # check if unshare can be used (e.g. not possible in some container environments)
-        unshare --fork --kill-child --mount-proc chroot / ls >/dev/null 2>&1
-        if [ $? -eq 0 ]; then
+        if unshare --fork --kill-child --mount-proc chroot / ls >/dev/null 2>&1 ; then
             ROOTCMD="unshare --pid --fork --kill-child --mount-proc chroot $FAI_ROOT"
         else
             ROOTCMD="chroot $FAI_ROOT"
