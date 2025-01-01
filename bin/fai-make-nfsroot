@@ -5,7 +5,7 @@
 # fai-make-nfsroot -- create nfsroot directory and add additional packages
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2024 by Thomas Lange, lange@cs.uni-koeln.de
+# (c) 2000-2025 by Thomas Lange, lange@cs.uni-koeln.de
 # Universitaet zu Koeln
 # (c) 2004      by Henning Glawe, glaweh@physik.fu-berlin.de
 # Freie Universitaet Berlin
@@ -32,7 +32,7 @@
 usage() {
 
     cat <<-EOF
-	Copyright (C) 1999-2024 Thomas Lange
+	Copyright (C) 1999-2025 Thomas Lange
 
 	Usage: fai-make-nfsroot [OPTIONS]
 	Create an NFSROOT for FAI.
@@ -132,7 +132,7 @@ set -e
 shopt -s nullglob
 
 # use FAI_ETC_DIR from environment variable
-if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+if [ -n "$FAI_ETC_DIR" ] && [ -z "$cfdir" ]; then
     echo "Using environment variable \$FAI_ETC_DIR."
 fi
 [ -z "$cfdir" ] && cfdir=${FAI_ETC_DIR:=/etc/fai}
@@ -159,8 +159,7 @@ deldir=$NFSROOT
 set +e
 if [ -z "$ROOTCMD" ]; then
     # check if unshare can be used (e.g. not possible in some container environments)
-    unshare --fork --kill-child --mount-proc chroot / ls >/dev/null 2>&1
-    if [ $? -eq 0 ]; then
+    if unshare --fork --kill-child --mount-proc chroot / ls >/dev/null 2>&1 ; then
         ROOTCMD="unshare --fork --kill-child --mount-proc chroot $NFSROOT"
     else
         ROOTCMD="chroot $NFSROOT"
@@ -671,11 +670,10 @@ if [ -d $NFSROOT/proc ]; then
     umount $NFSROOT/$MNTPOINT  2>/dev/null || true # it's safer to try to umount
     # remove old nfsroot using a background process
     rm -rf $deldir/../.will-now-be-deleted
-    mv $deldir $deldir/../.will-now-be-deleted
-    if [ $? -eq 1 ]; then
-        rm -rf $deldir
-    else
+    if mv $deldir $deldir/../.will-now-be-deleted ; then
         nice rm -rf $deldir/../.will-now-be-deleted &
+    else
+        rm -rf $deldir
     fi
 fi
 
