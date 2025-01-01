@@ -140,7 +140,7 @@ fai_init() {
         mount -oremount,ro,noatime /live/image
 
         # start secure shell daemon for remote access
-        [ "$flag_sshd" -a -x /usr/sbin/sshd ] && /usr/sbin/sshd
+        [ "$flag_sshd" ] && [ -x /usr/sbin/sshd ] && /usr/sbin/sshd
 	save_dmesg
     fi
 
@@ -244,7 +244,7 @@ while true ; do
 done
 
 # use FAI_ETC_DIR from environment variable
-if [ -n "$FAI_ETC_DIR" -a -z "$cfdir" ]; then
+if [ -n "$FAI_ETC_DIR" ] &&  [ -z "$cfdir" ]; then
     # print this message later so it gets into the log files
     etc_message="Using environment variable \$FAI_ETC_DIR."
 fi
@@ -269,7 +269,7 @@ if [ X$FAI_ACTION = Xdirinstall ]; then
     if [ -z "$FAI_ROOT" ]; then
         fdie 3 "Please specify a target directory. Aborted" >&2
     fi
-    if [ $renewclass -eq 0 -a -z "$cmdlineclasses" ]; then
+    if [ $renewclass -eq 0 ] && [ -z "$cmdlineclasses" ]; then
         fdie 4 "Please use -c or -N. Aborted" >&2
     fi
 
@@ -295,7 +295,7 @@ if [ X$FAI_ACTION = Xdirinstall ]; then
 fi
 
 # exit if we do not run from nfsroot and no parameter is given
-if [ ! -f /.THIS_IS_THE_FAI_NFSROOT -a "X$1" = "X" ]; then
+if [ ! -f /.THIS_IS_THE_FAI_NFSROOT ] && [ "X$1" = "X" ]; then
     fdie 2 "Please give more parameters if not run from the nfsroot." >&2
 fi
 
