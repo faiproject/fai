@@ -9,7 +9,7 @@ TFTP=$TFTPROOT
 
 # - - - - - - - - - - - - - - - - -
 error() {
-    echo "ERROR: $@" >/dev/stderr
+    echo "ERROR: $*" >/dev/stderr
 }
 # - - - - - - - - - - - - - - - - -
 chk-file() {
