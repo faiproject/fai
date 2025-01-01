@@ -85,7 +85,7 @@ fai_init() {
     DEBIAN_FRONTEND=noninteractive
     # local disks are mounted to $FAI_ROOT
     if [ -z "$FAI_ROOT" ] ; then
-      [ $do_init_tasks -eq 1 ] && FAI_ROOT=/target || FAI_ROOT=/
+      inside_nfsroot && FAI_ROOT=/target || FAI_ROOT=/
     fi
     # ROOTCMD will execute a command in the environment of the new system
     # if ROOTCMD was set from outside, do not touch it
@@ -104,13 +104,13 @@ fai_init() {
     AINSL_TARGET=$FAI_ROOT
     FAI_RAMDISKS="$target/var/lib/dpkg"
 
-    if [ $do_init_tasks -eq 1 ]; then
+    if inside_nfsroot; then
         trap 'echo "Now rebooting";faireboot' INT QUIT
     else
         trap "echo 'Aborted';rm -f $stamp" INT QUIT
     fi
 
-    if [ $do_init_tasks -eq 1 ]; then
+    if inside_nfsroot; then
         eval_cmdline
         define_fai_flags
         rm -f /run/nologin /etc/motd
@@ -185,7 +185,7 @@ fstart() {
     # these tasks can define variables, that are needed later
     [ -n "$etc_message" ] && echo ""
     echo "$etc_message"
-    [ $do_init_tasks -eq 1 ] || echo "Using configuration files from $FAI_ETC_DIR"
+    inside_nfsroot || echo "Using configuration files from $FAI_ETC_DIR"
     unset etc_message
     task confdir
     # if the config space is a local directory, reset $FAI
@@ -197,9 +197,9 @@ fstart() {
     task setup
     task defclass
     unset renewclass
-    [ $do_init_tasks -eq 1 ] && set_disk_info
+    inside_nfsroot && set_disk_info
     task defvar
-    [ $do_init_tasks -eq 1 ] && load_keymap_consolechars
+    inside_nfsroot && load_keymap_consolechars
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Main routine
@@ -305,7 +305,7 @@ export do_init_tasks=0
 [ -f /.THIS_IS_THE_FAI_NFSROOT ] && do_init_tasks=1
 
 # Do we run inside the nfsroot?
-if [ $do_init_tasks -eq 1 ]; then
+if inside_nfsroot; then
 
     # if hostname was set on the kernel command line (mostly when booting from CD)
     for word in $(< /proc/cmdline) ; do
@@ -346,7 +346,7 @@ fi
 
 [ -n "$newhostname" ] && export HOSTNAME=$newhostname
 
-if [ $do_init_tasks -eq 1 ]; then
+if inside_nfsroot; then
     # we are running an initial installation
     export LOGDIR=/tmp/fai
     mkdir -p $LOGDIR
@@ -366,7 +366,7 @@ chmod 0750 $LOGDIR
 
 fai_init
 
-if [ $do_init_tasks -ne 1 ]; then
+if ! inside_nfsroot; then
     echo "Starting FAI execution - $fai_rundate" | tee -a $LOGDIR/fai.log
 fi
 [ -n "$newhostname" ] && echo "Hostname set to $HOSTNAME" | tee -a $LOGDIR/fai.log

@@ -37,7 +37,7 @@ die() {
     [ -f $LOGDIR/skip.savelog ] || call_hook savelog
     [ -f $LOGDIR/skip.savelog ] || task_savelog
     echo "$@"
-    if [ $do_init_tasks -eq 1 ] ; then
+    if inside_nfsroot; then
         exec bash -i
     else
         exit 99
@@ -240,7 +240,7 @@ ctai() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 save_dmesg() {
 
-    [ $do_init_tasks -eq 0 ] && return
+    inside_nfsroot || return
     if [ -x /usr/sbin/logtail ] ; then
       logtail -f /var/log/kern.log -o /var/lib/fai/kern.log.offset >> $LOGDIR/dmesg.log
     else
@@ -466,7 +466,7 @@ define_fai_flags() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    $fai_rundate
-# Requires-Var:    $DOMAIN $do_init_tasks
+# Requires-Var:
 # Suggests-Var:    $flag_createvt $flag_sshd
 # Short-Description: <task desc.>
 ### END SUBROUTINE INFO
@@ -479,7 +479,7 @@ task_setup() {
     define_fai_flags
 
     # this may be moved to an external script
-    if [ $do_init_tasks -eq 1 ] ; then
+    if inside_nfsroot; then
         # set the system time and date using rdate or/and ntpdate
         [ "$TIMESRVS_1" ] && [ -f /bin/rdate ] && rdate $TIMESRVS_1
         [ -n "$NTPSRVS" ]  && ntpdate -b $NTPSRVS
@@ -516,7 +516,7 @@ task_setup() {
 
     # when did FAI start, using localtime
     : ${fai_rundate:=$(date +'%Y%m%d_%H%M%S')}
-    if [ $do_init_tasks -eq 1 ]; then
+    if inside_nfsroot; then
         echo "Starting FAI execution - $fai_rundate"
     fi
 }
@@ -544,7 +544,7 @@ task_action() {
                 return
             fi
             echo Performing FAI installation. All data may be overwritten!
-	    if [ $do_init_tasks -eq 1 -a X$flag_menu = X ] ; then
+            if inside_nfsroot && [ X$flag_menu = X ] ; then
 		echo -ne "\a"; sleep 1
 		echo -ne "\a"; sleep 1
 		echo  -e "\a"; sleep 5
@@ -670,7 +670,7 @@ task_mountdisks() {
 
     [ ! -f $LOGDIR/fstab ] && die "No $LOGDIR/fstab created."
     # mount swap space
-    if [ $do_init_tasks -eq 1 ]; then
+    if inside_nfsroot; then
 	local sd
 	for sd in $SWAPLIST; do
             swapon -p1 $sd && [ X$verbose = X1 ] && echo "Enable swap device $sd"
@@ -681,7 +681,7 @@ task_mountdisks() {
         sendmon "TASKERROR mountdisks 885"
         task_error 885
     fi
-    if [ $do_init_tasks -eq 1 ] && ! mountpoint -q $target; then
+    if inside_nfsroot && ! mountpoint -q $target; then
         echo "$target is not a mount point. Check your disk_config file."
         sendmon "TASKERROR mountdisks 886"
         task_error 886
@@ -734,7 +734,7 @@ task_faiend() {
 
     # reboot/halt without prompting if FAI_FLAG reboot or halt is set
     # wait for keypress if neither flag reboot nor halt is set
-    if [ $do_init_tasks -eq 1 -a "$flag_reboot" -eq 0 -a "$flag_halt" -eq 0 ]; then
+    if inside_nfsroot && [ "$flag_reboot" -eq 0 ] && [ "$flag_halt" -eq 0 ]; then
         echo "Press <RETURN> to reboot (do not remove your removable medium yet)."
         read
     fi
@@ -745,7 +745,7 @@ task_faiend() {
     mk_zerofree_list
     umount_target
     cleanup_devicemapper
-    if [ $do_init_tasks -eq 0 ]; then
+    if ! inside_nfsroot; then
 	echo "Log files are saved in $LOGDIR"
 	return 0
     fi
@@ -947,7 +947,7 @@ read_fai_monitor_vars() {
 
 task_confdir() {
 
-    if [ $do_init_tasks -eq 1 ] ; then
+    if inside_nfsroot; then
 
 	read_fai_monitor_vars
         eval_cmdline
@@ -1013,7 +1013,7 @@ task_confdir() {
     fi
 
     local mdir=/lib/modules/$(uname -r)
-    if [ $do_init_tasks -eq 1 ] && [ ! -d $mdir ]; then
+    if inside_nfsroot && [ ! -d $mdir ]; then
         echo "ERROR: The running kernel does not match the kernel modules inside the nfsroot."
         echo "ERROR: Kernel modules directory $mdir not available. Only found:"
         ls -d /lib/modules/*
@@ -1078,7 +1078,7 @@ call_debootstrap() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:    none
-# Requires-Var:    $FAI_ROOT $do_init_tasks $NFSROOT $LOGDIR
+# Requires-Var:    $FAI_ROOT $NFSROOT $LOGDIR
 # Suggests-Var:    $FAI_DEBOOTSTRAP
 # Short-Description: extrace minimal base file into target
 ### END SUBROUTINE INFO
@@ -1092,7 +1092,7 @@ task_extrbase() {
     # copy the base file class based if it exists
     [ -d $FAI/basefiles ] && ftar -1v -s $FAI/basefiles /
     if [ $? -ne 0 ]; then
-        if [ $do_init_tasks -eq 1 ]; then
+        if inside_nfsroot; then
             ftar -1v -c base -s /var/tmp /
         else
             [ -d $NFSROOT/var/tmp ] &&
@@ -1160,7 +1160,7 @@ task_repository () {
 	v=-v
     fi
 
-    [ $do_init_tasks -eq 1 ] && FAI_ETC_DIR=/etc
+    inside_nfsroot && FAI_ETC_DIR=/etc
 
     # some generale network files are needed on the client
     # resolv.conf is needed, /etc/hosts is useful in /target
@@ -1251,7 +1251,7 @@ task_instsoft() {
 task_finish() {
 
     mkramdisk -au # umount ramdisk
-    if [ $do_init_tasks -eq 1 ] ; then
+    if inside_nfsroot; then
         # show some local information
         df -PTh | grep -E ':|^/|^Filesystem'
         # show rx and tx bytes of network device
