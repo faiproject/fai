@@ -33,7 +33,7 @@ while true ; do
             shift
             break ;;
          *)
-            die 1 "$0: command line parsing error ! $@" >&2 ;;
+            die 1 "$0: command line parsing error ! $*" >&2 ;;
     esac
 done
 
@@ -50,14 +50,12 @@ if [ ! -d /usr/share/doc/fai-doc ]; then
    exit 1
 fi
 
-mkdir -p $FAI_CONFIGDIR
-if [ $? -ne 0 ]; then
+if ! mkdir -p $FAI_CONFIGDIR ; then
     echo "Cannot create the config space in $FAI_CONFIGDIR."
     exit 1
 fi
 
-cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR/.
-if [ $? -eq 0 ]; then
+if cp -a /usr/share/doc/fai-doc/examples/simple/* $FAI_CONFIGDIR/. ; then
     echo "Your initial config space is now located in $FAI_CONFIGDIR"
 else
     echo "Copying the config space examples failed."
