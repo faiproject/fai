@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000-2015
+# reboot FAI correctly, Thomas Lange, Uni Koeln, copyright 2000-2025
 
 faimond=0
 . /usr/lib/fai/subroutines
@@ -17,7 +17,7 @@ cd /
 killall -STOP fai
 killall -q apt-get dpkg tar gzip yes cat rsyslogd
 
-[ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ] && killall -q sshd
+[ -z "$SSH_CLIENT" ] && [ "$TERM" != "dumb" ] && killall -q sshd
 
 fai-divert -R
 
@@ -30,10 +30,10 @@ umount -arf 2>/dev/null
 
 echo "$HOSTNAME now rebooting"
 
-if [ "X" == "X$SSH_CLIENT" -a  "$TERM" != "dumb" ]; then
+if [ -z  "$SSH_CLIENT" ] && [ "$TERM" != "dumb" ]; then
     exec reboot -df
 fi
 
 killall -CONT fai
 killall fai
-init 6 &
+systemctl kexec &
