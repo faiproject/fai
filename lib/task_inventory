@@ -36,18 +36,6 @@ inventory() {
     echo "Network interface: $nic1"
     echo "MAC address: $mac1"
 
-    # lshw does not find disk of virtual machines
-    n=1
-    while read path device class desc; do
-	[[ $device = 'path' ]] && continue
-	[[ $desc =~ 'STORAGE DEVICE' ]] && continue
-	[[ $desc =~ 'SCSI Disk' ]] && continue
-	[ -z "$desc" ] && continue
-	[[ $device =~ 'cdrom' ]] && continue
-	echo "Hard disk $n: $diskni $desc"
-	(( n++ ))
-    done < <(lshw -quiet -short -C disk 2>/dev/null)
-
     # print disk infos
     # $disklist needs to be set, normally done in fai-disk-info
     local d=1
