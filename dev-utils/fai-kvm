@@ -2,13 +2,13 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2024
+# Author:    Thomas Lange, Uni Koeln, 2011-2025
 # License:   GPL v2 or any later version
 
 fix="-k en-us -smp 2 -cpu host -global isa-fdc.fdtypeA=none "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
 # without it centos initrd is not created properly and results in kernel panic
 
-vga="-vga std"
+vga=
 user=1
 size=10G   # default size of the disk image
 ram=2G
@@ -107,7 +107,6 @@ usage() {
              of the VM and is the number of the tap device number. It is also used
              for the file name of the disk files. Each VM must have a unique number.
              If you have created 9 tap devies you can use the numbers 1 to 9.
- -V          do not use vga std with Bochs extensions, use the kvm default
  -U          Use kvm user networking instead of tap devices
  -O          Swap boot order when booting an ISO. Default order is local disk, then ISO.
  -t          Set title of the Qemu window
@@ -119,7 +118,7 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "EbUhnNu:s:Mm:d:VD:t:O" opt ; do
+while getopts "EbUhnNu:s:Mm:d:D:t:O" opt ; do
     case "$opt" in
         O) order=dc  ;;
         b) daemonize=1  ;;
@@ -139,7 +138,6 @@ while getopts "EbUhnNu:s:Mm:d:VD:t:O" opt ; do
         D) diskdir=$OPTARG ;;
         t) title=$OPTARG ;;
         h) usage;;
-        V) vga="";;
         ?) die 1 "Unknown option";;
     esac
 done
