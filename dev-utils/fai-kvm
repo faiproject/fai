@@ -15,12 +15,14 @@ ram=2G
 disks=1
 cdimage=/files/scratch/fai-cd.iso # default name for CD image
 diskdir=/tmp     # directory where the disk images will be created, a RAM disk is recommended
+portbase=5900
 usernet=0
 newdisk=0
 daemonize=0
 efi=0
 order=cd
 usenvme=0
+spice=0
 
 # not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
 # If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
@@ -94,7 +96,8 @@ usage() {
 
  fai-kvm [options] pxe|cd|disk [imagename] -- [more options for kvm]
 
- -b          run the VM daemonized in the background, no video output
+ -b          run the VM daemonized in the background, no video output, activates VNC unless -S was added
+ -S          activate the spice remote protocol on port 5900+<user number>, add -b for running in the background
  -E          Boot the VM with UEFI instead of legacy BIOS
  -n          create a new empty disk image, which is used as a local disk
  -N          recreate a new empty disk image, even if one already exists
@@ -118,7 +121,7 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "EbUhnNu:s:Mm:d:D:t:O" opt ; do
+while getopts "EbUhnNu:s:SMm:d:D:t:O" opt ; do
     case "$opt" in
         O) order=dc  ;;
         b) daemonize=1  ;;
@@ -134,6 +137,7 @@ while getopts "EbUhnNu:s:Mm:d:D:t:O" opt ; do
                size="${size}G"
            fi
            ;;
+        S) spice=1 ;;
         d) disks=$OPTARG ;;
         D) diskdir=$OPTARG ;;
         t) title=$OPTARG ;;
@@ -156,8 +160,16 @@ fi
 hex=$(printf %02X $user)
 diskfile=$diskdir/faitest-disk-$user
 
+port=$(($portbase + $user))
+if [ $spice -eq 1 ]; then
+    vga="-vga qxl -spice port=$port,disable-ticketing=on"
+fi
 if [ $daemonize -eq 1 ]; then
-    vga="-display none -daemonize -vnc :$user"
+    if [ $spice -eq 1 ]; then
+        vga+=" -daemonize -display none"
+    else
+        vga="-daemonize -display none -vnc :$user"
+    fi
 fi
 
 mac=$macprefix:$hex
