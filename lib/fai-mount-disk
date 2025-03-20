@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# Copyright (c) 2002-2023 by Thomas Lange
+# Copyright (c) 2002-2025 by Thomas Lange
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fstab_mount() {
@@ -30,7 +30,9 @@ mount_local_disks() {
         [[ "$type" =~ "zfs_member" ]] && continue
         dev=$(readlink -e $disk)
         devname=${dev##*/}
-        [[ "$devname" =~ "$FAI_BOOTSTICK" ]] && continue # skip USB stick device
+        if [ -n "$FAI_BOOTSTICK" ]; then
+            [[ "$devname" =~ "$FAI_BOOTSTICK" ]] && continue # skip USB stick device
+        fi
         if [ -n "$base" ]; then
             [[ "$devname" =~ "$base" ]] && continue
         fi
