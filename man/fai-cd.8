@@ -1,7 +1,7 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
 .if \n(zZ=1 .ig zZ
 .if \n(zY=1 .ig zY
-.TH fai-cd 8 "Aug 2023" "FAI 6"
+.TH fai-cd 8 "Mar 2025" "FAI 6"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -157,7 +157,7 @@ can create a CD using:
 
    # fai-cd \-m /media/mirror fai-cd.iso
 
-If you want to create a bootable USB stick (here /dev/sdf) , write the
+If you want to create a bootable USB stick (here /dev/sdf), write the
 CD image to the stick via dd(1).
 
    # dd if=fai-cd.iso of=/dev/sdf bs=1M
@@ -189,6 +189,17 @@ Then create the live ISO:
 Hint: The FAI nfsroot is not needed when building a live ISO.
 
 \&\fBMore advanced usage\fR:
+
+You can build a special installation ISO for an USB stick that contains
+the config space on a writeable partition instead inside the read-only
+ISO. The log files of the installations will be save to this partition.
+After you have created the mirror in /tmp/mirror, build the ISO using
+the following two commands:
+
+   # fai-cd -d detect:// -m /tmp/mirror fai.iso
+   # mk-data-partition -c fai.iso /srv/fai/config
+
+After that copy this ISO onto the USB stick.
 
 It is possible to install over the network without using NFS, i.e. by
 getting the nfsroot via an http request. To do so you have to create a
