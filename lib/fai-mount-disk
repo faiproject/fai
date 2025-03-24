@@ -33,9 +33,6 @@ mount_local_disks() {
         if [ -n "$FAI_BOOTSTICK" ]; then
             [[ "$devname" =~ "$FAI_BOOTSTICK" ]] && continue # skip USB stick device
         fi
-        if [ -n "$base" ]; then
-            [[ "$devname" =~ "$base" ]] && continue
-        fi
         mkdir -p $FAI_ROOT/$devname
         mount -o $mountoption $dev $FAI_ROOT/$devname
 
@@ -88,10 +85,6 @@ while getopts ufrw opt ; do
 done
 
 set_bootstick
-if [ -e /dev/mapper/live-base ]; then
-    base=$(readlink -f /dev/mapper/live-base)
-    base=${base#/dev/}
-fi
 
 mount_local_disks
 if [ $dofstab -eq 1 ]; then
