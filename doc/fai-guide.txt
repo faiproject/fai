@@ -1649,7 +1649,7 @@ default fai-generated
 
 label fai-generated
 kernel vmlinuz-6.1.0-17-amd64
-append initrd=initrd.img-6.1.0-17-amd64 ip=dhcp root=/srv/fai/nfsroot:vers=3 rootovl FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
+append initrd=initrd.img-6.1.0-17-amd64 ip=dhcp root=/srv/fai/nfsroot rootovl FAI_FLAGS=verbose,sshd,createvt FAI_CONFIG_SRC=nfs://faiserver/srv/fai/config FAI_ACTION=install
 ----
 
 See '/usr/share/doc/syslinux/pxelinux.doc' for more detailed
@@ -1891,19 +1891,18 @@ only one file system table is found, the partitions are mounted
 according to this information. Here's an example:
 
 ----
-demohost:~# df
+demohost:~# df -h
 
-Filesystem                    1K-blocks     Used Available Use% Mounted on
-devtmpfs                        1950880        0   1950880   0% /dev
-tmpfs                           1971656      336   1971320   1% /run
-overlay                         1971656      148   1971508   1% /
-tmpfs                           1971656      148   1971508   1% /live/cow
-192.168.33.250:/srv/fai/nfsroot
-                                15416320 12121088    919552  93% /live/image
-faiserver:/srv/fai/config       15416320 12121088    919552  93% /var/lib/fai/config
-/dev/mapper/vg1-root            7828376  1599880   5811116  22% /target
-/dev/vda1                        198337    49976    138121  27% /target/boot
-/dev/mapper/vg1-home            1503280     4620   1404248   1% /target/home
+Filesystem                Size  Used Avail Use% Mounted on
+devtmpfs                  4.0M     0  4.0M   0% /dev
+tmpfs                     2.0G     0  2.0G   0% /dev/shm
+tmpfs                     783M   18M  766M   3% /run
+tmpfs                     5.0M     0  5.0M   0% /run/lock
+LiveOS_rootfs             783M   18M  766M   3% /
+192.168.33.250:/srv/fai/config   59G   23G   24G  49% /var/lib/fai/config
+/dev/mapper/vg1-root      7.3G  1.8G  5.2G  26% /target
+/dev/vda1                 459M   53M  378M  13% /target/boot
+/dev/mapper/vg1-home      1.4G   72K  1.3G   1% /target/home
 ----
 
 *This method can be used as a rescue environment!* If you need a file
@@ -2358,27 +2357,6 @@ configurations. This will define if an installation
 should be performed, or if the client should to boot from local
 disk. This is done using `fai-chboot(8)`.
 
-
-=== [[nfsv4]]How to use NFS v4 with the nfsroot
-
-The nfsroot is mounted via NFS v3 by default. This is done
-by adding the option 'nfsvers=3' to the kernel boot options of the
-kernel booted by the install clients. fai-chboot(8) will do this for you.
-
-If you want to use NFS v4 for the nfsroot, you have to remove this
-option the the kernel boot options. Additionally, overlayfs
-- the kernel module that is used for making the read-only mounted
-nfsroot writeable - can only work with NFS v4 if acl(5) support is
-disabled on the filessystem on the NFS server side (as of 2019). If
-'/srv/fai/nfsroot' on your FAI server is located on the root partition
-mounted to '/', you can disable acl support for the whole file system
-on this partition using
-
-----
-# mount -oremount,noacl /
-----
-
-Then mounting the nfsroot from a FAI server using NFS v4 will work.
 
 === [[debian-mirror]]How to create a local Debian mirror
 
