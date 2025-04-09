@@ -5,7 +5,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2024, Thomas Lange, lange@cs.uni-koeln.de
+# (c) 2000-2025, Thomas Lange, lange@cs.uni-koeln.de
 # (c) 2003-2004, Henning Glawe, glaweh@physik.fu-berlin.de
 # (c) 2004     , Jonas Hoffmann, jhoffman@physik.fu-berlin.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
@@ -47,6 +47,7 @@ my $dryrun=0;
 my $verbose;
 my $FAI_ROOT;
 my @classes;
+our @clvar;
 my $classpath;
 my $rootcmd;
 my @preloadlist;
@@ -140,6 +141,8 @@ $classpath = $opt_p || "$ENV{FAI}/package_config";
 $rootcmd = ($FAI_ROOT eq "/" or not defined $FAI_ROOT ) ? '' : "chroot $FAI_ROOT";
 @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 foreach (@classes) { $classisdef{$_}=1;}
+# define an array of arguments for subroutine call: the class names, set to 1
+@clvar =  map { $_,1 } @classes;
 
 warn "$0: reading config files from directory $classpath\n" if $verbose;
 foreach (@classes) {
@@ -310,16 +313,25 @@ sub readconfig {
       warn "ERROR: PACKAGES option $pkgoption not allowed\n" unless ( ! defined $pkgoption or $pkgoption =~ /^release=/);
 
       warn "WARNING: Unknown action $type after PACKAGES\n" unless defined $command{$type};
+
       # by default no classes are listed after this command so doit
       $doit = 1;
       if ($cllist) {
-        # no classes specified after PACKAGES command
-        # so add all packages listed
-        # use packages on for a list of classes
-        $doit = 0; # assume no class is defined
-        @oclasses = split(/\s+/,$cllist);
-        # if a listed class is defined, add the packaes, otherwise skip these packages
-        foreach (@oclasses) { exists $classisdef{$_} and $doit = 1;}
+        # check if we only have a list of classes or some logical expression
+        if ($cllist =~ /[!&|()]/) { # we found a logical expression
+          eval "require Eval::Logic" or
+            die "Perl module Eval::Logic is not available\n";
+          my $expr = Eval::Logic->new ( "$cllist" );
+          $expr->undef_default ( 0 ); # set default value for undefined classes
+          $doit = $expr->evaluate( @clvar );
+          print "REGEX: $cllist = $doit\n" if $debug;
+        } else {
+          # use packages only for the list of classes (like a logical or for all classes)
+          $doit = 0; # assume no class is defined
+          @oclasses = split(/\s+/,$cllist);
+          # if a listed class is defined, add the packaes, otherwise skip these packages
+          foreach (@oclasses) { exists $classisdef{$_} and $doit = 1;}
+        }
       }
       next;
     }
