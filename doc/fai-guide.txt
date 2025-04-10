@@ -5,9 +5,9 @@
 FAI Guide (Fully Automatic Installation)
 ========================================
 Thomas Lange <lange@debian.org>
-Wed, 17 Jan 2024
+Wed, 10 Apr 2025
 :Date: a date
-:Revision: 6.0
+:Revision: 6.4
 
 :nfsrootsize: 1.1
 
@@ -33,7 +33,7 @@ includes the installation of the packages, setting up the server, creating of th
 configuration and how to deal with errors.
 
 
-(c) 2000-2024 Thomas Lange
+(c) 2000-2025 Thomas Lange
 
 
 .Copyright
@@ -1127,12 +1127,26 @@ install the software, so this archive is downloaded to the directory
 '/root'. After installing the packages this file will be removed. If
 the file shouldn't be removed, use the command _PRELOAD_ instead.
 
+
+You can add an arbitrary boolean expression using FAI classes to
+define when the list of packages should be installed. Here, the
+packages are only installed if the class XORG is defined but the class
+MINT is not defined.
+
+Example:
+----
+PACKAGES install UBUNTU && XORG && ! MINT
+ubuntu-standard
+ubuntu-desktop
+----
+
+The old way of adding some logic in the PACKAGES lines is still supported:
 It's possible to append a list of class names after the command for
 apt-get. So this _PACKAGES_ command will only be executed when at least
 one of the corresponding classes is defined (logical OR). So you can
-combine many small files
-into the file DEFAULT. WARNING! Use this feature only in the file
-DEFAULT to keep everything simple. See this file for some examples.
+combine many small files into the file DEFAULT.
+
+
 
 If you want to remove a package name from a certain class was part of
 this class before, you should not remove the package name from the
