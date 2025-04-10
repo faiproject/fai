@@ -106,6 +106,7 @@ install:
 	# Systemd
 	mkdir -p $(DESTDIR)/usr/lib/systemd/system
 	install -m644 conf/systemd/* $(DESTDIR)/usr/lib/systemd/system
-
+	mkdir -p $(DESTDIR)/usr/share/perl5
+	cp -a lib/Eval $(DESTDIR)/usr/share/perl5
 
 .PHONY: clean veryclean
