@@ -1,0 +1,72 @@
+#! /usr/bin/perl
+
+# evaluate boolean expression of classes
+# (c) Thomas Lange 2025
+
+use strict;
+use warnings;
+use Eval::Logic;
+
+sub usage {
+
+  print << 'EOM';
+ifclass, evaluate boolean expression of FAI classes
+
+   Copyright (C) 2025 by Thomas Lange
+
+Usage: ifclass 'EXPRESSION'
+Usage: ifclass [-a|-o] CLASS1 [CLASSN]...
+
+   -o         Evaluate a logical OR  of the given classes
+   -a         Evaluate a logical AND of the given classes
+
+Either an expression is given and will be evaluated or a list of classes
+is combined with the OR or AND operator.
+The list of defined FAI classes must be stored in the variable $classes.
+
+Examples:
+
+$ classes="DEMO AMD64 FAIBASE UBUNTU MINT
+$ ifclass 'UBUNTU && ! MINT'
+$ ifclass 'DEMO || MINT'
+$ ifclass 'AMD64 && ( ROCKY || ALMA )'
+
+EOM
+  exit 0;
+}
+
+&usage unless defined $ARGV[0];
+&usage if ($ARGV[0] eq '-h');
+
+warn "Variable \$classes is undefined \n" unless defined $ENV{classes};
+
+# support old behaviour of ifclass -o and ifclass -a
+  if ($ARGV[0] eq '-o') {
+    # join all classes with logical OR
+    shift;
+    my $tmp = join(' || ',@ARGV);
+    undef @ARGV;
+    $ARGV[0] = $tmp;
+  }
+  if ($ARGV[0] eq '-a') {
+    # join all classes with logical AND
+    shift;
+    my $tmp = join(' && ',@ARGV);
+    undef @ARGV;
+    $ARGV[0] = $tmp;
+  }
+
+if (defined $ARGV[2]) {
+  die "Only two parameters are allowed. You may quote your boolean expression.\n";
+}
+
+# read the list of classes
+my @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
+my @clvar =  map { $_,1 } @classes; # make a list of defined variables for subroutine call
+
+my $inp = shift;
+
+my $expr = Eval::Logic->new("$inp");
+$expr->undef_default(0); # set default value for undefined classes
+my $e = $expr->evaluate(@clvar);
+exit ! $e;

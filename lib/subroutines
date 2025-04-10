@@ -55,63 +55,6 @@ defnop() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-### BEGIN SUBROUTINE INFO
-# Provides-Var:      none
-# Required-Var:      $classes
-# Short-Description: test if one or multiple classes are defined
-### END SUBROUTINE INFO
-
-ifclass() {
-
-    if [ $# -eq 1 ]; then
-        _ifclass $1
-        return $?
-    fi
-
-    case $1 in
-        -a) shift ; _ifclass_and $* ; return $? ;;
-        -o) shift ; _ifclass_or $*  ; return $? ;;
-    esac
-}
-
-_ifclass() {
-
-    # check one single class
-    [ "${debug:-}" ] && echo "Test if class $1 is in ${classes:-}" >&2
-    # test if a class is defined
-    local _ret
-
-    if [[ "${classes:-}" =~ (^|[[:space:]]+)$1($|[[:space:]]+) ]]; then
-        _ret=0
-    else
-        _ret=1
-    fi
-    [ "${debug:-}" ] && echo "ifclass returns $_ret" >&2
-    return $_ret
-}
-
-_ifclass_and() {
-
-    # check if all classes are defined (logical AND)
-    local cl
-
-    for cl in $*; do
-        ifclass $cl || return 1
-    done
-    return 0
-}
-
-_ifclass_or() {
-
-    # check if one of the classes is defined (logical OR)
-    local cl
-
-    for cl in $*; do
-        ifclass $cl && return 0
-    done
-    return 1
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 mount-fai-data() {
 
     # if we have a partition MY-DATA mount it
