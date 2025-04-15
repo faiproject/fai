@@ -214,7 +214,14 @@ if [ $efi = 1 ]; then
     if [ ! -f /usr/share/ovmf/OVMF.fd ]; then
 	die 99 "UEFI firmware not found. Please install package ovmf."
     fi
-    gopt="-bios /usr/share/ovmf/OVMF.fd $gopt"
+    if [ "$newdisk" -eq 2 ]; then # always overwrite
+        cp -v /usr/share/OVMF/OVMF_VARS.fd $diskdir/faitest-uefi-$user-OVMF_VARS.fd
+    fi
+    if [ "$newdisk" -eq 1 ] && [ ! -f $diskdir/faitest-uefi-$user-OVMF_VARS.fd ]; then
+        cp -v /usr/share/OVMF/OVMF_VARS.fd $diskdir/faitest-uefi-$user-OVMF_VARS.fd
+    fi
+    gopt="-drive if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/OVMF/OVMF_CODE.fd \
+          -drive if=pflash,format=raw,unit=1,file=$diskdir/faitest-uefi-$user-OVMF_VARS.fd $gopt"
 fi
 
 
