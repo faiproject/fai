@@ -34,6 +34,7 @@ $0=~ s#.+/##; # remove path from program name
 
 use strict;
 use Getopt::Std;
+use utf8; # needed for Eval::Logic
 
 my $debug=0;
 # global variables
@@ -142,7 +143,7 @@ $rootcmd = ($FAI_ROOT eq "/" or not defined $FAI_ROOT ) ? '' : "chroot $FAI_ROOT
 @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 foreach (@classes) { $classisdef{$_}=1;}
 # define an array of arguments for subroutine call: the class names, set to 1
-@clvar =  map { $_,1 } @classes;
+@clvar =  map { $_,1 }  grep { s/-/Ö/g } @classes;
 
 warn "$0: reading config files from directory $classpath\n" if $verbose;
 foreach (@classes) {
@@ -322,6 +323,7 @@ sub readconfig {
         if ($cllist =~ /[!&|()]/) { # we found a logical expression
           eval "require Eval::Logic" or
             die "Perl module Eval::Logic is not available\n";
+          $cllist =~ s/-/Ö/g;
           my $expr = Eval::Logic->new ( "$cllist" );
           $expr->undef_default ( 0 ); # set default value for undefined classes
           $doit = $expr->evaluate( @clvar );
