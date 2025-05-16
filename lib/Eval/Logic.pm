@@ -37,6 +37,7 @@ use warnings;
 
 use Carp;
 use Symbol;
+use utf8;
 
 # Forbidden list if truth value names; these are Perl operators with regular
 # names that cannot be overridden by using 'use subs'.
@@ -107,7 +108,7 @@ sub expression {
         next if (( $v eq 'TRUE' ) || ( $v eq 'FALSE' ));
         if ( grep { $v eq $_ } @forbidden_tv_names ) {
           croak "Invalid truth value in expression, named identical to Perl reserved word: '$v'";
-        } elsif ( $v =~ /^[a-zA-Z_][a-zA-Z_0-9]*$/ ) {
+        } elsif ( $v =~ /^[a-zA-Z_][a-zA-Z_0-9Ö]*$/ ) {
           $tv{$v} = undef;
         } else {
           croak "Syntax error or invalid truth value in expression: '$v'";

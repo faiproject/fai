@@ -6,6 +6,7 @@
 use strict;
 use warnings;
 use Eval::Logic;
+use utf8;
 
 sub usage {
 
@@ -61,10 +62,11 @@ if (defined $ARGV[2]) {
 }
 
 # read the list of classes
-my @classes = grep { !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
+my @classes = grep { s/-/Ö/g; !/^#|^\s*$/ } split(/[\s\n]+/,$ENV{classes});
 my @clvar =  map { $_,1 } @classes; # make a list of defined variables for subroutine call
 
 my $inp = shift;
+$inp =~ s/-/Ö/g;
 
 my $expr = Eval::Logic->new("$inp");
 $expr->undef_default(0); # set default value for undefined classes
