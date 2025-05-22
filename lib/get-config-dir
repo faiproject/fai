@@ -2,7 +2,7 @@
 
 #
 # (c) 2006 Henning Glawe <glaweh@debian.org>
-# (c) 2009-2011 Thomas Lange  <lange@debian.org>
+# (c) 2009-2025 Thomas Lange  <lange@debian.org>
 
 ### BEGIN SUBROUTINE INFO
 # Provides-Var:
@@ -42,6 +42,11 @@ mkdir -m 0750 -p $FAI
 # run get-config-dir-$method script if it exists
 if command -v get-config-dir-$method &>/dev/null ; then
         get-config-dir-$method
+        # check for errors
+        lerror=$(< $LOGDIR/task_local_error)
+        if [ "$lerror" -ne 0 ]; then
+            exit 25
+        fi
 else
         sendmon "TASKERROR get_fai_dir 22"
         echo "Error: get-config-dir-"$method "not found"  >&2
