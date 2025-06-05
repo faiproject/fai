@@ -173,7 +173,7 @@ foreach my $entry (@preloadlist,@preloadrmlist) {
   }
 }
 
--f "$FAI_ROOT/usr/bin/apt-cache" && create_debian_pkg_list();
+$hasdebian && create_debian_pkg_list();
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # begin of the big foreach loop
@@ -402,7 +402,7 @@ sub mkpackagelist {
   # @known contains the known packages
 
   # on Debian system, clean list of packages
-  if ( ! $opt_N && -f "$FAI_ROOT/usr/sbin/apt-cache" ) {
+  if ( ! $opt_N && $hasdebian ) {
     @known = clean_pkg_list(@complete);
   } else {
     @known = @complete;
@@ -506,11 +506,16 @@ sub showcommands {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub create_debian_pkg_list {
   # build a hash of all known package names
-  open(IN,"$rootcmd apt-cache dumpavail | egrep ^Package: |") || die;
+  open(IN,"$rootcmd apt-cache dumpavail |") || die;
   while (<IN>) {
     chomp;
-    s/^Package: //;
-    $pname{$_} = 1;
+    if (s/^Package: //) {
+      $pname{$_} = 1;
+    } elsif (s/^Provides: //) {
+      foreach (split /\s*,\s*/) {
+        $pname{$_} = 1;
+      }
+    }
   }
   close(IN);
 }
@@ -575,12 +580,14 @@ sub clean_pkg_list {
     }
 
     # handle $varname in package name
-    if ( $pack =~ s/\$\w+//) {
+    if ( $pack =~ /\$(\w+)/) {
+      $pack = $ENV{$1};
       insert_pkg($n, $pack, 1, "$n using $pack found") && next;
     }
 
     # handle ${varname} in package name
-    if ( $pack =~ s/\$\{\w+\}//) {
+    if ( $pack =~ /\$\{(\w+)\}/) {
+      $pack = $ENV{$1};
       insert_pkg($n, $pack, 1, "$n using $pack found") && next;
     }
 
