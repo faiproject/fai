@@ -575,12 +575,14 @@ sub clean_pkg_list {
     }
 
     # handle $varname in package name
-    if ( $pack =~ s/\$\w+//) {
+    if ( $pack =~ /\$(\w+)/) {
+      $pack = $ENV{$1};
       insert_pkg($n, $pack, 1, "$n using $pack found") && next;
     }
 
     # handle ${varname} in package name
-    if ( $pack =~ s/\$\{\w+\}//) {
+    if ( $pack =~ /\$\{(\w+)\}/) {
+      $pack = $ENV{$1};
       insert_pkg($n, $pack, 1, "$n using $pack found") && next;
     }
 
