@@ -506,11 +506,16 @@ sub showcommands {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - -
 sub create_debian_pkg_list {
   # build a hash of all known package names
-  open(IN,"$rootcmd apt-cache dumpavail | egrep ^Package: |") || die;
+  open(IN,"$rootcmd apt-cache dumpavail |") || die;
   while (<IN>) {
     chomp;
-    s/^Package: //;
-    $pname{$_} = 1;
+    if (s/^Package: //) {
+      $pname{$_} = 1;
+    } elsif (s/^Provides: //) {
+	foreach (split /\s*,\s*/) {
+	    $pname{$_} = 1;
+	}
+    }
   }
   close(IN);
 }
