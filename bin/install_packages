@@ -38,7 +38,7 @@ use utf8; # needed for Eval::Logic
 
 my $debug=0;
 # global variables
-our ($opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s);
+our ($opt_c,$opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
@@ -121,8 +121,9 @@ our @commands = qw/y2i y2r zypper zypper-pattern zypper-product zypper-rm yast r
 	  "apk-del" => "apk del",
 );
 
-getopts('dhHvlLm:p:nNs');
+getopts('cdhHvlLm:p:nNs');
 
+$opt_d=1 if $opt_c;
 $listonly = $opt_l || $opt_L;
 $opt_h && usage();
 $opt_H && showcommands();
@@ -408,6 +409,7 @@ sub mkpackagelist {
     @known = @complete;
   }
 
+  return if $opt_c;
   writepackages();
   return;
 }
@@ -596,6 +598,7 @@ sub clean_pkg_list {
   }
 
   warn "WARNING: These unknown packages are removed from the installation list: " . join(' ', @unknown) . "\n" if @unknown;
+  $opt_c && return;
 
   print "-"x30,"\n" if $debug;
   print join ' ' ,"   ORIG:", @inlist, "\n" if $debug;
