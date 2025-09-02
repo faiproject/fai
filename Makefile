@@ -83,7 +83,7 @@ install:
 	pod2man -c '' -r '' -s8 bin/fai-deps > $(DESTDIR)/man/fai-deps.8
 	$(MAKE) -C doc install
 	-install $(libfiles) $(LIBDIR)
-	cp -a lib/dracut/80fai-autodiscover $(DESTDIR)/usr/lib/dracut/modules.d
+	cp -a lib/dracut/50fai-autodiscover $(DESTDIR)/usr/lib/dracut/modules.d
 	install lib/setup-storage/* $(SHAREDIR)/setup-storage
 	cd bin ; install $(USRSBIN_SCRIPTS) $(DESTDIR)/usr/sbin
 	cd bin ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
