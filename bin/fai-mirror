@@ -253,13 +253,15 @@ add=1
 qflag=-qq
 bcount=0
 setvariables=0
-while getopts "a:bBvhx:pc:C:m:s:P:V" opt ; do
+conflicts=1
+while getopts "a:bBvhx:pc:C:m:s:P:VI" opt ; do
     case "$opt" in
         a) arch=$OPTARG ;;
         B) add=0 ; ((bcount++)) ;;
         b) add=2 ; ((bcount++)) ;;
         C) cfdir=$OPTARG ;;
         h) usage ;;
+        I) conflicts=0 ;;
         x) exclasses="$OPTARG";;
         c) cclasses="$OPTARG";;
         m) MAXPACKAGES="$OPTARG";;
@@ -342,6 +344,12 @@ cp -a /etc/apt/trusted.gpg.d $aptcache/etc/apt
 
 echo "Getting package information"
 apt-get $qflag $aptoptions update >/dev/null
+
+if [ "$conflicts" -eq 0 ]; then
+    # ignore all package conflicts
+    sed -i -e '/^Conflicts:/d' $mirrordir/aptcache/var/lib/apt/lists/*Packages
+    apt-cache $qflag $aptoptions gencaches
+fi
 
 [ $add -eq 1 ] && add_base_packages
 echo "Downloading packages for classes:" $classes
