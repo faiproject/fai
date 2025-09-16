@@ -215,17 +215,17 @@ for i in $(seq 1 $disks) ; do
 done
 gopt="$fix $vga -m $ram -name $title"
 if [ $efi = 1 ]; then
-    if [ ! -f /usr/share/ovmf/OVMF.fd ]; then
+    if [ ! -f /usr/share/ovmf/OVMF_CODE_4M.fd ]; then
 	die 99 "UEFI firmware not found. Please install package ovmf."
     fi
     if [ "$newdisk" -eq 2 ]; then # always overwrite
-        cp -v /usr/share/OVMF/OVMF_VARS.fd $diskdir/faitest-uefi-$user-OVMF_VARS.fd
+        cp -v /usr/share/OVMF/OVMF_VARS_4M.fd $diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd
     fi
-    if [ "$newdisk" -eq 1 ] && [ ! -f $diskdir/faitest-uefi-$user-OVMF_VARS.fd ]; then
-        cp -v /usr/share/OVMF/OVMF_VARS.fd $diskdir/faitest-uefi-$user-OVMF_VARS.fd
+    if [ "$newdisk" -eq 1 ] && [ ! -f $diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd ]; then
+        cp -v /usr/share/OVMF/OVMF_VARS_4M.fd $diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd
     fi
-    gopt="-drive if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/OVMF/OVMF_CODE.fd \
-          -drive if=pflash,format=raw,unit=1,file=$diskdir/faitest-uefi-$user-OVMF_VARS.fd $gopt"
+    gopt="-drive if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+          -drive if=pflash,format=raw,unit=1,file=$diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd $gopt"
 fi
 
 
