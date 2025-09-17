@@ -64,7 +64,7 @@ mk_bridge() {
     fi
 
     if [ $private -eq 0 ]; then
-	dhclient -r $netdev
+	dhcpcd -k $netdev
 	ip addr flush $netdev            # remove IP address of real nic
 	ip link set $netdev down
 	ip link set $netdev name r$netdev
@@ -76,7 +76,7 @@ mk_bridge() {
     if [ $private -eq 0 ]; then
 	ip link set r$netdev master $brname
 	ip link set r$netdev up
-	dhclient -v $netdev
+	dhcpcd $netdev
     else
 	ip addr add $brip/24 brd + dev $brname
     fi
@@ -99,7 +99,7 @@ rm_bridge() {
 
     if [ $private -eq 0 ]; then
 	brname=$netdev                   # use name of NIC for bridge
-	dhclient -r $netdev
+	dhcpcd -k $netdev
 	ip link set r$netdev nomaster
     fi
 
@@ -115,7 +115,7 @@ rm_bridge() {
 	ip link set r$netdev down
 	ip link set r$netdev name $netdev
 	ip link set $netdev up
-	dhclient -v $netdev
+	dhcpcd $netdev
     fi
     exit 0
 }

@@ -11,7 +11,7 @@ USRBIN_SCRIPTS = fai-class fai-do-scripts fai-mirror fai-debconf device2grub pol
 
 # for syntax checks
 BASH_SCRIPTS = bin/fai bin/fai-cd bin/fai-class bin/fai-debconf bin/fai-do-scripts bin/fai-make-nfsroot bin/fai-mirror bin/fai-setup bin/fai-diskimage bin/fai-statoverride bin/faireboot bin/ftar bin/fai-link bin/fai-sed dev-utils/fai-kvm dev-utils/fai-mk-network examples/simple/basefiles/mk-basefile examples/simple/class/*.sh examples/simple/class/[0-9]* examples/simple/files/etc/rc.local/FAISERVER examples/simple/hooks/* examples/simple/scripts/*/* lib/fai-divert lib/fai-mount-disk lib/fai-savelog lib/fetch-basefile lib/get-boot-info lib/get-config-dir* lib/mkramdisk lib/mount2dir lib/prcopyleft lib/subroutines lib/task_* lib/updatebase lib/dracut/*/* bin/fai-mk-configspace bin/mk-data-partition lib/terminal-wrapper lib/fai-disk-info
-SHELL_SCRIPTS = bin/dhclient-fai-script bin/policy-rc.d.fai lib/check_status lib/create_resolv_conf lib/fai-abort lib/load_keymap_consolechars utils/mkdebmirror
+SHELL_SCRIPTS = bin/policy-rc.d.fai lib/check_status lib/create_resolv_conf lib/fai-abort lib/load_keymap_consolechars utils/mkdebmirror
 PERL_SCRIPTS = lib/setup-storage/*.pm bin/ainsl bin/device2grub bin/dhcp-edit bin/fai-chboot bin/fai-deps bin/fai-monitor bin/fai-monitor-gui bin/fai-new-mac bin/fcopy bin/install_packages bin/setup-storage dev-utils/setup-storage_deps-graph.pl examples/simple/tests/Faitest.pm lib/dhclient-perl lib/fai-savelog-ftp bin/ifclass
 
 # do not include setup-storage and dracut subdir
@@ -89,8 +89,7 @@ install:
 	cd bin ; install $(USRBIN_SCRIPTS) $(DESTDIR)/usr/bin
 	install dev-utils/fai-kvm $(DESTDIR)/usr/bin
 	install dev-utils/fai-mk-network $(DESTDIR)/usr/sbin
-	install bin/dhclient-fai-script  $(SHAREDIR)/
-	install -m644 conf/dhclient-fai.conf $(SHAREDIR)/
+	install -m644 conf/dhcpcd.conf $(SHAREDIR)/
 	install -m644 conf/apt.conf $(DESTDIR)/etc/apt/apt.conf.d/90fai
 	cd conf ; install -m644 fai.conf grub.cfg grub.cfg.autodiscover grub.cfg.live $(DESTDIR)/etc/fai/
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
