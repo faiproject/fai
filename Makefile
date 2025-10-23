@@ -96,7 +96,7 @@ install:
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
 	install -m644 conf/fai-project.gpg $(DESTDIR)/etc/fai/apt/trusted.gpg.d/
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
-	install -m755 lib/fai-abort $(DESTDIR)/etc/init.d
+	install -m755 lib/fai-abort $(LIBDIR)
 	cp -a pixmaps/*.gif $(SHAREDIR)/pixmaps
 	cp -a pixmaps/small/*.gif $(SHAREDIR)/pixmaps/small
 	sed -i 's/FAIVERSIONSTRING/$(VERSIONSTRING)/' $(DESTDIR)/usr/sbin/fai
