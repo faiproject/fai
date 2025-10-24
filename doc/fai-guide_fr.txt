@@ -1300,106 +1300,114 @@ personnalisation. Dans les scripts, la variable +$classes+ contient
 une liste séparée par des espaces avec les noms de toutes les classes
 définies.
 
-==== [[cfengine]]Cfengine scripts
+==== [[cfengine]]Scripts cfengine
 
-CFEngine has a rich set of functions to edit existing configuration
-files, e.g _LocateLineMatching, ReplaceAll, InsertLine,
-AppendIfNoSuchLine, HashCommentLinesContaining_. But it can't handle
-variables which are undefined. If a variable is undefined, the whole
-cfengine script will abort.
+CFEngine dispose d’un riche ensemble de fonctions pour modifier les
+fichiers de configuration existants, par exemple _LocateLineMatching,
+ReplaceAll, InsertLine, AppendIfNoSuchLine, HashCommentLinesContaining_.
+Mais il ne peut pas traiter les variables qui sont indéfinies. Si une
+variable n’est pas définie, l’ensemble du script cfengine s’arrêtera.
 
-More information can be found in the manual page `cfengine(8)` or at
-the cfengine homepage https://www.cfengine.com.
-
-
-=== [[hooks]]Hooks
-
-Hooks let you specify functions or programs which are run at certain
-steps of the installation process. Before a task is called,
-FAI searches for existing hooks for this task and executes them. As
-you might expect, classes are also used when calling hooks. Hooks are
-executed for every defined class. You only have to create the hook
-with the name for the desired class and it will be used.  If several
-hooks for a task exists, they are called in the order defined by the
-classes.  If _debug_ is included in +$FAI_FLAG+ the option _-d_ is
-passed to all hooks, so you can debug your own hooks.  If some default
-tasks should be skipped, use the subroutine _skiptask_ and a list of
-default tasks as parameters. In the examples provided, the hooks of
-the class CENTOS skips some Debian specific tasks.
-
-The directory '$FAI/hooks/' contains all hooks. A hook is an executable
-file following the naming scheme 'taskname.CLASSNAME[.sh]' (e.g.
-'repository.CENTOS' or 'savelog.LAST.sh). The
-task name specifies which task to precede executing this hook, if the
-specified class is defined for the installing client.  See section
-<<tasks>> for a complete list of default tasks that can be used.
-
-A hook of the form _hookprefix.classname_ can't define variables for
-the installation script, because it's a subprocess. But you can use
-any binary executable or any script you wrote. Hooks that have the
-suffix _.sh_ (e.g. 'partition.DEFAULT.sh') must be Bourne
-shell scripts and are sourced. So it's possible to redefine variables
-for the installation scripts.
-
-In the first part of FAI, all hooks with prefix _confdir_ are called.
-Those hooks can not be located in the config space, since it's not yet
-available. Therefore these hooks are the only hooks located in
-+$nfsroot+'/$FAI/hooks' on the install server. All other hooks are
-found in '$FAI_CONFIGDIR/hooks' on the install server.
+On peut trouver plus d’informations dans la page de manuel
+`cfengine(8)` ou sur la page d’accueil de cfengine
+https://www.cfengine.com.
 
 
-All hooks that are called before classes are defined can only use the
-following classes: _DEFAULT $HOSTNAME LAST_. If a hook for class
-_DEFAULT_ should only be called if no hook for class +$HOSTNAME+ is
-available, insert these lines to the default hook:
+=== [[hooks]]Les hooks, les « crochets »
+
+Les crochets (hooks) vous permettent de spécifier des fonctions ou des programmes
+qui sont exécutés à certaines étapes du processus d’installation. Avant
+qu’une tâche soit appelée, FAI recherche les crochets existants pour cette
+tâche et les exécute. Comme on peut s’y attendre, les classes sont
+également utilisées lors de l’appel de hooks. Les hooks sont exécutés
+pour chaque classe définie. Il vous suffit de créer le hook avec le nom
+de la classe désirée et il sera utilisé. Si plusieurs hooks pour une
+tâche existent, ils sont appelés dans l’ordre défini par les classes. Si
+_debug_ est inclus dans +$FAI_FLAG+ l’option _-d_ est passée à tous
+les hooks, donc vous pouvez déboguer vos propres hooks. Si certaines
+tâches par défaut doivent être ignorées, utilisez la sous-routine
+_skiptask_ et une liste de tâches par défaut comme paramètres. Dans les
+exemples fournis, les hooks de la classe CENTOS ignorent certaines
+tâches spécifiques de Debian.
+
+Le répertoire '$FAI/hooks/' contient tous les hooks. Un hook est un
+fichier exécutable qui est nommé selon la tâche : 'taskname.CLASSNAME[.sh]'
+(par exemple, 'repository.CENTOS' ou 'savelog.LAST.sh'). Le nom de tâche
+spécifie quelle tâche précède l'exécution de ce hook, si la
+classe spécifiée est définie pour le client d’installation.
+Voir la section <<tasks>> pour une liste complète des tâches
+par défaut qu'on peut utiliser.
+
+Un hook du formulaire _hookprefix.classname_ ne peut pas définir de
+variables pour le script d’installation, car il s’agit d’un
+sous-processus. Mais vous pouvez utiliser n’importe quel exécutable
+binaire ou n’importe quel script que vous avez écrit. Les hooks qui ont
+le suffixe _.sh_ (par exemple, 'partition.DEFAULT.sh') doivent être des
+scripts Bourne shell et sont sourcé. Il est donc possible de redéfinir
+des variables pour les scripts d’installation.
+
+Dans la première partie de FAI, tous les hooks avec le préfixe _confdir_
+sont appelés. Ces hooks ne peuvent pas être localisés dans l’espace de
+configuration, car il n’est pas encore disponible. Par conséquent, ces
+hooks sont les seuls hooks situés dans +$nfsroot+'/$FAI/hooks' sur le
+serveur d’installation. Tous les autres hooks se trouvent dans
+'$FAI_CONFIGDIR/hooks' sur le serveur d’installation.
+
+
+Tous les hooks appelés avant la définition des classes peuvent
+utiliser uniquement les classes suivantes: _DEFAULT $HOSTNAME LAST_. Si un hook
+pour la classe _DEFAULT_ doit être appelé uniquement dans le cas où aucun hook pour
+la classe +$HOSTNAME+ n’est disponible, insérez ces lignes dans le hook
+par défaut :
 
 ----
 hookexample.DEFAULT:
 
 #! /bin/sh
 
-# skip DEFAULT hook if a hook for $HOSTNAME exists
+# sauter le hook DEFAULT s'il existe un hook pour $HOSTNAME
 scriptname=$(basename $0 .DEFAULT)
 [-f $FAI/hooks/$scriptname.$HOSTNAME ] && exit
-# here follows the actions for class DEFAULT
+# suivent alors les actions pour la classe DEFAULT
 .
 .
 ----
 
-Some examples for what hooks could be used:
+Quelques exemples de ce à quoi les hooks pourraient être utiles :
 
-- Load kernel modules before classes are defined in '$FAI/class'.
+- Charger les modules du noyau avant que les classes soient définies dans '$FAI/class'.
 
-- Send an email to the administrator if the installation is finished.
+- Envoyer un courriel à l’administrateur si l’installation est terminée.
 
-- Install a diskless client and skip local disk partitioning.
+- Installer un client sans disque et sautez le partitionnement de disque local.
 
-- Have a look at +hooks/debconf.IMAGE+ for how to clone a machine using a file system image.
+- Jeter un œil à +hooks/debconf.IMAGE+ pour savoir comment cloner une machine en utilisant une image de système de fichiers.
 
-=== [[faiflags]]FAI flags
+=== [[faiflags]]Options (flags) de FAI
 
-The variable +$FAI_FLAGS+ contains a space separated list of
-flags. Flags are normally defined in the pxelinux.cfg file which
-should be created by 'fai-chboot(1)'. The following flags are known:
+La variable +$FAI_FLAGS+ contient une liste d'options séparées par des
+espaces. Les options sont normalement définies dans le fichier pxelinux.cfg qui
+est censément créé par 'fai-chboot(1)'. Les options suivantes sont connues :
 
 verbose::
-Create verbose output during installation. This should always be the
-first flag, so consecutive definitions of flags will be verbosely
-displayed.
+Rend l'installation verbeuse. Cela doit toujours
+être la première option (le premier flag), de sorte que les définitions suivantes des
+options soient affichées verbeusement.
 
 debug::
-Create debug output. No unattended installation is performed. During
-package installation you have to answer all questions of the
-postinstall scripts on the client's console. A lot of debug
-information will be printed out. This flag is only useful for FAI
-developers.
+Afficher des informations de débogage. Aucune installation sans assistance
+n’est effectuée. Pendant l’installation du paquet, vous devez répondre
+à toutes les questions des scripts postinstall sur la console du
+client. Beaucoup d’informations de débogage seront affichées. Cette option
+n’est utile que pour les développeurs FAI.
 
 sshd::
-Start the ssh daemon to enable remote logins.
-You can then log in as _root_ to all install clients during the
-installation. The default password is _fai_ and can be changed by
-setting `FAI_ROOTPW` in `nfsroot.conf(5)`. To log in from your server
-to the install client (named demohost in this example) use:
+Démarrer le démon ssh pour activer les connexions à distance. Vous
+pouvez ensuite vous connecter en tant que _root_ à tous les clients
+d’installation pendant l’installation. Le mot de passe par défaut est
+_fai_ et peut être modifié en définissant `FAI_ROOTPW` dans
+`nfsroot.conf(5)`. Pour vous connecter à partir de votre serveur vers le
+client d’installation (nommé demohost dans cet exemple), utilisez :
 
 ----
 $ ssh root@demohost
@@ -1407,52 +1415,56 @@ Warning: Permanently added 'demohost,192.168.33.100' to the list of known hosts.
 root@demohost's password:
 ----
 
-This is only the root password during the
-installation process, not for the new installed system. You can also
-log in without a password when using +$SSH_IDENTITY+.
+Ce n’est le mot de passe root que pendant le processus d’installation,
+pas pour le nouveau système installé. Vous pouvez également vous
+connecter sans mot de passe lorsque vous utilisez +$SSH_IDENTITY+.
 
 
 createvt::
-Create two virtual terminals and execute a bash if _ctrl-c_ is typed
-in the console terminal. The additional terminals can be accessed by
-typing _Alt-F2_ or _Alt-F3_. Otherwise, no terminals are available and
-typing _ctrl-c_ will reboot the install client. Setting this flag is
-useful for debugging. If you want an installation which should not be
-interruptible, do not set this flag.
+Créez deux terminaux virtuels et exécutez un bash si _ctrl-c_ est tapé
+dans le terminal de console. Vous pouvez accéder aux terminaux
+supplémentaires en tapant _Alt-F2_ ou _Alt-F3_. Sinon, aucun terminal
+n’est disponible et la saisie _ctrl-c_ va redémarrer le client
+d’installation. La définition de cette option est utile pour le débogage.
+Si vous voulez une installation qui ne soit pas interruptible,
+ne définissez pas cette option.
 
 menu::
-This enables a user menu for selecting a profile. All files
-+class/*.profile+ are read and a curses based menu will be created.
+Cela active un menu utilisateur pour sélectionner un profil. Tous les
+fichiers +class/*.profile+ sont lus et un menu basé sur curses
+sera créé.
 
 screen::
-Run FAI inside a `screen(1)` session. The session is called FAI.
-If you log in via ssh from remote you can attach to the session using:
+Lancer FAI dans une session `screen(1)`. La session est nommée FAI.
+Si on se connecte via ssh à distance on peut se rattacher à la session en utilisant :
 ----
 $ screen -x
 ----
 
 tmux::
-Run FAI inside a `tmux(1)` session. The session is called FAI.
-If you log in via ssh from remote you can attach to the session using:
+Lancer FAI dans une session `tmux(1)`. La session est nommée FAI.
+Si on se connecte via ssh à distance on peut se rattacher à la session en utilisant :
 ----
 $ tmux attach
 ----
 
 reboot::
-Reboot the install client after installation is finished without
-typing RETURN on the console. If this flag is not set, and error.log
-contains anything, the install client will stop and wait that you
-press RETURN. If no errors occurred, the client will always reboot
-automatically.
+Redémarrer le client d’installation une fois l’installation terminée
+sans taper Entrée sur la console. Si cette option n’est pas définie, et
+que error.log contient quelque chose, le client d’installation
+s’arrêtera et attendra que vous appuyez sur Entrée. Si aucune erreur
+ne s’est produite, le client redémarrera toujours
+automatiquement.
 
 halt::
-Halt the install client at the end of the installation, instead of
-rebooting into the new system.
+Arrêter le client d’installation à la fin de l’installation, au lieu
+de redémarrer dans le nouveau système.
 
 initial::
-Used by `setup-storage(8)`. Partitions marked with +preserve_reinstall+
-are preserved unless this flag is set. Often, this flag is set in a
-file 'class/*.var' by using setting 'flag_initial=1'.
+Utilisé par `setup-storage(8)`. Les partitions marquées avec
++preserve_reinstall+ sont préservées à moins que cette option ne soit
+définie. Souvent, cette option est définie dans un fichier 'class/*.var' en
+utilisant le paramètre 'flag_initial=1'.
 
 == [[install]] FAI installs your plan
 

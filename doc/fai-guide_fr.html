@@ -2595,102 +2595,109 @@ une liste séparée par des espaces avec les noms de toutes les classes
 définies.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_a_id_cfengine_a_cfengine_scripts"><a id="cfengine"></a>Cfengine scripts</h4>
-<div class="paragraph"><p>CFEngine has a rich set of functions to edit existing configuration
-files, e.g <em>LocateLineMatching, ReplaceAll, InsertLine,
-AppendIfNoSuchLine, HashCommentLinesContaining</em>. But it can&#8217;t handle
-variables which are undefined. If a variable is undefined, the whole
-cfengine script will abort.</p></div>
-<div class="paragraph"><p>More information can be found in the manual page <code>cfengine(8)</code> or at
-the cfengine homepage <a href="https://www.cfengine.com">https://www.cfengine.com</a>.</p></div>
+<h4 id="_a_id_cfengine_a_scripts_cfengine"><a id="cfengine"></a>Scripts cfengine</h4>
+<div class="paragraph"><p>CFEngine dispose d’un riche ensemble de fonctions pour modifier les
+fichiers de configuration existants, par exemple <em>LocateLineMatching,
+ReplaceAll, InsertLine, AppendIfNoSuchLine, HashCommentLinesContaining</em>.
+Mais il ne peut pas traiter les variables qui sont indéfinies. Si une
+variable n’est pas définie, l’ensemble du script cfengine s’arrêtera.</p></div>
+<div class="paragraph"><p>On peut trouver plus d’informations dans la page de manuel
+<code>cfengine(8)</code> ou sur la page d’accueil de cfengine
+<a href="https://www.cfengine.com">https://www.cfengine.com</a>.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_a_id_hooks_a_hooks"><a id="hooks"></a>Hooks</h3>
-<div class="paragraph"><p>Hooks let you specify functions or programs which are run at certain
-steps of the installation process. Before a task is called,
-FAI searches for existing hooks for this task and executes them. As
-you might expect, classes are also used when calling hooks. Hooks are
-executed for every defined class. You only have to create the hook
-with the name for the desired class and it will be used.  If several
-hooks for a task exists, they are called in the order defined by the
-classes.  If <em>debug</em> is included in <code>$FAI_FLAG</code> the option <em>-d</em> is
-passed to all hooks, so you can debug your own hooks.  If some default
-tasks should be skipped, use the subroutine <em>skiptask</em> and a list of
-default tasks as parameters. In the examples provided, the hooks of
-the class CENTOS skips some Debian specific tasks.</p></div>
-<div class="paragraph"><p>The directory <em>$FAI/hooks/</em> contains all hooks. A hook is an executable
-file following the naming scheme <em>taskname.CLASSNAME[.sh]</em> (e.g.
-<em>repository.CENTOS</em> or 'savelog.LAST.sh). The
-task name specifies which task to precede executing this hook, if the
-specified class is defined for the installing client.  See section
-<a href="#tasks">[tasks]</a> for a complete list of default tasks that can be used.</p></div>
-<div class="paragraph"><p>A hook of the form <em>hookprefix.classname</em> can&#8217;t define variables for
-the installation script, because it&#8217;s a subprocess. But you can use
-any binary executable or any script you wrote. Hooks that have the
-suffix <em>.sh</em> (e.g. <em>partition.DEFAULT.sh</em>) must be Bourne
-shell scripts and are sourced. So it&#8217;s possible to redefine variables
-for the installation scripts.</p></div>
-<div class="paragraph"><p>In the first part of FAI, all hooks with prefix <em>confdir</em> are called.
-Those hooks can not be located in the config space, since it&#8217;s not yet
-available. Therefore these hooks are the only hooks located in
-<code>$nfsroot</code><em>/$FAI/hooks</em> on the install server. All other hooks are
-found in <em>$FAI_CONFIGDIR/hooks</em> on the install server.</p></div>
-<div class="paragraph"><p>All hooks that are called before classes are defined can only use the
-following classes: <em>DEFAULT $HOSTNAME LAST</em>. If a hook for class
-<em>DEFAULT</em> should only be called if no hook for class <code>$HOSTNAME</code> is
-available, insert these lines to the default hook:</p></div>
+<h3 id="_a_id_hooks_a_les_hooks_les_crochets"><a id="hooks"></a>Les hooks, les « crochets »</h3>
+<div class="paragraph"><p>Les crochets (hooks) vous permettent de spécifier des fonctions ou des programmes
+qui sont exécutés à certaines étapes du processus d’installation. Avant
+qu’une tâche soit appelée, FAI recherche les crochets existants pour cette
+tâche et les exécute. Comme on peut s’y attendre, les classes sont
+également utilisées lors de l’appel de hooks. Les hooks sont exécutés
+pour chaque classe définie. Il vous suffit de créer le hook avec le nom
+de la classe désirée et il sera utilisé. Si plusieurs hooks pour une
+tâche existent, ils sont appelés dans l’ordre défini par les classes. Si
+<em>debug</em> est inclus dans <code>$FAI_FLAG</code> l’option <em>-d</em> est passée à tous
+les hooks, donc vous pouvez déboguer vos propres hooks. Si certaines
+tâches par défaut doivent être ignorées, utilisez la sous-routine
+<em>skiptask</em> et une liste de tâches par défaut comme paramètres. Dans les
+exemples fournis, les hooks de la classe CENTOS ignorent certaines
+tâches spécifiques de Debian.</p></div>
+<div class="paragraph"><p>Le répertoire <em>$FAI/hooks/</em> contient tous les hooks. Un hook est un
+fichier exécutable qui est nommé selon la tâche : <em>taskname.CLASSNAME[.sh]</em>
+(par exemple, <em>repository.CENTOS</em> ou <em>savelog.LAST.sh</em>). Le nom de tâche
+spécifie quelle tâche précède l&#8217;exécution de ce hook, si la
+classe spécifiée est définie pour le client d’installation.
+Voir la section <a href="#tasks">[tasks]</a> pour une liste complète des tâches
+par défaut qu&#8217;on peut utiliser.</p></div>
+<div class="paragraph"><p>Un hook du formulaire <em>hookprefix.classname</em> ne peut pas définir de
+variables pour le script d’installation, car il s’agit d’un
+sous-processus. Mais vous pouvez utiliser n’importe quel exécutable
+binaire ou n’importe quel script que vous avez écrit. Les hooks qui ont
+le suffixe <em>.sh</em> (par exemple, <em>partition.DEFAULT.sh</em>) doivent être des
+scripts Bourne shell et sont sourcé. Il est donc possible de redéfinir
+des variables pour les scripts d’installation.</p></div>
+<div class="paragraph"><p>Dans la première partie de FAI, tous les hooks avec le préfixe <em>confdir</em>
+sont appelés. Ces hooks ne peuvent pas être localisés dans l’espace de
+configuration, car il n’est pas encore disponible. Par conséquent, ces
+hooks sont les seuls hooks situés dans <code>$nfsroot</code><em>/$FAI/hooks</em> sur le
+serveur d’installation. Tous les autres hooks se trouvent dans
+<em>$FAI_CONFIGDIR/hooks</em> sur le serveur d’installation.</p></div>
+<div class="paragraph"><p>Tous les hooks appelés avant la définition des classes peuvent
+utiliser uniquement les classes suivantes: <em>DEFAULT $HOSTNAME LAST</em>. Si un hook
+pour la classe <em>DEFAULT</em> doit être appelé uniquement dans le cas où aucun hook pour
+la classe <code>$HOSTNAME</code> n’est disponible, insérez ces lignes dans le hook
+par défaut :</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>hookexample.DEFAULT:
 
 #! /bin/sh
 
-# skip DEFAULT hook if a hook for $HOSTNAME exists
+# sauter le hook DEFAULT s'il existe un hook pour $HOSTNAME
 scriptname=$(basename $0 .DEFAULT)
 [-f $FAI/hooks/$scriptname.$HOSTNAME ] &amp;&amp; exit
-# here follows the actions for class DEFAULT
+# suivent alors les actions pour la classe DEFAULT
 .
 .</code></pre>
 </div></div>
-<div class="paragraph"><p>Some examples for what hooks could be used:</p></div>
+<div class="paragraph"><p>Quelques exemples de ce à quoi les hooks pourraient être utiles :</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-Load kernel modules before classes are defined in <em>$FAI/class</em>.
+Charger les modules du noyau avant que les classes soient définies dans <em>$FAI/class</em>.
 </p>
 </li>
 <li>
 <p>
-Send an email to the administrator if the installation is finished.
+Envoyer un courriel à l’administrateur si l’installation est terminée.
 </p>
 </li>
 <li>
 <p>
-Install a diskless client and skip local disk partitioning.
+Installer un client sans disque et sautez le partitionnement de disque local.
 </p>
 </li>
 <li>
 <p>
-Have a look at <code>hooks/debconf.IMAGE</code> for how to clone a machine using a file system image.
+Jeter un œil à <code>hooks/debconf.IMAGE</code> pour savoir comment cloner une machine en utilisant une image de système de fichiers.
 </p>
 </li>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_a_id_faiflags_a_fai_flags"><a id="faiflags"></a>FAI flags</h3>
-<div class="paragraph"><p>The variable <code>$FAI_FLAGS</code> contains a space separated list of
-flags. Flags are normally defined in the pxelinux.cfg file which
-should be created by <em>fai-chboot(1)</em>. The following flags are known:</p></div>
+<h3 id="_a_id_faiflags_a_options_flags_de_fai"><a id="faiflags"></a>Options (flags) de FAI</h3>
+<div class="paragraph"><p>La variable <code>$FAI_FLAGS</code> contient une liste d&#8217;options séparées par des
+espaces. Les options sont normalement définies dans le fichier pxelinux.cfg qui
+est censément créé par <em>fai-chboot(1)</em>. Les options suivantes sont connues :</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 verbose
 </dt>
 <dd>
 <p>
-Create verbose output during installation. This should always be the
-first flag, so consecutive definitions of flags will be verbosely
-displayed.
+Rend l&#8217;installation verbeuse. Cela doit toujours
+être la première option (le premier flag), de sorte que les définitions suivantes des
+options soient affichées verbeusement.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2698,11 +2705,11 @@ debug
 </dt>
 <dd>
 <p>
-Create debug output. No unattended installation is performed. During
-package installation you have to answer all questions of the
-postinstall scripts on the client&#8217;s console. A lot of debug
-information will be printed out. This flag is only useful for FAI
-developers.
+Afficher des informations de débogage. Aucune installation sans assistance
+n’est effectuée. Pendant l’installation du paquet, vous devez répondre
+à toutes les questions des scripts postinstall sur la console du
+client. Beaucoup d’informations de débogage seront affichées. Cette option
+n’est utile que pour les développeurs FAI.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2710,11 +2717,12 @@ sshd
 </dt>
 <dd>
 <p>
-Start the ssh daemon to enable remote logins.
-You can then log in as <em>root</em> to all install clients during the
-installation. The default password is <em>fai</em> and can be changed by
-setting <code>FAI_ROOTPW</code> in <code>nfsroot.conf(5)</code>. To log in from your server
-to the install client (named demohost in this example) use:
+Démarrer le démon ssh pour activer les connexions à distance. Vous
+pouvez ensuite vous connecter en tant que <em>root</em> à tous les clients
+d’installation pendant l’installation. Le mot de passe par défaut est
+<em>fai</em> et peut être modifié en définissant <code>FAI_ROOTPW</code> dans
+<code>nfsroot.conf(5)</code>. Pour vous connecter à partir de votre serveur vers le
+client d’installation (nommé demohost dans cet exemple), utilisez :
 </p>
 </dd>
 </dl></div>
@@ -2724,21 +2732,22 @@ to the install client (named demohost in this example) use:
 Warning: Permanently added 'demohost,192.168.33.100' to the list of known hosts.
 root@demohost's password:</code></pre>
 </div></div>
-<div class="paragraph"><p>This is only the root password during the
-installation process, not for the new installed system. You can also
-log in without a password when using <code>$SSH_IDENTITY</code>.</p></div>
+<div class="paragraph"><p>Ce n’est le mot de passe root que pendant le processus d’installation,
+pas pour le nouveau système installé. Vous pouvez également vous
+connecter sans mot de passe lorsque vous utilisez <code>$SSH_IDENTITY</code>.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 createvt
 </dt>
 <dd>
 <p>
-Create two virtual terminals and execute a bash if <em>ctrl-c</em> is typed
-in the console terminal. The additional terminals can be accessed by
-typing <em>Alt-F2</em> or <em>Alt-F3</em>. Otherwise, no terminals are available and
-typing <em>ctrl-c</em> will reboot the install client. Setting this flag is
-useful for debugging. If you want an installation which should not be
-interruptible, do not set this flag.
+Créez deux terminaux virtuels et exécutez un bash si <em>ctrl-c</em> est tapé
+dans le terminal de console. Vous pouvez accéder aux terminaux
+supplémentaires en tapant <em>Alt-F2</em> ou <em>Alt-F3</em>. Sinon, aucun terminal
+n’est disponible et la saisie <em>ctrl-c</em> va redémarrer le client
+d’installation. La définition de cette option est utile pour le débogage.
+Si vous voulez une installation qui ne soit pas interruptible,
+ne définissez pas cette option.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2746,8 +2755,9 @@ menu
 </dt>
 <dd>
 <p>
-This enables a user menu for selecting a profile. All files
-<code>class/*.profile</code> are read and a curses based menu will be created.
+Cela active un menu utilisateur pour sélectionner un profil. Tous les
+fichiers <code>class/*.profile</code> sont lus et un menu basé sur curses
+sera créé.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2755,8 +2765,8 @@ screen
 </dt>
 <dd>
 <p>
-Run FAI inside a <code>screen(1)</code> session. The session is called FAI.
-If you log in via ssh from remote you can attach to the session using:
+Lancer FAI dans une session <code>screen(1)</code>. La session est nommée FAI.
+Si on se connecte via ssh à distance on peut se rattacher à la session en utilisant :
 </p>
 </dd>
 </dl></div>
@@ -2770,8 +2780,8 @@ tmux
 </dt>
 <dd>
 <p>
-Run FAI inside a <code>tmux(1)</code> session. The session is called FAI.
-If you log in via ssh from remote you can attach to the session using:
+Lancer FAI dans une session <code>tmux(1)</code>. La session est nommée FAI.
+Si on se connecte via ssh à distance on peut se rattacher à la session en utilisant :
 </p>
 </dd>
 </dl></div>
@@ -2785,11 +2795,12 @@ reboot
 </dt>
 <dd>
 <p>
-Reboot the install client after installation is finished without
-typing RETURN on the console. If this flag is not set, and error.log
-contains anything, the install client will stop and wait that you
-press RETURN. If no errors occurred, the client will always reboot
-automatically.
+Redémarrer le client d’installation une fois l’installation terminée
+sans taper Entrée sur la console. Si cette option n’est pas définie, et
+que error.log contient quelque chose, le client d’installation
+s’arrêtera et attendra que vous appuyez sur Entrée. Si aucune erreur
+ne s’est produite, le client redémarrera toujours
+automatiquement.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2797,8 +2808,8 @@ halt
 </dt>
 <dd>
 <p>
-Halt the install client at the end of the installation, instead of
-rebooting into the new system.
+Arrêter le client d’installation à la fin de l’installation, au lieu
+de redémarrer dans le nouveau système.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2806,9 +2817,10 @@ initial
 </dt>
 <dd>
 <p>
-Used by <code>setup-storage(8)</code>. Partitions marked with <code>preserve_reinstall</code>
-are preserved unless this flag is set. Often, this flag is set in a
-file <em>class/*.var</em> by using setting <em>flag_initial=1</em>.
+Utilisé par <code>setup-storage(8)</code>. Les partitions marquées avec
+<code>preserve_reinstall</code> sont préservées à moins que cette option ne soit
+définie. Souvent, cette option est définie dans un fichier <em>class/*.var</em> en
+utilisant le paramètre <em>flag_initial=1</em>.
 </p>
 </dd>
 </dl></div>
@@ -4390,7 +4402,7 @@ from the install server (named faiserver):</p></div>
 <div id="footer-text">
 Version 6.4<br />
 Last updated
- 2025-10-23 20:00:00 CEST
+ 2025-10-24 09:15:27 CEST
 </div>
 </div>
 </body>
