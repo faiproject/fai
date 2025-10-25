@@ -24,7 +24,7 @@ potfile: $(DOC).txt
 updatepo: potfile
 	for l in $(LANGUAGES); do \
 	  [ -f po/$$l.po ] || cp po/$(DOC).pot po/$$l.po ; \
-	  pot2po po/$(DOC).pot -o po/$$l.po.tmp -t po/$$l.po || \
+	  pot2po po/$(DOC).pot -o po/$$l.po.tmp -t po/$$l.po && \
             mv po/$$l.po.tmp po/$$l.po ; \
 	done
 
