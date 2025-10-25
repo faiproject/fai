@@ -554,7 +554,7 @@ Utilisez ces commandes pour l'installation :
 # echo "deb http://fai-project.org/download bookworm koeln" > /etc/apt/sources.list.d/fai.list
 ----
 
-or
+ou 
 
 ----
 # apt install extrepo ; extrepo enable fai
@@ -1002,9 +1002,9 @@ Les variables suivantes sont utilisées dans les exemples et peuvent aussi être
 utiles pour votre installation :
 
 FAI_ACTION::
-Set the action FAI should perform. Normally this is done by
-`fai-chboot(8)`. If you can't use this command, define this variable
-i.e. in the script 'LAST.var'.
+Configure les actions que doit effectuer FAI. Normalement, ceci se fait
+par `fai-chboot(8)`. Si vous ne pouvez pas utiliser cette commande,
+définissez cette variable dans le script 'LAST.var'.
 
 FAI_ALLOW_UNSIGNED::
 Si cette variable vaut 1, FAI permet l’installation de paquets à partir de
@@ -2277,7 +2277,7 @@ régler la valeur à 123
 task_error 123 $? 1
 ----
 
-or
+ou 
 
 ----
 task_error 123 1 1
@@ -2590,11 +2590,11 @@ connexions ssh qui nécessitent de taper "yes" pour accepter la clé hôte
 pendant l’installation, vérifiez le contenu de votre fichier
 'NFSROOT/root/.ssh/known_hosts'
 
-- A list of all local hard disks is
-stored in +$disklist+. It's defined after `set_disk_info` is called.
+- Une liste de tous les disques durs locaux est stockée dans
++$disklist+. Elle est définie après l’appel de `set_disk_info`.
 
--  There are multiple functions for generating a customized disk
-list. See `fai-disk-info` for an example.
+-  Il y a de nombreuses fonctions pour générer un liste personnalisée
+de disques. Voir `fai-disk-info` pour un exemple.
     * set_bootstick()
     * grepv_disks()
     * grep_disks()
@@ -2608,49 +2608,55 @@ list. See `fai-disk-info` for an example.
     * checkdisk()
     * disks_by_id()
 
-- Use `fai-divert -a` if a postinst script calls a configuration
-program, e.g. the postinst script for package apache calls
-apacheconfig, which needs manual input. You can fake the configuration
-program so the installation can be fully automatic.
+- Utilisez `fai-divert -a` si un script postinst appelle un programme
+de configuration, par exemple le script postinst pour  le paquet apache
+appelle apacheconfig, qui nécessite une entrée manuelle. Vous pouvez
+contrefaire le programme de configuration pour que l’installation puisse
+être entièrement automatique.
 
-- Sometimes the installation seems to stop, but often there's only a
-postinstall script of a software package that requires manual input
-from the console. Change to another virtual terminal and look which
-process is running with tools like `top(1)` and `pstree(1)`. You can
-add _debug_ to _FAI_FLAGS_ to make the installation process show all
-output from the postinst scripts on the console and get its input also
-from the console.
+- Parfois, l’installation semble s’arrêter, mais souvent il y a seulement
+un script postinstall d’un logiciel qui nécessite une entrée manuelle de
+la console. Passez à un autre terminal virtuel et regardez quel
+processus fonctionne avec des outils comme `top(1)` et `pstree(1)`.
+Vous pouvez ajouter _debug_ à _FAI_FLAGS_ pour faire en sorte que le
+processus d’installation affiche toutes les sorties des scripts postinst
+sur la console et obtenir son entrée aussi à partir de la console.
 
 
-- How can I define classes on the kernel command line?
+- Comment puis-je définir des classes sur la ligne de commande du noyau ?
 +
-Read the man page of `fai-class(8)`. If you like to define some
-additional classes (for e.g. A,B,C) on the kernel command line add this: _ADDCLASSES=A,B,C_
+Lire la page de manuel de `fai-class(8)`. Si vous voulez définir quelques
+classes supplémentaires (par exemple A; B, C) dans la commande du noyau,
+ajoutez ceci : _ADDCLASSES=A,B,C_
 
 
-- How to use a custom kernel inside the nfsroot?
+- Comment utiliser un noyau personnalisé dans le nfsroot ?
 +
-Build your customized kernel by building a kernel package using
-`make-kpkg(8)` and use the option `--initrd`. Copy this Debian package
-to a local repository and add it to /etc/fai/sources.list. Add the
-name of your package to /etc/fai/NFSROOT. Then call
+Construisez votre noyau personnalisé en construisant un paquet kernelde noyau à
+l’aide de `make-kpkg(8)` et utilisez l’option `--initrd`. Copiez ce
+paquet Debian dans un dépôt local et ajoutez-le à
+/etc/fai/sources.list. Ajoutez le nom de votre paquet à
+/etc/fai/NFSROOT. Ensuite appelez
 +
 ----
 # fai-make-nfsroot -k
 ----
 
 
-- How to use the nfsroot as system for diskless clients?
+- Comment utiliser le nfsroot comme système pour les clients sans
+disque ?
 +
 https://wiki.fai-project.org/index.php/Use_nfsroot_for_diskless_clients
 
 
-- How to serve multiple nfsroot directories on one FAI server?
+- Comment faire pour servir plusieurs arborescence nfsroot sur un
+serveur FAI ?
 +
-If you want to serve multiple nfsroot directories,
-you need to create specific config directories in '/etc' for FAI, like
-'/etc/fai-buster' and '/etc/fai-bookworm'. Then you need to set the
-+$NFSROOT+ variables to different directories and run
+Si vous souhaitez diffuser plusieurs répertoires nfsroot, vous devez
+créer des répertoires de configuration spécifiques dans '/etc' pour FAI,
+comme '/etc/fai-buster' et '/etc/fai-bookworm'. Ensuite, vous devez
+définir les variables +$NFSROOT+ dans différents répertoires et
+lancer
 
 ----
 faiserver#fai-make-nfsroot -C /etc/fai-buster
@@ -2659,104 +2665,109 @@ faiserver#fai-make-nfsroot -C /etc/fai-buster
 
 === flag_reboot (FAI_FLAGS)
 
-If flag_reboot is set, by adding "reboot" to +$FAI_FLAGS+, your client
-machine will reboot after the task faiend has finished. This is true
-for network as well as bootmedium installations.
+Si flag_reboot est défini, en ajoutant "reboot" à +$FAI_FLAGS+, votre
+ordinateur client redémarrera après la fin de la tâche faiend. Ceci est vrai
+pour les installations par réseau ainsi que pour les installations par
+media amorçable.
 
 
-=== [[logfiles]]Log files
+=== [[logfiles]]Fichiers journaux
 
-FAI is creating several log files. During installation they are stored
-in '/tmp/fai' on the install client itself. At the end of the
-installation they will be copied to the install server (see
-<<isavelog>>). After the install client rebooted into his newly
-installed system, you can find the FAI logs in '/var/log/fai'.
-Log files are also created when doing the softupdate or dirinstall
-action.
+FAI crée plusieurs fichiers journaux. Pendant l’installation, ils sont
+stockés dans '/tmp/fai' sur le client d’installation lui-même. A la fin
+de l’installation, ils seront copiés sur le serveur d’installation (voir
+<<isavelog>>). Une fois le client d’installation redémarré
+dans son système nouvellement installé, vous pouvez trouver les journaux
+FAI dans '/var/log/fai'. Les fichiers journaux sont également créés lors
+de l’action softupdate ou dirinstall.
 
-On the faiserver, you can find the (remote) log files under the ~fai
-directory.
+Sur le faiserver, vous pouvez trouver les fichiers journaux (distants)
+sous le répertoire ~fai.
 
-Sample log files from successfully installed computers are
-available on https://fai-project.org/logs.
-These a some log files which are created by FAI.
+Des exemples de fichiers journaux d'ordinateurs installés avec succès
+sont disponibles sur https://fai-project.org/logs. Ce sont quelques
+fichiers journaux qui sont créés par FAI.
 
 FAI_CLASSES::
-Contains a list of all classes defined.
+  Contient une liste de toutes les classes définies.
 
 dmesg.log::
-Output of the `dmesg` command. Contains useful messages of the kernel
-ring buffer.
+  La sortie de la commande `dmesg`. Contient des messages utiles de la
+  mémoire tampon du noyau.
 
 fai.log::
-The main log file. Contains all important information. You should
-*always* read this file.
+  Le fichier journal principal. Contient toutes les informations
+  importantes. Vous devez *toujours* lire ce fichier.
 
 boot.log::
-A list of variables of network parameters, mostly defined by the DHCP daemon.
+  Une liste de variables de paramètres de réseau, principalement définis
+  par le démon DHCP.
 
 format.log::
-Output of the partition tool `setup-storage(8)`.
+  Sortie de l’outil de partition `setup-storage(8)`.
 
 scripts.log::
-Output of all scripts, that are used for customization.
+Sortie de tous les scripts, qui sont utilisés pour la personnalisation.
 
 variables.log::
-A list of all shell variables which are available during an
-installation.
+  Une liste de toutes les variables shell qui sont disponibles au cours
+  d’une installation.
 
 error.log::
-A summary of possible errors in all log files.
+  Résumé des erreurs possibles dans tous les fichiers journaux.
 
 disk_var.sh::
-A list of variables that contain information about devices and
-partitions to boot from, the root partition and a list of swap
-devices. These information is used by some customization scripts
-(e.g. _GRUB_PC/10-setup_).
+  Une liste des variables contenant des informations sur les
+  périphériques et les partitions à partir desquelles on démarre, la partition
+  racine et une liste de périphériques de swap. Ces informations sont
+  utilisées par certains scripts de personnalisation (par exemple
+  _GRUB_PC/10-setup_).
 
 
 
 
-If the installation process finishes, the hook 'savelog.LAST.sh'
-searches all log files for common errors and writes them to the file
-'error.log'. So, you should first look into this file for errors. Also
-the file 'status.log' give you the exit code of the last command
-executed in a script. To be sure, you should look for more details in
-all log files.
+Si le processus d’installation se termine, le hook 'savelog.LAST.sh'
+recherche dans tous les fichiers journaux les erreurs courantes et les
+écrit dans le fichier 'error.log'. Donc, vous devriez d’abord regarder
+dans ce fichier pour les erreurs. Le fichier 'status.log' vous donne
+également le code de sortie de la dernière commande exécutée dans un
+script. Pour être sûr, vous devrez rechercher plus de détails dans tous
+les fichiers journaux.
 
 
-=== How to use HTTP for PXE boot
+=== Comment utiliser HTTP pour le démarrage PXE
 
-fai-make-nfsroot now uses the lpxelinux.0 binary which already
-supports transfer of the kernel and initrd via http (additional to tftp).
-You only have to enable HTTP access to the tftp directory:
+fai-make-nfsroot utilise maintenant le fichier binaire lpxelinux.0 qui
+prend en charge déjà le transfert du noyau et du fichier initrd via http
+(en plus de tftp). Il vous suffit d'activer un accès HTTP au répertoire tftp :
 
 ----
 cd /var/www/html
 ln -s /srv/tftp/fai
 ----
 
-Add '-U URL' to the 'fai-chboot' call. For example:
+Ajoutez '-U URL' à l’appel 'fai-chboot'. Par exemple :
 
 ----
 fai-chboot -U http://faiserver/fai -IFv .......
 ----
 
-== [[troubleshoot]]Troubleshooting
+== [[troubleshoot]]Dépannage
 
-=== [[booterror]]Boot errors
+=== [[booterror]]Erreurs d’amorçage
 
-The following error message indicates that your install client doesn't
-get an answer from a DHCP server. Check your cables or start the
-`dhcpd(8)` daemon with the debug flag enabled.
+Le message d’erreur suivant indique que votre client d’installation
+n’obtient pas de réponse d’un serveur DHCP. Vérifiez vos câbles ou
+démarrez le démon `dhcpd(8)` avec l'option debug activée.
 
 ____
   PXE-E51: No DHCP or BOOTP offers received
   Network boot aborted
 ____
 
-If you do not see the following message, the install kernel could not
-detect your network card, for example because of a missing driver:
+Si vous ne voyez pas le message suivant, le noyau d’installation n’a pas
+pu détecter votre carte réseau, par exemple en raison d’un pilote
+manquant :
 
 ----
 Starting dhcp for interface eth0
@@ -2764,18 +2775,19 @@ dhcp: PREINIT eth0 up
 dhcp: BOND setting eth
 ----
 
-Check the initrd in the nfsroot (`lsinird`) if the kernel driver of your network
-card is included there and check if you like to add the package
-'firmware-linux-nonfree' in +/etc/fai/NFSROOT+ and rebuild the initrd
-by calling `fai-make-nfsroot -k`.
-You may also add a driver to +/srv/fai/nfsroot/etc/dracut.conf+ in
-the line +add_drivers+++=+.
+Vérifiez le fichier initrd dans le nfsroot (`lsinird`) pour voir
+si le pilote du noyau de
+votre carte réseau est inclus et vérifiez si vous souhaitez ajouter le
+paquet 'firmware-linux-nonfree' dans +/etc/fai/NFSROOT` puis
+reconstruisez le fichier initrd en appelant `fai-make-nfsroot -k`. Vous pouvez
+également ajouter un pilote à +/srv/fai/nfsroot/etc/dracut.conf+ dans
+la ligne +add_drivers+++=+.
 
 
-This is the error message you will see, when your network card is
-working, but the install server does not export the nfsroot
-directory to the install clients, This is often caused by missing
-NFS permissions on the server side.
+Voici le message d’erreur que vous verrez, lorsque votre carte réseau
+fonctionne, mais le serveur d’installation n’exporte pas le répertoire
+nfsroot vers les clients d’installation. Cela est souvent dû aux
+permissions NFS manquantes du côté serveur.
 
 ----
 Starting dhcp for interface eth0
@@ -2790,13 +2802,15 @@ Dropping to debug shell
 dracut:/#
 ----
 
-Now, you are inside the emergency shell of the initrd which was created
-by 'dracut(8)'. You will get a shell prompt, and can look at the log files.
-For more information about debugging the early boot process using
-dracut see `dracut.cmdline(7)`
+Maintenant, vous êtes à l’intérieur du shell d’urgence de l’initrd qui a
+été créé par 'dracut(8)'. Vous obtiendrez une invite du shell et pourrez
+consulter les fichiers journaux. Pour plus d’informations sur le
+débogage du processus de démarrage précoce à l’aide de dracut, consultez
+`dracut.cmdline(7)`
 
-Use the following command on the install server to see which directories are exported
-from the install server (named faiserver):
+Utilisez la commande suivante sur le serveur d’installation pour voir
+quels répertoires sont exportés à partir du serveur d’installation
+(nommé faiserver) :
 
 ----
 $ showmount -e faiserver
