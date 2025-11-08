@@ -42,8 +42,8 @@ case "$1" in
         fi
 
         perl -ni.bak -e "print unless m#^$FAI_CONFIGDIR\s|^$NFSROOT\s#" /etc/exports
-	if [ -f /etc/init.d/nfs-kernel-server ]; then
-	    invoke-rc.d nfs-kernel-server reload
+	if systemctl --quiet is-active nfs-kernel-server ]; then
+	    systemctl reload nfs-kernel-server
 	fi
 
         rmdir $FAI_CONFIGDIR || true
