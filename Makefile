@@ -76,7 +76,7 @@ veryclean: clean
 install:
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,apt/apt.conf.d}
 	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt/trusted.gpg.d
-	mkdir -p $(DESTDIR)/etc/{init,init.d} $(SHAREDIR)/{pixmaps/small,setup-storage}
+	mkdir -p $(SHAREDIR)/{pixmaps/small,setup-storage}
 	mkdir -p $(DESTDIR)/usr/lib/dracut/modules.d
 	install man/* $(DESTDIR)/man
 	pod2man -c '' -r '' -s8 bin/dhcp-edit > $(DESTDIR)/man/dhcp-edit.8
