@@ -124,6 +124,8 @@ create_autodiscover_iso() {
     else
 	compress="--zstd"
     fi
+    rel=$(ls $NEW/lib/modules/|head -1)
+    target=$NEW/lib/modules/$rel/kernel
     rm $NEW/boot/initrd.img*
     mountpoint -q $NEW/proc || mount --bind /proc $NEW/proc
     TMPDIR=/tmp chroot $NEW dracut -o ' fs-lib livenet rootfs-block ' -a 'overlayfs bash fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
@@ -500,11 +502,6 @@ if [ -n "$csdir" ]; then
     FAI_CONFIGDIR=$csdir # override by -c
 fi
 ONFSROOT=$(readlink -f $NFSROOT) # save original nfsroot
-
-if [ $autodiscover -eq 1 ]; then
-    rel=$(ls $ONFSROOT/lib/modules/|head -1)
-    target=$ONFSROOT/lib/modules/$rel/kernel
-fi
 
 [ -f "$NFSROOT/bin/dracut" ] || die 10 "Please create a NFSROOT that includes dracut."
 
