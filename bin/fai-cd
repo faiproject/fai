@@ -128,8 +128,11 @@ create_autodiscover_iso() {
     target=$NEW/lib/modules/$rel/kernel
     rm $NEW/boot/initrd.img*
     mountpoint -q $NEW/proc || mount --bind /proc $NEW/proc
+    mountpoint -q $NEW/sys  || mount --bind /sys  $NEW/sys
     TMPDIR=/tmp chroot $NEW dracut -o ' fs-lib livenet rootfs-block ' -a 'overlayfs bash fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
     umount $NEW/proc
+    umount $NEW/sys
+    hide_dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_squashfs_image() {
@@ -538,7 +541,6 @@ fi
 if [ $autodiscover -eq 1 ]; then
     create_new_nfsroot
     create_autodiscover_iso
-    exit 0
 fi
 
 [ $squash_only -eq 1 ] && exit 0
