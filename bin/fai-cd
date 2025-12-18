@@ -124,15 +124,10 @@ create_autodiscover_iso() {
     else
 	compress="--zstd"
     fi
-    mv $ONFSROOT/boot/initrd.img* $ONFSROOT/tmp
-    hide_dirs
-    mountpoint -q $ONFSROOT/proc || mount --bind /proc $ONFSROOT/proc
-    TMPDIR=/tmp chroot $ONFSROOT dracut -o ' fs-lib livenet rootfs-block ' -a 'overlayfs bash fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
-    umount $ONFSROOT/proc
-    unhide_dirs
-
-    fai-cd $arguments -g $grub_config $isoname
-    mv $ONFSROOT/tmp/initrd.img* $ONFSROOT/boot
+    rm $NEW/boot/initrd.img*
+    mountpoint -q $NEW/proc || mount --bind /proc $NEW/proc
+    TMPDIR=/tmp chroot $NEW dracut -o ' fs-lib livenet rootfs-block ' -a 'overlayfs bash fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
+    umount $NEW/proc
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_squashfs_image() {
@@ -319,12 +314,6 @@ cleanup_liveos_mounts() {
 
     mountpoint -q $NEW && umount $NEW
     rm -rf $tmp $scratch
-    if [ $autodiscover -eq 1 ]; then
-        local initrdfiles=($ONFSROOT/tmp/initrd.img*)
-        if [[ -e $initrdfiles ]]; then
-	    mv "${initrdfiles[@]}" $ONFSROOT/boot 2>/dev/null
-        fi
-    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkiso_x86() {
@@ -550,6 +539,7 @@ if [ $bootonly -eq 0 ]; then
 fi
 
 if [ $autodiscover -eq 1 ]; then
+    create_new_nfsroot
     create_autodiscover_iso
     exit 0
 fi
