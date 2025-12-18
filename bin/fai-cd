@@ -104,6 +104,27 @@ check_programs() {
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+create_new_nfsroot() {
+
+    NEW=$tmp/nfsroot
+
+    mkdir -p $tmp/cow/work $tmp/cow/rw
+    mkdir $NEW
+
+    mount -t overlay -o lowerdir=$ONFSROOT,upperdir=$tmp/cow/rw,workdir=$tmp/cow/work,default_permissions overlay $NEW
+
+    customize_nfsroot
+    rm -f $NEW/etc/resolv.conf
+
+    # copy config space into nfsroot-copy unless -d is given
+    if [ $configset -eq 0 ]; then
+        echo "Copying the config space to CD image"
+        cp -Ppr $FAI_CONFIGDIR/* $NEW/var/lib/fai/config/ || error_space $? "config directory"
+    fi
+    # add the partial mirror to the CD
+    addmirror
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_ext3fs_image() {
 
     # create the folder that will be used for the squashfs.img later
@@ -182,47 +203,45 @@ create_squashfs_image() {
     fi
 
     echo "Make squashfs file system"
-    mksquashfs $tmp/squashfs-root $output_path $sqopt
+    mksquashfs $NEW $output_path $sqopt -xattrs-exclude '^system.posix_acl_access|system.posix_acl_default'
 
-    rm $tmp/$liveos/ext3fs.img
-    rmdir $tmp/$liveos $tmp/squashfs-root
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 prepare_grub_cfg() {
 
     # prepare grub.cfg
-    cp $grub_config $NFSROOT/tmp/grub.cfg
+    cp $grub_config $NEW/tmp/grub.cfg
     # insert date into grub menu
-    perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $NFSROOT/tmp/grub.cfg
+    perl -pi -e "s/_VERSIONSTRING_/   $isoversion     /" $NEW/tmp/grub.cfg
     if [ -n "$config_space" ] || [ $configset -eq 1 ]; then
-	perl -pi -e "s|FAI_CONFIG_SRC=(.*?)\S+|FAI_CONFIG_SRC=$config_space|" $NFSROOT/tmp/grub.cfg
+	perl -pi -e "s|FAI_CONFIG_SRC=(.*?)\S+|FAI_CONFIG_SRC=$config_space|" $NEW/tmp/grub.cfg
     fi
     provide_memtest_boot_option
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 copy_kernel_initrd() {
     # copy kernel and initrd
-    cp -p $NFSROOT/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
-    cp -p $NFSROOT/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
-    cp -p $NFSROOT/boot/config-$kernelversion $tmp/boot/
-    rm -f $NFSROOT/tmp/grub.cfg
+    cp -p $NEW/boot/vmlinuz-$kernelversion $tmp/boot/vmlinuz
+    cp -p $NEW/boot/initrd.img-$kernelversion $tmp/boot/initrd.img
+    cp -p $NEW/boot/config-$kernelversion $tmp/boot/
+    rm -f $NEW/tmp/grub.cfg
     echo "$isoversion" > $tmp/FAI-CD
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_grub2_image_arm64() {
 
     mkdir -p $tmp/boot/grub
-    if [ -d $NFSROOT/usr/lib/grub/arm64-efi ]; then
+    if [ -d $NEW/usr/lib/grub/arm64-efi ]; then
 
 	prepare_grub_cfg
 
 	# create arch.efi and copy to vfat file system
-	TMPDIR=tmp chroot $NFSROOT grub-mkstandalone \
+	TMPDIR=tmp chroot $NEW grub-mkstandalone \
 	    --format=arm64-efi \
 	    --output=/tmp/grubaa64.efi \
 	    --locales="" \
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
-	mv $NFSROOT/tmp/grubaa64.efi $scratch/BOOTAA64.EFI
+	mv $NEW/tmp/grubaa64.efi $scratch/BOOTAA64.EFI
 
 	mkfs.vfat -C $scratch/efiboot.img 6000 >/dev/null
 	mmd -i $scratch/efiboot.img EFI EFI/boot
@@ -237,17 +256,17 @@ create_grub2_image_x86() {
 
     mkdir -p $tmp/boot/grub
 
-    if [ -d $NFSROOT/usr/lib/grub/x86_64-efi ]; then
+    if [ -d $NEW/usr/lib/grub/x86_64-efi ]; then
 
 	prepare_grub_cfg
 
 	# create arch.efi and copy to vfat file system
-	TMPDIR=tmp chroot $NFSROOT grub-mkstandalone \
+	TMPDIR=tmp chroot $NEW grub-mkstandalone \
 	    --format=x86_64-efi \
 	    --output=/tmp/bootx64.efi \
 	    --locales="" \
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
-	mv $NFSROOT/tmp/bootx64.efi $scratch
+	mv $NEW/tmp/bootx64.efi $scratch
 
 	mkfs.vfat -C $scratch/efiboot.img 6000 >/dev/null
 	mmd -i $scratch/efiboot.img efi efi/boot
@@ -255,10 +274,10 @@ create_grub2_image_x86() {
     else
         die 11 "No grub-efi-amd64-bin installation found in NFSROOT. Aborting."
     fi
-    if [ -d $NFSROOT/usr/lib/grub/i386-pc ]; then
-        cp -a $NFSROOT/usr/lib/grub/i386-pc $NFSROOT/tmp/grub
-        echo -e "ext2\niso9660\ntar\n" > $NFSROOT/tmp/grub/fs.lst
-	TMPDIR=/tmp chroot $NFSROOT grub-mkstandalone \
+    if [ -d $NEW/usr/lib/grub/i386-pc ]; then
+        cp -a $NEW/usr/lib/grub/i386-pc $NEW/tmp/grub
+        echo -e "ext2\niso9660\ntar\n" > $NEW/tmp/grub/fs.lst
+	TMPDIR=/tmp chroot $NEW grub-mkstandalone \
             --directory=/tmp/grub \
 	    --format=i386-pc \
 	    --output=/tmp/core.img \
@@ -266,8 +285,8 @@ create_grub2_image_x86() {
 	    --install-modules="linux normal iso9660 biosdisk memdisk search ls echo test chain msdospart part_msdos part_gpt minicmd ext2 keystatus all_video font sleep gfxterm regexp" \
 	    --modules="linux normal iso9660 biosdisk search" \
 	    "boot/grub/grub.cfg=/tmp/grub.cfg"
-	cat $NFSROOT/usr/lib/grub/i386-pc/cdboot.img $NFSROOT/tmp/core.img > $scratch/bios.img
-	rm -rf $NFSROOT/tmp/core.img $NFSROOT/tmp/grub
+	cat $NEW/usr/lib/grub/i386-pc/cdboot.img $NEW/tmp/core.img > $scratch/bios.img
+	rm -rf $NEW/tmp/core.img $NEW/tmp/grub
     else
         die 11 "No grub-pc installation found in NFSROOT. Aborting."
     fi
@@ -296,14 +315,14 @@ provide_memtest_boot_option() {
 	return
     fi
 
-    if [ -f $NFSROOT/boot/memtest86+x64.efi ] || [ -f $NFSROOT/boot/memtest86+x64.bin ]; then
-        cp -p $NFSROOT/boot/memtest86+x64* $tmp/boot
+    if [ -f $NEW/boot/memtest86+x64.efi ] || [ -f $NEW/boot/memtest86+x64.bin ]; then
+        cp -p $NEW/boot/memtest86+x64* $tmp/boot
         echo "Adding memtest86+ to grub menu"
     else
         return 0
     fi
 
-    cat >> $NFSROOT/tmp/grub.cfg <<'EOF'
+    cat >> $NEW/tmp/grub.cfg <<'EOF'
 
     if [ "$grub_platform" = efi -a "$grub_cpu" = x86_64 ]; then
        menuentry "Memory test (memtest86+)" --unrestricted {
@@ -325,11 +344,10 @@ hide_dirs() {
 # hide some dirs to save space and make the CD image smaller
     local d
 
-    mkdir -p $tmp/empty
     for d in $hidedirs; do
         if [ -d $target/$d ]; then
             [ "$debug" ] && echo "hiding $d"
-            mount --bind $tmp/empty $target/$d
+            rm -rf $target/$d/*
         fi
     done
 }
@@ -339,11 +357,10 @@ customize_nfsroot() {
     # hide some dirs to save space and make the CD image smaller
     local d
 
-    mkdir -p $tmp/empty
     for d in $hidedirs; do
-        if [ -d $ONFSROOT/$d ]; then
+        if [ -d $NEW/$d ]; then
 	    [ "$debug" ] && echo "hiding $d"
-	    mount --bind $tmp/empty $ONFSROOT/$d
+	    rm -rf $NEW/$d/*
         fi
     done
 }
@@ -369,8 +386,7 @@ unhide_dirs() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 cleanup_liveos_mounts() {
 
-    mountpoint -q $tmp/$liveos/mounted-ext3fs && umount $tmp/$liveos/mounted-ext3fs
-    unhide_dirs
+    mountpoint -q $NEW && umount $NEW
     rm -rf $tmp $scratch
     if [ $autodiscover -eq 1 ]; then
         local initrdfiles=($ONFSROOT/tmp/initrd.img*)
@@ -391,9 +407,10 @@ mkiso_x86() {
 	-no-emul-boot -boot-load-size 4 -boot-info-table \
 	--eltorito-catalog boot/grub/boot.cat \
 	--grub2-boot-info \
-	--grub2-mbr $NFSROOT/usr/lib/grub/i386-pc/boot_hybrid.img \
+	--grub2-mbr $NEW/usr/lib/grub/i386-pc/boot_hybrid.img \
 	-eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot \
 	-append_partition 2 0xef $scratch/efiboot.img \
+	--exclude $NEW --exclude $tmp/cow \
 	-o $isoname -graft-points \
 	--sort-weight 0 / --sort-weight 1 /boot \
 	"$tmp" \
@@ -402,7 +419,6 @@ mkiso_x86() {
 
     echo -n "ISO image size and filename: "; du -h $isoname
 
-    unhide_dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 mkiso_arm64() {
@@ -428,13 +444,13 @@ addmirror() {
 
     [ $nomirror -eq 1 ] && return
 
-    mkdir $tmp/$liveos/mounted-ext3fs/media/mirror
+    mkdir $NEW/media/mirror
 
     echo "Copying the mirror to CD image"
-    cp -Pr $mirrordir/{dists,pool} $tmp/$liveos/mounted-ext3fs/media/mirror 2>/dev/null || error_space $? "mirror"
+    cp -Pr $mirrordir/{dists,pool} $NEW/media/mirror 2>/dev/null || error_space $? "mirror"
 
     # create the sources.list for the CD
-    cat > $tmp/$liveos/mounted-ext3fs/etc/apt/sources.list <<EOF
+    cat > $NEW/etc/apt/sources.list <<EOF
 # mirror location for fai CD, file generated by fai-cd
 EOF
 
@@ -445,7 +461,7 @@ EOF
     for i in $dists ; do
         comp=$(find $mirrordir/dists/$i -maxdepth 2 -type d -name "binary-*" | \
         sed -e "s#$mirrordir/*dists/$i/##" -e 's#/binary-.*##' | uniq | tr '\n' " ")
-        echo "deb [trusted=yes] file:/media/mirror $i $comp" >> $tmp/squashfs-root/LiveOS/mounted-ext3fs/etc/apt/sources.list
+        echo "deb [trusted=yes] file:/media/mirror $i $comp" >> $NEW/etc/apt/sources.list
     done
 
 }
@@ -589,7 +605,7 @@ scratch=$(mktemp -t -d scratch.XXXXXX) || exit 13
 trap "cleanup_liveos_mounts" EXIT ERR
 
 if [ $bootonly -eq 0 ]; then
-create_ext3fs_image
+create_new_nfsroot
 create_squashfs_image
 fi
 
@@ -601,8 +617,8 @@ fi
 [ $squash_only -eq 1 ] && exit 0
 
 
-kernelversion=$(ls -tr $NFSROOT/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
-faiversion=$(dpkg --root=$NFSROOT -l fai-client 2>/dev/null |awk '/fai-client/ {print $3}')
+kernelversion=$(ls -tr $NEW/boot/vmlinu?-* | tail -1 | sed -e 's#.*/vmlinuz-##')
+faiversion=$(dpkg --root=$NEW -l fai-client 2>/dev/null |awk '/fai-client/ {print $3}')
 isoversion=$(printf "FAI %-6s build $(date '+%Y %b %d - %R')" "$faiversion")
 aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 
@@ -616,6 +632,7 @@ case $(uname -m) in
         mkiso_arm64
         ;;
 esac
+mountpoint -q $NEW && umount $NEW
 
 [ "$burn" -eq 1 ] && burniso
 exit 0
