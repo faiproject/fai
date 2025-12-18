@@ -112,14 +112,6 @@ create_new_nfsroot() {
 
     customize_nfsroot
     rm -f $NEW/etc/resolv.conf
-
-    # copy config space into nfsroot-copy unless -d is given
-    if [ $configset -eq 0 ]; then
-        echo "Copying the config space to CD image"
-        cp -Ppr $FAI_CONFIGDIR/* $NEW/var/lib/fai/config/ || error_space $? "config directory"
-    fi
-    # add the partial mirror to the CD
-    addmirror
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_autodiscover_iso() {
@@ -405,6 +397,15 @@ EOF
 
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
+add_config_space() {
+
+    # copy config space into nfsroot-copy unless -d is given
+    if [ $configset -eq 0 ]; then
+        echo "Copying the config space to CD image"
+        cp -Ppr $FAI_CONFIGDIR/* $NEW/var/lib/fai/config/ || error_space $? "config directory"
+    fi
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - -
 burniso() {
 
     wodim -v -eject $isoname
@@ -543,6 +544,9 @@ trap "cleanup_liveos_mounts" EXIT ERR
 if [ $bootonly -eq 0 ]; then
     create_new_nfsroot
     create_squashfs_image
+    # add the partial mirror to the CD
+    addmirror
+    add_config_space
 fi
 
 if [ $autodiscover -eq 1 ]; then
