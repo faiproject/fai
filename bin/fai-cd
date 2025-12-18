@@ -105,7 +105,7 @@ create_new_nfsroot() {
 
     mount -t overlay -o lowerdir=$ONFSROOT,upperdir=$tmp/cow/rw,workdir=$tmp/cow/work,default_permissions overlay $NEW
 
-    customize_nfsroot
+    customize_nfsroot $NEW
     rm -f $NEW/etc/resolv.conf
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -129,7 +129,7 @@ create_autodiscover_iso() {
     TMPDIR=/tmp chroot $NEW dracut -o ' fs-lib livenet rootfs-block ' -a 'overlayfs bash fai-autodiscover' "$compress" /boot/initrd.img-$rel $rel 2>/dev/null
     umount $NEW/proc
     umount $NEW/sys
-    hide_dirs
+    customize_nfsroot $target
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_squashfs_image() {
@@ -267,28 +267,16 @@ provide_memtest_boot_option() {
 EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-hide_dirs() {
-
-    # hide/remove some dirs to save space and make the CD image smaller
-    local d
-
-    for d in $hidedirs; do
-        if [ -d $target/$d ]; then
-            [ "$debug" ] && echo "hiding $d"
-            rm -rf $target/$d/*
-        fi
-    done
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 customize_nfsroot() {
 
     # hide/remove some dirs to save space and make the CD image smaller
+    local path=$1
     local d
 
     for d in $hidedirs; do
-        if [ -d $NEW/$d ]; then
+        if [ -d $path/$d ]; then
 	    [ "$debug" ] && echo "hiding $d"
-	    rm -rf $NEW/$d/*
+	    rm -rf $path/$d/*
         fi
     done
 }
