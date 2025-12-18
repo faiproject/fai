@@ -115,13 +115,14 @@ create_autodiscover_iso() {
 
     local compress
     local rel
+    rel=$(ls $NEW/lib/modules/|head -1)
+    local target=$NEW/lib/modules/$rel/kernel
+
     if [ -n "$_OPTJ" ]; then
 	compress="--xz"
     else
 	compress="--zstd"
     fi
-    rel=$(ls $NEW/lib/modules/|head -1)
-    local target=$NEW/lib/modules/$rel/kernel
     rm $NEW/boot/initrd.img*
     mountpoint -q $NEW/proc || mount --bind /proc $NEW/proc
     mountpoint -q $NEW/sys  || mount --bind /sys  $NEW/sys
