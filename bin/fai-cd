@@ -296,25 +296,6 @@ customize_nfsroot() {
     done
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-unhide_dirs() {
-
-    set +e
-    for d in $hidedirs; do
-	if [ $autodiscover -eq 1 ]; then
-	    if [ -d $target/$d ]; then
-		[ "$debug" ] && echo "disclosing $d"
-		umount  $target/$d 2>/dev/null
-            fi
-	else
-            if [ -d $ONFSROOT/$d ]; then
-		[ "$debug" ] && echo "disclosing $d"
-		umount $ONFSROOT/$d 2>/dev/null
-            fi
-	fi
-    done
-    set -e
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 cleanup_liveos_mounts() {
 
     mountpoint -q $NEW && umount $NEW
@@ -362,7 +343,6 @@ mkiso_arm64() {
 
     echo -n "ISO image size and filename: "; du -h $isoname
 
-    unhide_dirs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 addmirror() {
