@@ -51,7 +51,6 @@ vname="FAI_CD"
 # arguments to be passed on to internal fai-cd call
 arguments="-MB"
 
-liveos="squashfs-root/LiveOS/"
 hidedirs="/usr/share/locale /usr/share/doc /var/lib/apt /var/lib/aptitude /var/cache/debconf /var/cache/apt /var/cache/man /usr/share/man /var/lib/dpkg/info /media/mirror/aptcache "
 
 # we need FAI_CONFIGDIR, NFSROOT
@@ -86,8 +85,6 @@ error_space() {
     shift
     local msg=$1
     echo "Not enough space left on image for the $msg" >&2
-    df -h $tmp/$liveos/mounted-ext3fs >&2
-    echo "You can add more space to the image by using the option -s. See man fai-cd for details." >&2
     die $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -123,48 +120,6 @@ create_new_nfsroot() {
     fi
     # add the partial mirror to the CD
     addmirror
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
-create_ext3fs_image() {
-
-    # create the folder that will be used for the squashfs.img later
-    # along with it, a temporary folder is created to mount the ext3fs.img
-    mkdir -p $tmp/$liveos/mounted-ext3fs
-
-    # hide some directories before copying the nfsroot
-    customize_nfsroot
-    calculate_required_size
-
-    # creates an empty file
-    dd if=/dev/zero of=$tmp/$liveos/ext3fs.img bs=1M count=$count 2>/dev/null ||
-        die 9 "dd failed. Maybe no enough free space in $tmp"
-
-    mkfs.ext4 -q -m1 -q -O^has_journal -F -L FAI-NFSROOT $tmp/$liveos/ext3fs.img
-
-    # the resulting ext3fs.img is mounted
-    mount -o loop,noatime $tmp/$liveos/ext3fs.img $tmp/$liveos/mounted-ext3fs
-
-    if [ -f $ONFSROOT/.THIS_IS_THE_FAI_NFSROOT ]; then
-        echo "Copying the nfsroot to CD image"
-    else
-        echo "Copying the file system to CD image"
-    fi
-    # copy the contents of the nfsroot into it
-    cp -a $ONFSROOT/. $tmp/$liveos/mounted-ext3fs/ || error_space $? "nfsroot"
-    rm -f $tmp/$liveos/mounted-ext3fs/etc/resolv.conf
-
-    # find $tmp/$liveos/mounted-ext3fs # for debugging
-    # copy config space into nfsroot-copy unless -d is given
-    if [ $configset -eq 0 ]; then
-        echo "Copying the config space to CD image"
-        cp -Ppr $FAI_CONFIGDIR/* $tmp/$liveos/mounted-ext3fs/var/lib/fai/config/ || error_space $? "config directory"
-    fi
-    # add the partial mirror to the CD
-    addmirror
-
-    unhide_dirs
-    umount $tmp/$liveos/mounted-ext3fs
-    rmdir $tmp/$liveos/mounted-ext3fs
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_autodiscover_iso() {
@@ -291,22 +246,6 @@ create_grub2_image_x86() {
         die 11 "No grub-pc installation found in NFSROOT. Aborting."
     fi
     copy_kernel_initrd
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
-calculate_required_size() {
-    # calculates the amount of space needed for the ext3fsimage
-
-    local size
-    [ $configset -eq 1 ] && unset FAI_CONFIGDIR
-    if [ $nomirror -eq 0 ]; then
-	size=$(du -sck $ONFSROOT $FAI_CONFIGDIR $mirrordir/{dists,pool} | tail -n1 | awk '{print $1}')
-    else
-	size=$(du -sck $ONFSROOT $FAI_CONFIGDIR | tail -n1 | awk '{print $1}')
-    fi
-
-    # not dividing by 1024 to get the exact, this allows us to get some additional space
-    # add some addition space
-    count=$((size/850 + space))
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
 provide_memtest_boot_option() {
