@@ -77,15 +77,6 @@ die() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
-error_space() {
-
-    local e=$1
-    shift
-    local msg=$1
-    echo "Not enough space left on image for the $msg" >&2
-    die $e
-}
-# - - - - - - - - - - - - - - - - - - - - - - - - - -
 check_programs() {
 
     local msg
@@ -336,7 +327,7 @@ addmirror() {
     mkdir $NEW/media/mirror
 
     echo "Copying the mirror to CD image"
-    cp -Pr $mirrordir/{dists,pool} $NEW/media/mirror 2>/dev/null || error_space $? "mirror"
+    cp -Pr $mirrordir/{dists,pool} $NEW/media/mirror 2>/dev/null || die $? "Not enough space left on image for the mirror"
 
     # create the sources.list for the CD
     cat > $NEW/etc/apt/sources.list <<EOF
@@ -359,7 +350,7 @@ add_config_space() {
     # copy config space into nfsroot-copy unless -d is given
     if [ $configset -eq 0 ]; then
         echo "Copying the config space to CD image"
-        cp -Ppr $FAI_CONFIGDIR/* $NEW/var/lib/fai/config/ || error_space $? "config directory"
+        cp -Ppr $FAI_CONFIGDIR/* $NEW/var/lib/fai/config/ || die $? "Not enough space left on image for the config directory"
     fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - -
