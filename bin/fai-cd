@@ -298,10 +298,10 @@ mkiso_x86() {
 	-no-emul-boot -boot-load-size 4 -boot-info-table \
 	--eltorito-catalog boot/grub/boot.cat \
 	--grub2-boot-info \
-	--grub2-mbr $NEW/usr/lib/grub/i386-pc/boot_hybrid.img \
+	--grub2-mbr $ONFSROOT/usr/lib/grub/i386-pc/boot_hybrid.img \
 	-eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot \
 	-append_partition 2 0xef $scratch/efiboot.img \
-	--exclude $NEW --exclude $tmp/cow \
+	--exclude $tmp/cow \
 	-o $isoname -graft-points \
 	--sort-weight 0 / --sort-weight 1 /boot \
 	"$tmp" \
@@ -319,7 +319,7 @@ mkiso_arm64() {
         -volid "$vname" -appid "$aname" \
         -J -joliet-long \
         -e boot/grub/efi.img -no-emul-boot \
-	--exclude $NEW --exclude $tmp/cow \
+        --exclude $tmp/cow \
         -append_partition 2 0xef $scratch/efiboot.img \
         -partition_cyl_align all \
         "$tmp" \
@@ -517,10 +517,12 @@ aname="Fully Automatic Installation by Thomas Lange, $isoversion"
 case $(uname -m) in
     x86_64)
         create_grub2_image_x86
+        umount $NEW
         mkiso_x86
         ;;
     aarch64)
         create_grub2_image_arm64
+        umount $NEW
         mkiso_arm64
         ;;
 esac
