@@ -38,7 +38,7 @@ use utf8; # needed for Eval::Logic
 
 my $debug=0;
 # global variables
-our ($opt_c,$opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s);
+our ($opt_c,$opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s,$opt_P);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
@@ -65,6 +65,7 @@ my $execerrors; # counts execution errors
 my $aptopt='-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew --allow-change-held-packages';
 my $aptitudeopt='-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew';
 my $pacmanopts=' --noconfirm ';
+my $qopt;
 my $downloaddir="/var/cache/apt/archives/partial/"; # where to download packages that gets only unpacked
 my $debsourcesdir='/var/lib/fai/packages';
 my @ls;
@@ -121,7 +122,7 @@ our @commands = qw/y2i y2r zypper zypper-pattern zypper-product zypper-rm yast r
 	  "apk-del" => "apk del",
 );
 
-getopts('cdhHvlLm:p:nNs');
+getopts('cdhHvlLm:p:nNsP');
 
 $opt_d=1 if $opt_c;
 $listonly = $opt_l || $opt_L;
@@ -129,13 +130,14 @@ $opt_h && usage();
 $opt_H && showcommands();
 $dryrun=1 if $opt_n;
 $verbose=$ENV{verbose} || $opt_v;
+$qopt="-qq" unless $verbose;
+$qopt.=" --print-uris" if $opt_P;
 $opt_d && setdownloadonly();
 $maxpl=$ENV{MAXPACKAGES} || $opt_m ;
 $maxpl && $verbose && warn "Maximum number of packages installed at a time set to $maxpl\n";
 $maxpl or $maxpl = 99 ; # set default value
 $opt_N=$ENV{FAI_DISABLE_PACKAGE_NAME_CHECK} || $opt_N;
 
-my $qopt="-qq" unless $verbose;
 my $devnull=">/dev/null" unless $verbose;
 
 $FAI_ROOT = $ENV{FAI_ROOT};
