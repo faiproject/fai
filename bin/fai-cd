@@ -94,7 +94,7 @@ create_new_nfsroot() {
 
     mkdir -p $tmp/cow/work $tmp/cow/rw $NEW
 
-    mount -t overlay -o lowerdir=$ONFSROOT,upperdir=$tmp/cow/rw,workdir=$tmp/cow/work,default_permissions overlay $NEW
+    mount -t overlay -o lowerdir=$NFSROOT,upperdir=$tmp/cow/rw,workdir=$tmp/cow/work,default_permissions overlay $NEW
 
     customize_nfsroot $NEW
     rm -f $NEW/etc/resolv.conf
@@ -289,7 +289,7 @@ mkiso_x86() {
 	-no-emul-boot -boot-load-size 4 -boot-info-table \
 	--eltorito-catalog boot/grub/boot.cat \
 	--grub2-boot-info \
-	--grub2-mbr $ONFSROOT/usr/lib/grub/i386-pc/boot_hybrid.img \
+	--grub2-mbr $NFSROOT/usr/lib/grub/i386-pc/boot_hybrid.img \
 	-eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot \
 	-append_partition 2 0xef $scratch/efiboot.img \
 	--exclude $tmp/cow \
@@ -461,7 +461,7 @@ fi
 if [ -n "$csdir" ]; then
     FAI_CONFIGDIR=$csdir # override by -c
 fi
-ONFSROOT=$(readlink -f $NFSROOT) # save original nfsroot
+NFSROOT=$(readlink -f $NFSROOT) # resolve symlinks
 
 [ -f "$NFSROOT/bin/dracut" ] || die 10 "Please create a NFSROOT that includes dracut."
 
