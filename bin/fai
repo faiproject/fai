@@ -52,6 +52,20 @@ fdie() {
     exit $e
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+mirrorvars() {
+
+    # set variables if dir exists (on USB, CD)
+    local dir=$1
+
+    if [ -d "$1" ]; then
+            romountopt=
+            FAI_DEBMIRROR="--bind $1"
+            MNTPOINT=/media/mirror
+            return 0
+    fi
+    return 1
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fai_init() {
 
     set -a # now export all variables
@@ -68,13 +82,6 @@ fai_init() {
     : ${FAI_LOGPROTO:=ssh}        # default value
     [ -n "$cspace" ] && FAI_CONFIG_SRC=$cspace
     unset cspace
-
-    # this test is not perfect. There may be false positives
-    if [ -d /media/mirror ]; then   # we are booting from fai CD or USB stick
-        romountopt=
-        FAI_DEBMIRROR="--bind /media/mirror"
-        MNTPOINT=/media/mirror
-    fi
 
     [ -f "$stamp" ] && {
        echo -n "$0 already running or was aborted before. PID: " >&2
@@ -134,8 +141,6 @@ fai_init() {
            mount -t efivarfs none /sys/firmware/efi/efivars
         fi
 
-        mount-fai-data
-
         # start secure shell daemon for remote access
         [ "$flag_sshd" ] && [ -x /usr/sbin/sshd ] && /usr/sbin/sshd
 	save_dmesg
@@ -184,6 +189,11 @@ fstart() {
     echo "$etc_message"
     inside_nfsroot || echo "Using configuration files from $FAI_ETC_DIR"
     unset etc_message
+
+    mount-fai-data
+    # use mirror on partition MY-DATA or on ISO
+    mirrorvars /media/data/mirror ||
+        mirrorvars /media/mirror
     task confdir
     # if the config space is a local directory, reset $FAI
     local method=$(expr match "$FAI_CONFIG_SRC" '\([^+]*\).*://')
