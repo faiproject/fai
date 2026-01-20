@@ -116,6 +116,12 @@ sub get_current_disks {
     my $error =
       &FAI::execute_ro_command("parted -sm $disk unit B print", \@parted_print, 0);
 
+      if ($error eq 'parted_3_2') {
+          # Ignore this
+          print "Ignoring error $error\n";
+          $error = '';
+      }
+
     # possible problems
     if (!defined($FAI::configs{"PHY_$disk"}) && $error ne "") {
       warn "Could not determine size and contents of $disk, skipping\n";
