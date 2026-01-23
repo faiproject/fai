@@ -5,7 +5,7 @@
 # install_packages -- read package config and install packages via apt-get
 #
 # This script is part of FAI (Fully Automatic Installation)
-# (c) 2000-2025, Thomas Lange, lange@cs.uni-koeln.de
+# (c) 2000-2026, Thomas Lange, lange@cs.uni-koeln.de
 # (c) 2003-2004, Henning Glawe, glaweh@physik.fu-berlin.de
 # (c) 2004     , Jonas Hoffmann, jhoffman@physik.fu-berlin.de
 # PRELOAD feature from Thomas Gebhardt  <gebhardt@hrz.uni-marburg.de>
@@ -38,7 +38,7 @@ use utf8; # needed for Eval::Logic
 
 my $debug=0;
 # global variables
-our ($opt_c,$opt_d,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s,$opt_P);
+our ($opt_c,$opt_d,$opt_G,$opt_l,$opt_L,$opt_v,$opt_h,$opt_H,$opt_m,$opt_n,$opt_N,$opt_p,$opt_s,$opt_P);
 my $listonly; # flag, that indicates that only a list of packages will be printed
 our %command;
 our $atype;    # type of action (for apt-get, aptitude,..) that will be performed
@@ -122,7 +122,7 @@ our @commands = qw/y2i y2r zypper zypper-pattern zypper-product zypper-rm yast r
 	  "apk-del" => "apk del",
 );
 
-getopts('cdhHvlLm:p:nNsP');
+getopts('cdGhHvlLm:p:nNsP');
 
 $opt_d=1 if $opt_c;
 $listonly = $opt_l || $opt_L;
@@ -318,7 +318,7 @@ sub readconfig {
       # by default no classes are listed after this command so doit
       $doit = 1;
       if ($cllist) {
-        next if ($opt_d && $cllist =~ /!/); # if we have a negation in the regex we need to download for fai-mirror
+        next if ($opt_G && $cllist =~ /!/); # if we have a negation in the regex we need to download for fai-mirror
         # check if we only have a list of classes or some logical expression
         if ($cllist =~ /[!&|()]/) { # we found a logical expression
           eval "require Eval::Logic" or
@@ -560,6 +560,7 @@ sub clean_pkg_list {
 
     # handle packagename-
     if ( $pack =~ s/-$//) {
+      next if $opt_G; # ignore pkgname- for generic
       insert_pkg($n, $pack, 0, "$pack - removed") && next;
     }
 
