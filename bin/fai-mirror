@@ -254,12 +254,13 @@ qflag=-qq
 bcount=0
 setvariables=0
 ignoreconflicts=0
-while getopts "a:bBvhx:pc:C:m:s:P:VI" opt ; do
+while getopts "a:bBvGhx:pc:C:m:s:P:VI" opt ; do
     case "$opt" in
         a) arch=$OPTARG ;;
         B) add=0 ; ((bcount++)) ;;
         b) add=2 ; ((bcount++)) ;;
         C) cfdir=$OPTARG ;;
+        G) generic="-G" ;;
         h) usage ;;
         I) ignoreconflicts=1 ;;
         x) exclasses="$OPTARG";;
@@ -353,7 +354,7 @@ fi
 
 [ $add -eq 1 ] && add_base_packages
 echo "Downloading packages for classes:" $classes
-if FAI=$FAI_CONFIGDIR install_packages -N -d $vflag; then
+if FAI=$FAI_CONFIGDIR install_packages -d $vflag $generic; then
     :
 else
     echo "ERROR when downloading packages. Your mirror may be broken or you have used a negation in a boolean expression in packages_config. Use fai-mirror -v for details."
