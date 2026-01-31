@@ -195,17 +195,17 @@ create_grub2_image_x86() {
 
 	prepare_grub_cfg
 
-	# create arch.efi and copy to vfat file system
-	TMPDIR=tmp chroot $NEW grub-mkstandalone \
-	    --format=x86_64-efi \
-	    --output=/tmp/bootx64.efi \
-	    --locales="" \
-	    "boot/grub/grub.cfg=/tmp/grub.cfg"
-	mv $NEW/tmp/bootx64.efi $scratch
+	# Populates the grub efi programs and grub config
+	cp $NEW/tmp/grub.cfg $tmp/boot/grub/grub.cfg
+	cp $NEW/tmp/grub.cfg $scratch/grub.cfg
+	cp $NEW/usr/lib/shim/shimx64.efi.signed $scratch/BOOTx64.EFI
+	cp $NEW/usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed $scratch/grubx64.efi
 
 	mkfs.vfat -C $scratch/efiboot.img 6000 >/dev/null
 	mmd -i $scratch/efiboot.img efi efi/boot
-	mcopy -i $scratch/efiboot.img $scratch/bootx64.efi ::efi/boot/
+	mcopy -i $scratch/efiboot.img $scratch/grub.cfg ::efi/boot/
+	mcopy -i $scratch/efiboot.img $scratch/BOOTx64.EFI ::efi/boot/
+	mcopy -i $scratch/efiboot.img $scratch/grubx64.efi ::efi/boot/
     else
         die 11 "No grub-efi-amd64-bin installation found in NFSROOT. Aborting."
     fi
@@ -297,6 +297,7 @@ mkiso_x86() {
 	--sort-weight 0 / --sort-weight 1 /boot \
 	"$tmp" \
 	/boot/grub/bios.img=$scratch/bios.img \
+        /EFI/debian/grub.cfg=$scratch/grub.cfg \
 	/EFI/efiboot.img=$scratch/efiboot.img || die 12 "xorriso failed."
 
     echo -n "ISO image size and filename: "; du -h $isoname
