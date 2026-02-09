@@ -562,6 +562,12 @@ sub clean_pkg_list {
   foreach my $n (@inlist) {
     $pack = $n;
 
+    # substitute $varname in package name, also pkgname$var
+    if ( $pack =~ m#(\S*)\$\{?(\w+)\}?#) {
+      $pack = "$1$ENV{$2}";
+      print "VARIABLE in $n : $1 has variable $2 = $ENV{$2} RESULT: $pack\n" if $debug;
+    }
+
     # plain package name is known, this also matches g++, memtest86+, ...
     insert_pkg($n, $pack, 1, "$n found") && next;
 
@@ -584,18 +590,6 @@ sub clean_pkg_list {
     # remove :arch from package name
     if ( $pack =~ s/:\S+//) {
       insert_pkg($n, $pack, 1, "$n using $pack found") && next;
-    }
-
-    # handle $varname in package name
-    if ( $pack =~ /\$(\w+)/) {
-      $pack = $ENV{$1};
-      insert_pkg($n, $pack, 1, "$pack found variable $n") && next;
-    }
-
-    # handle ${varname} in package name
-    if ( $pack =~ /\$\{(\w+)\}/) {
-      $pack = $ENV{$1};
-      insert_pkg($n, $pack, 1, "$pack found variable $n") && next;
     }
 
     # else package is unknown
