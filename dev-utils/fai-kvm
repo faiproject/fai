@@ -2,7 +2,7 @@
 
 # fai-kvm, start kvm host for testing FAI software
 #
-# Author:    Thomas Lange, Uni Koeln, 2011-2025
+# Author:    Thomas Lange, Uni Koeln, 2011-2026
 # License:   GPL v2 or any later version
 
 fix="-k en-us -smp 2 -cpu host -global isa-fdc.fdtypeA=none "  # if loading cirrusfb (via pcimodules and modprobe cirrusfb) causes errors in kvm
@@ -23,6 +23,7 @@ efi=0
 order=cd
 usenvme=0
 spice=0
+secboot=0
 
 # not all mac addresses work in kvm (or the bridge), be carefull when changing the first two bytes
 # If you are generating your own MAC addresses you should use a value that contains 2,6,A or E as the second number as this defines a locally administered MAC address.
@@ -121,9 +122,10 @@ EOF
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - -
 
-while getopts "EbUhnNu:s:SMm:d:D:t:O" opt ; do
+while getopts "BEbUhnNu:s:SMm:d:D:t:O" opt ; do
     case "$opt" in
         O) order=dc  ;;
+        B) secboot=1  ;;
         b) daemonize=1  ;;
         E) efi=1  ;;
         n) newdisk=1    ;;
@@ -185,6 +187,16 @@ else
 "
 fi
 
+if [ $secboot = 1 ]; then
+    pf="ms.fd"
+    gopt="-machine q35,smm=on -object rng-random,filename=/dev/urandom,id=rng0 \
+        -device virtio-rng-pci,rng=rng0 \
+        -global driver=cfi.pflash01,property=secure,value=on \
+        "
+else
+    pf="fd"
+
+fi
 
 # create new disk images
 if [ X$newdisk != X0 ]; then
@@ -213,19 +225,20 @@ for i in $(seq 1 $disks) ; do
     disk="$disk"
   fi
 done
-gopt="$fix $vga -m $ram -name $title"
+gopt="$fix $vga -m $ram -name $title $gopt"
 if [ $efi = 1 ]; then
-    if [ ! -f /usr/share/OVMF/OVMF_CODE_4M.fd ]; then
+    if [ ! -f /usr/share/OVMF/OVMF_CODE_4M.$pf ]; then
 	die 99 "UEFI firmware not found. Please install package ovmf."
     fi
     if [ "$newdisk" -eq 2 ]; then # always overwrite
-        cp -v /usr/share/OVMF/OVMF_VARS_4M.fd $diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd
+        cp -v /usr/share/OVMF/OVMF_VARS_4M.$pf $diskdir/faitest-uefi-$user-OVMF_VARS_4M.$pf
     fi
     if [ "$newdisk" -eq 1 ] && [ ! -f $diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd ]; then
-        cp -v /usr/share/OVMF/OVMF_VARS_4M.fd $diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd
+        cp -v /usr/share/OVMF/OVMF_VARS_4M.$pf $diskdir/faitest-uefi-$user-OVMF_VARS_4M.$pf
     fi
-    gopt="-drive if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
-          -drive if=pflash,format=raw,unit=1,file=$diskdir/faitest-uefi-$user-OVMF_VARS_4M.fd $gopt"
+    gopt="-drive if=pflash,format=raw,unit=0,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.$pf \
+          -drive if=pflash,format=raw,unit=1,file=$diskdir/faitest-uefi-$user-OVMF_VARS_4M.$pf $gopt"
+
 fi
 
 
