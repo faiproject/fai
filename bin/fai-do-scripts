@@ -41,6 +41,13 @@ savemaxstatus() {
     exitcode=$1 # set global variable
     # save the highest exit status
     [ $1 -gt $maxstatus ] && maxstatus=$1
+
+    if [ "$exitcode" -gt 0 ] && [ $((100 + exitcode)) -gt "${STOP_ON_ERROR:-700}" ]; then
+        printf '%-20s FAILED with exit code %s; STOP_ON_ERROR=%s exceeded, aborting.\n' \
+            "${2:-script}" "$exitcode" "${STOP_ON_ERROR:-700}" \
+            | tee -a "$LOGDIR/status.log"
+        exit $((100 + maxstatus))
+    fi
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 fc_check_status() {
@@ -130,14 +137,14 @@ do_script() {
             vecho "Executing   $shelldebug shell: $file"
             echo "=====   shell: $file   =====" >> $slog 2>&1
             $shelldebug ./$file >> $slog 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $slog
         ;;
         *)
             vecho "Executing: $file"
             echo "=====   $filetype $file   =====" >> $slog 2>&1
             ./$file >> $slog 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $slog
         ;;
         esac
@@ -150,7 +157,7 @@ do_script() {
             vecho "Executing   $shelldebug shell: $file"
             echo "=====   shell: $file   =====" >> $LOGDIR/shell.log 2>&1
             $shelldebug ./$file >> $LOGDIR/shell.log 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $LOGDIR/shell.log
         ;;
 
@@ -158,7 +165,7 @@ do_script() {
             vecho "Executing cf-agent: $file"
             echo "=====   cf-agent: $file   =====" >> $LOGDIR/cfagent.log 2>&1
             ./$file $cfagentdebug -KI -D${cfclasses} >> $LOGDIR/cfagent.log 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $LOGDIR/cfagent.log
         ;;
 
@@ -166,7 +173,7 @@ do_script() {
             vecho "Executing    perl: $file"
             echo "=====   perl: $file   =====" >> $LOGDIR/perl.log 2>&1
             ./$file >> $LOGDIR/perl.log 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $LOGDIR/perl.log
         ;;
 
@@ -174,7 +181,7 @@ do_script() {
             vecho "Executing  expect: $file"
             echo "=====   expect: $file   =====" >> $LOGDIR/expect.log 2>&1
             ./$file >> $LOGDIR/expect.log 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $LOGDIR/expect.log
         ;;
 
@@ -182,7 +189,7 @@ do_script() {
             vecho "Executing  python: $file"
             echo "=====   python: $file   =====" >> $LOGDIR/python.log 2>&1
             ./$file >> $LOGDIR/python.log 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $LOGDIR/python.log
         ;;
 
@@ -190,7 +197,7 @@ do_script() {
             vecho "Executing ruby: $file"
             echo "=====   ruby: $file   =====" >> $LOGDIR/ruby.log 2>&1
             ./$file >> $LOGDIR/ruby.log 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $LOGDIR/ruby.log
         ;;
 
@@ -198,7 +205,7 @@ do_script() {
             vecho "Executing: $file"
             echo "=====   $filetype $file   =====" >> $LOGDIR/scripts.log 2>&1
             ./$file >> $LOGDIR/scripts.log 2>&1
-            savemaxstatus $?
+            savemaxstatus $? "$file"
             fc_check_status $file $exitcode | tee -a $LOGDIR/scripts.log
         ;;
     esac
