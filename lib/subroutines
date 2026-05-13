@@ -222,7 +222,7 @@ cleanup_devicemapper() {
 
     local vgroup v
     # remove device mapper devices
-    grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
+    grep -qs 'Executing: vgcreate' $LOGDIR/format.log
     if [ $? -eq 0 ]; then
 
 	# write which vg should be removed, PPID is the fai-diskimage process
@@ -988,7 +988,7 @@ task_partition() {
     [ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X |& tee $LOGDIR/format.log
 
     # if we've created device mapper devices, do cleanup on error
-    grep -q 'Executing: vgcreate' $LOGDIR/format.log 2>/dev/null
+    grep -qs 'Executing: vgcreate' $LOGDIR/format.log
     if [ $? -eq 0 ]; then
 	trap "umount_target;cleanup_devicemapper" QUIT EXIT
     fi

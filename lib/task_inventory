@@ -15,7 +15,7 @@ inventory() {
     udevadm trigger
 
     cd /sys/class/dmi/id
-    grep . {board_,bios_,product_}* 2>/dev/null| sed -e 's/:/: /'| grep -E -iv 'board_version|System Product Name|System Version|System Serial Number|123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
+    grep -s . {board_,bios_,product_}* | sed -e 's/:/: /'| grep -E -iv 'board_version|System Product Name|System Version|System Serial Number|123456789|To Be Filled|: Not |N/A|:[[:blank:]]+$'
 
     lscpu | grep 'Hypervisor vendor:'
 
@@ -61,7 +61,7 @@ inventory() {
 
     echo List serial numbers of devices
     cd /sys/class/dmi/id
-    grep . *_serial 2>/dev/null| sed -e 's/:/: /'| egrep -iv 'serial: 0123456789|: Not |N/A|:[[:blank:]]+$'
+    grep -s . *_serial | sed -e 's/:/: /'| egrep -iv 'serial: 0123456789|: Not |N/A|:[[:blank:]]+$'
     lsblk -dno name,serial
 }
 
