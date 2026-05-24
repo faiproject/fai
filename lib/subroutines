@@ -353,7 +353,7 @@ call_hook() {
     local hook=$1
     shift
 
-    local cl dflag hfile
+    local cl dflag hfile te
     [ "$debug" ] && dflag="-d"
 
     for cl in $classes; do
@@ -383,6 +383,12 @@ call_hook() {
             # execute the hook
             $hfile $dflag "$@"
             check_status $hook.$cl $?
+            te=$(< $LOGDIR/task_error)
+            if [ "$te" -gt "$STOP_ON_ERROR" ]; then
+                task_error=$te
+                task_error_func=$hook.$cl
+                stop_fai_installation
+            fi
         fi
     done
 }
