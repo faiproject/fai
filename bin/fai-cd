@@ -294,13 +294,14 @@ mkiso_x86() {
 	-eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot \
 	-partition_offset 16 -appended_part_as_gpt \
 	-append_partition 2 0xef $scratch/efiboot.img \
+	-e --interval:appended_partition_2:all:: \
 	--exclude $tmp/cow \
 	-o $isoname -graft-points \
 	--sort-weight 0 / --sort-weight 1 /boot \
 	"$tmp" \
 	/boot/grub/bios.img=$scratch/bios.img \
         /EFI/debian/grub.cfg=$scratch/grub.cfg \
-	/EFI/efiboot.img=$scratch/efiboot.img || die 12 "xorriso failed."
+	|| die 12 "xorriso failed."
 
     echo -n "ISO image size and filename: "; du -h $isoname
 }
