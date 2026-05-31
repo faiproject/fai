@@ -284,7 +284,6 @@ mkiso_x86() {
 
     echo "Writing FAI CD-ROM image to $isoname. This may need some time."
     xorriso -report_about HINT -as mkisofs -iso-level 3 \
-	-iso_mbr_part_type 00 \
         -full-iso9660-filenames \
 	-volid "$vname" -appid "$aname" \
 	-eltorito-boot boot/grub/bios.img  \
@@ -293,6 +292,7 @@ mkiso_x86() {
 	--grub2-boot-info \
 	--grub2-mbr $NFSROOT/usr/lib/grub/i386-pc/boot_hybrid.img \
 	-eltorito-alt-boot -e EFI/efiboot.img -no-emul-boot \
+	-partition_offset 16 -appended_part_as_gpt \
 	-append_partition 2 0xef $scratch/efiboot.img \
 	--exclude $tmp/cow \
 	-o $isoname -graft-points \
