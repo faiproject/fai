@@ -648,6 +648,38 @@ sub create_volume_group {
 
 ################################################################################
 #
+# @brief Build a shell command that waits for a device node to appear,
+# bounded by a fixed number of retries
+#
+# This works around a well-known device-mapper/udev race condition: right
+# after e.g. lvcreate returns, the kernel has already created the
+# underlying /dev/dm-N device, but the "friendly name" symlinks
+# /dev/<vg>/<lv> (and /dev/mapper/<vg>-<lv>) are only created
+# asynchronously, once udev gets around to processing the corresponding
+# uevent. "udevadm settle" -- which setup-storage already calls before
+# every command -- normally takes care of this, but it relies on a
+# reachable udev daemon and can return prematurely or be a no-op in
+# environments where udev is slow or unreachable, e.g. privileged
+# containers sharing the host's /dev (see
+# https://github.com/rancher/os/issues/838). Polling for the device node
+# itself is environment-agnostic and catches that case too.
+#
+# @param $device Device path that is expected to appear
+#
+# @return Shell command string that succeeds as soon as $device exists,
+# and fails if it is still missing after the bounded number of retries
+#
+################################################################################
+sub wait_for_device {
+
+  my ($device) = @_;
+
+  return 'i=0; while [ $i -lt 30 ] && [ ! -e ' . $device .
+    ' ]; do sleep 1; i=$((i+1)); done; [ -e ' . $device . ' ]';
+}
+
+################################################################################
+#
 # @brief Create the volume group $config, unless it exists already; if the
 # latter is the case, only add/remove the physical devices
 #
@@ -730,7 +762,13 @@ sub setup_logical_volumes {
     # create a new volume
     &FAI::push_command( "lvcreate $create_options -n $lv -L " .
       &FAI::convert_unit($lv_size->{eff_size} . "B") . " $vg", "vg_enabled_$vg",
-      "exist_/dev/$vg/$lv" );
+      "lv_dev_created_$vg/$lv" );
+
+    # the /dev/$vg/$lv symlink may not exist immediately after lvcreate
+    # returns -- see wait_for_device() for details on why this is needed
+    # in addition to the generic udevadm settle calls
+    &FAI::push_command( &FAI::wait_for_device("/dev/$vg/$lv"),
+      "lv_dev_created_$vg/$lv", "exist_/dev/$vg/$lv" );
 
     # create the filesystem on the volume
     &FAI::build_mkfs_commands("/dev/$vg/$lv",
