@@ -42,6 +42,27 @@ add_p3() {
     udevadm settle --timeout=10
 }
 
+add_p4() {
+
+    # $1: filename or device name
+    # $2: partition name
+    local type
+
+    [ -b $2 ] && die 4 "Partition 4 already exists on $1"
+
+    if [ X$fmt = Xexfat ]; then
+        type=0700
+    else
+        type=8300
+    fi
+
+    # add 4th gpt partion to the image or device
+    {
+        echo -e "x\ne\nm\nn\n\n\n\n8300\nw\nY\n" | gdisk $1
+    } >/dev/null 2>&1 || die 3 "Cannot add 4th partition to $1. Error code $?"
+    udevadm settle --timeout=10
+}
+
 make_fs() {
 
     if [ -b $1 ]; then
