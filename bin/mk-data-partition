@@ -142,13 +142,25 @@ if [ ! -b $filename ] && [ ! -f $filename ]; then
     die 9 "$filename is neither a device nor an existing file"
 fi
 
+type=$(fdisk -l $filename 2>/dev/null| grep -Po '(?<=Disklabel type:\s)...' )
+case $type in
+    dos)
+        p=3
+        fname=add_p3
+        ;;
+    gpt)
+        p=4
+        fname=add_p4
+        ;;
+esac
+
 if [ -b $filename ]; then
     # file is a USB device
     if [ -n "$size" ]; then
         echo "Warning: Ignoring the size parameter for USB sticks."
     fi
-    part=${filename}3
-    add_p3 $filename $part
+    part=${filename}$p
+    $fname $filename $part
     make_fs $part
 fi
 
@@ -156,7 +168,7 @@ if [ -f $filename ]; then
 
     # check if the image already has a 3th partition
     set +e
-    fdisk -l $filename | egrep -q ^${filename}3 && die 5 "Partition 3 already exists on $filename"
+    fdisk -l $filename | egrep -q ^${filename}$p && die 5 "Partition $p already exists on $filename"
     size=${size:-300M}
     echo "Extend $filename by $size"
     truncate -s +$size $filename || die 9 "Cannot extend $filename. Aborting"
@@ -164,8 +176,8 @@ if [ -f $filename ]; then
         die 5 "Cannot create loop device"
     fi
     trap "losetup -d $loop" EXIT
-    part=${loop}p3
-    add_p3 $loop $part
+    part=${loop}p$p
+    $fname $loop $part
     make_fs $part
 fi
 
