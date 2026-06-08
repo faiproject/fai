@@ -34,7 +34,11 @@ add_p3() {
     fi
     # add 3th partion to the image or device
 
-    { echo -e "n\np\n3\n\n\n"; sleep 2; echo -e "v\nt\n3\n$type\nw\n"; } | fdisk -w never $1 >/dev/null 2>&1
+    {
+        {
+            echo -e "n\np\n3\n\n\n"; sleep 2; echo -e "v\nt\n3\n$type\nw\n"
+        } | fdisk -w never $1
+    } >/dev/null 2>&1 || die 3 "Cannot add 3th partition to $1. Error code $?"
     if [ "$?" -ne 0 ]; then
         die 3 "Cannot add 3th partition to $1. Error code $?"
     fi
