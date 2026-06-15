@@ -323,11 +323,11 @@ if [ "$FAI_DEBMIRROR" ]; then
     mount -r $FAI_DEBMIRROR $MNTPOINT || exit 9
 fi
 
-# TODO: use -p to preserve sources.list
+cp -av $cfdir/apt/sources.list.d $aptcache/etc/apt
 sed -e 's/file:/copy:/' $cfdir/apt/sources.list > $aptcache/etc/apt/sources.list
-if [ "$(ls -A $cfdir/apt/sources.list.d/*.list 2>/dev/null)" ]; then
-    sed -e 's/file:/copy:/' $cfdir/apt/sources.list.d/*.list >> $aptcache/etc/apt/sources.list
-fi
+for f in `ls $cfdir/apt/sources.list.d/*.list 2>/dev/null`; do
+    sed -e 's/file:/copy:/' $f > $aptcache/etc/apt/sources.list.d/$f
+done
 
 if [ -f "$aptpref" ]; then
     cp $vflag "$aptpref" $aptcache/etc/apt/preferences
@@ -381,6 +381,10 @@ EOF
 
 # check if backports are used
 bponame=$(grep -E '^deb ' $aptcache/etc/apt/sources.list | grep -P -o '\S+-backports' | head -n 1)
+if [ -z "$bponame" ]; then
+    bponame=$(grep -hPo '(?<=Suites:.)\S+-backports' $aptcache/etc/apt/sources.list.d/*|head -n 1)
+fi
+
 # add entry for backports
 if [ -n "$bponame" ]; then
      cat >> $mirrordir/conf/distributions <<EOF
