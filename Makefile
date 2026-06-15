@@ -75,7 +75,7 @@ veryclean: clean
 
 install:
 	mkdir -p $(DESTDIR)/{sbin,man} $(DESTDIR)/etc/{modutils,apt/apt.conf.d}
-	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt/trusted.gpg.d
+	mkdir -p $(DESTDIR)/usr/{sbin,bin} $(DESTDIR)/usr/lib/fai $(DESTDIR)/etc/fai/apt/sources.list.d
 	mkdir -p $(SHAREDIR)/{pixmaps/small,setup-storage}
 	mkdir -p $(DESTDIR)/usr/lib/dracut/modules.d
 	install man/* $(DESTDIR)/man
@@ -94,7 +94,7 @@ install:
 	cd conf ; install -m644 fai.conf grub.cfg grub.cfg.autodiscover grub.cfg.live $(DESTDIR)/etc/fai/
 	install -m644 conf/nfsroot.conf $(DESTDIR)/etc/fai/
 	install -m644 conf/sources.list $(DESTDIR)/etc/fai/apt/
-	install -m644 conf/fai-project.gpg $(DESTDIR)/etc/fai/apt/trusted.gpg.d/
+	install -m644 conf/fai-project.sources $(DESTDIR)/etc/fai/apt/sources.list.d
 	install -m644 conf/NFSROOT $(DESTDIR)/etc/fai
 	install -m755 lib/fai-abort $(LIBDIR)
 	cp -a pixmaps/*.gif $(SHAREDIR)/pixmaps
