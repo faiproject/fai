@@ -270,20 +270,28 @@ mount_special_into_nfsroot() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 call_debootstrap() {
 
+    local xstrap
+
     [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
 
+    if [ command -v mmdebstrap >&/dev/null ]; then
+        xstrap=debootstrap
     # check if NFSROOT directory is mounted with bad options
     fs=$(df -P $NFSROOT | tail -1 | awk '{print $6}')
     if mount | grep "on $fs " |  awk '{print $6}' | grep -E -q "nosuid|nodev"; then
         die 1 "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
     fi
-    local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
-    echo "Creating base system using debootstrap version $dversion"
+        else
+        xstrap=mmdebstrap
+    fi
 
-    echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
-    LC_ALL=C call_verbose debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
+    local dversion=$(dpkg-query -Wf '${Version}\n' $xstrap)
+    echo "Creating base system using $xstrap $dversion"
+
+    echo "Calling $xstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2"
+    LC_ALL=C call_verbose $xstrap $FAI_DEBOOTSTRAP_OPTS $1 $NFSROOT $2
     if [ $? -ne 0 ]; then
-        echo "ERROR: debootstrap did not complete successfully."
+        echo "ERROR: $xstrap did not complete successfully."
         echo "This is mostly caused by a broken mirror."
         echo "Please check your mirror or use an official mirror."
         [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
@@ -292,7 +300,7 @@ call_debootstrap() {
 
     if [ ! -f $NFSROOT/usr/bin/apt-get ]; then
         echo "No apt-get executable available inside the NFSROOT."
-        echo "Maybe debootstrap did not finish successfully. Aborting."
+        echo "Maybe $xstrap did not finish successfully. Aborting."
         [ X$verbose = X1 ] || echo "Call fai-make-nfsroot -v for better debugging."
         exit 11
     fi
@@ -326,7 +334,7 @@ add_etc_hosts_entries() {
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 create_base() {
 
-    command -v debootstrap >&/dev/null || die 1 "Can't find debootstrap command. Aborting."
+    command -v debootstrap >&/dev/null || command -v mmdebstrap >&/dev/null || die 1 "Can't find debootstrap or mmdebstrap command. Aborting."
     call_debootstrap $FAI_DEBOOTSTRAP
     $ROOTCMD apt-get clean
     rm -f $NFSROOT/etc/resolv.conf $NFSROOT/etc/hostname $NFSROOT/etc/udev/rules.d/70-persistent-net.rules $NFSROOT/var/lib/dbus/machine-id
@@ -369,7 +377,7 @@ create_nfsroot() {
 
     local fslist
 
-    mkdir -p $NFSROOT/$FAI
+    mkdir -p $NFSROOT
     cd $NFSROOT || die 1 "Can't cd to $NFSROOT"
 
     if [ -n "$basetgz" ] ; then
@@ -377,6 +385,7 @@ create_nfsroot() {
     else
       create_base
     fi
+    mkdir -p $NFSROOT/$FAI
     touch .THIS_IS_THE_FAI_NFSROOT
     # save the list of all packages in the base.tar.zst
     $ROOTCMD dpkg --get-selections | awk '/install$/ {print $1}' > var/tmp/base-pkgs.lis
