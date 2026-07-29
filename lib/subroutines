@@ -1025,11 +1025,19 @@ task_partition() {
 
 call_debootstrap() {
 
-    local dversion=$(dpkg-query -Wf '${Version}\n' debootstrap)
-    echo "Creating base system using debootstrap version $dversion"
+    local xstrap
 
-    echo "Calling debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3"
-    LC_ALL=C debootstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3
+    if [ command -v mmdebstrap >&/dev/null ]; then
+        xstrap=debootstrap
+        else
+        xstrap=mmdebstrap
+    fi
+
+    local dversion=$(dpkg-query -Wf '${Version}\n' $xstrap)
+    echo "Creating base system using $xstrap $dversion"
+
+    echo "Calling $xstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3"
+    LC_ALL=C $xstrap $FAI_DEBOOTSTRAP_OPTS $1 $FAI_ROOT $2 $3
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### BEGIN SUBROUTINE INFO
