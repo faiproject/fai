@@ -1383,6 +1383,32 @@ grepv_disks() {
     disks_by_id | grep -E -v $1
 }
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+order_disks() {
+    # order_disks PATTERN PATTERN ....
+    # print $disklist reordered. Disks whose "name model serial" matches the
+    # first pattern come first, then the disks matching the second pattern, ...
+    # Spaces in the model name are replaced by _ (like in /dev/disk/by-id).
+    # Disks not matching any pattern are removed from the list. Use '.' as
+    # the last pattern to append all remaining disks in their original order.
+
+    local p d model serial list=
+    local -A info
+
+    for d in $disklist; do
+        model=$(echo $(lsblk -d -n -o MODEL /dev/$d 2>/dev/null))
+        serial=$(echo $(lsblk -d -n -o SERIAL /dev/$d 2>/dev/null))
+        info[$d]="$d ${model// /_} $serial"
+    done
+
+    for p in "$@"; do
+        for d in $disklist; do
+            [[ " $list " == *" $d "* ]] && continue
+            grep -E -q -- "$p" <<< "${info[$d]}" && list+="$d "
+        done
+    done
+    echo $list
+}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 set_bootstick() {
 
     # determine the device of the USB stick we boot from
