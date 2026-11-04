@@ -2442,6 +2442,15 @@ please check the contents of your 'NFSROOT/root/.ssh/known_hosts file'
 - A list of all local hard disks is
 stored in +$disklist+. It's defined after `set_disk_info` is called.
 
+- To get a predictable order of the disks for setup-storage, define
++DISKORDER+ in a class/*.var file. It's a space separated list of
+ regular expressions matching the device name, the model
+(spaces replaced by _) or the serial number of a disk. The task
+partition reorders +$disklist+ so that the disks matching the first
+pattern become disk1, ... Disks not matching any pattern are
+removed. Add +.+ as the last pattern to append the remaining disks.
+Example: +DISKORDER="Micron_7450 S6BCNG0R214545W ."+
+
 -  There are multiple functions for generating a customized disk
 list. See `fai-disk-info` for an example.
     * set_bootstick()
@@ -2456,6 +2465,7 @@ list. See `fai-disk-info` for an example.
     * once_only()
     * checkdisk()
     * disks_by_id()
+    * order_disks()
 
 - Use `fai-divert -a` if a postinst script calls a configuration
 program, e.g. the postinst script for package apache calls
