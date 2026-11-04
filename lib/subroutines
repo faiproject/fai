@@ -991,6 +991,16 @@ task_confdir() {
 
 task_partition() {
 
+    # reorder $disklist using the patterns in $DISKORDER, see order_disks()
+    if [ -n "$DISKORDER" ]; then
+        local -a pats
+        read -r -a pats <<< "$DISKORDER"
+        disklist=$(order_disks "${pats[@]}")
+        echo "disklist reordered using \$DISKORDER."
+        echo "New disklist: $disklist"
+        [ -z "$disklist" ] && echo "WARNING: No disk matches DISKORDER=$DISKORDER" >&2
+    fi
+
     [ ! -s $LOGDIR/disk_var.sh ] && setup-storage -X |& tee $LOGDIR/format.log
 
     # if we've created device mapper devices, do cleanup on error
