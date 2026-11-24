@@ -447,6 +447,7 @@ EOF
     [ X$verbose = X1 ] && echo "Upgrading $NFSROOT"
     LC_ALL=C call_verbose upgrade_nfsroot
     LC_ALL=C add_packages_nfsroot
+    run_hooks '--regex=^[a-zA-Z0-9_.-]+\.pretftp$'
 
     # remove file diversion, then create initrd
     rm $NFSROOT/etc/kernel/postinst.d/dracut
@@ -586,11 +587,12 @@ fdivert() {
 run_hooks() {
 
     local file
+    local filter=${1:---lsbsysinit}
     [ -z "$NFSROOT_HOOKS" ] && return 0
     [ -d "$NFSROOT_HOOKS" ] || return 0
 
     echo "Running hooks..."
-    for file in $(run-parts --lsbsysinit --list "$NFSROOT_HOOKS"); do
+    for file in $(run-parts "$filter" --list "$NFSROOT_HOOKS"); do
         . $file $v
     done
 }
@@ -628,6 +630,7 @@ trap "bad_exit" ERR
     $ROOTCMD apt-get update
     $ROOTCMD apt-get -y dist-upgrade
     LC_ALL=C add_packages_nfsroot
+    run_hooks '--regex=^[a-zA-Z0-9_.-]+\.pretftp$'
     setup_tftp
     run_hooks
     umount_dirs
