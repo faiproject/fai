@@ -1252,7 +1252,6 @@ task_chboot() {
     fi
 
     local frsh remotesh hostname
-    local doexit=0
     read hostname < /proc/sys/kernel/hostname
     local ipaddr=$(grep IPADDR $LOGDIR/boot.log | cut -d= -f2 | sed "s/'//g")
     local nexttest=$(grep -E -s ^NEXTTEST= $LOGDIR/test.log | cut -d= -f2)
@@ -1262,16 +1261,15 @@ task_chboot() {
         ssh) remotesh=ssh ;;
         rsh) remotesh=rsh ;;
         none) return ;;
-	*) echo "ERROR: Unknown value for \$FAI_LOGPROTO." ;;
+	*) echo "ERROR: Unknown value for \$FAI_LOGPROTO."; return ;;
     esac
     frsh="$remotesh -l $LOGUSER ${SERVER}"
 
     if [ -z "$SERVER" ] ; then
         echo "SERVER not defined. Can't change network boot configuration"
         task_error 2
-        doexit=1
+        return
     fi
-    [ $doexit -eq 1 ] && return
 
     # change boot device (local disk or network) when using PXE
     # first test if rsh to server works
