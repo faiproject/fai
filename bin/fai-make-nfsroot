@@ -274,15 +274,15 @@ call_debootstrap() {
 
     [ -z "$FAI_DEBOOTSTRAP" ] && die 4 "\$FAI_DEBOOTSTRAP not defined."
 
-    if [ command -v mmdebstrap >&/dev/null ]; then
-        xstrap=debootstrap
-    # check if NFSROOT directory is mounted with bad options
-    fs=$(df -P $NFSROOT | tail -1 | awk '{print $6}')
-    if mount | grep "on $fs " |  awk '{print $6}' | grep -E -q "nosuid|nodev"; then
-        die 1 "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
-    fi
-        else
+    if command -v mmdebstrap >/dev/null; then
         xstrap=mmdebstrap
+    else
+        xstrap=debootstrap
+        # check if NFSROOT directory is mounted with bad options
+        fs=$(df -P $NFSROOT | tail -1 | awk '{print $6}')
+        if mount | grep "on $fs " |  awk '{print $6}' | grep -E -q "nosuid|nodev"; then
+            die 1 "NFSROOT directory $NFSROOT is mounted using nosuid or nodev. Aborting"
+        fi
     fi
 
     local dversion=$(dpkg-query -Wf '${Version}\n' $xstrap)
