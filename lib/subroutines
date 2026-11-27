@@ -208,7 +208,7 @@ umount_target() {
     if [ "$target" != '/' ]; then
 	# do not umount during softupdate
 	umount $target/proc $target/sys/firmware/efi/efivars $target/sys $target/dev/pts $target/dev 2>/dev/null
-	for dir in $(mount | grep $target | grep -E -v "media/mirror"| awk '{print $3}' | sort -r); do
+	for dir in $(mount | grep -E "on $target( |/)" | grep -E -v "media/mirror"| awk '{print $3}' | sort -r); do
             if [ "$dir" = "$target" ]; then
                # do not umount an empty target directory
                [ -z "$(ls -A "$target")" ] && return
@@ -250,7 +250,7 @@ mk_zerofree_list() {
 	    *) continue ;;
 	esac
 
-	if [[ $mpoint =~ $target ]]; then
+	if [[ $mpoint =~ ^$target(/|$) ]]; then
 	    echo "zerofree $v $source" >> /var/run/fai/zerofree.$PPID
 	fi
 
