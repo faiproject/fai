@@ -281,8 +281,9 @@ if [ X$FAI_ACTION = Xdirinstall ]; then
     fi
 
     # two lines taken from task_dirinstall
-    mkdir -p $FAI_ROOT
-    FAI_ROOT=$(cd $FAI_ROOT;pwd)
+    mkdir -p $FAI_ROOT || fdie 3 "Cannot create target directory $FAI_ROOT. Aborted"
+    FAI_ROOT=$(cd $FAI_ROOT && pwd) || fdie 3 "Cannot change to target directory $FAI_ROOT. Aborted"
+    [ "$FAI_ROOT" != / ] || fdie 3 "Target directory must not be /. Aborted"
 
     # check if target directory is mounted with bad options
     fs=$(df -P $FAI_ROOT | tail -1 | awk '{print $6}')
