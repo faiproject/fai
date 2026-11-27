@@ -381,14 +381,16 @@ sub tcopy {
       return;
     }
     print "copy pxe config from $srchost to template $desthost\n" if $verbose;
+    return if $opt_n;
     docopy("$pxedir/$srcfile",$pxedir,$desthost,$desthost,$ipadr);
   } else {
     ($ipadr,$desthex) = host2hex($desthost);
+    print "copy pxe config from $srchost to $desthost, filenames: $srcfile -> $desthex\n" if $verbose;
+    return if $opt_n;
     if (-f "$pxedir/$desthex.disable") {
       unlink "$pxedir/$desthex.disable";
       print "removed old $pxedir/$desthex.disable\n";
     }
-    print "copy pxe config from $srchost to $desthost, filenames: $srcfile -> $desthex\n" if $verbose;
     docopy("$pxedir/$srcfile",$pxedir,$desthex,$desthost,$ipadr);
   }
 }
