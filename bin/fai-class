@@ -153,6 +153,11 @@ debugmsg "Scripts found: $scripts"
 for f in $scripts ; do
     [ -f $f ] || continue # skip sockets, pipes, symlinks
     debugmsg "File $f found."
+    case $f in
+        *~|*.bak|*.dpkg-old|*.dpkg-new|*.dpkg-inst|*.dpkg-tmp|*.dpkg-dist)
+            debugmsg "Skipping backup file $f"
+            continue ;;
+    esac
     if [ ! -x $f ]; then
         echo "Warning: File $f is not executable, so it's not used for defining classes." >&2
         continue
@@ -160,7 +165,6 @@ for f in $scripts ; do
     classes=$(< $filename)
     export classes
     case $f in
-        *~|*.bak) debugmsg "Skipping backup file $f" ;;
         *.sh)
             verbosemsg "Executing $classdir/$f."
             # this script can define $newclasses
