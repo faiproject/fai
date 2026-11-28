@@ -285,7 +285,10 @@ sub mkpxecfg {
     warn "WARNING: $pxedir/$hex already exists.\nSkipping file creation. ";
     return;
   }
-  open (FILE,"> $pxedir/$hex") or warn "$0 $@ $!";
+  unless (open (FILE,"> $pxedir/$hex")) {
+    $error .= "\nCannot write $pxedir/$hex. $!";
+    return;
+  }
   print FILE << "EOM";
 default fai-generated
 
@@ -534,3 +537,4 @@ warn "   $flags\n\n" if ($verbose and $flags);
 $opt_k && print "Kernel parameters: $opt_k\n";
 
 foreach (@ARGV) { mkpxecfg($_,$kernelname,$rootfs,$initrd); }
+$error and die "$0: $error\n";
