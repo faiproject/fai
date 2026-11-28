@@ -269,9 +269,10 @@ if ($opt_L || $opt_l) {
 foreach my $entry (@preloadrmlist) {
   my ($url, $directory) = @$entry;
   $url =~ m#/([^/]+$)#;
-  my $file =  "$directory/$1";
+  my $file =  "$FAI_ROOT/$directory/$1";
   print "rm $file\n" if $verbose;
-  unlink $file || warn "Can't remove $file\n";
+  next if $dryrun;
+  unlink($file) or warn "Can't remove $file\n";
 }
 
 if ($hasdebian) {
