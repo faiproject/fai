@@ -31,7 +31,10 @@ cleanup() {
             [ $i -gt 12 ] && echo "Still cannot umount $dir. Will try again."
 	    sleep $i
 	done
-	[ "$umounted" -eq 0 ] && echo "ERROR: fai-diskimage cannot umount $dir" >&2
+	if [ "$umounted" -eq 0 ]; then
+	    echo "ERROR: fai-diskimage cannot umount $dir" >&2
+	    umount_failed=1
+	fi
     done
 
     # call zerofree for ext2/3/4 devices if available
@@ -106,6 +109,7 @@ unset TEMP
 
 verbose=0
 convert=1
+umount_failed=
 
 while true ; do
     case "$1" in
@@ -230,6 +234,7 @@ error=$?
 cleanup
 
 trap - EXIT
+[ -n "$umount_failed" ] && die 10 "Not all file systems were unmounted. $rawname may be inconsistent and is not converted."
 
 # convert if needed
 if [ $convert -eq 1 ] || [ $convert -eq 3 ]; then
