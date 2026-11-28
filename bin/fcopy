@@ -138,7 +138,7 @@ sub copy_one {
   }
 
   # handle broken symlink
-  unless (stat($sourcefile)) {
+  unless (defined $sourcelink or stat($sourcefile)) {
     ewarn("$sourcefile is a broken symlink\n");
     return;
   }
@@ -149,7 +149,7 @@ sub copy_one {
     $preinst = 1;        # a tmpfile is used because of preinst script
   }
 
-  if ($substitute or -f "$ps/_substitute") {
+  if (!defined($sourcelink) and ($substitute or -f "$ps/_substitute")) { # no substitution if a symlink is copied with -H
     warn "Enable substitution. Copying $sourcefile to $tmpfile" if $debug;
 
     do_substitution($sourcefile,$tmpfh);
